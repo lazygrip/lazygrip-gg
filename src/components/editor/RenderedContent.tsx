@@ -51,11 +51,21 @@ export default function RenderedContent({ html }: RenderedContentProps) {
           margin: 22px 0 10px 0;
           color: var(--text-primary, #111827);
         }
-        .rendered-content ul, .rendered-content ol {
+        .rendered-content ul {
           padding-left: 26px;
           margin: 0 0 14px 0;
+          list-style-type: disc;
         }
-        .rendered-content li { margin: 6px 0; line-height: 1.65; }
+        .rendered-content ol {
+          padding-left: 26px;
+          margin: 0 0 14px 0;
+          list-style-type: decimal;
+        }
+        .rendered-content li {
+          margin: 6px 0;
+          line-height: 1.65;
+          display: list-item;
+        }
         .rendered-content li p { margin: 0; }
         .rendered-content blockquote {
           border-left: 3px solid var(--accent, #10b981);
