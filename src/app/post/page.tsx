@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { WOW_CLASSES, CONTENT_TYPES, STEP_FUNCTIONS, slugify } from '@/lib/wow-data'
@@ -23,7 +23,7 @@ const EMPTY_FORM = {
   performance_notes: '',
 }
 
-export default function PostPage() {
+function PostForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const editId = searchParams.get('edit')
@@ -38,7 +38,6 @@ export default function PostPage() {
 
   const selectedClass = WOW_CLASSES.find(c => c.id === Number(form.class_id))
 
-  // Load existing sequence when in edit mode
   useEffect(() => {
     if (!editId) return
 
@@ -51,7 +50,7 @@ export default function PostPage() {
         .from('sequences')
         .select('*')
         .eq('id', editId)
-        .eq('author_id', user.id) // RLS enforced, but also block non-authors from loading
+        .eq('author_id', user.id)
         .single()
 
       if (error || !data) {
@@ -61,7 +60,6 @@ export default function PostPage() {
 
       setEditSlug(data.slug)
 
-      // Convert raw_steps back to plain text for the textarea
       let raw_steps_text = ''
       if (Array.isArray(data.raw_steps)) {
         raw_steps_text = data.raw_steps.map((s: any) =>
@@ -389,6 +387,18 @@ export default function PostPage() {
         </div>
       </form>
     </div>
+  )
+}
+
+export default function PostPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ maxWidth: 760, margin: '80px auto', padding: '0 24px', textAlign: 'center' }}>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Loading...</p>
+      </div>
+    }>
+      <PostForm />
+    </Suspense>
   )
 }
 
