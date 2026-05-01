@@ -1,40 +1,100 @@
 'use client'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { WOW_CLASSES, CONTENT_TYPES, STEP_FUNCTIONS, slugify } from '@/lib/wow-data'
-import { AlertCircle, CheckCircle } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import TiptapEditor from '@/components/editor/TiptapEditor'
+
+const EMPTY_FORM = {
+  title: '',
+  description: '',
+  class_id: '',
+  spec_name: '',
+  content_type: 'mythic_plus',
+  hero_talent: '',
+  patch_version: '12.0.5',
+  grip_version: '1.9.10',
+  step_function: 'Sequential',
+  grip_string: '',
+  raw_steps_text: '',
+  talent_string: '',
+  warcraftlogs_url: '',
+  performance_notes: '',
+}
 
 export default function PostPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const editId = searchParams.get('edit')
+  const isEditMode = !!editId
+
   const supabase = createClient()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [selectedClassId, setSelectedClassId] = useState<number | ''>('')
+  const [loadingEdit, setLoadingEdit] = useState(isEditMode)
+  const [editSlug, setEditSlug] = useState<string | null>(null)
+  const [form, setForm] = useState(EMPTY_FORM)
 
-  const [form, setForm] = useState({
-    title: '',
-    description: '',
-    class_id: '',
-    spec_name: '',
-    content_type: 'mythic_plus',
-    hero_talent: '',
-    patch_version: '12.0.5',
-    grip_version: '1.9.10',
-    step_function: 'Sequential',
-    grip_string: '',
-    raw_steps_text: '',
-    talent_string: '',
-    warcraftlogs_url: '',
-    performance_notes: '',
-  })
+  const selectedClass = WOW_CLASSES.find(c => c.id === Number(form.class_id))
+
+  // Load existing sequence when in edit mode
+  useEffect(() => {
+    if (!editId) return
+
+    async function loadSequence() {
+      setLoadingEdit(true)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/auth/login'); return }
+
+      const { data, error } = await supabase
+        .from('sequences')
+        .select('*')
+        .eq('id', editId)
+        .eq('author_id', user.id) // RLS enforced, but also block non-authors from loading
+        .single()
+
+      if (error || !data) {
+        router.push('/browse')
+        return
+      }
+
+      setEditSlug(data.slug)
+
+      // Convert raw_steps back to plain text for the textarea
+      let raw_steps_text = ''
+      if (Array.isArray(data.raw_steps)) {
+        raw_steps_text = data.raw_steps.map((s: any) =>
+          typeof s === 'string' ? s : s.text || ''
+        ).join('\n')
+      }
+
+      setForm({
+        title: data.title ?? '',
+        description: data.description ?? '',
+        class_id: String(data.class_id ?? ''),
+        spec_name: data.spec_name ?? '',
+        content_type: data.content_type ?? 'mythic_plus',
+        hero_talent: data.hero_talent ?? '',
+        patch_version: data.patch_version ?? '12.0.5',
+        grip_version: data.grip_version ?? '1.9.10',
+        step_function: data.step_function ?? 'Sequential',
+        grip_string: data.grip_string ?? '',
+        raw_steps_text,
+        talent_string: data.talent_string ?? '',
+        warcraftlogs_url: data.warcraftlogs_url ?? '',
+        performance_notes: data.performance_notes ?? '',
+      })
+
+      setLoadingEdit(false)
+    }
+
+    loadSequence()
+  }, [editId])
 
   function setField(key: string, value: string) {
     setForm(f => ({ ...f, [key]: value }))
   }
-
-  const selectedClass = WOW_CLASSES.find(c => c.id === Number(form.class_id))
 
   function parseSteps(text: string) {
     if (!text.trim()) return null
@@ -46,7 +106,6 @@ export default function PostPage() {
   }
 
   function descriptionIsEmpty(html: string) {
-    // Tiptap leaves <p></p> when "empty" — treat that as empty
     if (!html) return true
     const stripped = html.replace(/<p><\/p>/g, '').replace(/<p>\s*<\/p>/g, '').trim()
     return stripped === ''
@@ -67,37 +126,46 @@ export default function PostPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/auth/login'); return }
 
-      const slug = slugify(form.title) + '-' + Date.now().toString(36)
       const raw_steps = parseSteps(form.raw_steps_text)
+      const payload = {
+        title: form.title.trim(),
+        description: descriptionIsEmpty(form.description) ? null : form.description,
+        class_id: Number(form.class_id),
+        class_name: selectedClass?.name ?? '',
+        spec_name: form.spec_name || null,
+        content_type: form.content_type,
+        hero_talent: form.hero_talent || null,
+        patch_version: form.patch_version || null,
+        grip_version: form.grip_version || null,
+        step_function: form.step_function,
+        step_count: raw_steps?.length ?? null,
+        grip_string: form.grip_string.trim() || null,
+        raw_steps,
+        talent_string: form.talent_string.trim() || null,
+        warcraftlogs_url: form.warcraftlogs_url.trim() || null,
+        performance_notes: form.performance_notes.trim() || null,
+      }
 
-      const { data, error: insertError } = await supabase
-        .from('sequences')
-        .insert({
-          author_id: user.id,
-          title: form.title.trim(),
-          slug,
-          description: descriptionIsEmpty(form.description) ? null : form.description,
-          class_id: Number(form.class_id),
-          class_name: selectedClass?.name ?? '',
-          spec_name: form.spec_name || null,
-          content_type: form.content_type,
-          hero_talent: form.hero_talent || null,
-          patch_version: form.patch_version || null,
-          grip_version: form.grip_version || null,
-          step_function: form.step_function,
-          step_count: raw_steps?.length ?? null,
-          grip_string: form.grip_string.trim() || null,
-          raw_steps: raw_steps,
-          talent_string: form.talent_string.trim() || null,
-          warcraftlogs_url: form.warcraftlogs_url.trim() || null,
-          performance_notes: form.performance_notes.trim() || null,
-          is_published: true,
-        })
-        .select('slug')
-        .single()
+      if (isEditMode) {
+        const { error: updateError } = await supabase
+          .from('sequences')
+          .update(payload)
+          .eq('id', editId)
+          .eq('author_id', user.id)
 
-      if (insertError) throw insertError
-      if (data) router.push(`/sequence/${data.slug}`)
+        if (updateError) throw updateError
+        router.push(`/sequence/${editSlug}`)
+      } else {
+        const slug = slugify(form.title) + '-' + Date.now().toString(36)
+        const { data, error: insertError } = await supabase
+          .from('sequences')
+          .insert({ ...payload, author_id: user.id, slug, is_published: true })
+          .select('slug')
+          .single()
+
+        if (insertError) throw insertError
+        if (data) router.push(`/sequence/${data.slug}`)
+      }
     } catch (err: any) {
       setError(err.message || 'Something went wrong. Please try again.')
     } finally {
@@ -105,13 +173,21 @@ export default function PostPage() {
     }
   }
 
+  if (loadingEdit) return (
+    <div style={{ maxWidth: 760, margin: '80px auto', padding: '0 24px', textAlign: 'center' }}>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Loading sequence...</p>
+    </div>
+  )
+
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 24px' }}>
       <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 6 }}>
-        Post a sequence
+        {isEditMode ? 'Edit sequence' : 'Post a sequence'}
       </h1>
       <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 28 }}>
-        Share your GRIP-EMS sequence with the community. Include your GRIP export string so others can import it directly.
+        {isEditMode
+          ? 'Update your sequence details below. Changes will be live immediately.'
+          : 'Share your GRIP-EMS sequence with the community. Include your GRIP export string so others can import it directly.'}
       </p>
 
       <form onSubmit={handleSubmit}>
@@ -274,21 +350,42 @@ export default function PostPage() {
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={submitting}
-            style={{
-              background: 'var(--accent)', color: 'white',
-              border: 'none', borderRadius: 'var(--radius-md)',
-              padding: '12px 24px', fontSize: 14, fontWeight: 500,
-              cursor: submitting ? 'not-allowed' : 'pointer',
-              opacity: submitting ? 0.7 : 1,
-              fontFamily: 'var(--font-sans)',
-              alignSelf: 'flex-start',
-            }}
-          >
-            {submitting ? 'Publishing...' : 'Publish sequence'}
-          </button>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <button
+              type="submit"
+              disabled={submitting}
+              style={{
+                background: 'var(--accent)', color: 'white',
+                border: 'none', borderRadius: 'var(--radius-md)',
+                padding: '12px 24px', fontSize: 14, fontWeight: 500,
+                cursor: submitting ? 'not-allowed' : 'pointer',
+                opacity: submitting ? 0.7 : 1,
+                fontFamily: 'var(--font-sans)',
+              }}
+            >
+              {submitting
+                ? (isEditMode ? 'Saving...' : 'Publishing...')
+                : (isEditMode ? 'Save changes' : 'Publish sequence')}
+            </button>
+
+            {isEditMode && (
+              <button
+                type="button"
+                onClick={() => router.push(`/sequence/${editSlug}`)}
+                disabled={submitting}
+                style={{
+                  background: 'var(--bg-secondary)', color: 'var(--text-secondary)',
+                  border: '0.5px solid var(--border-strong)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '12px 20px', fontSize: 14,
+                  cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                }}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+
         </div>
       </form>
     </div>
