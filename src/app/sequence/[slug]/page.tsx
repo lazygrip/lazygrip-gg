@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Sequence, Comment } from '@/types'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { formatDistanceToNow } from 'date-fns'
+import RenderedContent from '@/components/editor/RenderedContent'
 
 export default function SequencePage() {
   const params = useParams()
@@ -122,7 +123,7 @@ export default function SequencePage() {
         borderTop: `3px solid ${classColor}`,
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <h1 style={{
               fontSize: 22,
               fontWeight: 600,
@@ -144,9 +145,9 @@ export default function SequencePage() {
             </div>
 
             {sequence.description && (
-              <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.65 }}>
-                {sequence.description}
-              </p>
+              <div style={{ marginTop: 16 }}>
+                <RenderedContent html={sequence.description} />
+              </div>
             )}
           </div>
 

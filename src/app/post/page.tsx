@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { WOW_CLASSES, CONTENT_TYPES, STEP_FUNCTIONS, slugify } from '@/lib/wow-data'
 import { AlertCircle, CheckCircle } from 'lucide-react'
+import TiptapEditor from '@/components/editor/TiptapEditor'
 
 export default function PostPage() {
   const router = useRouter()
@@ -19,7 +20,7 @@ export default function PostPage() {
     spec_name: '',
     content_type: 'mythic_plus',
     hero_talent: '',
-    patch_version: '12.0.1',
+    patch_version: '12.0.5',
     grip_version: '1.9.10',
     step_function: 'Sequential',
     grip_string: '',
@@ -42,6 +43,13 @@ export default function PostPage() {
       text: block.replace(/^\d+\.\s*/, '').trim(),
       char_count: block.trim().length,
     }))
+  }
+
+  function descriptionIsEmpty(html: string) {
+    // Tiptap leaves <p></p> when "empty" — treat that as empty
+    if (!html) return true
+    const stripped = html.replace(/<p><\/p>/g, '').replace(/<p>\s*<\/p>/g, '').trim()
+    return stripped === ''
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -68,7 +76,7 @@ export default function PostPage() {
           author_id: user.id,
           title: form.title.trim(),
           slug,
-          description: form.description.trim() || null,
+          description: descriptionIsEmpty(form.description) ? null : form.description,
           class_id: Number(form.class_id),
           class_name: selectedClass?.name ?? '',
           spec_name: form.spec_name || null,
@@ -119,13 +127,14 @@ export default function PostPage() {
               />
             </Field>
 
-            <Field label="Description">
-              <textarea
-                value={form.description}
-                onChange={e => setField('description', e.target.value)}
+            <Field
+              label="Description"
+              hint="Use the toolbar for headings, lists, code blocks, and links. Keyboard shortcuts work too (Ctrl+B, Ctrl+I)."
+            >
+              <TiptapEditor
+                content={form.description}
+                onChange={(html) => setField('description', html)}
                 placeholder="Describe your sequence — build, talents, key modifiers, what it's optimised for..."
-                rows={4}
-                style={{ resize: 'vertical' }}
               />
             </Field>
           </Section>
@@ -178,7 +187,7 @@ export default function PostPage() {
                 <input
                   value={form.patch_version}
                   onChange={e => setField('patch_version', e.target.value)}
-                  placeholder="e.g. 12.0.1"
+                  placeholder="e.g. 12.0.5"
                 />
               </Field>
 
