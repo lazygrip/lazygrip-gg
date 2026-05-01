@@ -95,15 +95,21 @@ export default function ProfilePage() {
     const path = `${user.id}.${ext}`
 
     const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(path, file, { upsert: true })
+	  .from('avatars')
+	  .upload(path, file, { upsert: true })
 
-    if (!uploadError) {
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
-      setAvatarUrl(publicUrl)
-      await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id)
-      setAvatarSaved(true)
-      setTimeout(() => setAvatarSaved(false), 2000)
+	if (uploadError) {
+	  console.error('Upload error:', JSON.stringify(uploadError))
+	  alert('Upload failed: ' + uploadError.message)
+	  setUploadingAvatar(false)
+	  return
+	}
+
+	const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+	setAvatarUrl(publicUrl)
+	await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id)
+	setAvatarSaved(true)
+	setTimeout(() => setAvatarSaved(false), 2000)
     }
 
     setUploadingAvatar(false)
