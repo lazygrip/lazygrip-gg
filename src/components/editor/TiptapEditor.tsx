@@ -224,10 +224,19 @@ export default function TiptapEditor({ content, onChange, placeholder }: TiptapE
           margin: 16px 0 8px 0;
           color: var(--text-primary, #111827);
         }
-        .tiptap-editor-content ul,
+        .tiptap-editor-content ul {
+          padding-left: 24px;
+          margin: 0 0 12px 0;
+          list-style-type: disc;
+        }
         .tiptap-editor-content ol {
           padding-left: 24px;
           margin: 0 0 12px 0;
+          list-style-type: decimal;
+        }
+        .tiptap-editor-content ul li,
+        .tiptap-editor-content ol li {
+          display: list-item;
         }
         .tiptap-editor-content li { margin: 4px 0; }
         .tiptap-editor-content li p { margin: 0; }
