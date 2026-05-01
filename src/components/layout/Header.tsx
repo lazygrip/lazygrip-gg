@@ -1,25 +1,65 @@
 'use client'
 import Link from 'next/link'
-import { Shield, Search, PlusCircle, User, LogOut } from 'lucide-react'
+import { Shield, Search, PlusCircle, LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
 
 export default function Header() {
   const [user, setUser] = useState<any>(null)
+  const [username, setUsername] = useState<string | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [unreadCount, setUnreadCount] = useState(0)
   const supabase = createClient()
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user)
+      if (data.user) {
+        loadProfile(data.user.id)
+        loadUnread(data.user.id)
+      }
+    })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
       setUser(session?.user ?? null)
+      if (session?.user) {
+        loadProfile(session.user.id)
+        loadUnread(session.user.id)
+      } else {
+        setUsername(null)
+        setAvatarUrl(null)
+        setUnreadCount(0)
+      }
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  async function loadProfile(userId: string) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('username, avatar_url')
+      .eq('id', userId)
+      .single()
+    if (data) {
+      setUsername(data.username)
+      setAvatarUrl(data.avatar_url ?? null)
+    }
+  }
+
+  async function loadUnread(userId: string) {
+    const { count } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_read', false)
+    setUnreadCount(count ?? 0)
+  }
 
   const signOut = async () => {
     await supabase.auth.signOut()
     window.location.href = '/'
   }
+
+  const initial = username?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? '?'
 
   return (
     <header style={{
@@ -128,21 +168,61 @@ export default function Header() {
                 <PlusCircle size={14} />
                 Post Sequence
               </Link>
+
+              {/* Notification bell */}
+              <Link href="/notifications" style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 32,
+                height: 32,
+                borderRadius: 'var(--radius-sm)',
+                color: unreadCount > 0 ? 'var(--accent)' : 'var(--text-muted)',
+                textDecoration: 'none',
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+                {unreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: 4,
+                    right: 4,
+                    width: 8,
+                    height: 8,
+                    background: '#c0392b',
+                    borderRadius: '50%',
+                    border: '1.5px solid var(--bg-primary)',
+                  }} />
+                )}
+              </Link>
+
+              {/* Avatar */}
               <Link href="/profile" style={{
+                position: 'relative',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 width: 32,
                 height: 32,
                 borderRadius: '50%',
-                background: 'var(--accent-subtle)',
+                background: avatarUrl ? 'transparent' : 'var(--accent-subtle)',
                 color: 'var(--accent-text)',
                 textDecoration: 'none',
                 fontSize: 13,
-                fontWeight: 500,
+                fontWeight: 600,
+                overflow: 'hidden',
+                flexShrink: 0,
               }}>
-                <User size={15} />
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt={username ?? 'avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  initial
+                )}
               </Link>
+
               <button onClick={signOut} style={{
                 background: 'none',
                 border: 'none',
