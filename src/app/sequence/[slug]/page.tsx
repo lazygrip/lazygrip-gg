@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
-import { Copy, Check, Star, Bookmark, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
+import { useParams, useRouter } from 'next/navigation'
+import { Copy, Check, Star, Bookmark, ExternalLink, ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Sequence, Comment } from '@/types'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
@@ -10,6 +10,7 @@ import RenderedContent from '@/components/editor/RenderedContent'
 
 export default function SequencePage() {
   const params = useParams()
+  const router = useRouter()
   const slug = params.slug as string
   const [sequence, setSequence] = useState<Sequence | null>(null)
   const [comments, setComments] = useState<Comment[]>([])
@@ -21,6 +22,8 @@ export default function SequencePage() {
   const [commentText, setCommentText] = useState('')
   const [user, setUser] = useState<any>(null)
   const [saved, setSaved] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const supabase = createClient()
 
@@ -93,6 +96,25 @@ export default function SequencePage() {
     setSaved(s => !s)
   }
 
+  async function handleDelete() {
+    if (!user || !sequence) return
+    setDeleting(true)
+    const { error } = await supabase
+      .from('sequences')
+      .delete()
+      .eq('id', sequence.id)
+      .eq('author_id', user.id)
+    if (!error) {
+      router.push('/browse')
+    } else {
+      console.error('Delete failed:', error)
+      setDeleting(false)
+      setShowDeleteConfirm(false)
+    }
+  }
+
+  const isAuthor = user && sequence && user.id === sequence.author_id
+
   if (loading) return (
     <div style={{ maxWidth: 900, margin: '40px auto', padding: '0 24px' }}>
       <div style={{ height: 300, background: 'var(--bg-primary)', borderRadius: 'var(--radius-lg)', border: '0.5px solid var(--border)' }} />
@@ -112,6 +134,66 @@ export default function SequencePage() {
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px' }}>
+
+      {/* Delete confirm dialog */}
+      {showDeleteConfirm && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 100,
+          background: 'rgba(0,0,0,0.6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            background: 'var(--bg-primary)',
+            border: '0.5px solid var(--border)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '28px',
+            maxWidth: 400,
+            width: '100%',
+            margin: '0 24px',
+          }}>
+            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 10, color: 'var(--text-primary)' }}>
+              Delete this sequence?
+            </h2>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
+              This will permanently delete <strong style={{ color: 'var(--text-primary)' }}>{sequence.title}</strong> and all its ratings and comments. This cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  border: '0.5px solid var(--border-strong)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer', fontSize: 13,
+                  fontFamily: 'var(--font-sans)',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  border: 'none',
+                  background: '#c0392b',
+                  color: 'white',
+                  cursor: deleting ? 'not-allowed' : 'pointer',
+                  fontSize: 13, fontWeight: 500,
+                  fontFamily: 'var(--font-sans)',
+                  opacity: deleting ? 0.7 : 1,
+                }}
+              >
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header card */}
       <div style={{
@@ -187,6 +269,40 @@ export default function SequencePage() {
           </div>
 
           <div style={{ display: 'flex', gap: 8 }}>
+            {/* Author-only: Edit and Delete */}
+            {isAuthor && (
+              <>
+                <button
+                  onClick={() => router.push(`/post?edit=${sequence.id}`)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '7px 12px', borderRadius: 'var(--radius-md)',
+                    border: '0.5px solid var(--border-strong)',
+                    background: 'var(--bg-secondary)',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  <Pencil size={14} />
+                  Edit
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '7px 12px', borderRadius: 'var(--radius-md)',
+                    border: '0.5px solid rgba(192,57,43,0.4)',
+                    background: 'rgba(192,57,43,0.08)',
+                    color: '#c0392b',
+                    cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  <Trash2 size={14} />
+                  Delete
+                </button>
+              </>
+            )}
+
             {user && (
               <button onClick={toggleSave} style={{
                 display: 'flex', alignItems: 'center', gap: 6,
