@@ -7,7 +7,6 @@ import { formatDistanceToNow } from 'date-fns'
 import Link from 'next/link'
 import { Upload, Check } from 'lucide-react'
 
-// 8 generated avatar color options using accent/class palette
 const AVATAR_COLORS = [
   { bg: '#1D9E75', label: 'Emerald' },
   { bg: '#5a8dee', label: 'Sapphire' },
@@ -31,7 +30,6 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'posted' | 'saved'>('posted')
 
-  // Avatar state
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [selectedColor, setSelectedColor] = useState<string | null>(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
@@ -71,7 +69,6 @@ export default function ProfilePage() {
         .order('created_at', { ascending: false })
 
       setSavedSequences((saves ?? []).map((s: any) => s.sequence).filter(Boolean))
-
       setLoading(false)
     }
     load()
@@ -95,23 +92,21 @@ export default function ProfilePage() {
     const path = `${user.id}.${ext}`
 
     const { error: uploadError } = await supabase.storage
-	  .from('avatars')
-	  .upload(path, file, { upsert: true })
+      .from('avatars')
+      .upload(path, file, { upsert: true })
 
-	if (uploadError) {
-	  console.error('Upload error:', JSON.stringify(uploadError))
-	  alert('Upload failed: ' + uploadError.message)
-	  setUploadingAvatar(false)
-	  return
-	}
-
-	const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
-	setAvatarUrl(publicUrl)
-	await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id)
-	setAvatarSaved(true)
-	setTimeout(() => setAvatarSaved(false), 2000)
+    if (uploadError) {
+      console.error('Upload error:', JSON.stringify(uploadError))
+      alert('Upload failed: ' + uploadError.message)
+      setUploadingAvatar(false)
+      return
     }
 
+    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+    setAvatarUrl(publicUrl)
+    await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id)
+    setAvatarSaved(true)
+    setTimeout(() => setAvatarSaved(false), 2000)
     setUploadingAvatar(false)
   }
 
@@ -140,7 +135,6 @@ export default function ProfilePage() {
       }}>
         {/* Avatar column */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-          {/* Avatar display */}
           <div style={{
             width: 72,
             height: 72,
@@ -162,7 +156,6 @@ export default function ProfilePage() {
             }
           </div>
 
-          {/* Upload button */}
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadingAvatar}
@@ -204,7 +197,6 @@ export default function ProfilePage() {
             {postedSequences.length} sequence{postedSequences.length !== 1 ? 's' : ''} posted
           </p>
 
-          {/* Color picker */}
           <div>
             <p style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 8 }}>
               Avatar color
@@ -320,20 +312,20 @@ function SequenceRow({ seq, showAuthor }: { seq: any; showAuthor: boolean }) {
 
   return (
     <Link href={`/sequence/${seq.slug}`} style={{ textDecoration: 'none' }}>
-      <div style={{
-        background: 'var(--bg-primary)',
-        border: '0.5px solid var(--border)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '14px 18px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 14,
-        borderLeft: `3px solid ${classColor}`,
-        transition: 'border-color 0.15s',
-        cursor: 'pointer',
-      }}
-        onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
-        onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
+      <div
+        style={{
+          background: 'var(--bg-primary)',
+          border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '14px 18px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          borderLeft: `3px solid ${classColor}`,
+          cursor: 'pointer',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.borderLeftColor = 'var(--accent)')}
+        onMouseLeave={e => (e.currentTarget.style.borderLeftColor = classColor)}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
