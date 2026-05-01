@@ -115,7 +115,7 @@ export default function SequenceCard({ sequence }: Props) {
             <Stat icon={<Eye size={11} />} value={sequence.view_count} />
             <Stat icon={<Bookmark size={11} />} value={sequence.save_count} />
           </div>
-          <div style={{ display: 'flex', align: 'center', gap: 8, fontSize: 11, color: 'var(--text-muted)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-muted)' }}>
             {sequence.author && (
               <span>by <strong style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{sequence.author.username}</strong></span>
             )}

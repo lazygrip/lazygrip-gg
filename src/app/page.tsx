@@ -1,3 +1,5 @@
+'use client'
+
 import Link from 'next/link'
 import { Shield, ArrowRight, Zap, Users, Star } from 'lucide-react'
 import { WOW_CLASSES } from '@/lib/wow-data'
