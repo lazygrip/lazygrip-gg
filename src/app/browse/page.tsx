@@ -26,6 +26,15 @@ function BrowseContent() {
     page: 1,
     limit: 20,
   }))
+
+  useEffect(() => {
+    setFilters({
+      sort: (searchParams.get('sort') as any) || 'recent',
+      content_type: (searchParams.get('content_type') as any) || undefined,
+      page: 1,
+      limit: 20,
+    })
+  }, [searchParams])
   const [search, setSearch] = useState('')
   const [showMobileFilters, setShowMobileFilters] = useState(false)
 
