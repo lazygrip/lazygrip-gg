@@ -7,6 +7,10 @@ export const metadata: Metadata = {
   title: 'LazyGrip.net — GRIP-EMS Sequences for WoW',
   description: 'Browse, share, and rate GRIP-EMS macro sequences for World of Warcraft. Every class, every spec, every content type.',
   keywords: 'GRIP-EMS, WoW macros, Guardian Druid, GSE alternative, World of Warcraft sequences',
+  icons: {
+    icon: '/icon.png',
+    apple: '/apple-icon.png',
+  },
   openGraph: {
     title: 'LazyGrip.net',
     description: 'Community GRIP-EMS sequences for World of Warcraft',
