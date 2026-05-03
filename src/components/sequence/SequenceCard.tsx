@@ -13,10 +13,15 @@ const CONTENT_LABELS: Record<string, string> = {
   solo: 'Solo',
 }
 
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim()
+}
+
 export default function SequenceCard({ sequence }: Props) {
   const classColor = getClassColor(sequence.class_id)
   const contentLabel = CONTENT_LABELS[sequence.content_type] ?? sequence.content_type
   const timeAgo = formatDistanceToNow(new Date(sequence.created_at), { addSuffix: true })
+  const plainDescription = sequence.description ? stripHtml(sequence.description) : null
 
   return (
     <Link href={`/sequence/${sequence.slug}`} style={{ textDecoration: 'none' }}>
@@ -89,7 +94,7 @@ export default function SequenceCard({ sequence }: Props) {
         </div>
 
         {/* Description */}
-        {sequence.description && (
+        {plainDescription && (
           <p style={{
             fontSize: 12,
             color: 'var(--text-secondary)',
@@ -100,7 +105,7 @@ export default function SequenceCard({ sequence }: Props) {
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
           }}>
-            {sequence.description}
+            {plainDescription}
           </p>
         )}
 
