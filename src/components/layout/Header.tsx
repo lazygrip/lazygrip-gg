@@ -103,7 +103,7 @@ export default function Header() {
           }}>
             <Shield size={15} color="white" strokeWidth={2.5} />
           </div>
-          LazyGrip<span style={{ color: 'var(--accent)' }}>.gg</span>
+          LazyGrip<span style={{ color: 'var(--accent)' }}>.net</span>
         </Link>
 
         {/* Nav */}
