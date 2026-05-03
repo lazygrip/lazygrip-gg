@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Search, SlidersHorizontal, X } from 'lucide-react'
 import SequenceCard from '@/components/sequence/SequenceCard'
 import { WOW_CLASSES, CONTENT_TYPES } from '@/lib/wow-data'
@@ -14,12 +15,17 @@ const SORT_OPTIONS = [
 ]
 
 export default function BrowsePage() {
+  const searchParams = useSearchParams()
+
   const [sequences, setSequences] = useState<Sequence[]>([])
   const [loading, setLoading] = useState(true)
   const [count, setCount] = useState(0)
-  const [filters, setFilters] = useState<SequenceFilters>({
-    sort: 'recent', page: 1, limit: 20,
-  })
+  const [filters, setFilters] = useState<SequenceFilters>(() => ({
+    sort: (searchParams.get('sort') as string) || 'recent',
+    content_type: searchParams.get('content_type') || undefined,
+    page: 1,
+    limit: 20,
+  }))
   const [search, setSearch] = useState('')
   const [showMobileFilters, setShowMobileFilters] = useState(false)
 
