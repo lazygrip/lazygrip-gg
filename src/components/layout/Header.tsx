@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
-import { Shield, Search, PlusCircle, LogOut } from 'lucide-react'
+import Image from 'next/image'
+import { Search, PlusCircle, LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState } from 'react'
 
@@ -92,17 +93,13 @@ export default function Header() {
           fontSize: 16,
           letterSpacing: '-0.02em',
         }}>
-          <div style={{
-            width: 28,
-            height: 28,
-            background: 'var(--accent)',
-            borderRadius: 7,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            <Shield size={15} color="white" strokeWidth={2.5} />
-          </div>
+          <Image
+            src="/icon.png"
+            alt="LazyGrip logo"
+            width={28}
+            height={28}
+            style={{ borderRadius: 7 }}
+          />
           LazyGrip<span style={{ color: 'var(--accent)' }}>.net</span>
         </Link>
 
