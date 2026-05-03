@@ -22,7 +22,7 @@ export default function BrowsePage() {
   const [count, setCount] = useState(0)
   const [filters, setFilters] = useState<SequenceFilters>(() => ({
     sort: (searchParams.get('sort') as string) || 'recent',
-    content_type: searchParams.get('content_type') || undefined,
+    content_type: (searchParams.get('content_type') as any) || undefined,
     page: 1,
     limit: 20,
   }))
