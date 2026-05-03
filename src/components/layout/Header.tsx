@@ -138,7 +138,7 @@ export default function Header() {
 
         {/* Right side */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Link href="/browse" style={{
+          <Link href="/browse" title="Search sequences" style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -170,7 +170,7 @@ export default function Header() {
               </Link>
 
               {/* Notification bell */}
-              <Link href="/notifications" style={{
+              <Link href="/notifications" title="Notifications" style={{
                 position: 'relative',
                 display: 'flex',
                 alignItems: 'center',
@@ -200,7 +200,7 @@ export default function Header() {
               </Link>
 
               {/* Avatar */}
-              <Link href="/profile" style={{
+              <Link href="/profile" title="Your profile" style={{
                 position: 'relative',
                 display: 'flex',
                 alignItems: 'center',
@@ -223,7 +223,7 @@ export default function Header() {
                 )}
               </Link>
 
-              <button onClick={signOut} style={{
+              <button onClick={signOut} title="Sign out" style={{
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',

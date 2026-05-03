@@ -14,16 +14,19 @@ export default function Footer() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 12,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 13 }}>
           <Shield size={14} color="var(--accent)" />
-          <span>LazyGrip.gg — Not affiliated with Blizzard Entertainment or the GRIP-EMS addon.</span>
+          <span>LazyGrip.net — Not affiliated with Blizzard Entertainment or the GRIP-EMS addon.</span>
         </div>
         <div style={{ display: 'flex', gap: 20, fontSize: 13 }}>
           {[
             { href: '/about', label: 'About' },
             { href: '/faq', label: 'FAQ' },
-            { href: 'https://discord.gg/wowlazymacros', label: 'Discord' },
+            { href: '/tos', label: 'Terms' },
+            { href: '/privacy', label: 'Privacy' },
           ].map(link => (
             <Link key={link.href} href={link.href} style={{
               color: 'var(--text-muted)',
