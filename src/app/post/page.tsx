@@ -6,6 +6,8 @@ import { WOW_CLASSES, CONTENT_TYPES, STEP_FUNCTIONS, slugify } from '@/lib/wow-d
 import { AlertCircle } from 'lucide-react'
 import TiptapEditor from '@/components/editor/TiptapEditor'
 
+const GRIP_VERSIONS = ['1.9.10', '2.0', '2.0.1']
+
 const EMPTY_FORM = {
   title: '',
   description: '',
@@ -14,7 +16,7 @@ const EMPTY_FORM = {
   content_type: 'mythic_plus',
   hero_talent: '',
   patch_version: '12.0.5',
-  grip_version: '1.9.10',
+  grip_version: '2.0.1',
   step_function: 'Sequential',
   grip_string: '',
   raw_steps_text: '',
@@ -75,7 +77,7 @@ function PostForm() {
         content_type: data.content_type ?? 'mythic_plus',
         hero_talent: data.hero_talent ?? '',
         patch_version: data.patch_version ?? '12.0.5',
-        grip_version: data.grip_version ?? '1.9.10',
+        grip_version: data.grip_version ?? '2.0.1',
         step_function: data.step_function ?? 'Sequential',
         grip_string: data.grip_string ?? '',
         raw_steps_text,
@@ -297,12 +299,12 @@ function PostForm() {
               />
             </Field>
 
-            <Field label="GRIP version" hint="Which version of GRIP-EMS was this built for?">
-              <input
-                value={form.grip_version}
-                onChange={e => setField('grip_version', e.target.value)}
-                placeholder="e.g. 1.9.10"
-              />
+            <Field label="GRIP version" hint="Which version of GRIP-EMS was this sequence built with?">
+              <select value={form.grip_version} onChange={e => setField('grip_version', e.target.value)}>
+                {GRIP_VERSIONS.map(v => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
             </Field>
           </Section>
 
