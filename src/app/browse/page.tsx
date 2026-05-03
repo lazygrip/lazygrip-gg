@@ -21,7 +21,7 @@ export default function BrowsePage() {
   const [loading, setLoading] = useState(true)
   const [count, setCount] = useState(0)
   const [filters, setFilters] = useState<SequenceFilters>(() => ({
-    sort: (searchParams.get('sort') as string) || 'recent',
+    sort: (searchParams.get('sort') as any) || 'recent',
     content_type: (searchParams.get('content_type') as any) || undefined,
     page: 1,
     limit: 20,
