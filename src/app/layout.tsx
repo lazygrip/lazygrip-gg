@@ -4,14 +4,14 @@ import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 
 export const metadata: Metadata = {
-  title: 'LazyGrip.gg — GRIP-EMS Sequences for WoW',
+  title: 'LazyGrip.net — GRIP-EMS Sequences for WoW',
   description: 'Browse, share, and rate GRIP-EMS macro sequences for World of Warcraft. Every class, every spec, every content type.',
   keywords: 'GRIP-EMS, WoW macros, Guardian Druid, GSE alternative, World of Warcraft sequences',
   openGraph: {
-    title: 'LazyGrip.gg',
+    title: 'LazyGrip.net',
     description: 'Community GRIP-EMS sequences for World of Warcraft',
-    url: 'https://lazygrip.gg',
-    siteName: 'LazyGrip.gg',
+    url: 'https://lazygrip.net',
+    siteName: 'LazyGrip.net',
   },
 }
 
