@@ -96,8 +96,8 @@ export default function Header() {
           <Image
             src="/icon.png"
             alt="LazyGrip logo"
-            width={28}
-            height={28}
+            width={45}
+            height={45}
             style={{ borderRadius: 7 }}
           />
           LazyGrip<span style={{ color: 'var(--accent)' }}>.net</span>
