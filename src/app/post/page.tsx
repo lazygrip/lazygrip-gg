@@ -39,6 +39,8 @@ function PostForm() {
   const [form, setForm] = useState(EMPTY_FORM)
 
   const selectedClass = WOW_CLASSES.find(c => c.id === Number(form.class_id))
+  const selectedSpec = selectedClass?.specs.find(s => s.name === form.spec_name)
+  const heroTalentOptions = selectedSpec?.heroTalents ?? []
 
   useEffect(() => {
     if (!editId) return
@@ -220,7 +222,11 @@ function PostForm() {
               <Field label="Class *">
                 <select
                   value={form.class_id}
-                  onChange={e => { setField('class_id', e.target.value); setField('spec_name', '') }}
+                  onChange={e => {
+                    setField('class_id', e.target.value)
+                    setField('spec_name', '')
+                    setField('hero_talent', '')
+                  }}
                   required
                 >
                   <option value="">Select class...</option>
@@ -233,7 +239,10 @@ function PostForm() {
               <Field label="Spec">
                 <select
                   value={form.spec_name}
-                  onChange={e => setField('spec_name', e.target.value)}
+                  onChange={e => {
+                    setField('spec_name', e.target.value)
+                    setField('hero_talent', '')
+                  }}
                   disabled={!selectedClass}
                 >
                   <option value="">Select spec...</option>
@@ -252,11 +261,18 @@ function PostForm() {
               </Field>
 
               <Field label="Hero talent">
-                <input
+                <select
                   value={form.hero_talent}
                   onChange={e => setField('hero_talent', e.target.value)}
-                  placeholder="e.g. Druid of the Claw"
-                />
+                  disabled={heroTalentOptions.length === 0}
+                >
+                  <option value="">
+                    {heroTalentOptions.length === 0 ? 'Select a spec first...' : 'Select hero talent...'}
+                  </option>
+                  {heroTalentOptions.map(ht => (
+                    <option key={ht} value={ht}>{ht}</option>
+                  ))}
+                </select>
               </Field>
 
               <Field label="Patch version">
@@ -331,7 +347,7 @@ function PostForm() {
               <textarea
                 value={form.performance_notes}
                 onChange={e => setField('performance_notes', e.target.value)}
-                placeholder="e.g. Ironfur 86–95% uptime, 14–17 Mangle CPM, 13–16k sustained DPS. Tested on training dummy and LFR..."
+                placeholder="e.g. Ironfur 86-95% uptime, 14-17 Mangle CPM, 13-16k sustained DPS. Tested on training dummy and LFR..."
                 rows={4}
                 style={{ resize: 'vertical' }}
               />

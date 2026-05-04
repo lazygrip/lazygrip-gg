@@ -9,6 +9,7 @@ export type WowSpec = {
   id: number
   name: string
   role: 'tank' | 'healer' | 'dps'
+  heroTalents: string[]
 }
 
 export type ContentType = 'raid' | 'mythic_plus' | 'pvp' | 'solo'
