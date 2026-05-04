@@ -7,6 +7,7 @@ import { AlertCircle } from 'lucide-react'
 import TiptapEditor from '@/components/editor/TiptapEditor'
 
 const GRIP_VERSIONS = ['1.9.10', '2.0', '2.0.1']
+const PATCH_VERSIONS = ['12.0', '12.0.5', '12.0.7']
 
 const EMPTY_FORM = {
   title: '',
@@ -276,12 +277,12 @@ function PostForm() {
               </Field>
 
               <Field label="Patch version">
-                <input
-                  value={form.patch_version}
-                  onChange={e => setField('patch_version', e.target.value)}
-                  placeholder="e.g. 12.0.5"
-                />
-              </Field>
+				<select value={form.patch_version} onChange={e => setField('patch_version', e.target.value)}>
+				 {PATCH_VERSIONS.map(v => (
+				<option key={v} value={v}>{v}</option>
+				))}
+				</select>
+			  </Field>
 
               <Field label="Step function">
                 <select value={form.step_function} onChange={e => setField('step_function', e.target.value)}>
