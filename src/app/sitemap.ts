@@ -1,0 +1,60 @@
+import { MetadataRoute } from 'next'
+import { createClient } from '@/lib/supabase/server'
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const supabase = createClient()
+
+  const { data: sequences } = await supabase
+    .from('sequences')
+    .select('slug, updated_at')
+    .eq('is_published', true)
+    .order('created_at', { ascending: false })
+
+  const staticPages: MetadataRoute.Sitemap = [
+    {
+      url: 'https://lazygrip.net',
+      lastModified: new Date(),
+      changeFrequency: 'daily',
+      priority: 1.0,
+    },
+    {
+      url: 'https://lazygrip.net/browse',
+      lastModified: new Date(),
+      changeFrequency: 'hourly',
+      priority: 0.9,
+    },
+    {
+      url: 'https://lazygrip.net/about',
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: 'https://lazygrip.net/faq',
+      lastModified: new Date(),
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: 'https://lazygrip.net/tos',
+      lastModified: new Date(),
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+    {
+      url: 'https://lazygrip.net/privacy',
+      lastModified: new Date(),
+      changeFrequency: 'yearly',
+      priority: 0.3,
+    },
+  ]
+
+  const sequencePages: MetadataRoute.Sitemap = (sequences ?? []).map(seq => ({
+    url: `https://lazygrip.net/sequence/${seq.slug}`,
+    lastModified: new Date(seq.updated_at),
+    changeFrequency: 'weekly' as const,
+    priority: 0.8,
+  }))
+
+  return [...staticPages, ...sequencePages]
+}
