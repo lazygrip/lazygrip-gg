@@ -1,96 +1,65 @@
 export default function PrivacyPage() {
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>
-      <h1 style={{
-        fontSize: 28,
-        fontWeight: 600,
-        letterSpacing: '-0.02em',
-        marginBottom: 8,
-        color: 'var(--text-primary)',
-      }}>
+      <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 8, color: 'var(--text-primary)' }}>
         Privacy Policy
       </h1>
-      <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 40 }}>
-        Last updated: May 3, 2026
-      </p>
+      <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 40 }}>Last updated: May 3, 2026</p>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 24, fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8 }}>
 
-        <Section title="Overview">
-          <p>LazyGrip.net is built on Supabase (database and authentication) and hosted on Vercel. This policy explains what data we collect, how we use it, and your rights regarding that data. We do not sell your personal information.</p>
-        </Section>
+        <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
+          <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Overview</h2>
+          <p>LazyGrip.net runs on Supabase for the database and authentication, and Vercel for hosting. This page covers what data we collect, what we do with it, and what rights you have. We do not sell your information.</p>
+        </div>
 
-        <Section title="What We Collect">
-          <p>When you create an account we collect your email address and the username you choose. We store content you post to the site including sequences, comments, and ratings. We also collect basic usage data such as page views and sequence view counts, which are used to improve the site.</p>
-          <p style={{ marginTop: 12 }}>We do not collect payment information. LazyGrip.net is free and has no paid features.</p>
-        </Section>
+        <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
+          <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>What We Collect</h2>
+          <p>When you create an account we collect your email address and the username you pick. We store whatever you post to the site, sequences, comments, and ratings. We also collect basic usage data like page views and sequence view counts to understand how the site is being used.</p>
+          <p style={{ marginTop: 12 }}>We do not collect payment information. The site is free and there is nothing to pay for.</p>
+        </div>
 
-        <Section title="How We Use Your Data">
-          <ul style={{ paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <li>To identify you on the site and display your username on content you post</li>
-            <li>To send you important account notifications such as password resets</li>
-            <li>To maintain and improve the site</li>
-            <li>To detect and prevent abuse</li>
-          </ul>
-          <p style={{ marginTop: 12 }}>We do not use your data for advertising and we do not share it with advertising networks.</p>
-        </Section>
+        <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
+          <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>How We Use It</h2>
+          <p>Your data is used to identify you on the site, show your username on content you post, send account notifications like password resets, keep the site running, and catch abuse. We do not use it for advertising and we do not share it with ad networks.</p>
+        </div>
 
-        <Section title="Third-Party Services">
-          <p>LazyGrip.net uses the following third-party services to operate:</p>
-          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {[
-              { name: 'Supabase', desc: 'Database and authentication. Your account data and posted content are stored here.' },
-              { name: 'Vercel', desc: 'Site hosting and deployment. Vercel may collect anonymized request logs.' },
-            ].map(s => (
-              <div key={s.name} style={{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: '0.5px solid var(--border)' }}>
-                <span style={{ fontWeight: 500, color: 'var(--text-primary)', minWidth: 100, flexShrink: 0 }}>{s.name}</span>
-                <span>{s.desc}</span>
-              </div>
-            ))}
-          </div>
-        </Section>
+        <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
+          <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Third-Party Services</h2>
+          <p>Supabase handles the database and authentication. Your account data and content live there. Vercel handles hosting and deployment and may collect anonymized request logs.</p>
+        </div>
 
-        <Section title="Cookies">
-          <p>LazyGrip.net uses cookies only for authentication — to keep you logged in between visits. We do not use advertising cookies or third-party tracking cookies.</p>
-        </Section>
+        <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
+          <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Cookies</h2>
+          <p>The only cookies we use are for keeping you logged in. No ad tracking, no third-party tracking cookies.</p>
+        </div>
 
-        <Section title="Your Rights">
-          <p>You can update your profile information at any time from your profile page. You can delete sequences and comments you have posted. To request full account deletion and removal of your personal data, email <a href="mailto:admin@lazygrip.net" style={{ color: 'var(--accent)', textDecoration: 'none' }}>admin@lazygrip.net</a> with your username. We will process deletion requests within 30 days.</p>
-        </Section>
+        <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
+          <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Your Rights</h2>
+          <p>You can update your profile from your profile page anytime. You can delete sequences and comments you have posted. If you want your account and personal data fully removed, email <a href="mailto:admin@lazygrip.net" style={{ color: 'var(--accent)', textDecoration: 'none' }}>admin@lazygrip.net</a> with your username and we will take care of it within 30 days.</p>
+        </div>
 
-        <Section title="Data Retention">
-          <p>We retain your account data and content for as long as your account is open. When your account is deleted, your personal information is removed. Some anonymized usage data may be retained for site analytics.</p>
-        </Section>
+        <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
+          <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Data Retention</h2>
+          <p>We keep your account data and content as long as your account is open. When your account is deleted your personal information goes with it. Some anonymized usage data may stick around for analytics.</p>
+        </div>
 
-        <Section title="Children">
-          <p>LazyGrip.net is not directed at children under 13. We do not knowingly collect personal information from children under 13. If you believe a child has provided us with personal information, contact us at admin@lazygrip.net and we will delete it.</p>
-        </Section>
+        <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
+          <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Children</h2>
+          <p>This site is not for anyone under 13 and we do not knowingly collect information from children under 13. If you think a child has submitted information to the site contact us at <a href="mailto:admin@lazygrip.net" style={{ color: 'var(--accent)', textDecoration: 'none' }}>admin@lazygrip.net</a> and we will remove it.</p>
+        </div>
 
-        <Section title="Changes">
-          <p>We may update this policy from time to time. We will update the date at the top of this page when changes are made. Continued use of the site after updates are posted constitutes your acceptance of the updated policy.</p>
-        </Section>
+        <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
+          <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Changes</h2>
+          <p>We can update this policy. The date at the top will reflect when it last changed. Continued use of the site after updates means you accept the updated policy.</p>
+        </div>
 
-        <Section title="Contact">
-          <p>Questions about this privacy policy can be sent to <a href="mailto:admin@lazygrip.net" style={{ color: 'var(--accent)', textDecoration: 'none' }}>admin@lazygrip.net</a>.</p>
-        </Section>
+        <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
+          <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Contact</h2>
+          <p>Questions go to <a href="mailto:admin@lazygrip.net" style={{ color: 'var(--accent)', textDecoration: 'none' }}>admin@lazygrip.net</a>.</p>
+        </div>
 
       </div>
-    </div>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{
-      background: 'var(--bg-primary)',
-      border: '0.5px solid var(--border)',
-      borderRadius: 'var(--radius-lg)',
-      padding: '20px 24px',
-    }}>
-      <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>
-        {title}
-      </h2>
-      {children}
     </div>
   )
 }
