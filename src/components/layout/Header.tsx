@@ -1,15 +1,18 @@
 'use client'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Search, PlusCircle, LogOut } from 'lucide-react'
+import { Search, PlusCircle, LogOut, LayoutList, Bookmark, Settings } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 export default function Header() {
   const [user, setUser] = useState<any>(null)
   const [username, setUsername] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [avatarColor, setAvatarColor] = useState<string | null>(null)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -28,21 +31,34 @@ export default function Header() {
       } else {
         setUsername(null)
         setAvatarUrl(null)
+        setAvatarColor(null)
         setUnreadCount(0)
       }
     })
     return () => subscription.unsubscribe()
   }, [])
 
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    if (dropdownOpen) document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [dropdownOpen])
+
   async function loadProfile(userId: string) {
     const { data } = await supabase
       .from('profiles')
-      .select('username, avatar_url')
+      .select('username, avatar_url, avatar_color')
       .eq('id', userId)
       .single()
     if (data) {
       setUsername(data.username)
       setAvatarUrl(data.avatar_url ?? null)
+      setAvatarColor(data.avatar_color ?? null)
     }
   }
 
@@ -56,11 +72,32 @@ export default function Header() {
   }
 
   const signOut = async () => {
+    setDropdownOpen(false)
     await supabase.auth.signOut()
     window.location.href = '/'
   }
 
   const initial = username?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? '?'
+  const displayColor = avatarColor ?? '#1D9E75'
+
+  const avatarStyle: React.CSSProperties = {
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 32,
+    height: 32,
+    borderRadius: '50%',
+    background: avatarUrl ? 'transparent' : displayColor,
+    color: 'white',
+    fontSize: 13,
+    fontWeight: 600,
+    overflow: 'hidden',
+    flexShrink: 0,
+    cursor: 'pointer',
+    border: dropdownOpen ? '2px solid var(--accent)' : '2px solid transparent',
+    transition: 'border-color 0.15s',
+  }
 
   return (
     <header style={{
@@ -196,44 +233,104 @@ export default function Header() {
                 )}
               </Link>
 
-              {/* Avatar */}
-              <Link href="/profile" title="Your profile" style={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 32,
-                height: 32,
-                borderRadius: '50%',
-                background: avatarUrl ? 'transparent' : 'var(--accent-subtle)',
-                color: 'var(--accent-text)',
-                textDecoration: 'none',
-                fontSize: 13,
-                fontWeight: 600,
-                overflow: 'hidden',
-                flexShrink: 0,
-              }}>
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt={username ?? 'avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  initial
-                )}
-              </Link>
+              {/* Avatar + dropdown */}
+              <div ref={dropdownRef} style={{ position: 'relative' }}>
+                <div
+                  style={avatarStyle}
+                  onClick={() => setDropdownOpen(prev => !prev)}
+                  title="Your profile"
+                >
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt={username ?? 'avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    initial
+                  )}
+                </div>
 
-              <button onClick={signOut} title="Sign out" style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 32,
-                height: 32,
-                borderRadius: 'var(--radius-sm)',
-                color: 'var(--text-muted)',
-              }}>
-                <LogOut size={15} />
-              </button>
+                {dropdownOpen && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    right: 0,
+                    width: 220,
+                    background: 'var(--bg-primary)',
+                    border: '0.5px solid var(--border)',
+                    borderRadius: 'var(--radius-lg)',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+                    overflow: 'hidden',
+                    zIndex: 200,
+                  }}>
+                    {/* User identity row */}
+                    <div style={{
+                      padding: '14px 16px 12px',
+                      borderBottom: '0.5px solid var(--border)',
+                    }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>
+                        {username ?? user?.email}
+                      </div>
+                      {username && (
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {user?.email}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Nav items */}
+                    <div style={{ padding: '6px 0' }}>
+                      <DropdownLink
+                        href="/profile"
+                        icon={<LayoutList size={14} />}
+                        label="My Sequences"
+                        onClick={() => setDropdownOpen(false)}
+                      />
+                      <DropdownLink
+                        href="/profile?tab=saved"
+                        icon={<Bookmark size={14} />}
+                        label="Saved"
+                        onClick={() => setDropdownOpen(false)}
+                      />
+                      <DropdownLink
+                        href="/profile?tab=settings"
+                        icon={<Settings size={14} />}
+                        label="Settings"
+                        onClick={() => setDropdownOpen(false)}
+                      />
+                    </div>
+
+                    {/* Sign out */}
+                    <div style={{ borderTop: '0.5px solid var(--border)', padding: '6px 0' }}>
+                      <button
+                        onClick={signOut}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: '8px 16px',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: 13,
+                          color: 'var(--text-secondary)',
+                          fontFamily: 'var(--font-sans)',
+                          textAlign: 'left',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = 'var(--bg-tertiary)'
+                          e.currentTarget.style.color = '#c0392b'
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = 'none'
+                          e.currentTarget.style.color = 'var(--text-secondary)'
+                        }}
+                      >
+                        <LogOut size={14} />
+                        Sign out
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </>
           ) : (
             <>
@@ -261,5 +358,40 @@ export default function Header() {
         </div>
       </div>
     </header>
+  )
+}
+
+function DropdownLink({ href, icon, label, onClick }: {
+  href: string
+  icon: React.ReactNode
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '8px 16px',
+        fontSize: 13,
+        color: 'var(--text-secondary)',
+        textDecoration: 'none',
+        transition: 'background 0.1s, color 0.1s',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.background = 'var(--bg-tertiary)'
+        e.currentTarget.style.color = 'var(--text-primary)'
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.background = 'transparent'
+        e.currentTarget.style.color = 'var(--text-secondary)'
+      }}
+    >
+      {icon}
+      {label}
+    </Link>
   )
 }
