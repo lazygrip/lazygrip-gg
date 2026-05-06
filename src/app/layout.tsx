@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
+import { cookies } from 'next/headers'
 import './globals.css'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import { ThemeProvider } from '@/components/ThemeProvider'
 
 export const metadata: Metadata = {
   title: {
@@ -43,19 +45,25 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const cookieStore = cookies()
+  const themeCookie = cookieStore.get('theme')
+  const initialTheme = themeCookie?.value === 'dark' ? 'dark' : 'light'
+
   return (
-    <html lang="en">
+    <html lang="en" data-theme={initialTheme}>
       <body>
-        <Header />
-        <main style={{ minHeight: 'calc(100vh - 56px - 60px)' }}>
-          {children}
-        </main>
-        <Footer />
+        <ThemeProvider initialTheme={initialTheme}>
+          <Header />
+          <main style={{ minHeight: 'calc(100vh - 56px - 60px)' }}>
+            {children}
+          </main>
+          <Footer />
+        </ThemeProvider>
       </body>
     </html>
   )

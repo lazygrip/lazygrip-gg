@@ -1,9 +1,10 @@
 'use client'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Search, PlusCircle, LogOut, LayoutList, Bookmark, Settings } from 'lucide-react'
+import { Search, PlusCircle, LogOut, LayoutList, Bookmark, Settings, Sun, Moon } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState, useRef } from 'react'
+import { useTheme } from '@/components/ThemeProvider'
 
 export default function Header() {
   const [user, setUser] = useState<any>(null)
@@ -14,6 +15,7 @@ export default function Header() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
+  const { theme, toggle } = useTheme()
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -38,7 +40,6 @@ export default function Header() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Close dropdown on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -80,25 +81,6 @@ export default function Header() {
   const initial = username?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? '?'
   const displayColor = avatarColor ?? '#1D9E75'
 
-  const avatarStyle: React.CSSProperties = {
-    position: 'relative',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 32,
-    height: 32,
-    borderRadius: '50%',
-    background: avatarUrl ? 'transparent' : displayColor,
-    color: 'white',
-    fontSize: 13,
-    fontWeight: 600,
-    overflow: 'hidden',
-    flexShrink: 0,
-    cursor: 'pointer',
-    border: dropdownOpen ? '2px solid var(--accent)' : '2px solid transparent',
-    transition: 'border-color 0.15s',
-  }
-
   return (
     <header style={{
       background: 'var(--bg-primary)',
@@ -130,13 +112,7 @@ export default function Header() {
           fontSize: 16,
           letterSpacing: '-0.02em',
         }}>
-          <Image
-            src="/icon.png"
-            alt="LazyGrip logo"
-            width={64}
-            height={64}
-            style={{ borderRadius: 7 }}
-          />
+          <Image src="/icon.png" alt="LazyGrip logo" width={64} height={64} style={{ borderRadius: 7 }} />
           LazyGrip<span style={{ color: 'var(--accent)' }}>.net</span>
         </Link>
 
@@ -173,31 +149,34 @@ export default function Header() {
         {/* Right side */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Link href="/browse" title="Search sequences" style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 32,
-            height: 32,
-            borderRadius: 'var(--radius-sm)',
-            color: 'var(--text-secondary)',
-            textDecoration: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 32, height: 32, borderRadius: 'var(--radius-sm)',
+            color: 'var(--text-secondary)', textDecoration: 'none',
           }}>
             <Search size={16} />
           </Link>
 
+          {/* Theme toggle */}
+          <button
+            onClick={toggle}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 32, height: 32, borderRadius: 'var(--radius-sm)',
+              color: 'var(--text-muted)',
+            }}
+          >
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+
           {user ? (
             <>
               <Link href="/post" style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                background: 'var(--accent)',
-                color: 'white',
-                textDecoration: 'none',
-                padding: '6px 12px',
-                borderRadius: 'var(--radius-md)',
-                fontSize: 13,
-                fontWeight: 500,
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: 'var(--accent)', color: 'white',
+                textDecoration: 'none', padding: '6px 12px',
+                borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 500,
               }}>
                 <PlusCircle size={14} />
                 Post Sequence
@@ -205,13 +184,8 @@ export default function Header() {
 
               {/* Notification bell */}
               <Link href="/notifications" title="Notifications" style={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 32,
-                height: 32,
-                borderRadius: 'var(--radius-sm)',
+                position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 32, height: 32, borderRadius: 'var(--radius-sm)',
                 color: unreadCount > 0 ? 'var(--accent)' : 'var(--text-muted)',
                 textDecoration: 'none',
               }}>
@@ -221,13 +195,8 @@ export default function Header() {
                 </svg>
                 {unreadCount > 0 && (
                   <span style={{
-                    position: 'absolute',
-                    top: 4,
-                    right: 4,
-                    width: 8,
-                    height: 8,
-                    background: '#c0392b',
-                    borderRadius: '50%',
+                    position: 'absolute', top: 4, right: 4, width: 8, height: 8,
+                    background: '#c0392b', borderRadius: '50%',
                     border: '1.5px solid var(--bg-primary)',
                   }} />
                 )}
@@ -236,35 +205,36 @@ export default function Header() {
               {/* Avatar + dropdown */}
               <div ref={dropdownRef} style={{ position: 'relative' }}>
                 <div
-                  style={avatarStyle}
                   onClick={() => setDropdownOpen(prev => !prev)}
                   title="Your profile"
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 32, height: 32, borderRadius: '50%',
+                    background: avatarUrl ? 'transparent' : displayColor,
+                    color: 'white', fontSize: 13, fontWeight: 600,
+                    overflow: 'hidden', flexShrink: 0, cursor: 'pointer',
+                    border: dropdownOpen ? '2px solid var(--accent)' : '2px solid transparent',
+                    transition: 'border-color 0.15s',
+                  }}
                 >
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt={username ?? 'avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    initial
-                  )}
+                  {avatarUrl
+                    ? <img src={avatarUrl} alt={username ?? 'avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : initial
+                  }
                 </div>
 
                 {dropdownOpen && (
                   <div style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 8px)',
-                    right: 0,
+                    position: 'absolute', top: 'calc(100% + 8px)', right: 0,
                     width: 220,
                     background: 'var(--bg-primary)',
                     border: '0.5px solid var(--border)',
                     borderRadius: 'var(--radius-lg)',
                     boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
-                    overflow: 'hidden',
-                    zIndex: 200,
+                    overflow: 'hidden', zIndex: 200,
                   }}>
-                    {/* User identity row */}
-                    <div style={{
-                      padding: '14px 16px 12px',
-                      borderBottom: '0.5px solid var(--border)',
-                    }}>
+                    {/* Identity */}
+                    <div style={{ padding: '14px 16px 12px', borderBottom: '0.5px solid var(--border)' }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>
                         {username ?? user?.email}
                       </div>
@@ -277,24 +247,9 @@ export default function Header() {
 
                     {/* Nav items */}
                     <div style={{ padding: '6px 0' }}>
-                      <DropdownLink
-                        href="/profile?tab=posted"
-                        icon={<LayoutList size={14} />}
-                        label="My Sequences"
-                        onClick={() => setDropdownOpen(false)}
-                      />
-                      <DropdownLink
-                        href="/profile?tab=saved"
-                        icon={<Bookmark size={14} />}
-                        label="Saved"
-                        onClick={() => setDropdownOpen(false)}
-                      />
-                      <DropdownLink
-                        href="/profile?tab=settings"
-                        icon={<Settings size={14} />}
-                        label="Settings"
-                        onClick={() => setDropdownOpen(false)}
-                      />
+                      <DropdownLink href="/profile?tab=posted" icon={<LayoutList size={14} />} label="My Sequences" onClick={() => setDropdownOpen(false)} />
+                      <DropdownLink href="/profile?tab=saved" icon={<Bookmark size={14} />} label="Saved" onClick={() => setDropdownOpen(false)} />
+                      <DropdownLink href="/profile?tab=settings" icon={<Settings size={14} />} label="Settings" onClick={() => setDropdownOpen(false)} />
                     </div>
 
                     {/* Sign out */}
@@ -302,18 +257,10 @@ export default function Header() {
                       <button
                         onClick={signOut}
                         style={{
-                          width: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 10,
-                          padding: '8px 16px',
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          fontSize: 13,
-                          color: 'var(--text-secondary)',
-                          fontFamily: 'var(--font-sans)',
-                          textAlign: 'left',
+                          width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '8px 16px', background: 'none', border: 'none',
+                          cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)',
+                          fontFamily: 'var(--font-sans)', textAlign: 'left',
                         }}
                         onMouseEnter={e => {
                           e.currentTarget.style.background = 'var(--bg-tertiary)'
@@ -335,20 +282,15 @@ export default function Header() {
           ) : (
             <>
               <Link href="/auth/login" style={{
-                fontSize: 13,
-                color: 'var(--text-secondary)',
-                textDecoration: 'none',
-                padding: '6px 12px',
+                fontSize: 13, color: 'var(--text-secondary)',
+                textDecoration: 'none', padding: '6px 12px',
               }}>
                 Sign in
               </Link>
               <Link href="/auth/signup" style={{
-                fontSize: 13,
-                fontWeight: 500,
-                background: 'var(--accent)',
-                color: 'white',
-                textDecoration: 'none',
-                padding: '6px 14px',
+                fontSize: 13, fontWeight: 500,
+                background: 'var(--accent)', color: 'white',
+                textDecoration: 'none', padding: '6px 14px',
                 borderRadius: 'var(--radius-md)',
               }}>
                 Sign up
@@ -372,13 +314,9 @@ function DropdownLink({ href, icon, label, onClick }: {
       href={href}
       onClick={onClick}
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        padding: '8px 16px',
-        fontSize: 13,
-        color: 'var(--text-secondary)',
-        textDecoration: 'none',
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '8px 16px', fontSize: 13,
+        color: 'var(--text-secondary)', textDecoration: 'none',
         transition: 'background 0.1s, color 0.1s',
       }}
       onMouseEnter={e => {
