@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
@@ -19,6 +19,14 @@ const AVATAR_COLORS = [
 ]
 
 export default function ProfilePage() {
+  return (
+    <Suspense fallback={null}>
+      <ProfilePageInner />
+    </Suspense>
+  )
+}
+
+function ProfilePageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
