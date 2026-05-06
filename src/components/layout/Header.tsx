@@ -278,7 +278,7 @@ export default function Header() {
                     {/* Nav items */}
                     <div style={{ padding: '6px 0' }}>
                       <DropdownLink
-                        href="/profile"
+                        href="/profile?tab=posted"
                         icon={<LayoutList size={14} />}
                         label="My Sequences"
                         onClick={() => setDropdownOpen(false)}

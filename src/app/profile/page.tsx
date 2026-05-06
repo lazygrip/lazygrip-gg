@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { formatDistanceToNow } from 'date-fns'
 import Link from 'next/link'
-import { Upload, Check } from 'lucide-react'
+import { Upload, Check, Save } from 'lucide-react'
 
 const AVATAR_COLORS = [
   { bg: '#1D9E75', label: 'Emerald' },
@@ -44,10 +44,21 @@ function ProfilePageInner() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarSaved, setAvatarSaved] = useState(false)
 
-  // Read ?tab= from URL on mount
+  // Settings form state
+  const [username, setUsername] = useState('')
+  const [displayName, setDisplayName] = useState('')
+  const [bio, setBio] = useState('')
+  const [battletag, setBattletag] = useState('')
+  const [settingsSaving, setSettingsSaving] = useState(false)
+  const [settingsSaved, setSettingsSaved] = useState(false)
+  const [settingsError, setSettingsError] = useState<string | null>(null)
+
+  // Read ?tab= from URL — resets tab on every navigation including from dropdown
   useEffect(() => {
     const tab = searchParams.get('tab')
-    if (tab === 'saved' || tab === 'settings') setActiveTab(tab)
+    if (tab === 'saved') setActiveTab('saved')
+    else if (tab === 'settings') setActiveTab('settings')
+    else setActiveTab('posted')
   }, [searchParams])
 
   useEffect(() => {
@@ -66,6 +77,10 @@ function ProfilePageInner() {
         setProfile(prof)
         setAvatarUrl(prof.avatar_url ?? null)
         setSelectedColor(prof.avatar_color ?? AVATAR_COLORS[0].bg)
+        setUsername(prof.username ?? '')
+        setDisplayName(prof.display_name ?? '')
+        setBio(prof.bio ?? '')
+        setBattletag(prof.battletag ?? '')
       }
 
       const { data: posted } = await supabase
@@ -125,6 +140,45 @@ function ProfilePageInner() {
     setUploadingAvatar(false)
   }
 
+  async function saveProfileSettings() {
+    if (!user) return
+    setSettingsSaving(true)
+    setSettingsError(null)
+
+    if (username !== profile?.username) {
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', username.trim())
+        .neq('id', user.id)
+        .single()
+      if (existing) {
+        setSettingsError('That username is already taken.')
+        setSettingsSaving(false)
+        return
+      }
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        username: username.trim(),
+        display_name: displayName.trim(),
+        bio: bio.trim(),
+        battletag: battletag.trim(),
+      })
+      .eq('id', user.id)
+
+    if (error) {
+      setSettingsError('Save failed. Please try again.')
+    } else {
+      setProfile((p: any) => ({ ...p, username: username.trim(), display_name: displayName.trim(), bio: bio.trim(), battletag: battletag.trim() }))
+      setSettingsSaved(true)
+      setTimeout(() => setSettingsSaved(false), 2500)
+    }
+    setSettingsSaving(false)
+  }
+
   const initial = profile?.username?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? '?'
   const displayColor = selectedColor ?? AVATAR_COLORS[0].bg
 
@@ -148,7 +202,6 @@ function ProfilePageInner() {
         gap: 20,
         alignItems: 'center',
       }}>
-        {/* Avatar */}
         <div style={{
           width: 64,
           height: 64,
@@ -169,12 +222,15 @@ function ProfilePageInner() {
             : initial
           }
         </div>
-
-        {/* Name + stats */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <h1 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 4 }}>
             {profile?.username ?? user?.email}
           </h1>
+          {profile?.bio && (
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {profile.bio}
+            </p>
+          )}
           <div style={{ display: 'flex', gap: 16 }}>
             <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
               <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{postedSequences.length}</span> sequence{postedSequences.length !== 1 ? 's' : ''} posted
@@ -222,6 +278,7 @@ function ProfilePageInner() {
       {/* Tab content */}
       {activeTab === 'settings' ? (
         <SettingsTab
+          user={user}
           avatarUrl={avatarUrl}
           selectedColor={selectedColor}
           displayColor={displayColor}
@@ -231,6 +288,18 @@ function ProfilePageInner() {
           fileInputRef={fileInputRef}
           onUpload={handleAvatarUpload}
           onColorSelect={saveAvatarColor}
+          username={username}
+          setUsername={setUsername}
+          displayName={displayName}
+          setDisplayName={setDisplayName}
+          bio={bio}
+          setBio={setBio}
+          battletag={battletag}
+          setBattletag={setBattletag}
+          onSave={saveProfileSettings}
+          saving={settingsSaving}
+          saved={settingsSaved}
+          error={settingsError}
         />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -275,9 +344,13 @@ function ProfilePageInner() {
 }
 
 function SettingsTab({
-  avatarUrl, selectedColor, displayColor, initial,
+  user, avatarUrl, selectedColor, displayColor, initial,
   uploadingAvatar, avatarSaved, fileInputRef, onUpload, onColorSelect,
+  username, setUsername, displayName, setDisplayName,
+  bio, setBio, battletag, setBattletag,
+  onSave, saving, saved, error,
 }: {
+  user: any
   avatarUrl: string | null
   selectedColor: string | null
   displayColor: string
@@ -287,9 +360,130 @@ function SettingsTab({
   fileInputRef: React.RefObject<HTMLInputElement>
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onColorSelect: (color: string) => void
+  username: string
+  setUsername: (v: string) => void
+  displayName: string
+  setDisplayName: (v: string) => void
+  bio: string
+  setBio: (v: string) => void
+  battletag: string
+  setBattletag: (v: string) => void
+  onSave: () => void
+  saving: boolean
+  saved: boolean
+  error: string | null
 }) {
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '8px 12px',
+    background: 'var(--bg-secondary)',
+    border: '0.5px solid var(--border-strong)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--text-primary)',
+    fontSize: 13,
+    fontFamily: 'var(--font-sans)',
+    outline: 'none',
+    boxSizing: 'border-box',
+  }
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: 12,
+    fontWeight: 500,
+    color: 'var(--text-secondary)',
+    marginBottom: 6,
+    display: 'block',
+  }
+
+  const hintStyle: React.CSSProperties = {
+    fontSize: 11,
+    color: 'var(--text-muted)',
+    marginTop: 4,
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+      {/* Profile info */}
+      <div style={{
+        background: 'var(--bg-primary)',
+        border: '0.5px solid var(--border)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '24px',
+      }}>
+        <h2 style={{ fontSize: 14, fontWeight: 600, marginBottom: 20 }}>Profile</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          <div>
+            <label style={labelStyle}>Username</label>
+            <input
+              style={inputStyle}
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              placeholder="your username"
+              maxLength={30}
+            />
+            <p style={hintStyle}>Your unique handle on LazyGrip. Shown on all your sequences.</p>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Display name</label>
+            <input
+              style={inputStyle}
+              value={displayName}
+              onChange={e => setDisplayName(e.target.value)}
+              placeholder="Your Name"
+              maxLength={50}
+            />
+            <p style={hintStyle}>Optional longer name shown on your profile page.</p>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Bio</label>
+            <textarea
+              style={{ ...inputStyle, resize: 'vertical', minHeight: 80, lineHeight: 1.5 } as React.CSSProperties}
+              value={bio}
+              onChange={e => setBio(e.target.value)}
+              placeholder="Tell the community a bit about yourself..."
+              maxLength={300}
+            />
+            <p style={hintStyle}>{bio.length}/300</p>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Battle tag</label>
+            <input
+              style={inputStyle}
+              value={battletag}
+              onChange={e => setBattletag(e.target.value)}
+              placeholder="YourName#1234"
+              maxLength={20}
+            />
+            <p style={hintStyle}>Optional. Shown on your public profile.</p>
+          </div>
+
+        </div>
+      </div>
+
+      {/* Account */}
+      <div style={{
+        background: 'var(--bg-primary)',
+        border: '0.5px solid var(--border)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '24px',
+      }}>
+        <h2 style={{ fontSize: 14, fontWeight: 600, marginBottom: 20 }}>Account</h2>
+        <div>
+          <label style={labelStyle}>Email</label>
+          <input
+            style={{ ...inputStyle, opacity: 0.6, cursor: 'not-allowed' }}
+            value={user?.email ?? ''}
+            readOnly
+          />
+          <p style={hintStyle}>Email cannot be changed here.</p>
+        </div>
+      </div>
+
+      {/* Avatar */}
       <div style={{
         background: 'var(--bg-primary)',
         border: '0.5px solid var(--border)',
@@ -297,34 +491,22 @@ function SettingsTab({
         padding: '24px',
       }}>
         <h2 style={{ fontSize: 14, fontWeight: 600, marginBottom: 20 }}>Avatar</h2>
-
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 24 }}>
-          {/* Preview */}
           <div style={{
-            width: 72,
-            height: 72,
-            borderRadius: '50%',
+            width: 72, height: 72, borderRadius: '50%',
             background: avatarUrl ? 'transparent' : displayColor,
-            overflow: 'hidden',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 28,
-            fontWeight: 700,
-            color: 'white',
-            border: '2px solid var(--border)',
-            flexShrink: 0,
+            overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 28, fontWeight: 700, color: 'white',
+            border: '2px solid var(--border)', flexShrink: 0,
           }}>
             {avatarUrl
               ? <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : initial
             }
           </div>
-
           <div style={{ flex: 1 }}>
-            {/* Upload */}
             <div style={{ marginBottom: 16 }}>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>Photo</p>
+              <p style={labelStyle}>Photo</p>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingAvatar}
@@ -342,18 +524,10 @@ function SettingsTab({
                 <Upload size={12} />
                 {uploadingAvatar ? 'Uploading...' : 'Upload photo'}
               </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={onUpload}
-              />
+              <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onUpload} />
             </div>
-
-            {/* Color picker */}
             <div>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>Color</p>
+              <p style={labelStyle}>Color</p>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {AVATAR_COLORS.map(opt => (
                   <button
@@ -361,29 +535,17 @@ function SettingsTab({
                     onClick={() => onColorSelect(opt.bg)}
                     title={opt.label}
                     style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: '50%',
-                      background: opt.bg,
-                      border: selectedColor === opt.bg && !avatarUrl
-                        ? '2.5px solid var(--text-primary)'
-                        : '2px solid transparent',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: 0,
-                      outline: 'none',
+                      width: 28, height: 28, borderRadius: '50%', background: opt.bg,
+                      border: selectedColor === opt.bg && !avatarUrl ? '2.5px solid var(--text-primary)' : '2px solid transparent',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      padding: 0, outline: 'none',
                     }}
                   >
-                    {selectedColor === opt.bg && !avatarUrl && (
-                      <Check size={12} color="white" strokeWidth={3} />
-                    )}
+                    {selectedColor === opt.bg && !avatarUrl && <Check size={12} color="white" strokeWidth={3} />}
                   </button>
                 ))}
               </div>
             </div>
-
             {avatarSaved && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--accent)', marginTop: 10 }}>
                 <Check size={12} /> Saved
@@ -392,6 +554,34 @@ function SettingsTab({
           </div>
         </div>
       </div>
+
+      {/* Save button */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button
+          onClick={onSave}
+          disabled={saving}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '8px 18px',
+            background: 'var(--accent)', color: 'white',
+            border: 'none', borderRadius: 'var(--radius-md)',
+            fontSize: 13, fontWeight: 500,
+            cursor: saving ? 'not-allowed' : 'pointer',
+            opacity: saving ? 0.7 : 1,
+            fontFamily: 'var(--font-sans)',
+          }}
+        >
+          <Save size={13} />
+          {saving ? 'Saving...' : 'Save changes'}
+        </button>
+        {saved && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--accent)' }}>
+            <Check size={13} /> Saved
+          </span>
+        )}
+        {error && <span style={{ fontSize: 13, color: '#c0392b' }}>{error}</span>}
+      </div>
+
     </div>
   )
 }
