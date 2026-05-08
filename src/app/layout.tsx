@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import './globals.css'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import OutageBanner from '@/components/layout/OutageBanner'
 import { ThemeProvider } from '@/components/ThemeProvider'
 
 export const metadata: Metadata = {
@@ -58,6 +59,7 @@ export default async function RootLayout({
     <html lang="en" data-theme={initialTheme}>
       <body>
         <ThemeProvider initialTheme={initialTheme}>
+          <OutageBanner />
           <Header />
           <main style={{ minHeight: 'calc(100vh - 56px - 60px)' }}>
             {children}
