@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
+import type { ResponseCookie } from 'next/dist/compiled/@edge-runtime/cookies'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,14 +22,14 @@ export async function GET(request: Request) {
     {
       cookies: {
         getAll() {
-          return request.headers.get('cookie')
-            ? request.headers.get('cookie')!.split('; ').map(c => {
-                const [name, ...rest] = c.split('=')
-                return { name, value: rest.join('=') }
-              })
-            : []
+          const cookie = request.headers.get('cookie')
+          if (!cookie) return []
+          return cookie.split('; ').map(c => {
+            const [name, ...rest] = c.split('=')
+            return { name, value: rest.join('=') }
+          })
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: Array<{ name: string; value: string; options?: ResponseCookie }>) {
           cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options)
           })
