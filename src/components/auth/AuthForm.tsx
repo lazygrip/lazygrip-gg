@@ -46,10 +46,20 @@ export default function AuthPage({ mode = 'login' }: { mode?: Mode }) {
   }
 
   async function handleDiscord() {
-    await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'discord',
-      options: { redirectTo: `${window.location.origin}/auth/callback` }
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        skipBrowserRedirect: true,
+      },
     })
+
+    if (error || !data.url) {
+      setError('Failed to initiate Discord login.')
+      return
+    }
+
+    window.location.href = data.url
   }
 
   return (
