@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Shield, AlertCircle } from 'lucide-react'
@@ -9,7 +9,8 @@ type Mode = 'login' | 'signup'
 
 export default function AuthPage({ mode = 'login' }: { mode?: Mode }) {
   const router = useRouter()
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
   const [isLogin, setIsLogin] = useState(mode === 'login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
