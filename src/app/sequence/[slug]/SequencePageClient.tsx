@@ -77,14 +77,15 @@ export default function SequencePageClient() {
 
   async function submitComment() {
     if (!user || !sequence || !commentText.trim()) return
-    const { data } = await supabase
-      .from('comments')
-      .insert({ sequence_id: sequence.id, author_id: user.id, body: commentText.trim() })
-      .select('*, author:profiles(*)')
-      .single()
+    const { data, error } = await supabase
+    .from('comments')
+    .insert({ sequence_id: sequence.id, author_id: user.id, body: commentText.trim() })
+    .select('*, author:profiles(*)')
+    .single()
+    if (error) console.error('Comment insert error:', error)
     if (data) setComments(c => [...c, data])
     setCommentText('')
-  }
+}
 
   async function toggleSave() {
     if (!user || !sequence) return
