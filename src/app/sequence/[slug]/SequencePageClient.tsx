@@ -1,12 +1,14 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Copy, Check, Star, Bookmark, ExternalLink, ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react'
+import { Copy, Check, Bookmark, ExternalLink, ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Sequence, Comment } from '@/types'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { formatDistanceToNow } from 'date-fns'
 import RenderedContent from '@/components/editor/RenderedContent'
+
+const SITE_OWNER_ID = 'c2374192-e541-4636-9baf-84fc192cff52'
 
 export default function SequencePageClient() {
   const params = useParams()
@@ -78,14 +80,26 @@ export default function SequencePageClient() {
   async function submitComment() {
     if (!user || !sequence || !commentText.trim()) return
     const { data, error } = await supabase
-    .from('comments')
-    .insert({ sequence_id: sequence.id, author_id: user.id, body: commentText.trim() })
-    .select('*, author:profiles(*)')
-    .single()
+      .from('comments')
+      .insert({ sequence_id: sequence.id, author_id: user.id, body: commentText.trim() })
+      .select('*, author:profiles(*)')
+      .single()
     if (error) console.error('Comment insert error:', error)
     if (data) setComments(c => [...c, data])
     setCommentText('')
-}
+  }
+
+  async function deleteComment(commentId: string) {
+    const { error } = await supabase
+      .from('comments')
+      .update({ is_deleted: true })
+      .eq('id', commentId)
+    if (error) {
+      console.error('Comment delete error:', error)
+      return
+    }
+    setComments(c => c.filter(comment => comment.id !== commentId))
+  }
 
   async function toggleSave() {
     if (!user || !sequence) return
@@ -116,6 +130,7 @@ export default function SequencePageClient() {
   }
 
   const isAuthor = user && sequence && user.id === sequence.author_id
+  const isOwner = user?.id === SITE_OWNER_ID
 
   if (loading) return (
     <div style={{ maxWidth: 900, margin: '40px auto', padding: '0 24px' }}>
@@ -493,6 +508,23 @@ export default function SequencePageClient() {
                         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                           {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                         </span>
+                        {(user?.id === comment.author_id || isOwner) && (
+                          <button
+                            onClick={() => deleteComment(comment.id)}
+                            title="Delete comment"
+                            style={{
+                              marginLeft: 'auto',
+                              background: 'none', border: 'none',
+                              cursor: 'pointer', color: 'var(--text-muted)',
+                              padding: '2px 4px', borderRadius: 4,
+                              display: 'flex', alignItems: 'center',
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.color = '#c0392b')}
+                            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
                       </div>
                       <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                         {comment.body}
