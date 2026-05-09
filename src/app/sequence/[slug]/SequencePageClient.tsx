@@ -98,7 +98,7 @@ export default function SequencePageClient() {
       console.error('Comment delete error:', error)
       return
     }
-    setComments(c => c.filter(comment => comment.id !== commentId))
+    setComments(c => c.map(comment => comment.id !== commentId ? comment : { ...comment, is_deleted: true, body: '[deleted by user]' }))
   }
 
   async function toggleSave() {
