@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Copy, Check, Star, Bookmark, ExternalLink, ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -25,7 +25,8 @@ export default function SequencePageClient() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
@@ -269,7 +270,6 @@ export default function SequencePageClient() {
           </div>
 
           <div style={{ display: 'flex', gap: 8 }}>
-            {/* Author-only: Edit and Delete */}
             {isAuthor && (
               <>
                 <button
