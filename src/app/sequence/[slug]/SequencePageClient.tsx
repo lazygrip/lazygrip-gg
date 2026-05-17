@@ -604,6 +604,7 @@ export default function SequencePageClient() {
                   ['GRIP version', sequence.grip_version],
                   ['Patch', sequence.patch_version],
                   ['Views', sequence.view_count?.toLocaleString()],
+				  ['Comments', sequence.comment_count?.toLocaleString()],
                 ].filter(([, v]) => v).map(([label, value]) => (
                   <tr key={label as string}>
                     <td style={{ color: 'var(--text-muted)', padding: '4px 0', verticalAlign: 'top' }}>{label}</td>

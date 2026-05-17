@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Eye, MessageSquare, Star, Bookmark, Clock } from 'lucide-react'
+import { Eye, MessageSquare, Bookmark, Clock } from 'lucide-react'
 import { Sequence } from '@/types'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { formatDistanceToNow } from 'date-fns'
@@ -118,6 +118,7 @@ export default function SequenceCard({ sequence }: Props) {
         }}>
           <div style={{ display: 'flex', gap: 12 }}>
             <Stat icon={<Eye size={11} />} value={sequence.view_count} />
+            <Stat icon={<MessageSquare size={11} />} value={sequence.comment_count ?? 0} />
             <Stat icon={<Bookmark size={11} />} value={sequence.save_count} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-muted)' }}>

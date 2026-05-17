@@ -49,6 +49,7 @@ export type Sequence = {
   performance_notes: string | null
   view_count: number
   save_count: number
+  comment_count: number
   is_published: boolean
   is_featured: boolean
   created_at: string
