@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Copy, Check, Bookmark, ExternalLink, ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react'
+import { Copy, Check, Bookmark, ExternalLink, ChevronDown, ChevronUp, Pencil, Trash2, CornerDownRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Sequence, Comment } from '@/types'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
@@ -9,6 +9,20 @@ import { formatDistanceToNow } from 'date-fns'
 import RenderedContent from '@/components/editor/RenderedContent'
 
 const SITE_OWNER_ID = 'c2374192-e541-4636-9baf-84fc192cff52'
+
+function nestComments(flat: Comment[]): Comment[] {
+  const map = new Map<string, Comment>()
+  const roots: Comment[] = []
+  flat.forEach(c => map.set(c.id, { ...c, replies: [] }))
+  map.forEach(c => {
+    if (c.parent_id && map.has(c.parent_id)) {
+      map.get(c.parent_id)!.replies!.push(c)
+    } else {
+      roots.push(c)
+    }
+  })
+  return roots
+}
 
 export default function SequencePageClient() {
   const params = useParams()
@@ -22,6 +36,8 @@ export default function SequencePageClient() {
   const [userRating, setUserRating] = useState<number | null>(null)
   const [hoveredRating, setHoveredRating] = useState<number | null>(null)
   const [commentText, setCommentText] = useState('')
+  const [replyingTo, setReplyingTo] = useState<string | null>(null)
+  const [replyText, setReplyText] = useState('')
   const [user, setUser] = useState<any>(null)
   const [saved, setSaved] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -55,7 +71,7 @@ export default function SequencePageClient() {
         .eq('is_deleted', false)
         .order('created_at', { ascending: true })
 
-      setComments(cmts || [])
+      setComments(nestComments(cmts || []))
     }
     setLoading(false)
   }
@@ -85,8 +101,26 @@ export default function SequencePageClient() {
       .select('*, author:profiles(*)')
       .single()
     if (error) console.error('Comment insert error:', error)
-    if (data) setComments(c => [...c, data])
+    if (data) setComments(c => nestComments([...flattenComments(c), data]))
     setCommentText('')
+  }
+
+  async function submitReply(parentId: string) {
+    if (!user || !sequence || !replyText.trim()) return
+    const { data, error } = await supabase
+      .from('comments')
+      .insert({
+        sequence_id: sequence.id,
+        author_id: user.id,
+        body: replyText.trim(),
+        parent_id: parentId,
+      })
+      .select('*, author:profiles(*)')
+      .single()
+    if (error) { console.error('Reply insert error:', error); return }
+    if (data) setComments(c => nestComments([...flattenComments(c), data]))
+    setReplyText('')
+    setReplyingTo(null)
   }
 
   async function deleteComment(commentId: string) {
@@ -94,11 +128,13 @@ export default function SequencePageClient() {
       .from('comments')
       .update({ is_deleted: true })
       .eq('id', commentId)
-    if (error) {
-      console.error('Comment delete error:', error)
-      return
-    }
-    setComments(c => c.map(comment => comment.id !== commentId ? comment : { ...comment, is_deleted: true, body: '[deleted by user]' }))
+    if (error) { console.error('Comment delete error:', error); return }
+    setComments(c => {
+      const flat = flattenComments(c).map(comment =>
+        comment.id !== commentId ? comment : { ...comment, is_deleted: true, body: '[deleted]' }
+      )
+      return nestComments(flat.filter(x => !x.is_deleted))
+    })
   }
 
   async function toggleSave() {
@@ -131,6 +167,7 @@ export default function SequencePageClient() {
 
   const isAuthor = user && sequence && user.id === sequence.author_id
   const isOwner = user?.id === SITE_OWNER_ID
+  const totalComments = flattenComments(comments).length
 
   if (loading) return (
     <div style={{ maxWidth: 900, margin: '40px auto', padding: '0 24px' }}>
@@ -451,7 +488,7 @@ export default function SequencePageClient() {
             padding: '18px',
           }}>
             <h2 style={{ fontSize: 14, fontWeight: 500, marginBottom: 16 }}>
-              Comments ({comments.length})
+              Comments ({totalComments})
             </h2>
 
             {user ? (
@@ -490,47 +527,21 @@ export default function SequencePageClient() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {comments.map(comment => (
-                  <div key={comment.id} style={{ display: 'flex', gap: 10 }}>
-                    <div style={{
-                      width: 32, height: 32, borderRadius: '50%',
-                      background: 'var(--accent-subtle)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 12, fontWeight: 500, color: 'var(--accent-text)',
-                      flexShrink: 0,
-                    }}>
-                      {(comment.author?.username ?? '?')[0].toUpperCase()}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', marginBottom: 4 }}>
-                        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
-                          {comment.author?.username}
-                        </span>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                          {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
-                        </span>
-                        {(user?.id === comment.author_id || isOwner) && (
-                          <button
-                            onClick={() => deleteComment(comment.id)}
-                            title="Delete comment"
-                            style={{
-                              marginLeft: 'auto',
-                              background: 'none', border: 'none',
-                              cursor: 'pointer', color: 'var(--text-muted)',
-                              padding: '2px 4px', borderRadius: 4,
-                              display: 'flex', alignItems: 'center',
-                            }}
-                            onMouseEnter={e => (e.currentTarget.style.color = '#c0392b')}
-                            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        )}
-                      </div>
-                      <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                        {comment.body}
-                      </p>
-                    </div>
-                  </div>
+                  <CommentThread
+                    key={comment.id}
+                    comment={comment}
+                    user={user}
+                    isOwner={isOwner}
+                    replyingTo={replyingTo}
+                    replyText={replyText}
+                    onReplyClick={(id) => {
+                      setReplyingTo(replyingTo === id ? null : id)
+                      setReplyText('')
+                    }}
+                    onReplyTextChange={setReplyText}
+                    onReplySubmit={submitReply}
+                    onDelete={deleteComment}
+                  />
                 ))}
               </div>
             )}
@@ -604,7 +615,7 @@ export default function SequencePageClient() {
                   ['GRIP version', sequence.grip_version],
                   ['Patch', sequence.patch_version],
                   ['Views', sequence.view_count?.toLocaleString()],
-				  ['Comments', sequence.comment_count?.toLocaleString()],
+                  ['Comments', sequence.comment_count?.toLocaleString()],
                 ].filter(([, v]) => v).map(([label, value]) => (
                   <tr key={label as string}>
                     <td style={{ color: 'var(--text-muted)', padding: '4px 0', verticalAlign: 'top' }}>{label}</td>
@@ -656,6 +667,165 @@ export default function SequencePageClient() {
       </div>
     </div>
   )
+}
+
+// --- Comment thread component ---
+
+interface CommentThreadProps {
+  comment: Comment
+  user: any
+  isOwner: boolean
+  replyingTo: string | null
+  replyText: string
+  onReplyClick: (id: string) => void
+  onReplyTextChange: (text: string) => void
+  onReplySubmit: (parentId: string) => void
+  onDelete: (id: string) => void
+  depth?: number
+}
+
+function CommentThread({
+  comment, user, isOwner, replyingTo, replyText,
+  onReplyClick, onReplyTextChange, onReplySubmit, onDelete, depth = 0,
+}: CommentThreadProps) {
+  const isReplying = replyingTo === comment.id
+  const canDelete = user && (user.id === comment.author_id || isOwner)
+
+  return (
+    <div style={{ marginLeft: depth > 0 ? 20 : 0 }}>
+      <div style={{ display: 'flex', gap: 10 }}>
+        {depth > 0 && (
+          <div style={{ paddingTop: 6, color: 'var(--text-muted)', flexShrink: 0 }}>
+            <CornerDownRight size={13} />
+          </div>
+        )}
+        <div style={{
+          width: 32, height: 32, borderRadius: '50%',
+          background: 'var(--accent-subtle)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 12, fontWeight: 500, color: 'var(--accent-text)',
+          flexShrink: 0,
+        }}>
+          {(comment.author?.username ?? '?')[0].toUpperCase()}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', marginBottom: 4 }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
+              {comment.author?.username}
+            </span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+            </span>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
+              {user && (
+                <button
+                  onClick={() => onReplyClick(comment.id)}
+                  style={{
+                    background: 'none', border: 'none',
+                    cursor: 'pointer', fontSize: 11,
+                    color: isReplying ? 'var(--accent)' : 'var(--text-muted)',
+                    fontFamily: 'var(--font-sans)',
+                    padding: '2px 4px', borderRadius: 4,
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = isReplying ? 'var(--accent)' : 'var(--text-muted)')}
+                >
+                  {isReplying ? 'Cancel' : 'Reply'}
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  onClick={() => onDelete(comment.id)}
+                  title="Delete comment"
+                  style={{
+                    background: 'none', border: 'none',
+                    cursor: 'pointer', color: 'var(--text-muted)',
+                    padding: '2px 4px', borderRadius: 4,
+                    display: 'flex', alignItems: 'center',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#c0392b')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                >
+                  <Trash2 size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            {comment.body}
+          </p>
+
+          {/* Inline reply box */}
+          {isReplying && (
+            <div style={{ marginTop: 10 }}>
+              <textarea
+                value={replyText}
+                onChange={e => onReplyTextChange(e.target.value)}
+                placeholder={`Reply to ${comment.author?.username}...`}
+                rows={2}
+                autoFocus
+                style={{
+                  width: '100%', padding: '8px 10px',
+                  border: '0.5px solid var(--accent)',
+                  borderRadius: 'var(--radius-md)', fontSize: 13,
+                  background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                  resize: 'vertical', fontFamily: 'var(--font-sans)',
+                  marginBottom: 6,
+                }}
+              />
+              <button
+                onClick={() => onReplySubmit(comment.id)}
+                disabled={!replyText.trim()}
+                style={{
+                  padding: '6px 14px', background: 'var(--accent)', color: 'white',
+                  border: 'none', borderRadius: 'var(--radius-md)',
+                  cursor: 'pointer', fontSize: 12, fontWeight: 500,
+                  fontFamily: 'var(--font-sans)',
+                }}
+              >
+                Post reply
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Nested replies */}
+      {comment.replies && comment.replies.length > 0 && (
+        <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {comment.replies.map(reply => (
+            <CommentThread
+              key={reply.id}
+              comment={reply}
+              user={user}
+              isOwner={isOwner}
+              replyingTo={replyingTo}
+              replyText={replyText}
+              onReplyClick={onReplyClick}
+              onReplyTextChange={onReplyTextChange}
+              onReplySubmit={onReplySubmit}
+              onDelete={onDelete}
+              depth={depth + 1}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// --- Helpers ---
+
+function flattenComments(nested: Comment[]): Comment[] {
+  const result: Comment[] = []
+  function walk(comments: Comment[]) {
+    for (const c of comments) {
+      result.push(c)
+      if (c.replies?.length) walk(c.replies)
+    }
+  }
+  walk(nested)
+  return result
 }
 
 function Badge({ color, children }: { color: string; children: React.ReactNode }) {
