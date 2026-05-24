@@ -7,7 +7,7 @@ import { AlertCircle, ChevronUp, ChevronDown } from 'lucide-react'
 import TiptapEditor from '@/components/editor/TiptapEditor'
 
 const PATCH_VERSIONS = ['12.0', '12.0.5', '12.0.7']
-const DEFAULT_GRIP_VERSION = '2.1.3'
+const DEFAULT_GRIP_VERSION = '2.1.7'
 
 const EMPTY_FORM = {
   title: '',
