@@ -4,6 +4,7 @@ import './globals.css'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import { ThemeProvider } from '@/components/ThemeProvider'
+import Script from 'next/script'
 
 export const metadata: Metadata = {
   title: {
@@ -60,6 +61,18 @@ export default async function RootLayout({
   return (
     <html lang="en" data-theme={initialTheme}>
       <body>
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-CJTX030THX"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-CJTX030THX');
+          `}
+        </Script>
         <ThemeProvider initialTheme={initialTheme}>
           <Header />
           <main style={{ minHeight: 'calc(100vh - 56px - 60px)' }}>
