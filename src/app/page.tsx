@@ -28,7 +28,7 @@ export default function HomePage() {
             border: '0.5px solid rgba(29,158,117,0.2)',
           }}>
             <Shield size={12} />
-            The home for GRIP-EMS sequences
+            Community sequences for GRIP-EMS
           </div>
 
           <h1 style={{
@@ -39,21 +39,20 @@ export default function HomePage() {
             marginBottom: 16,
             color: 'var(--text-primary)',
           }}>
-            Browse and share<br />
-            <span style={{ color: 'var(--accent)' }}>GRIP-EMS sequences</span><br />
-            for every class
+            Your rotation should work<br />
+            <span style={{ color: 'var(--accent)' }}>every pull, every time</span>
           </h1>
 
           <p style={{
             fontSize: 16,
             color: 'var(--text-secondary)',
             lineHeight: 1.6,
-            marginBottom: 28,
-            maxWidth: 480,
+            maxWidth: 520,
             margin: '0 auto 28px',
           }}>
-            Community-built rotation sequences for World of Warcraft.
-            No accounts needed to browse. Free to post and share.
+            GRIP-EMS is a World of Warcraft rotation addon that holds its place when a cast fails
+            instead of skipping ahead. For Mythic+ players running tight keys, that difference
+            shows up in your logs. LazyGrip is the community library for sequences built around it.
           </p>
 
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -114,6 +113,105 @@ export default function HomePage() {
                 {item.label}
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Why GRIP-EMS */}
+      <section style={{
+        borderBottom: '0.5px solid var(--border)',
+        padding: '48px 24px',
+      }}>
+        <div style={{ maxWidth: 720, margin: '0 auto' }}>
+          <h2 style={{
+            fontSize: 22,
+            fontWeight: 600,
+            letterSpacing: '-0.02em',
+            marginBottom: 16,
+            color: 'var(--text-primary)',
+          }}>
+            Why GRIP-EMS?
+          </h2>
+          <p style={{
+            fontSize: 15,
+            color: 'var(--text-secondary)',
+            lineHeight: 1.75,
+            marginBottom: 32,
+            maxWidth: 620,
+          }}>
+            Because consistent execution shows up in your logs. When a rotation holds its place
+            on a failed cast instead of advancing, your cooldowns land when your sequence says
+            they should. Your high-priority spells don't get buried behind abilities that fired
+            out of order. Your uptime numbers stop fluctuating run to run for reasons you can't
+            explain. That's not a promise. It's what the logs show when you build sequences the
+            right way around an engine that doesn't skip.
+          </p>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+            gap: 12,
+          }}>
+            {[
+              {
+                label: 'Holds on failed casts',
+                desc: 'The sequence stays where it is until the cast lands, not where the engine decided to move.',
+                color: '#1D9E75',
+              },
+              {
+                label: 'Cooldowns on schedule',
+                desc: 'High-priority abilities fire when the sequence reaches them, not whenever the engine cycles back around.',
+                color: '#5a8dee',
+              },
+              {
+                label: 'Consistent across keys',
+                desc: 'The same sequence produces the same uptime numbers pull to pull because the execution model doesn\'t drift.',
+                color: '#a330c9',
+              },
+            ].map(card => (
+              <div key={card.label} style={{
+                background: 'var(--bg-primary)',
+                border: '0.5px solid var(--border)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '16px',
+              }}>
+                <div style={{
+                  width: 32,
+                  height: 4,
+                  background: card.color,
+                  borderRadius: 2,
+                  marginBottom: 10,
+                }} />
+                <div style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  marginBottom: 6,
+                }}>
+                  {card.label}
+                </div>
+                <div style={{
+                  fontSize: 12,
+                  color: 'var(--text-secondary)',
+                  lineHeight: 1.6,
+                }}>
+                  {card.desc}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ marginTop: 24 }}>
+            <Link href="/faq" style={{
+              fontSize: 13,
+              color: 'var(--accent)',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+            }}>
+              Learn more about GRIP-EMS <ArrowRight size={13} />
+            </Link>
           </div>
         </div>
       </section>
