@@ -1,4 +1,5 @@
-import DOMPurify from 'isomorphic-dompurify'
+'use client'
+import DOMPurify from 'dompurify'
 
 interface RenderedContentProps {
   html: string
