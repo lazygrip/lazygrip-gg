@@ -1,6 +1,7 @@
 export type WowClass = {
   id: number
   name: string
+  slug: string
   color: string
   specs: WowSpec[]
 }

@@ -2,7 +2,7 @@ import { WowClass } from '@/types'
 
 export const WOW_CLASSES: WowClass[] = [
   {
-    id: 1, name: 'Warrior', color: '#C69B3A',
+    id: 1, name: 'Warrior', slug: 'warrior', color: '#C69B3A',
     specs: [
       { id: 71, name: 'Arms', role: 'dps', heroTalents: ['Slayer', 'Colossus'] },
       { id: 72, name: 'Fury', role: 'dps', heroTalents: ['Slayer', 'Mountain Thane'] },
@@ -10,7 +10,7 @@ export const WOW_CLASSES: WowClass[] = [
     ]
   },
   {
-    id: 2, name: 'Paladin', color: '#F48CBA',
+    id: 2, name: 'Paladin', slug: 'paladin', color: '#F48CBA',
     specs: [
       { id: 65, name: 'Holy', role: 'healer', heroTalents: ['Lightsmith', 'Herald of the Sun'] },
       { id: 66, name: 'Protection', role: 'tank', heroTalents: ['Lightsmith', 'Templar'] },
@@ -18,7 +18,7 @@ export const WOW_CLASSES: WowClass[] = [
     ]
   },
   {
-    id: 3, name: 'Hunter', color: '#AAD372',
+    id: 3, name: 'Hunter', slug: 'hunter', color: '#AAD372',
     specs: [
       { id: 253, name: 'Beast Mastery', role: 'dps', heroTalents: ['Pack Leader', 'Sentinel'] },
       { id: 254, name: 'Marksmanship', role: 'dps', heroTalents: ['Sentinel', 'Dark Ranger'] },
@@ -26,7 +26,7 @@ export const WOW_CLASSES: WowClass[] = [
     ]
   },
   {
-    id: 4, name: 'Rogue', color: '#FFF468',
+    id: 4, name: 'Rogue', slug: 'rogue', color: '#FFF468',
     specs: [
       { id: 259, name: 'Assassination', role: 'dps', heroTalents: ['Deathstalker', 'Trickster'] },
       { id: 260, name: 'Outlaw', role: 'dps', heroTalents: ['Trickster', 'Fatebound'] },
@@ -34,7 +34,7 @@ export const WOW_CLASSES: WowClass[] = [
     ]
   },
   {
-    id: 5, name: 'Priest', color: '#FFFFFF',
+    id: 5, name: 'Priest', slug: 'priest', color: '#FFFFFF',
     specs: [
       { id: 256, name: 'Discipline', role: 'healer', heroTalents: ['Voidweaver', 'Oracle'] },
       { id: 257, name: 'Holy', role: 'healer', heroTalents: ['Oracle', 'Archon'] },
@@ -42,7 +42,7 @@ export const WOW_CLASSES: WowClass[] = [
     ]
   },
   {
-    id: 6, name: 'Death Knight', color: '#C41E3A',
+    id: 6, name: 'Death Knight', slug: 'death-knight', color: '#C41E3A',
     specs: [
       { id: 250, name: 'Blood', role: 'tank', heroTalents: ['Deathbringer', 'San\'layn'] },
       { id: 251, name: 'Frost', role: 'dps', heroTalents: ['Deathbringer', 'Rider of the Apocalypse'] },
@@ -50,7 +50,7 @@ export const WOW_CLASSES: WowClass[] = [
     ]
   },
   {
-    id: 7, name: 'Shaman', color: '#0070DD',
+    id: 7, name: 'Shaman', slug: 'shaman', color: '#0070DD',
     specs: [
       { id: 262, name: 'Elemental', role: 'dps', heroTalents: ['Stormbringer', 'Farseer'] },
       { id: 263, name: 'Enhancement', role: 'dps', heroTalents: ['Stormbringer', 'Totemic'] },
@@ -58,7 +58,7 @@ export const WOW_CLASSES: WowClass[] = [
     ]
   },
   {
-    id: 8, name: 'Mage', color: '#3FC7EB',
+    id: 8, name: 'Mage', slug: 'mage', color: '#3FC7EB',
     specs: [
       { id: 62, name: 'Arcane', role: 'dps', heroTalents: ['Spellslinger', 'Sunfury'] },
       { id: 63, name: 'Fire', role: 'dps', heroTalents: ['Sunfury', 'Frostfire'] },
@@ -66,7 +66,7 @@ export const WOW_CLASSES: WowClass[] = [
     ]
   },
   {
-    id: 9, name: 'Warlock', color: '#8788EE',
+    id: 9, name: 'Warlock', slug: 'warlock', color: '#8788EE',
     specs: [
       { id: 265, name: 'Affliction', role: 'dps', heroTalents: ['Soul Harvester', 'Hellcaller'] },
       { id: 266, name: 'Demonology', role: 'dps', heroTalents: ['Hellcaller', 'Diabolist'] },
@@ -74,7 +74,7 @@ export const WOW_CLASSES: WowClass[] = [
     ]
   },
   {
-    id: 10, name: 'Monk', color: '#00FF98',
+    id: 10, name: 'Monk', slug: 'monk', color: '#00FF98',
     specs: [
       { id: 268, name: 'Brewmaster', role: 'tank', heroTalents: ['Shado-Pan', 'Master of Harmony'] },
       { id: 269, name: 'Windwalker', role: 'dps', heroTalents: ['Shado-Pan', 'Conduit of the Celestials'] },
@@ -82,7 +82,7 @@ export const WOW_CLASSES: WowClass[] = [
     ]
   },
   {
-    id: 11, name: 'Druid', color: '#FF7C0A',
+    id: 11, name: 'Druid', slug: 'druid', color: '#FF7C0A',
     specs: [
       { id: 102, name: 'Balance', role: 'dps', heroTalents: ['Elune\'s Chosen', 'Keeper of the Grove'] },
       { id: 103, name: 'Feral', role: 'dps', heroTalents: ['Wildstalker', 'Druid of the Claw'] },
@@ -91,7 +91,7 @@ export const WOW_CLASSES: WowClass[] = [
     ]
   },
   {
-    id: 12, name: 'Demon Hunter', color: '#A330C9',
+    id: 12, name: 'Demon Hunter', slug: 'demon-hunter', color: '#A330C9',
     specs: [
       { id: 577, name: 'Havoc', role: 'dps', heroTalents: ['Fel-Scarred', 'Aldrachi Reaver'] },
       { id: 581, name: 'Vengeance', role: 'tank', heroTalents: ['Aldrachi Reaver', 'Annihilator'] },
@@ -99,7 +99,7 @@ export const WOW_CLASSES: WowClass[] = [
     ]
   },
   {
-    id: 13, name: 'Evoker', color: '#33937F',
+    id: 13, name: 'Evoker', slug: 'evoker', color: '#33937F',
     specs: [
       { id: 1467, name: 'Devastation', role: 'dps', heroTalents: ['Scalecommander', 'Flameshaper'] },
       { id: 1468, name: 'Preservation', role: 'healer', heroTalents: ['Chronowarden', 'Flameshaper'] },
@@ -109,10 +109,10 @@ export const WOW_CLASSES: WowClass[] = [
 ]
 
 export const CONTENT_TYPES = [
-  { value: 'raid', label: 'Raid' },
-  { value: 'mythic_plus', label: 'Mythic+' },
-  { value: 'pvp', label: 'PvP' },
-  { value: 'solo', label: 'Solo / Leveling' },
+  { value: 'raid', label: 'Raid', slug: 'raid' },
+  { value: 'mythic_plus', label: 'Mythic+', slug: 'mythic-plus' },
+  { value: 'pvp', label: 'PvP', slug: 'pvp' },
+  { value: 'solo', label: 'Solo / Leveling', slug: 'solo' },
 ] as const
 
 export const STEP_FUNCTIONS = [
@@ -124,6 +124,14 @@ export const STEP_FUNCTIONS = [
 
 export function getClassById(id: number): WowClass | undefined {
   return WOW_CLASSES.find(c => c.id === id)
+}
+
+export function getClassBySlug(slug: string): WowClass | undefined {
+  return WOW_CLASSES.find(c => c.slug === slug)
+}
+
+export function getContentTypeBySlug(slug: string) {
+  return CONTENT_TYPES.find(ct => ct.slug === slug)
 }
 
 export function getClassColor(classId: number): string {

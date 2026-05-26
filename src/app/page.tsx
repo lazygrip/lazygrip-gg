@@ -245,7 +245,7 @@ export default function HomePage() {
           {WOW_CLASSES.map(cls => (
             <Link
               key={cls.id}
-              href={`/browse?class_id=${cls.id}`}
+              href={`/browse/${cls.slug}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -290,12 +290,12 @@ export default function HomePage() {
         </h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
           {[
-            { type: 'mythic_plus', label: 'Mythic+', desc: 'Dungeon tank, heal, and DPS rotations', color: '#5a8dee' },
-            { type: 'raid', label: 'Raid', desc: 'Boss-ready sequences with cooldown timing', color: '#e0522a' },
-            { type: 'pvp', label: 'PvP', desc: 'Arena and battleground rotations', color: '#a330c9' },
-            { type: 'solo', label: 'Solo / Leveling', desc: 'Open world and solo content', color: '#1D9E75' },
+            { slug: 'mythic-plus', label: 'Mythic+', desc: 'Dungeon tank, heal, and DPS rotations', color: '#5a8dee' },
+            { slug: 'raid', label: 'Raid', desc: 'Boss-ready sequences with cooldown timing', color: '#e0522a' },
+            { slug: 'pvp', label: 'PvP', desc: 'Arena and battleground rotations', color: '#a330c9' },
+            { slug: 'solo', label: 'Solo / Leveling', desc: 'Open world and solo content', color: '#1D9E75' },
           ].map(ct => (
-            <Link key={ct.type} href={`/browse?content_type=${ct.type}`} style={{
+            <Link key={ct.slug} href={`/browse/${ct.slug}`} style={{
               background: 'var(--bg-primary)',
               border: '0.5px solid var(--border)',
               borderRadius: 'var(--radius-lg)',
@@ -304,8 +304,8 @@ export default function HomePage() {
               display: 'block',
               transition: 'border-color 0.15s',
             }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = ct.color + '60'}
-              onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = ct.color + '60')}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
             >
               <div style={{
                 width: 32,
