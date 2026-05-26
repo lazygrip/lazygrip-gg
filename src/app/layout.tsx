@@ -41,7 +41,10 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: 'https://lazygrip.net',
+canonical: 'https://lazygrip.net',
+  },
+  verification: {
+    google: 'afA04s2vcXI-O42reKGbxNN557MNpLRyhmqSAfCdHh0',
   },
 }
 
