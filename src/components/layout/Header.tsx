@@ -123,6 +123,7 @@ export default function Header() {
             { href: '/browse?sort=top_rated', label: 'Top Rated' },
             { href: '/browse?content_type=mythic_plus', label: 'Mythic+' },
             { href: '/browse?content_type=raid', label: 'Raid' },
+            { href: '/guide', label: 'Guide' },
           ].map(link => (
             <Link key={link.href} href={link.href} style={{
               fontSize: 13,
