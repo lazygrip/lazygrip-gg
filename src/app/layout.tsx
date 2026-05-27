@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     template: '%s | LazyGrip.net',
   },
   description: 'Browse, share, and rate GRIP-EMS macro sequences for World of Warcraft. Every class, every spec, every content type. Free to browse and post.',
-  keywords: 'GRIP-EMS, WoW macros, Guardian Druid, Blood Death Knight, GSE alternative, World of Warcraft sequences, Midnight Season 1, GRIP EMS sequences, WoW rotation macro',
+  keywords: 'GRIP-EMS, GRIP EMS guide, GRIP-EMS tutorial, how to use GRIP EMS, WoW macros, Guardian Druid, Blood Death Knight, GSE alternative, GnomeSequencer alternative, World of Warcraft sequences, Mythic+ macro guide, WoW rotation addon, GRIP Enhanced Macro Sequencer, WoW sequence builder, Midnight Season 1, GRIP EMS sequences, WoW rotation macro',
   authors: [{ name: 'LazyGrip.net' }],
   creator: 'LazyGrip.net',
   metadataBase: new URL('https://lazygrip.net'),
