@@ -23,6 +23,7 @@ export default function Footer() {
         </div>
         <div style={{ display: 'flex', gap: 20, fontSize: 13 }}>
           {[
+            { href: '/guide', label: 'Guide' },
             { href: '/about', label: 'About' },
             { href: '/faq', label: 'FAQ' },
             { href: '/tos', label: 'Terms' },

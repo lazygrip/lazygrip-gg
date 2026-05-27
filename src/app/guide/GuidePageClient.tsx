@@ -107,11 +107,39 @@ export default function GuidePageClient() {
         ))}
       </div>
 
-      <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
+      <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px', marginBottom: 12 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>About this guide</div>
         <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: 600 }}>
           Every claim in this guide is backed by in-game testing and Warcraft Logs validation. When something is opinion or preference it is labeled as such. The sequence examples use real published sequences, not invented ones. This guide will be updated as GRIP-EMS develops and as new patterns emerge from real Mythic+ use.
         </p>
+      </div>
+
+      <div style={{
+        background: 'rgba(90,141,238,0.06)',
+        border: '0.5px solid rgba(90,141,238,0.2)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '20px 24px',
+      }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+          Found something wrong?
+        </div>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, maxWidth: 600, marginBottom: 10 }}>
+          This guide is written in good faith based on direct in-game testing, Warcraft Logs validation, and Sataana's published release notes. GRIP-EMS is actively developed and things change. If something here is inaccurate, outdated, or missing context, we want to know. Send a correction with as much detail as you can and we will review and update it.
+        </p>
+        <a
+          href="mailto:admin@lazygrip.net?subject=Guide correction"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: 13,
+            color: '#5a8dee',
+            textDecoration: 'none',
+            fontWeight: 500,
+          }}
+        >
+          admin@lazygrip.net
+        </a>
       </div>
     </div>
   )
