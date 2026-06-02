@@ -24,7 +24,7 @@ export default function SequenceCard({ sequence }: Props) {
   const plainDescription = sequence.description ? stripHtml(sequence.description) : null
 
   return (
-    <Link href={`/sequence/${sequence.slug}`} style={{ textDecoration: 'none' }}>
+    <Link href={`/sequences/${sequence.slug}`} style={{ textDecoration: 'none' }}>
       <article style={{
         background: 'var(--bg-primary)',
         border: '0.5px solid var(--border)',
