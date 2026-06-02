@@ -60,12 +60,15 @@ export default function SequenceCard({ sequence }: Props) {
 
             {/* Badges */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-              <Badge color={classColor} label={sequence.class_name} />
-              {sequence.spec_name && <Badge color="#5a8dee" label={sequence.spec_name} />}
-              <Badge color="#1D9E75" label={contentLabel} />
-              {sequence.grip_version && (
-                <Badge color="#888" label={`GRIP ${sequence.grip_version}`} />
-              )}
+			<Badge color={classColor} label={sequence.class_name} />
+			{sequence.spec_name && <Badge color="#5a8dee" label={sequence.spec_name} />}
+			<Badge color="#1D9E75" label={contentLabel} />
+			{sequence.grip_version && (
+              <Badge color="#888" label={`GRIP ${sequence.grip_version}`} />
+            )}
+            {sequence.current_version_label && (
+             <Badge color="#1D9E75" label={sequence.current_version_label} />
+            )}
             </div>
           </div>
 
