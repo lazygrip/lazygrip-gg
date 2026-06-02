@@ -4,8 +4,6 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Sequence, SequenceVersion } from '@/types'
 
-const supabaseRef = { current: null as any }
-
 export default function UpdateSequencePage() {
   const params = useParams()
   const router = useRouter()
@@ -27,11 +25,12 @@ export default function UpdateSequencePage() {
   const [contentType, setContentType] = useState('')
   const [stepFunction, setStepFunction] = useState('')
   const [gripVersion, setGripVersion] = useState('')
+  const [talentString, setTalentString] = useState('')
+  const [warcraftlogsUrl, setWarcraftlogsUrl] = useState('')
+  const [performanceNotes, setPerformanceNotes] = useState('')
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user)
-    })
+    supabase.auth.getUser().then(({ data }) => setUser(data.user))
     fetchSequence()
   }, [slug])
 
@@ -68,6 +67,9 @@ export default function UpdateSequencePage() {
       setContentType(versionData.content_type ?? seq.content_type)
       setStepFunction(versionData.step_function ?? seq.step_function)
       setGripVersion(versionData.grip_version ?? seq.grip_version ?? '')
+      setTalentString(versionData.talent_string ?? '')
+      setWarcraftlogsUrl(versionData.warcraftlogs_url ?? '')
+      setPerformanceNotes(versionData.performance_notes ?? '')
     }
 
     setLoading(false)
@@ -99,7 +101,7 @@ export default function UpdateSequencePage() {
         }))
       : null
 
-    const { data, error: rpcError } = await supabase.rpc('publish_sequence_version', {
+    const { error: rpcError } = await supabase.rpc('publish_sequence_version', {
       p_sequence_id: sequence.id,
       p_version_number: currentVersion.version_number + 1,
       p_version_label: versionLabel.trim(),
@@ -111,6 +113,9 @@ export default function UpdateSequencePage() {
       p_content_type: contentType,
       p_step_function: stepFunction,
       p_grip_version: gripVersion || null,
+      p_talent_string: talentString || null,
+      p_warcraftlogs_url: warcraftlogsUrl || null,
+      p_performance_notes: performanceNotes || null,
     })
 
     if (rpcError) {
@@ -129,15 +134,13 @@ export default function UpdateSequencePage() {
     </div>
   )
 
-  if (error && !sequence) return (
+  if (!sequence || !currentVersion) return (
     <div style={{ maxWidth: 720, margin: '80px auto', padding: '0 24px', textAlign: 'center' }}>
-      <p style={{ color: 'var(--text-secondary)' }}>{error}</p>
+      <p style={{ color: 'var(--text-secondary)' }}>{error ?? 'Sequence not found.'}</p>
     </div>
   )
 
-  if (!sequence || !currentVersion) return null
-
-  if (user?.id !== sequence.author_id) {
+  if (user && user.id !== sequence.author_id) {
     router.push(`/sequences/${slug}`)
     return null
   }
@@ -161,6 +164,18 @@ export default function UpdateSequencePage() {
           The current version is <strong style={{ color: 'var(--accent)' }}>{currentVersion.version_label}</strong>.
           Your new version will become the default import string. The previous version stays in the history and remains importable.
         </p>
+        <div style={{
+          marginTop: 12,
+          padding: '10px 14px',
+          background: 'var(--bg-secondary)',
+          border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius-md)',
+          fontSize: 13,
+          color: 'var(--text-muted)',
+          fontFamily: 'var(--font-sans)',
+        }}>
+          To update the title or description, use the <strong style={{ color: 'var(--text-secondary)' }}>Edit</strong> button on the sequence page instead.
+        </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -248,7 +263,6 @@ export default function UpdateSequencePage() {
           <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
             Sequence data
           </h2>
-
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
               <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
@@ -317,7 +331,6 @@ export default function UpdateSequencePage() {
             Metadata
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-
             <div>
               <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
                 Content type
@@ -326,13 +339,10 @@ export default function UpdateSequencePage() {
                 value={contentType}
                 onChange={e => setContentType(e.target.value)}
                 style={{
-                  width: '100%',
-                  padding: '8px 12px',
+                  width: '100%', padding: '8px 12px',
                   border: '0.5px solid var(--border-strong)',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: 13,
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-primary)',
+                  borderRadius: 'var(--radius-md)', fontSize: 13,
+                  background: 'var(--bg-secondary)', color: 'var(--text-primary)',
                   fontFamily: 'var(--font-sans)',
                 }}
               >
@@ -351,13 +361,10 @@ export default function UpdateSequencePage() {
                 value={stepFunction}
                 onChange={e => setStepFunction(e.target.value)}
                 style={{
-                  width: '100%',
-                  padding: '8px 12px',
+                  width: '100%', padding: '8px 12px',
                   border: '0.5px solid var(--border-strong)',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: 13,
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-primary)',
+                  borderRadius: 'var(--radius-md)', fontSize: 13,
+                  background: 'var(--bg-secondary)', color: 'var(--text-primary)',
                   fontFamily: 'var(--font-sans)',
                 }}
               >
@@ -378,15 +385,11 @@ export default function UpdateSequencePage() {
                 onChange={e => setHeroTalent(e.target.value)}
                 placeholder="e.g. Elune's Chosen"
                 style={{
-                  width: '100%',
-                  padding: '8px 12px',
+                  width: '100%', padding: '8px 12px',
                   border: '0.5px solid var(--border-strong)',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: 13,
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-primary)',
-                  fontFamily: 'var(--font-sans)',
-                  boxSizing: 'border-box',
+                  borderRadius: 'var(--radius-md)', fontSize: 13,
+                  background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-sans)', boxSizing: 'border-box',
                 }}
               />
             </div>
@@ -401,23 +404,18 @@ export default function UpdateSequencePage() {
                 onChange={e => setGripVersion(e.target.value)}
                 placeholder="e.g. 2.1.6"
                 style={{
-                  width: '100%',
-                  padding: '8px 12px',
+                  width: '100%', padding: '8px 12px',
                   border: '0.5px solid var(--border-strong)',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: 13,
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-primary)',
-                  fontFamily: 'var(--font-sans)',
-                  boxSizing: 'border-box',
+                  borderRadius: 'var(--radius-md)', fontSize: 13,
+                  background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-sans)', boxSizing: 'border-box',
                 }}
               />
             </div>
-
           </div>
         </div>
 
-        {/* Optional extras */}
+        {/* Version-specific extras */}
         <div style={{
           background: 'var(--bg-primary)',
           border: '0.5px solid var(--border)',
@@ -425,11 +423,70 @@ export default function UpdateSequencePage() {
           padding: '20px 24px',
         }}>
           <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
-            Optional extras
+            Version extras
           </h2>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
-            Talent string, Warcraft Logs URL, and performance notes are shared across all versions and can be updated via Edit.
+            These are specific to this version and will update when visitors switch between versions.
           </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
+                Talent string
+              </label>
+              <input
+                type="text"
+                value={talentString}
+                onChange={e => setTalentString(e.target.value)}
+                placeholder="Paste talent import string..."
+                style={{
+                  width: '100%', padding: '8px 12px',
+                  border: '0.5px solid var(--border-strong)',
+                  borderRadius: 'var(--radius-md)', fontSize: 12,
+                  background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-mono)', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
+                Warcraft Logs URL
+              </label>
+              <input
+                type="text"
+                value={warcraftlogsUrl}
+                onChange={e => setWarcraftlogsUrl(e.target.value)}
+                placeholder="https://www.warcraftlogs.com/reports/..."
+                style={{
+                  width: '100%', padding: '8px 12px',
+                  border: '0.5px solid var(--border-strong)',
+                  borderRadius: 'var(--radius-md)', fontSize: 13,
+                  background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                  fontFamily: 'var(--font-sans)', boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
+                Performance notes
+              </label>
+              <textarea
+                value={performanceNotes}
+                onChange={e => setPerformanceNotes(e.target.value)}
+                placeholder="e.g. Ironfur 91% uptime across full +13 run. Thrash leading damage at 47%. Zero deaths."
+                rows={4}
+                style={{
+                  width: '100%', padding: '10px 12px',
+                  border: '0.5px solid var(--border-strong)',
+                  borderRadius: 'var(--radius-md)', fontSize: 13,
+                  background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                  resize: 'vertical', fontFamily: 'var(--font-sans)',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Error */}
@@ -458,8 +515,7 @@ export default function UpdateSequencePage() {
               color: submitting ? 'var(--text-muted)' : 'white',
               border: 'none',
               borderRadius: 'var(--radius-md)',
-              fontSize: 14,
-              fontWeight: 600,
+              fontSize: 14, fontWeight: 600,
               cursor: submitting ? 'not-allowed' : 'pointer',
               fontFamily: 'var(--font-sans)',
             }}
@@ -474,8 +530,7 @@ export default function UpdateSequencePage() {
               color: 'var(--text-secondary)',
               border: '0.5px solid var(--border-strong)',
               borderRadius: 'var(--radius-md)',
-              fontSize: 14,
-              cursor: 'pointer',
+              fontSize: 14, cursor: 'pointer',
               fontFamily: 'var(--font-sans)',
             }}
           >

@@ -113,6 +113,13 @@ export type SequenceVersion = {
   raw_steps: SequenceStep[] | null
   changelog: string | null
   author_id: string
+  hero_talent: string | null
+  content_type: string | null
+  step_function: string | null
+  grip_version: string | null
+  talent_string: string | null
+  warcraftlogs_url: string | null
+  performance_notes: string | null
   created_at: string
 }
 

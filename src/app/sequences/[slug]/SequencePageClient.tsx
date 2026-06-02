@@ -3,22 +3,12 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Copy, Check, Bookmark, ExternalLink, ChevronDown, ChevronUp, Pencil, Trash2, CornerDownRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { Sequence, Comment } from '@/types'
+import { Sequence, Comment, SequenceVersion } from '@/types'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { formatDistanceToNow } from 'date-fns'
 import RenderedContent from '@/components/editor/RenderedContent'
 
 const SITE_OWNER_ID = 'c2374192-e541-4636-9baf-84fc192cff52'
-
-interface SequenceVersion {
-  id: string
-  version_number: number
-  version_label: string
-  grip_string: string
-  changelog: string | null
-  created_at: string
-  author_id: string
-}
 
 function nestComments(flat: Comment[]): Comment[] {
   const map = new Map<string, Comment>()
@@ -87,7 +77,7 @@ export default function SequencePageClient() {
 
       const { data: versionData } = await supabase
         .from('sequence_versions')
-        .select('id, version_number, version_label, grip_string, changelog, created_at, author_id')
+        .select('*')
         .eq('sequence_id', seq.id)
         .order('version_number', { ascending: false })
 
@@ -316,9 +306,9 @@ export default function SequencePageClient() {
               <Badge color={classColor}>{sequence.class_name}</Badge>
               {sequence.spec_name && <Badge color="#5a8dee">{sequence.spec_name}</Badge>}
               <Badge color="#1D9E75">{contentLabel}</Badge>
-              {sequence.hero_talent && <Badge color="#a330c9">{sequence.hero_talent}</Badge>}
-              {sequence.grip_version && <Badge color="#888">GRIP {sequence.grip_version}</Badge>}
-              {sequence.step_function && <Badge color="#888">{sequence.step_function}</Badge>}
+              {selectedVersion?.hero_talent && <Badge color="#a330c9">{selectedVersion.hero_talent}</Badge>}
+              {selectedVersion?.grip_version && <Badge color="#888">GRIP {selectedVersion.grip_version}</Badge>}
+              {selectedVersion?.step_function && <Badge color="#888">{selectedVersion.step_function}</Badge>}
               {sequence.step_count && <Badge color="#888">{sequence.step_count} steps</Badge>}
             </div>
 
@@ -424,8 +414,8 @@ export default function SequencePageClient() {
                 {saved ? 'Saved' : 'Save'}
               </button>
             )}
-            {sequence.warcraftlogs_url && (
-              <a href={sequence.warcraftlogs_url} target="_blank" rel="noopener noreferrer" style={{
+            {selectedVersion?.warcraftlogs_url && (
+              <a href={selectedVersion.warcraftlogs_url} target="_blank" rel="noopener noreferrer" style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '7px 12px', borderRadius: 'var(--radius-md)',
                 border: '0.5px solid var(--border-strong)',
@@ -454,7 +444,6 @@ export default function SequencePageClient() {
               borderRadius: 'var(--radius-lg)',
               padding: '18px',
             }}>
-              {/* Version selector - only shown when multiple versions exist */}
               {versions.length > 1 && (
                 <div style={{ marginBottom: 14 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -728,11 +717,11 @@ export default function SequencePageClient() {
                 {[
                   ['Class', sequence.class_name],
                   ['Spec', sequence.spec_name],
-                  ['Hero talent', sequence.hero_talent],
-                  ['Content', CONTENT_TYPES.find(c => c.value === sequence.content_type)?.label],
-                  ['Step function', sequence.step_function],
+                  ['Hero talent', selectedVersion?.hero_talent],
+                  ['Content', CONTENT_TYPES.find(c => c.value === (selectedVersion?.content_type ?? sequence.content_type))?.label],
+                  ['Step function', selectedVersion?.step_function],
                   ['Steps', sequence.step_count],
-                  ['GRIP version', sequence.grip_version],
+                  ['GRIP version', selectedVersion?.grip_version],
                   ['Patch', sequence.patch_version],
                   ['Views', sequence.view_count?.toLocaleString()],
                   ['Comments', sequence.comment_count?.toLocaleString()],
@@ -747,7 +736,7 @@ export default function SequencePageClient() {
           </div>
 
           {/* Talent string */}
-          {sequence.talent_string && (
+          {selectedVersion?.talent_string && (
             <div style={{
               background: 'var(--bg-primary)',
               border: '0.5px solid var(--border)',
@@ -764,13 +753,13 @@ export default function SequencePageClient() {
                 wordBreak: 'break-all',
                 color: 'var(--text-secondary)',
               }}>
-                {sequence.talent_string}
+                {selectedVersion.talent_string}
               </div>
             </div>
           )}
 
           {/* Performance notes */}
-          {sequence.performance_notes && (
+          {selectedVersion?.performance_notes && (
             <div style={{
               background: 'var(--bg-primary)',
               border: '0.5px solid var(--border)',
@@ -779,10 +768,31 @@ export default function SequencePageClient() {
             }}>
               <h3 style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Performance notes</h3>
               <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                {sequence.performance_notes}
+                {selectedVersion.performance_notes}
               </p>
             </div>
           )}
+
+          {/* Warcraft Logs - shown in sidebar too if present */}
+          {selectedVersion?.warcraftlogs_url && (
+            <div style={{
+              background: 'var(--bg-primary)',
+              border: '0.5px solid var(--border)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '16px',
+            }}>
+              <h3 style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Warcraft Logs</h3>
+              
+                href={selectedVersion.warcraftlogs_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: 12, color: 'var(--accent)', wordBreak: 'break-all' }}
+              >
+                View log report
+              </a>
+            </div>
+          )}
+
         </div>
       </div>
     </div>
