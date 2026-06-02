@@ -1,13 +1,14 @@
 'use client'
-
-import { useState, useEffect, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import Link from 'next/link'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import RatingWidget from '@/components/RatingWidget'
-import CommentSection from '@/components/CommentSection'
+import { Copy, Check, Bookmark, ExternalLink, ChevronDown, ChevronUp, Pencil, Trash2, CornerDownRight } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { Sequence, Comment } from '@/types'
+import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
+import { formatDistanceToNow } from 'date-fns'
+import RenderedContent from '@/components/editor/RenderedContent'
 
-const supabase = createClient()
+const SITE_OWNER_ID = 'c2374192-e541-4636-9baf-84fc192cff52'
 
 interface SequenceVersion {
   id: string
@@ -19,571 +20,749 @@ interface SequenceVersion {
   author_id: string
 }
 
-interface Sequence {
-  id: string
-  title: string
-  slug: string
-  description: string | null
-  class_id: number
-  class_name: string
-  spec_id: number | null
-  spec_name: string | null
-  content_type: string
-  hero_talent: string | null
-  patch_version: string | null
-  grip_version: string | null
-  step_function: string | null
-  step_count: number | null
-  grip_string: string | null
-  raw_steps: any[] | null
-  keybind_info: any | null
-  talent_string: string | null
-  warcraftlogs_url: string | null
-  performance_notes: string | null
-  view_count: number
-  save_count: number
-  avg_score: number | null
-  rating_count: number
-  comment_count: number
-  author_id: string
-  current_version_id: string | null
-  author: {
-    username: string
-    avatar_url: string | null
-  }
-  created_at: string
-  updated_at: string
+function nestComments(flat: Comment[]): Comment[] {
+  const map = new Map<string, Comment>()
+  const roots: Comment[] = []
+  flat.forEach(c => map.set(c.id, { ...c, replies: [] }))
+  map.forEach(c => {
+    if (c.parent_id && map.has(c.parent_id)) {
+      map.get(c.parent_id)!.replies!.push(c)
+    } else {
+      roots.push(c)
+    }
+  })
+  return roots
 }
 
 export default function SequencePageClient() {
   const params = useParams()
   const router = useRouter()
-  const slug = params?.slug as string
-
+  const slug = params.slug as string
   const [sequence, setSequence] = useState<Sequence | null>(null)
   const [versions, setVersions] = useState<SequenceVersion[]>([])
   const [selectedVersion, setSelectedVersion] = useState<SequenceVersion | null>(null)
-  const [currentUser, setCurrentUser] = useState<any>(null)
+  const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [showAllSteps, setShowAllSteps] = useState(false)
+  const [userRating, setUserRating] = useState<number | null>(null)
+  const [hoveredRating, setHoveredRating] = useState<number | null>(null)
+  const [commentText, setCommentText] = useState('')
+  const [replyingTo, setReplyingTo] = useState<string | null>(null)
+  const [replyText, setReplyText] = useState('')
+  const [user, setUser] = useState<any>(null)
   const [saved, setSaved] = useState(false)
-  const [saveLoading, setSaveLoading] = useState(false)
-  const [deleteLoading, setDeleteLoading] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
 
   useEffect(() => {
-    if (slug) {
-      fetchSequence()
-      fetchCurrentUser()
-    }
+    supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    fetchSequence()
   }, [slug])
 
   async function fetchSequence() {
     setLoading(true)
-    setError(null)
-
-    const { data, error } = await supabase
+    const { data: seq } = await supabase
       .from('sequences')
-      .select(`
-        *,
-        author:profiles(username, avatar_url)
-      `)
+      .select('*, author:profiles(*)')
       .eq('slug', slug)
       .eq('is_published', true)
       .single()
 
-    if (error || !data) {
-      setError('Sequence not found')
-      setLoading(false)
-      return
+    if (seq) {
+      setSequence(seq)
+      await supabase.rpc('increment_view_count', { seq_id: seq.id })
+
+      const { data: cmts } = await supabase
+        .from('comments')
+        .select('*, author:profiles(*)')
+        .eq('sequence_id', seq.id)
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: true })
+
+      setComments(nestComments(cmts || []))
+
+      const { data: versionData } = await supabase
+        .from('sequence_versions')
+        .select('id, version_number, version_label, grip_string, changelog, created_at, author_id')
+        .eq('sequence_id', seq.id)
+        .order('version_number', { ascending: false })
+
+      if (versionData && versionData.length > 0) {
+        setVersions(versionData)
+        const current = versionData.find(v => v.id === seq.current_version_id) ?? versionData[0]
+        setSelectedVersion(current)
+      }
     }
-
-    setSequence(data)
-
-    const { data: versionData, error: versionError } = await supabase
-      .from('sequence_versions')
-      .select('id, version_number, version_label, grip_string, changelog, created_at, author_id')
-      .eq('sequence_id', data.id)
-      .order('version_number', { ascending: false })
-
-    if (versionError || !versionData || versionData.length === 0) {
-      setError('No versions found for this sequence')
-      setLoading(false)
-      return
-    }
-
-    setVersions(versionData)
-
-    const current = versionData.find(v => v.id === data.current_version_id) ?? versionData[0]
-    setSelectedVersion(current)
-
     setLoading(false)
   }
 
-  async function fetchCurrentUser() {
-    const { data: { user } } = await supabase.auth.getUser()
-    setCurrentUser(user)
-  }
-
-  async function handleCopy() {
+  async function copyGripString() {
     if (!selectedVersion?.grip_string) return
-    try {
-      await navigator.clipboard.writeText(selectedVersion.grip_string)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      const textarea = document.createElement('textarea')
-      textarea.value = selectedVersion.grip_string
-      document.body.appendChild(textarea)
-      textarea.select()
-      document.execCommand('copy')
-      document.body.removeChild(textarea)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
+    await navigator.clipboard.writeText(selectedVersion.grip_string)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
-  async function handleSave() {
-    if (!currentUser) {
-      router.push('/login')
-      return
-    }
-    setSaveLoading(true)
+  async function submitRating(score: number) {
+    if (!user || !sequence) return
+    setUserRating(score)
+    await supabase.from('ratings').upsert({
+      sequence_id: sequence.id,
+      user_id: user.id,
+      score,
+    }, { onConflict: 'sequence_id,user_id' })
+  }
+
+  async function submitComment() {
+    if (!user || !sequence || !commentText.trim()) return
+    const { data, error } = await supabase
+      .from('comments')
+      .insert({ sequence_id: sequence.id, author_id: user.id, body: commentText.trim() })
+      .select('*, author:profiles(*)')
+      .single()
+    if (error) console.error('Comment insert error:', error)
+    if (data) setComments(c => nestComments([...flattenComments(c), data]))
+    setCommentText('')
+  }
+
+  async function submitReply(parentId: string) {
+    if (!user || !sequence || !replyText.trim()) return
+    const { data, error } = await supabase
+      .from('comments')
+      .insert({
+        sequence_id: sequence.id,
+        author_id: user.id,
+        body: replyText.trim(),
+        parent_id: parentId,
+      })
+      .select('*, author:profiles(*)')
+      .single()
+    if (error) { console.error('Reply insert error:', error); return }
+    if (data) setComments(c => nestComments([...flattenComments(c), data]))
+    setReplyText('')
+    setReplyingTo(null)
+  }
+
+  async function deleteComment(commentId: string) {
+    const { error } = await supabase
+      .from('comments')
+      .update({ is_deleted: true })
+      .eq('id', commentId)
+    if (error) { console.error('Comment delete error:', error); return }
+    setComments(c => {
+      const flat = flattenComments(c).map(comment =>
+        comment.id !== commentId ? comment : { ...comment, is_deleted: true, body: '[deleted]' }
+      )
+      return nestComments(flat.filter(x => !x.is_deleted))
+    })
+  }
+
+  async function toggleSave() {
+    if (!user || !sequence) return
     if (saved) {
-      await supabase
-        .from('saved_sequences')
-        .delete()
-        .eq('user_id', currentUser.id)
-        .eq('sequence_id', sequence!.id)
-      setSaved(false)
+      await supabase.from('saves').delete()
+        .eq('sequence_id', sequence.id).eq('user_id', user.id)
     } else {
-      await supabase
-        .from('saved_sequences')
-        .insert({ user_id: currentUser.id, sequence_id: sequence!.id })
-      setSaved(true)
+      await supabase.from('saves').insert({ sequence_id: sequence.id, user_id: user.id })
     }
-    setSaveLoading(false)
+    setSaved(s => !s)
   }
 
   async function handleDelete() {
-    if (!sequence) return
-    setDeleteLoading(true)
+    if (!user || !sequence) return
+    setDeleting(true)
     const { error } = await supabase
       .from('sequences')
       .delete()
       .eq('id', sequence.id)
-    if (error) {
-      alert('Failed to delete sequence')
-      setDeleteLoading(false)
-      return
+      .eq('author_id', user.id)
+    if (!error) {
+      router.push('/browse')
+    } else {
+      console.error('Delete failed:', error)
+      setDeleting(false)
+      setShowDeleteConfirm(false)
     }
-    router.push('/sequences')
   }
 
-  const isOwner = currentUser && sequence && currentUser.id === sequence.author_id
+  const isAuthor = user && sequence && user.id === sequence.author_id
+  const isOwner = user?.id === SITE_OWNER_ID
+  const totalComments = flattenComments(comments).length
   const isCurrentVersion = selectedVersion?.id === sequence?.current_version_id
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-        <div style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>Loading...</div>
-      </div>
-    )
-  }
+  if (loading) return (
+    <div style={{ maxWidth: 900, margin: '40px auto', padding: '0 24px' }}>
+      <div style={{ height: 300, background: 'var(--bg-primary)', borderRadius: 'var(--radius-lg)', border: '0.5px solid var(--border)' }} />
+    </div>
+  )
 
-  if (error || !sequence || !selectedVersion) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-        <div style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>{error || 'Sequence not found'}</div>
-      </div>
-    )
-  }
+  if (!sequence) return (
+    <div style={{ maxWidth: 900, margin: '80px auto', padding: '0 24px', textAlign: 'center' }}>
+      <p style={{ color: 'var(--text-secondary)' }}>Sequence not found.</p>
+    </div>
+  )
 
-  const contentLabels: Record<string, string> = {
-    raid: 'Raid',
-    mythic_plus: 'Mythic+',
-    pvp: 'PvP',
-    solo: 'Solo / Leveling',
-  }
+  const classColor = getClassColor(sequence.class_id)
+  const steps = sequence.raw_steps || []
+  const visibleSteps = showAllSteps ? steps : steps.slice(0, 8)
+  const contentLabel = CONTENT_TYPES.find(c => c.value === sequence.content_type)?.label ?? sequence.content_type
 
   return (
-    <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '2rem 1rem' }}>
+    <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px' }}>
 
-      {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-          <h1 style={{
-            fontSize: '1.75rem',
-            fontWeight: 700,
-            color: 'var(--text-primary)',
-            fontFamily: 'var(--font-sans)',
-            margin: 0,
+      {/* Delete confirm dialog */}
+      {showDeleteConfirm && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 100,
+          background: 'rgba(0,0,0,0.6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            background: 'var(--bg-primary)',
+            border: '0.5px solid var(--border)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '28px',
+            maxWidth: 400,
+            width: '100%',
+            margin: '0 24px',
           }}>
-            {sequence.title}
-          </h1>
-          <span style={{
-            background: 'var(--accent)',
-            color: 'white',
-            fontSize: '0.7rem',
-            fontWeight: 700,
-            padding: '0.2rem 0.5rem',
-            borderRadius: 'var(--radius-sm)',
-            fontFamily: 'var(--font-sans)',
-            letterSpacing: '0.03em',
-          }}>
-            {selectedVersion.version_label}
-          </span>
+            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 10, color: 'var(--text-primary)' }}>
+              Delete this sequence?
+            </h2>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
+              This will permanently delete <strong style={{ color: 'var(--text-primary)' }}>{sequence.title}</strong> and all its ratings and comments. This cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  border: '0.5px solid var(--border-strong)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer', fontSize: 13,
+                  fontFamily: 'var(--font-sans)',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  border: 'none',
+                  background: '#c0392b',
+                  color: 'white',
+                  cursor: deleting ? 'not-allowed' : 'pointer',
+                  fontSize: 13, fontWeight: 500,
+                  fontFamily: 'var(--font-sans)',
+                  opacity: deleting ? 0.7 : 1,
+                }}
+              >
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
         </div>
-        <div style={{ color: 'var(--text-muted)', fontSize: '0.875rem', fontFamily: 'var(--font-sans)' }}>
-          Posted by <strong>{sequence.author?.username}</strong>
-          {sequence.created_at && ` · ${new Date(sequence.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
-          {sequence.patch_version && ` · Patch ${sequence.patch_version}`}
+      )}
+
+      {/* Header card */}
+      <div style={{
+        background: 'var(--bg-primary)',
+        border: '0.5px solid var(--border)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '24px',
+        marginBottom: 16,
+        borderTop: `3px solid ${classColor}`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+              <h1 style={{
+                fontSize: 22,
+                fontWeight: 600,
+                letterSpacing: '-0.02em',
+                margin: 0,
+                color: 'var(--text-primary)',
+              }}>
+                {sequence.title}
+              </h1>
+              {selectedVersion && (
+                <span style={{
+                  background: 'var(--accent)',
+                  color: 'white',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: '2px 7px',
+                  borderRadius: 'var(--radius-sm)',
+                  fontFamily: 'var(--font-sans)',
+                  letterSpacing: '0.03em',
+                  flexShrink: 0,
+                }}>
+                  {selectedVersion.version_label}
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+              <Badge color={classColor}>{sequence.class_name}</Badge>
+              {sequence.spec_name && <Badge color="#5a8dee">{sequence.spec_name}</Badge>}
+              <Badge color="#1D9E75">{contentLabel}</Badge>
+              {sequence.hero_talent && <Badge color="#a330c9">{sequence.hero_talent}</Badge>}
+              {sequence.grip_version && <Badge color="#888">GRIP {sequence.grip_version}</Badge>}
+              {sequence.step_function && <Badge color="#888">{sequence.step_function}</Badge>}
+              {sequence.step_count && <Badge color="#888">{sequence.step_count} steps</Badge>}
+            </div>
+
+            {sequence.description && (
+              <div style={{ marginTop: 16 }}>
+                <RenderedContent html={sequence.description} />
+              </div>
+            )}
+          </div>
+
+          {/* Rating display */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 4,
+            flexShrink: 0,
+            padding: '0 16px',
+          }}>
+            <span style={{ fontSize: 36, fontWeight: 600, color: 'var(--accent)', lineHeight: 1 }}>
+              {sequence.avg_score ?? '—'}
+            </span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              {sequence.rating_count ?? 0} ratings
+            </span>
+          </div>
+        </div>
+
+        {/* Author + actions row */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginTop: 20,
+          paddingTop: 16,
+          borderTop: '0.5px solid var(--border)',
+        }}>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+            Posted by <strong style={{ color: 'var(--text-primary)' }}>
+              {sequence.author?.username}
+            </strong>
+            {' · '}{formatDistanceToNow(new Date(sequence.created_at), { addSuffix: true })}
+            {sequence.patch_version && ` · Patch ${sequence.patch_version}`}
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            {isAuthor && (
+              <>
+                <button
+                  onClick={() => router.push(`/post?edit=${sequence.id}`)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '7px 12px', borderRadius: 'var(--radius-md)',
+                    border: '0.5px solid var(--border-strong)',
+                    background: 'var(--bg-secondary)',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  <Pencil size={14} />
+                  Edit
+                </button>
+                <button
+                  onClick={() => router.push(`/sequences/${sequence.slug}/update`)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '7px 12px', borderRadius: 'var(--radius-md)',
+                    border: '0.5px solid var(--accent)',
+                    background: 'transparent',
+                    color: 'var(--accent)',
+                    cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  ↑ Update
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    padding: '7px 12px', borderRadius: 'var(--radius-md)',
+                    border: '0.5px solid rgba(192,57,43,0.4)',
+                    background: 'rgba(192,57,43,0.08)',
+                    color: '#c0392b',
+                    cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  <Trash2 size={14} />
+                  Delete
+                </button>
+              </>
+            )}
+
+            {user && (
+              <button onClick={toggleSave} style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '7px 12px', borderRadius: 'var(--radius-md)',
+                border: '0.5px solid var(--border-strong)',
+                background: saved ? 'var(--accent-subtle)' : 'var(--bg-primary)',
+                color: saved ? 'var(--accent-text)' : 'var(--text-secondary)',
+                cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)',
+              }}>
+                <Bookmark size={14} />
+                {saved ? 'Saved' : 'Save'}
+              </button>
+            )}
+            {sequence.warcraftlogs_url && (
+              <a href={sequence.warcraftlogs_url} target="_blank" rel="noopener noreferrer" style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '7px 12px', borderRadius: 'var(--radius-md)',
+                border: '0.5px solid var(--border-strong)',
+                background: 'var(--bg-primary)',
+                color: 'var(--text-secondary)',
+                textDecoration: 'none', fontSize: 13,
+              }}>
+                <ExternalLink size={14} />
+                Warcraft Logs
+              </a>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Two-column layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '2rem', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 16, alignItems: 'flex-start' }}>
 
         {/* Left column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-          {/* Description */}
-          {sequence.description && (
+          {/* GRIP string import */}
+          {selectedVersion && (
             <div style={{
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border)',
+              background: 'var(--bg-primary)',
+              border: '0.5px solid var(--border)',
               borderRadius: 'var(--radius-lg)',
-              padding: '1.5rem',
+              padding: '18px',
             }}>
-              <div
-                style={{ color: 'var(--text-primary)', lineHeight: 1.7, fontFamily: 'var(--font-sans)' }}
-                dangerouslySetInnerHTML={{ __html: sequence.description }}
-              />
+              {/* Version selector - only shown when multiple versions exist */}
+              {versions.length > 1 && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>
+                      Version:
+                    </span>
+                    {versions.map(v => (
+                      <button
+                        key={v.id}
+                        onClick={() => setSelectedVersion(v)}
+                        style={{
+                          padding: '3px 8px',
+                          borderRadius: 'var(--radius-sm)',
+                          border: selectedVersion.id === v.id
+                            ? '0.5px solid var(--accent)'
+                            : '0.5px solid var(--border-strong)',
+                          background: selectedVersion.id === v.id
+                            ? 'var(--accent)' : 'var(--bg-secondary)',
+                          color: selectedVersion.id === v.id ? 'white' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          fontSize: 12,
+                          fontWeight: selectedVersion.id === v.id ? 600 : 400,
+                          fontFamily: 'var(--font-sans)',
+                        }}
+                      >
+                        {v.version_label}
+                        {v.id === sequence.current_version_id && (
+                          <span style={{ marginLeft: 4, opacity: 0.75, fontSize: 10 }}>current</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  {!isCurrentVersion && (
+                    <div style={{
+                      marginTop: 8,
+                      fontSize: 12,
+                      color: '#d97706',
+                      fontFamily: 'var(--font-sans)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}>
+                      ⚠ Older version. Switch to {versions.find(v => v.id === sequence.current_version_id)?.version_label ?? 'the current version'} for the latest.
+                    </div>
+                  )}
+                  {selectedVersion.changelog && (
+                    <div style={{
+                      marginTop: 10,
+                      padding: '8px 10px',
+                      background: 'var(--bg-tertiary)',
+                      border: '0.5px solid var(--border)',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: 12,
+                      color: 'var(--text-secondary)',
+                      fontFamily: 'var(--font-sans)',
+                      lineHeight: 1.5,
+                    }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>What changed: </span>
+                      {selectedVersion.changelog}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div style={{
+                display: 'flex', alignItems: 'center',
+                justifyContent: 'space-between', marginBottom: 12,
+              }}>
+                <h2 style={{ fontSize: 14, fontWeight: 500 }}>GRIP import string</h2>
+                <button onClick={copyGripString} style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '6px 12px', borderRadius: 'var(--radius-md)',
+                  border: '0.5px solid var(--border-strong)',
+                  background: copied ? 'var(--accent-subtle)' : 'var(--bg-secondary)',
+                  color: copied ? 'var(--accent-text)' : 'var(--text-secondary)',
+                  cursor: 'pointer', fontSize: 12, fontFamily: 'var(--font-sans)',
+                }}>
+                  {copied ? <><Check size={13} /> Copied!</> : <><Copy size={13} /> Copy string</>}
+                </button>
+              </div>
+              <div className="grip-string" style={{ maxHeight: 120, overflow: 'hidden' }}>
+                {selectedVersion.grip_string}
+              </div>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+                In-game: type /gems import and paste this string
+              </p>
             </div>
           )}
 
-          {/* GRIP import string */}
+          {/* Steps display */}
+          {steps.length > 0 && (
+            <div style={{
+              background: 'var(--bg-primary)',
+              border: '0.5px solid var(--border)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '18px',
+            }}>
+              <h2 style={{ fontSize: 14, fontWeight: 500, marginBottom: 12 }}>
+                Steps ({steps.length})
+              </h2>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+                {visibleSteps.map((step: any, i: number) => (
+                  <div key={i} style={{
+                    display: 'flex',
+                    gap: 10,
+                    padding: '6px 0',
+                    borderBottom: '0.5px solid var(--border)',
+                  }}>
+                    <span style={{ color: 'var(--text-muted)', minWidth: 24, textAlign: 'right' }}>
+                      {i + 1}
+                    </span>
+                    <div style={{ flex: 1 }}>
+                      {(typeof step === 'string' ? step : step.text || '').split('\n').map((line: string, j: number) => (
+                        <div key={j} style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                          <StepLine text={line} />
+                        </div>
+                      ))}
+                    </div>
+                    <span style={{
+                      fontSize: 10,
+                      color: 'var(--text-muted)',
+                      alignSelf: 'flex-start',
+                      paddingTop: 2,
+                    }}>
+                      {typeof step === 'object' && step.char_count ? `${step.char_count}/255` : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {steps.length > 8 && (
+                <button onClick={() => setShowAllSteps(s => !s)} style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  marginTop: 12, background: 'none', border: 'none',
+                  cursor: 'pointer', fontSize: 12, color: 'var(--accent)',
+                  fontFamily: 'var(--font-sans)',
+                }}>
+                  {showAllSteps
+                    ? <><ChevronUp size={13} /> Show fewer steps</>
+                    : <><ChevronDown size={13} /> Show all {steps.length} steps</>
+                  }
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Comments */}
           <div style={{
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border)',
+            background: 'var(--bg-primary)',
+            border: '0.5px solid var(--border)',
             borderRadius: 'var(--radius-lg)',
-            padding: '1.5rem',
+            padding: '18px',
           }}>
-            {/* Version selector */}
-            {versions.length > 1 && (
-              <div style={{ marginBottom: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>
-                    Version:
-                  </span>
-                  {versions.map(v => (
+            <h2 style={{ fontSize: 14, fontWeight: 500, marginBottom: 16 }}>
+              Comments ({totalComments})
+            </h2>
+
+            {user ? (
+              <div style={{ marginBottom: 20 }}>
+                <textarea
+                  value={commentText}
+                  onChange={e => setCommentText(e.target.value)}
+                  placeholder="Share your experience, ask a question, or suggest improvements..."
+                  rows={3}
+                  style={{
+                    width: '100%', padding: '10px 12px',
+                    border: '0.5px solid var(--border-strong)',
+                    borderRadius: 'var(--radius-md)', fontSize: 13,
+                    background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                    resize: 'vertical', fontFamily: 'var(--font-sans)',
+                    marginBottom: 8,
+                  }}
+                />
+                <button onClick={submitComment} disabled={!commentText.trim()} style={{
+                  padding: '7px 16px', background: 'var(--accent)', color: 'white',
+                  border: 'none', borderRadius: 'var(--radius-md)',
+                  cursor: 'pointer', fontSize: 13, fontWeight: 500,
+                  fontFamily: 'var(--font-sans)',
+                }}>
+                  Post comment
+                </button>
+              </div>
+            ) : (
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
+                <a href="/auth/login" style={{ color: 'var(--accent)' }}>Sign in</a> to leave a comment.
+              </p>
+            )}
+
+            {comments.length === 0 ? (
+              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No comments yet. Be the first!</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {comments.map(comment => (
+                  <CommentThread
+                    key={comment.id}
+                    comment={comment}
+                    user={user}
+                    isOwner={isOwner}
+                    replyingTo={replyingTo}
+                    replyText={replyText}
+                    onReplyClick={(id) => {
+                      setReplyingTo(replyingTo === id ? null : id)
+                      setReplyText('')
+                    }}
+                    onReplyTextChange={setReplyText}
+                    onReplySubmit={submitReply}
+                    onDelete={deleteComment}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right sidebar */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+          {/* Rate this sequence */}
+          <div style={{
+            background: 'var(--bg-primary)',
+            border: '0.5px solid var(--border)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '16px',
+          }}>
+            <h3 style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>Rate this sequence</h3>
+            {user ? (
+              <div>
+                <div style={{ display: 'flex', gap: 3, marginBottom: 8 }}>
+                  {[1,2,3,4,5,6,7,8,9,10].map(n => (
                     <button
-                      key={v.id}
-                      onClick={() => setSelectedVersion(v)}
+                      key={n}
+                      onClick={() => submitRating(n)}
+                      onMouseEnter={() => setHoveredRating(n)}
+                      onMouseLeave={() => setHoveredRating(null)}
                       style={{
-                        background: selectedVersion.id === v.id ? 'var(--accent)' : 'var(--bg-tertiary)',
-                        color: selectedVersion.id === v.id ? 'white' : 'var(--text-secondary)',
-                        border: selectedVersion.id === v.id ? '1px solid var(--accent)' : '1px solid var(--border)',
-                        borderRadius: 'var(--radius-sm)',
-                        padding: '0.25rem 0.6rem',
-                        fontSize: '0.75rem',
-                        fontWeight: selectedVersion.id === v.id ? 700 : 400,
-                        cursor: 'pointer',
+                        width: 22, height: 22, borderRadius: 4,
+                        border: 'none', cursor: 'pointer',
+                        background: n <= (hoveredRating ?? userRating ?? 0)
+                          ? 'var(--accent)' : 'var(--bg-tertiary)',
+                        color: n <= (hoveredRating ?? userRating ?? 0) ? 'white' : 'var(--text-muted)',
+                        fontSize: 10, fontWeight: 500,
                         fontFamily: 'var(--font-sans)',
-                        transition: 'all 0.15s',
                       }}
                     >
-                      {v.version_label}
-                      {v.id === sequence.current_version_id && (
-                        <span style={{ marginLeft: '0.3rem', opacity: 0.8 }}>current</span>
-                      )}
+                      {n}
                     </button>
                   ))}
                 </div>
-                {!isCurrentVersion && (
-                  <div style={{
-                    marginTop: '0.6rem',
-                    fontSize: '0.78rem',
-                    color: '#d97706',
-                    fontFamily: 'var(--font-sans)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.3rem',
-                  }}>
-                    ⚠ You are viewing an older version. Switch to {versions.find(v => v.id === sequence.current_version_id)?.version_label ?? 'the current version'} for the latest.
-                  </div>
-                )}
-                {selectedVersion.changelog && (
-                  <div style={{
-                    marginTop: '0.75rem',
-                    padding: '0.6rem 0.75rem',
-                    background: 'var(--bg-tertiary)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 'var(--radius-sm)',
-                    fontSize: '0.8rem',
-                    color: 'var(--text-secondary)',
-                    fontFamily: 'var(--font-sans)',
-                    lineHeight: 1.5,
-                  }}>
-                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>What changed: </span>
-                    {selectedVersion.changelog}
-                  </div>
+                {userRating && (
+                  <p style={{ fontSize: 11, color: 'var(--accent)' }}>
+                    You rated this {userRating}/10
+                  </p>
                 )}
               </div>
+            ) : (
+              <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                <a href="/auth/login" style={{ color: 'var(--accent)' }}>Sign in</a> to rate
+              </p>
             )}
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)' }}>
-                GRIP import string
-              </h3>
-              <button
-                onClick={handleCopy}
-                style={{
-                  background: copied ? 'var(--accent)' : 'var(--bg-tertiary)',
-                  color: copied ? 'white' : 'var(--text-primary)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-sm)',
-                  padding: '0.375rem 0.75rem',
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-sans)',
-                  transition: 'all 0.15s',
-                }}
-              >
-                {copied ? '✓ Copied' : '⧉ Copy string'}
-              </button>
-            </div>
-            <div style={{
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '0.75rem',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '0.75rem',
-              color: 'var(--text-secondary)',
-              wordBreak: 'break-all',
-              lineHeight: 1.5,
-              maxHeight: '120px',
-              overflowY: 'auto',
-            }}>
-              {selectedVersion.grip_string || 'No import string available'}
-            </div>
-            <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>
-              In-game: type /gems import and paste this string
-            </div>
           </div>
 
-          {/* Action buttons */}
+          {/* Metadata */}
           <div style={{
-            display: 'flex',
-            gap: '0.5rem',
-            padding: '1rem 1.5rem',
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border)',
+            background: 'var(--bg-primary)',
+            border: '0.5px solid var(--border)',
             borderRadius: 'var(--radius-lg)',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            padding: '16px',
           }}>
-            <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontFamily: 'var(--font-sans)' }}>
-              Posted by <strong style={{ color: 'var(--text-secondary)' }}>{sequence.author?.username}</strong>
-              {sequence.created_at && ` · ${new Date(sequence.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`}
-              {sequence.patch_version && ` · Patch ${sequence.patch_version}`}
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              {isOwner && (
-                <>
-                  <Link href={`/sequences/${sequence.slug}/edit`}>
-                    <button style={{
-                      background: 'var(--bg-tertiary)',
-                      color: 'var(--text-primary)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 'var(--radius-sm)',
-                      padding: '0.375rem 0.75rem',
-                      fontSize: '0.8rem',
-                      cursor: 'pointer',
-                      fontFamily: 'var(--font-sans)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                    }}>
-                      ✏️ Edit
-                    </button>
-                  </Link>
-                  <button
-                    style={{
-                      background: 'var(--bg-tertiary)',
-                      color: 'var(--accent)',
-                      border: '1px solid var(--accent)',
-                      borderRadius: 'var(--radius-sm)',
-                      padding: '0.375rem 0.75rem',
-                      fontSize: '0.8rem',
-                      cursor: 'pointer',
-                      fontFamily: 'var(--font-sans)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.25rem',
-                    }}
-                    onClick={() => router.push(`/sequences/${sequence.slug}/update`)}
-                  >
-                    ↑ Update
-                  </button>
-                  {!showDeleteConfirm ? (
-                    <button
-                      onClick={() => setShowDeleteConfirm(true)}
-                      style={{
-                        background: 'var(--bg-tertiary)',
-                        color: '#e53e3e',
-                        border: '1px solid #e53e3e',
-                        borderRadius: 'var(--radius-sm)',
-                        padding: '0.375rem 0.75rem',
-                        fontSize: '0.8rem',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-sans)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.25rem',
-                      }}>
-                      🗑 Delete
-                    </button>
-                  ) : (
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>Are you sure?</span>
-                      <button
-                        onClick={handleDelete}
-                        disabled={deleteLoading}
-                        style={{
-                          background: '#e53e3e',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: 'var(--radius-sm)',
-                          padding: '0.375rem 0.75rem',
-                          fontSize: '0.8rem',
-                          cursor: 'pointer',
-                          fontFamily: 'var(--font-sans)',
-                        }}>
-                        {deleteLoading ? 'Deleting...' : 'Yes, delete'}
-                      </button>
-                      <button
-                        onClick={() => setShowDeleteConfirm(false)}
-                        style={{
-                          background: 'var(--bg-tertiary)',
-                          color: 'var(--text-primary)',
-                          border: '1px solid var(--border)',
-                          borderRadius: 'var(--radius-sm)',
-                          padding: '0.375rem 0.75rem',
-                          fontSize: '0.8rem',
-                          cursor: 'pointer',
-                          fontFamily: 'var(--font-sans)',
-                        }}>
-                        Cancel
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
-              <button
-                onClick={handleSave}
-                disabled={saveLoading}
-                style={{
-                  background: saved ? 'var(--accent)' : 'var(--bg-tertiary)',
-                  color: saved ? 'white' : 'var(--text-primary)',
-                  border: saved ? '1px solid var(--accent)' : '1px solid var(--border)',
-                  borderRadius: 'var(--radius-sm)',
-                  padding: '0.375rem 0.75rem',
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-sans)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                }}>
-                {saved ? '✓ Saved' : '🔖 Save'}
-              </button>
-              {sequence.warcraftlogs_url && (
-                <a href={sequence.warcraftlogs_url} target="_blank" rel="noopener noreferrer">
-                  <button style={{
-                    background: 'var(--bg-tertiary)',
-                    color: 'var(--text-primary)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 'var(--radius-sm)',
-                    padding: '0.375rem 0.75rem',
-                    fontSize: '0.8rem',
-                    cursor: 'pointer',
-                    fontFamily: 'var(--font-sans)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                  }}>
-                    ↗ Warcraft Logs
-                  </button>
-                </a>
-              )}
-            </div>
+            <h3 style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>Details</h3>
+            <table style={{ width: '100%', fontSize: 12 }}>
+              <tbody>
+                {[
+                  ['Class', sequence.class_name],
+                  ['Spec', sequence.spec_name],
+                  ['Hero talent', sequence.hero_talent],
+                  ['Content', CONTENT_TYPES.find(c => c.value === sequence.content_type)?.label],
+                  ['Step function', sequence.step_function],
+                  ['Steps', sequence.step_count],
+                  ['GRIP version', sequence.grip_version],
+                  ['Patch', sequence.patch_version],
+                  ['Views', sequence.view_count?.toLocaleString()],
+                  ['Comments', sequence.comment_count?.toLocaleString()],
+                ].filter(([, v]) => v).map(([label, value]) => (
+                  <tr key={label as string}>
+                    <td style={{ color: 'var(--text-muted)', padding: '4px 0', verticalAlign: 'top' }}>{label}</td>
+                    <td style={{ color: 'var(--text-secondary)', padding: '4px 0', textAlign: 'right' }}>{value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
-          {/* Comments */}
-          <CommentSection sequenceId={sequence.id} currentUser={currentUser} />
-
-        </div>
-
-        {/* Right column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-
-          {/* Rating */}
-          <RatingWidget sequenceId={sequence.id} currentUser={currentUser} />
-
-          {/* Details */}
-          <div style={{
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '1.5rem',
-          }}>
-            <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)' }}>
-              Details
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {[
-                { label: 'Class', value: sequence.class_name },
-                { label: 'Spec', value: sequence.spec_name },
-                { label: 'Hero talent', value: sequence.hero_talent },
-                { label: 'Content', value: contentLabels[sequence.content_type] ?? sequence.content_type },
-                { label: 'Step function', value: sequence.step_function },
-                { label: 'GRIP version', value: sequence.grip_version },
-                { label: 'Patch', value: sequence.patch_version },
-                { label: 'Views', value: sequence.view_count },
-                { label: 'Comments', value: sequence.comment_count },
-              ].map(({ label, value }) => value != null && value !== '' ? (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', fontFamily: 'var(--font-sans)' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>{label}</span>
-                  <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{String(value)}</span>
-                </div>
-              ) : null)}
-            </div>
-          </div>
-
-          {/* Talent build */}
+          {/* Talent string */}
           {sequence.talent_string && (
             <div style={{
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border)',
+              background: 'var(--bg-primary)',
+              border: '0.5px solid var(--border)',
               borderRadius: 'var(--radius-lg)',
-              padding: '1.5rem',
+              padding: '16px',
             }}>
-              <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)' }}>
-                Talent build
-              </h3>
+              <h3 style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Talent build</h3>
               <div style={{
-                background: 'var(--bg-tertiary)',
-                border: '1px solid var(--border)',
-                borderRadius: 'var(--radius-sm)',
-                padding: '0.75rem',
                 fontFamily: 'var(--font-mono)',
-                fontSize: '0.7rem',
-                color: 'var(--text-muted)',
+                fontSize: 10,
+                background: 'var(--bg-tertiary)',
+                padding: '8px',
+                borderRadius: 'var(--radius-sm)',
                 wordBreak: 'break-all',
-                lineHeight: 1.5,
+                color: 'var(--text-secondary)',
               }}>
                 {sequence.talent_string}
               </div>
@@ -593,22 +772,205 @@ export default function SequencePageClient() {
           {/* Performance notes */}
           {sequence.performance_notes && (
             <div style={{
-              background: 'var(--bg-secondary)',
-              border: '1px solid var(--border)',
+              background: 'var(--bg-primary)',
+              border: '0.5px solid var(--border)',
               borderRadius: 'var(--radius-lg)',
-              padding: '1.5rem',
+              padding: '16px',
             }}>
-              <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)' }}>
-                Performance notes
-              </h3>
-              <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6, fontFamily: 'var(--font-sans)' }}>
+              <h3 style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Performance notes</h3>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                 {sequence.performance_notes}
               </p>
             </div>
           )}
-
         </div>
       </div>
     </div>
+  )
+}
+
+// --- Comment thread component ---
+
+interface CommentThreadProps {
+  comment: Comment
+  user: any
+  isOwner: boolean
+  replyingTo: string | null
+  replyText: string
+  onReplyClick: (id: string) => void
+  onReplyTextChange: (text: string) => void
+  onReplySubmit: (parentId: string) => void
+  onDelete: (id: string) => void
+  depth?: number
+}
+
+function CommentThread({
+  comment, user, isOwner, replyingTo, replyText,
+  onReplyClick, onReplyTextChange, onReplySubmit, onDelete, depth = 0,
+}: CommentThreadProps) {
+  const isReplying = replyingTo === comment.id
+  const canDelete = user && (user.id === comment.author_id || isOwner)
+
+  return (
+    <div style={{ marginLeft: depth > 0 ? 20 : 0 }}>
+      <div style={{ display: 'flex', gap: 10 }}>
+        {depth > 0 && (
+          <div style={{ paddingTop: 6, color: 'var(--text-muted)', flexShrink: 0 }}>
+            <CornerDownRight size={13} />
+          </div>
+        )}
+        <div style={{
+          width: 32, height: 32, borderRadius: '50%',
+          background: 'var(--accent-subtle)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 12, fontWeight: 500, color: 'var(--accent-text)',
+          flexShrink: 0,
+        }}>
+          {(comment.author?.username ?? '?')[0].toUpperCase()}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', marginBottom: 4 }}>
+            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
+              {comment.author?.username}
+            </span>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+            </span>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
+              {user && (
+                <button
+                  onClick={() => onReplyClick(comment.id)}
+                  style={{
+                    background: 'none', border: 'none',
+                    cursor: 'pointer', fontSize: 11,
+                    color: isReplying ? 'var(--accent)' : 'var(--text-muted)',
+                    fontFamily: 'var(--font-sans)',
+                    padding: '2px 4px', borderRadius: 4,
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = isReplying ? 'var(--accent)' : 'var(--text-muted)')}
+                >
+                  {isReplying ? 'Cancel' : 'Reply'}
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  onClick={() => onDelete(comment.id)}
+                  title="Delete comment"
+                  style={{
+                    background: 'none', border: 'none',
+                    cursor: 'pointer', color: 'var(--text-muted)',
+                    padding: '2px 4px', borderRadius: 4,
+                    display: 'flex', alignItems: 'center',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#c0392b')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                >
+                  <Trash2 size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            {comment.body}
+          </p>
+
+          {isReplying && (
+            <div style={{ marginTop: 10 }}>
+              <textarea
+                value={replyText}
+                onChange={e => onReplyTextChange(e.target.value)}
+                placeholder={`Reply to ${comment.author?.username}...`}
+                rows={2}
+                autoFocus
+                style={{
+                  width: '100%', padding: '8px 10px',
+                  border: '0.5px solid var(--accent)',
+                  borderRadius: 'var(--radius-md)', fontSize: 13,
+                  background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                  resize: 'vertical', fontFamily: 'var(--font-sans)',
+                  marginBottom: 6,
+                }}
+              />
+              <button
+                onClick={() => onReplySubmit(comment.id)}
+                disabled={!replyText.trim()}
+                style={{
+                  padding: '6px 14px', background: 'var(--accent)', color: 'white',
+                  border: 'none', borderRadius: 'var(--radius-md)',
+                  cursor: 'pointer', fontSize: 12, fontWeight: 500,
+                  fontFamily: 'var(--font-sans)',
+                }}
+              >
+                Post reply
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {comment.replies && comment.replies.length > 0 && (
+        <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {comment.replies.map(reply => (
+            <CommentThread
+              key={reply.id}
+              comment={reply}
+              user={user}
+              isOwner={isOwner}
+              replyingTo={replyingTo}
+              replyText={replyText}
+              onReplyClick={onReplyClick}
+              onReplyTextChange={onReplyTextChange}
+              onReplySubmit={onReplySubmit}
+              onDelete={onDelete}
+              depth={depth + 1}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function flattenComments(nested: Comment[]): Comment[] {
+  const result: Comment[] = []
+  function walk(comments: Comment[]) {
+    for (const c of comments) {
+      result.push(c)
+      if (c.replies?.length) walk(c.replies)
+    }
+  }
+  walk(nested)
+  return result
+}
+
+function Badge({ color, children }: { color: string; children: React.ReactNode }) {
+  const hex = color.startsWith('#') ? color.slice(1) : 'aaaaaa'
+  const r = parseInt(hex.slice(0,2), 16) || 100
+  const g = parseInt(hex.slice(2,4), 16) || 100
+  const b = parseInt(hex.slice(4,6), 16) || 100
+  return (
+    <span style={{
+      fontSize: 12, fontWeight: 500, padding: '3px 8px',
+      borderRadius: 'var(--radius-sm)',
+      background: `rgba(${r},${g},${b},0.12)`,
+      color: color === '#888' ? 'var(--text-secondary)' : color,
+      border: `0.5px solid rgba(${r},${g},${b},0.2)`,
+    }}>
+      {children}
+    </span>
+  )
+}
+
+function StepLine({ text }: { text: string }) {
+  const parts = text.split(/(\[[^\]]+\]|\/\w+)/g)
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part.startsWith('/')) return <span key={i} style={{ color: 'var(--accent)' }}>{part}</span>
+        if (part.startsWith('[')) return <span key={i} style={{ color: '#5a8dee' }}>{part}</span>
+        return <span key={i}>{part}</span>
+      })}
+    </>
   )
 }
