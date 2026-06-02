@@ -53,6 +53,7 @@ export type Sequence = {
   comment_count: number
   is_published: boolean
   is_featured: boolean
+  current_version_id: string | null
   created_at: string
   updated_at: string
   // Joined fields
@@ -106,10 +107,12 @@ export type Save = {
 export type SequenceVersion = {
   id: string
   sequence_id: string
+  version_number: number
   version_label: string
   grip_string: string
   raw_steps: SequenceStep[] | null
   changelog: string | null
+  author_id: string
   created_at: string
 }
 
