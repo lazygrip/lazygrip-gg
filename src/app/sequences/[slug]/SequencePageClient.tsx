@@ -783,7 +783,8 @@ export default function SequencePageClient() {
             }}>
               <h3 style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Warcraft Logs</h3>
               
-                href={selectedVersion.warcraftlogs_url}
+                <a
+				href={selectedVersion.warcraftlogs_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ fontSize: 12, color: 'var(--accent)', wordBreak: 'break-all' }}
