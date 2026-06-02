@@ -3,7 +3,6 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Sequence, SequenceVersion } from '@/types'
-import { WOW_CLASSES, CONTENT_TYPES, STEP_FUNCTIONS, GRIP_VERSIONS, HERO_TALENTS } from '@/lib/wow-data'
 
 const supabaseRef = { current: null as any }
 
