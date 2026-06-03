@@ -2,7 +2,13 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Sequence, SequenceVersion } from '@/types'
+import { Sequence, SequenceVersion, SequenceStep } from '@/types'
+import { Wand2, X } from 'lucide-react'
+
+interface SequenceOption {
+  name: string
+  index: number
+}
 
 export default function UpdateSequencePage() {
   const params = useParams()
@@ -28,6 +34,17 @@ export default function UpdateSequencePage() {
   const [talentString, setTalentString] = useState('')
   const [warcraftlogsUrl, setWarcraftlogsUrl] = useState('')
   const [performanceNotes, setPerformanceNotes] = useState('')
+
+  // Decode state
+  const [decoding, setDecoding] = useState(false)
+  const [decodeError, setDecodeError] = useState<string | null>(null)
+  const [stepsAutoPopulated, setStepsAutoPopulated] = useState(false)
+  const [sequenceOptions, setSequenceOptions] = useState<SequenceOption[] | null>(null)
+  const [pendingExportString, setPendingExportString] = useState<string | null>(null)
+  // Stores the structured steps from the decoder so submit uses them directly
+  // rather than re-parsing the textarea text, which would split multiline steps.
+  const [decodedSteps, setDecodedSteps] = useState<SequenceStep[] | null>(null)
+  const decodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
@@ -75,6 +92,78 @@ export default function UpdateSequencePage() {
     setLoading(false)
   }
 
+  async function runDecode(exportString: string, sequenceIndex?: number) {
+    setDecoding(true)
+    setDecodeError(null)
+
+    try {
+      const res = await fetch('/api/decode-grip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ exportString, sequenceIndex }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setDecodeError(data.error || 'Decode failed.')
+        return
+      }
+
+      if (data.multipleSequences) {
+        setPendingExportString(exportString)
+        setSequenceOptions(data.sequences)
+        return
+      }
+
+      const steps: SequenceStep[] = data.steps
+      // Store the structured steps for use at submit time.
+      setDecodedSteps(steps)
+      // Display in textarea with step separators so multiline steps are readable.
+      const stepsText = steps.map(s => s.text).join('\n---\n')
+      setRawSteps(stepsText)
+      setStepsAutoPopulated(true)
+      setSequenceOptions(null)
+      setPendingExportString(null)
+    } catch {
+      setDecodeError('Could not reach the decode API. Check your connection.')
+    } finally {
+      setDecoding(false)
+    }
+  }
+
+  function handleGripStringChange(value: string) {
+    setGripString(value)
+    setDecodeError(null)
+    setStepsAutoPopulated(false)
+    setDecodedSteps(null)
+
+    if (decodeTimeoutRef.current) clearTimeout(decodeTimeoutRef.current)
+
+    const trimmed = value.trim()
+    if (!trimmed || (!trimmed.toUpperCase().startsWith('!GRIP1!') && !trimmed.toUpperCase().startsWith('!EMS1!'))) {
+      return
+    }
+
+    decodeTimeoutRef.current = setTimeout(() => {
+      runDecode(trimmed)
+    }, 800)
+  }
+
+  function handleRawStepsChange(value: string) {
+    setRawSteps(value)
+    if (stepsAutoPopulated) {
+      setStepsAutoPopulated(false)
+      setDecodedSteps(null)
+    }
+  }
+
+  function handleSequencePick(index: number) {
+    if (!pendingExportString) return
+    setSequenceOptions(null)
+    runDecode(pendingExportString, index)
+  }
+
   async function handlePublish() {
     if (!sequence || !currentVersion || !user) return
     if (!gripString.trim()) {
@@ -93,13 +182,17 @@ export default function UpdateSequencePage() {
     setSubmitting(true)
     setError(null)
 
-    const parsedSteps = rawSteps.trim()
-      ? rawSteps.trim().split('\n').map((line, i) => ({
-          index: i,
-          text: line,
-          char_count: line.length,
-        }))
-      : null
+    // Use the structured decoded steps if available, otherwise fall back to
+    // parsing the textarea text line by line.
+    const parsedSteps = decodedSteps ?? (
+      rawSteps.trim()
+        ? rawSteps.trim().split('\n').map((line, i) => ({
+            index: i,
+            text: line,
+            char_count: line.length,
+          }))
+        : null
+    )
 
     const { error: rpcError } = await supabase.rpc('publish_sequence_version', {
       p_sequence_id: sequence.id,
@@ -147,6 +240,65 @@ export default function UpdateSequencePage() {
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '28px 24px' }}>
+
+      {/* Sequence picker modal */}
+      {sequenceOptions && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            background: 'var(--bg-primary)',
+            border: '0.5px solid var(--border-strong)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '24px',
+            maxWidth: 440,
+            width: '100%',
+            margin: '0 16px',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)' }}>
+                Multiple sequences found
+              </h3>
+              <button
+                onClick={() => { setSequenceOptions(null); setPendingExportString(null) }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
+              This export contains {sequenceOptions.length} sequences. Pick the one you want to use for this version.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {sequenceOptions.map(opt => (
+                <button
+                  key={opt.index}
+                  onClick={() => handleSequencePick(opt.index)}
+                  style={{
+                    padding: '10px 14px',
+                    background: 'var(--bg-secondary)',
+                    border: '0.5px solid var(--border)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 13,
+                    color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-sans)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  {opt.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
@@ -270,7 +422,7 @@ export default function UpdateSequencePage() {
               </label>
               <textarea
                 value={gripString}
-                onChange={e => setGripString(e.target.value)}
+                onChange={e => handleGripStringChange(e.target.value)}
                 placeholder="Paste your GRIP export string here..."
                 rows={5}
                 style={{
@@ -286,18 +438,62 @@ export default function UpdateSequencePage() {
                   boxSizing: 'border-box',
                 }}
               />
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginTop: 6 }}>
-                Export from GRIP-EMS using the Export button, then paste here.
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', flex: 1 }}>
+                  Export from GRIP-EMS using the Export button, then paste here. Steps will decode automatically.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => gripString.trim() && runDecode(gripString.trim())}
+                  disabled={decoding || !gripString.trim()}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    padding: '5px 10px',
+                    background: decoding ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
+                    border: '0.5px solid var(--border-strong)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 12,
+                    color: decoding ? 'var(--text-muted)' : 'var(--text-secondary)',
+                    cursor: decoding || !gripString.trim() ? 'not-allowed' : 'pointer',
+                    fontFamily: 'var(--font-sans)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <Wand2 size={12} />
+                  {decoding ? 'Decoding...' : 'Decode steps'}
+                </button>
+              </div>
+              {decodeError && (
+                <p style={{ fontSize: 12, color: '#c0392b', marginTop: 6, fontFamily: 'var(--font-sans)' }}>
+                  {decodeError}
+                </p>
+              )}
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
-                Steps (plain text)
-              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <label style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)' }}>
+                  Steps (plain text)
+                </label>
+                {stepsAutoPopulated && (
+                  <span style={{
+                    fontSize: 11,
+                    color: 'var(--accent)',
+                    fontFamily: 'var(--font-sans)',
+                    padding: '2px 7px',
+                    background: 'rgba(29,158,117,0.1)',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '0.5px solid rgba(29,158,117,0.3)',
+                  }}>
+                    Auto-decoded
+                  </span>
+                )}
+              </div>
               <textarea
                 value={rawSteps}
-                onChange={e => setRawSteps(e.target.value)}
+                onChange={e => handleRawStepsChange(e.target.value)}
                 placeholder={`/targetenemy [noharm][dead]\n/cast [noform:1] Bear Form\n/cast Mangle`}
                 rows={6}
                 style={{
@@ -314,7 +510,7 @@ export default function UpdateSequencePage() {
                 }}
               />
               <p style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginTop: 6 }}>
-                Paste your steps one per line. Users can read these without importing.
+                Paste steps one per line, or decode from your export string above. Users can read these without importing.
               </p>
             </div>
           </div>
@@ -520,7 +716,7 @@ export default function UpdateSequencePage() {
               fontFamily: 'var(--font-sans)',
             }}
           >
-            {submitting ? 'Publishing…' : 'Publish version'}
+            {submitting ? 'Publishing...' : 'Publish version'}
           </button>
           <button
             onClick={() => router.push(`/sequences/${slug}`)}

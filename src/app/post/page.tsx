@@ -1,13 +1,14 @@
 'use client'
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { WOW_CLASSES, CONTENT_TYPES, STEP_FUNCTIONS, slugify } from '@/lib/wow-data'
-import { AlertCircle, ChevronUp, ChevronDown } from 'lucide-react'
+import { AlertCircle, ChevronUp, ChevronDown, Wand2, X } from 'lucide-react'
 import TiptapEditor from '@/components/editor/TiptapEditor'
+import type { SequenceStep } from '@/types'
 
 const PATCH_VERSIONS = ['12.0', '12.0.5', '12.0.7']
-const DEFAULT_GRIP_VERSION = '2.1.7'
+const DEFAULT_GRIP_VERSION = '2.1.10'
 
 const EMPTY_FORM = {
   title: '',
@@ -24,6 +25,11 @@ const EMPTY_FORM = {
   talent_string: '',
   warcraftlogs_url: '',
   performance_notes: '',
+}
+
+interface SequenceOption {
+  name: string
+  index: number
 }
 
 function stepGripVersion(version: string, direction: 'up' | 'down'): string {
@@ -47,6 +53,17 @@ function PostForm() {
   const [loadingEdit, setLoadingEdit] = useState(isEditMode)
   const [editSlug, setEditSlug] = useState<string | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
+
+  // Decode state
+  const [decoding, setDecoding] = useState(false)
+  const [decodeError, setDecodeError] = useState<string | null>(null)
+  const [stepsAutoPopulated, setStepsAutoPopulated] = useState(false)
+  const [sequenceOptions, setSequenceOptions] = useState<SequenceOption[] | null>(null)
+  const [pendingExportString, setPendingExportString] = useState<string | null>(null)
+  // Stores the structured steps from the decoder so submit uses them directly
+  // rather than re-parsing the textarea text, which would split multiline steps.
+  const [decodedSteps, setDecodedSteps] = useState<SequenceStep[] | null>(null)
+  const decodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const selectedClass = WOW_CLASSES.find(c => c.id === Number(form.class_id))
   const selectedSpec = selectedClass?.specs.find(s => s.name === form.spec_name)
@@ -76,7 +93,7 @@ function PostForm() {
 
       let raw_steps_text = ''
       if (Array.isArray(data.raw_steps)) {
-        raw_steps_text = data.raw_steps.map((s: any) =>
+        raw_steps_text = data.raw_steps.map((s: SequenceStep) =>
           typeof s === 'string' ? s : s.text || ''
         ).join('\n')
       }
@@ -104,10 +121,86 @@ function PostForm() {
     loadSequence()
   }, [editId])
 
+  // When the author edits the steps textarea manually, discard the decoded
+  // steps so the form falls back to parsing the textarea text on submit.
+  function handleStepsChange(value: string) {
+    setField('raw_steps_text', value)
+    if (stepsAutoPopulated) {
+      setStepsAutoPopulated(false)
+      setDecodedSteps(null)
+    }
+  }
+
+  async function runDecode(exportString: string, sequenceIndex?: number) {
+    setDecoding(true)
+    setDecodeError(null)
+
+    try {
+      const res = await fetch('/api/decode-grip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ exportString, sequenceIndex }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setDecodeError(data.error || 'Decode failed.')
+        return
+      }
+
+      if (data.multipleSequences) {
+        setPendingExportString(exportString)
+        setSequenceOptions(data.sequences)
+        return
+      }
+
+      const steps: SequenceStep[] = data.steps
+      // Store the structured steps for use at submit time.
+      setDecodedSteps(steps)
+      // Display in textarea with newlines so each step's macro lines are readable.
+      const stepsText = steps.map(s => s.text).join('\n---\n')
+      setField('raw_steps_text', stepsText)
+      setStepsAutoPopulated(true)
+      setSequenceOptions(null)
+      setPendingExportString(null)
+    } catch {
+      setDecodeError('Could not reach the decode API. Check your connection.')
+    } finally {
+      setDecoding(false)
+    }
+  }
+
+  function handleGripStringChange(value: string) {
+    setField('grip_string', value)
+    setDecodeError(null)
+    setStepsAutoPopulated(false)
+    setDecodedSteps(null)
+
+    if (decodeTimeoutRef.current) clearTimeout(decodeTimeoutRef.current)
+
+    const trimmed = value.trim()
+    if (!trimmed || (!trimmed.toUpperCase().startsWith('!GRIP1!') && !trimmed.toUpperCase().startsWith('!EMS1!'))) {
+      return
+    }
+
+    decodeTimeoutRef.current = setTimeout(() => {
+      runDecode(trimmed)
+    }, 800)
+  }
+
+  function handleSequencePick(index: number) {
+    if (!pendingExportString) return
+    setSequenceOptions(null)
+    runDecode(pendingExportString, index)
+  }
+
   function setField(key: string, value: string) {
     setForm(f => ({ ...f, [key]: value }))
   }
 
+  // Only used when the author typed steps manually rather than decoding.
+  // Splits on newlines that precede a slash command or numbered line.
   function parseSteps(text: string) {
     if (!text.trim()) return null
     return text.split(/\n(?=\/|\d+\.)/).map((block, i) => ({
@@ -138,7 +231,11 @@ function PostForm() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/auth/login'); return }
 
-      const raw_steps = parseSteps(form.raw_steps_text)
+      // Use the structured decoded steps if available, otherwise fall back to
+      // parsing the textarea text. This prevents multiline GRIP steps from
+      // being split into individual lines when storing to the database.
+      const raw_steps = decodedSteps ?? parseSteps(form.raw_steps_text)
+
       const payload = {
         title: form.title.trim(),
         description: descriptionIsEmpty(form.description) ? null : form.description,
@@ -166,7 +263,7 @@ function PostForm() {
           .eq('author_id', user.id)
 
         if (updateError) throw updateError
-        router.push(`/sequence/${editSlug}`)
+        router.push(`/sequences/${editSlug}`)
       } else {
         const slug = slugify(form.title) + '-' + Date.now().toString(36)
         const { data, error: insertError } = await supabase
@@ -176,10 +273,11 @@ function PostForm() {
           .single()
 
         if (insertError) throw insertError
-        if (data) router.push(`/sequence/${data.slug}`)
+        if (data) router.push(`/sequences/${data.slug}`)
       }
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong. Please try again.')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
+      setError(message)
     } finally {
       setSubmitting(false)
     }
@@ -193,6 +291,66 @@ function PostForm() {
 
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 24px' }}>
+
+      {/* Sequence picker modal */}
+      {sequenceOptions && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+        }}>
+          <div style={{
+            background: 'var(--bg-primary)',
+            border: '0.5px solid var(--border-strong)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '24px',
+            maxWidth: 440,
+            width: '100%',
+            margin: '0 16px',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)' }}>
+                Multiple sequences found
+              </h3>
+              <button
+                onClick={() => { setSequenceOptions(null); setPendingExportString(null) }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
+              This export contains {sequenceOptions.length} sequences. Pick the one you want to use for this post.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {sequenceOptions.map(opt => (
+                <button
+                  key={opt.index}
+                  onClick={() => handleSequencePick(opt.index)}
+                  style={{
+                    padding: '10px 14px',
+                    background: 'var(--bg-secondary)',
+                    border: '0.5px solid var(--border)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 13,
+                    color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-sans)',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  {opt.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 6 }}>
         {isEditMode ? 'Edit sequence' : 'Post a sequence'}
       </h1>
@@ -222,7 +380,7 @@ function PostForm() {
               <TiptapEditor
                 content={form.description}
                 onChange={(html) => setField('description', html)}
-                placeholder="Describe your sequence — build, talents, key modifiers, what it's optimised for..."
+                placeholder="Describe your sequence -- build, talents, key modifiers, what it's optimised for..."
               />
             </Field>
           </Section>
@@ -302,28 +460,100 @@ function PostForm() {
           </Section>
 
           <Section title="Sequence data">
-            <Field label="GRIP export string" hint="Export from GRIP-EMS using the Export button, then paste here. Users will copy this to import directly.">
+            <div>
+              <label style={{
+                display: 'block',
+                fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)',
+                marginBottom: 5,
+              }}>
+                GRIP export string
+              </label>
+              <style>{`
+                input, select, textarea {
+                  width: 100%; padding: 8px 12px;
+                  border: 0.5px solid var(--border-strong);
+                  border-radius: var(--radius-md);
+                  font-size: 13px; background: var(--bg-secondary);
+                  color: var(--text-primary); font-family: var(--font-sans);
+                }
+                input:focus, select:focus, textarea:focus {
+                  outline: none; border-color: var(--accent);
+                }
+                select { appearance: auto; }
+              `}</style>
               <textarea
                 value={form.grip_string}
-                onChange={e => setField('grip_string', e.target.value)}
+                onChange={e => handleGripStringChange(e.target.value)}
                 placeholder="Paste your GRIP1 export string here..."
                 rows={4}
                 style={{ fontFamily: 'var(--font-mono)', fontSize: 12, resize: 'vertical' }}
               />
-            </Field>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', flex: 1 }}>
+                  Export from GRIP-EMS using the Export button, then paste here. Steps will decode automatically.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => form.grip_string.trim() && runDecode(form.grip_string.trim())}
+                  disabled={decoding || !form.grip_string.trim()}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 5,
+                    padding: '5px 10px',
+                    background: decoding ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
+                    border: '0.5px solid var(--border-strong)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 12,
+                    color: decoding ? 'var(--text-muted)' : 'var(--text-secondary)',
+                    cursor: decoding || !form.grip_string.trim() ? 'not-allowed' : 'pointer',
+                    fontFamily: 'var(--font-sans)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <Wand2 size={12} />
+                  {decoding ? 'Decoding...' : 'Decode steps'}
+                </button>
+              </div>
+              {decodeError && (
+                <p style={{ fontSize: 12, color: '#c41e3a', marginTop: 6, fontFamily: 'var(--font-sans)' }}>
+                  {decodeError}
+                </p>
+              )}
+            </div>
 
-            <Field
-              label="Steps (plain text)"
-              hint="Paste your steps one per line for display on the site. Users can read these without importing."
-            >
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                <label style={{
+                  fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)',
+                }}>
+                  Steps (plain text)
+                </label>
+                {stepsAutoPopulated && (
+                  <span style={{
+                    fontSize: 11,
+                    color: 'var(--accent)',
+                    fontFamily: 'var(--font-sans)',
+                    padding: '2px 7px',
+                    background: 'rgba(29,158,117,0.1)',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '0.5px solid rgba(29,158,117,0.3)',
+                  }}>
+                    Auto-decoded
+                  </span>
+                )}
+              </div>
               <textarea
                 value={form.raw_steps_text}
-                onChange={e => setField('raw_steps_text', e.target.value)}
+                onChange={e => handleStepsChange(e.target.value)}
                 placeholder={`/targetenemy [noharm][dead]\n/cast [noform:1] Bear Form\n/cast Mangle`}
                 rows={8}
                 style={{ fontFamily: 'var(--font-mono)', fontSize: 12, resize: 'vertical' }}
               />
-            </Field>
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                Paste steps one per line, or decode from your export string above. Users can read these without importing.
+              </p>
+            </div>
 
             <Field label="GRIP version" hint="Which version of GRIP-EMS was this sequence built with?">
               <div style={{ display: 'flex', alignItems: 'stretch', width: '100%' }}>
@@ -351,17 +581,10 @@ function PostForm() {
                     type="button"
                     onClick={() => setField('grip_version', stepGripVersion(form.grip_version, 'up'))}
                     style={{
-                      flex: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '0 8px',
-                      background: 'transparent',
-                      border: 'none',
-                      borderBottom: '0.5px solid var(--border-strong)',
-                      cursor: 'pointer',
-                      color: 'var(--text-secondary)',
-                      width: 28,
+                      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      padding: '0 8px', background: 'transparent', border: 'none',
+                      borderBottom: '0.5px solid var(--border-strong)', cursor: 'pointer',
+                      color: 'var(--text-secondary)', width: 28,
                     }}
                   >
                     <ChevronUp size={12} />
@@ -370,16 +593,9 @@ function PostForm() {
                     type="button"
                     onClick={() => setField('grip_version', stepGripVersion(form.grip_version, 'down'))}
                     style={{
-                      flex: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '0 8px',
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: 'var(--text-secondary)',
-                      width: 28,
+                      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      padding: '0 8px', background: 'transparent', border: 'none',
+                      cursor: 'pointer', color: 'var(--text-secondary)', width: 28,
                     }}
                   >
                     <ChevronDown size={12} />
@@ -452,7 +668,7 @@ function PostForm() {
             {isEditMode && (
               <button
                 type="button"
-                onClick={() => router.push(`/sequence/${editSlug}`)}
+                onClick={() => router.push(`/sequences/${editSlug}`)}
                 disabled={submitting}
                 style={{
                   background: 'var(--bg-secondary)', color: 'var(--text-secondary)',
@@ -515,19 +731,6 @@ function Field({ label, hint, children }: {
       }}>
         {label}
       </label>
-      <style>{`
-        input, select, textarea {
-          width: 100%; padding: 8px 12px;
-          border: 0.5px solid var(--border-strong);
-          border-radius: var(--radius-md);
-          font-size: 13px; background: var(--bg-secondary);
-          color: var(--text-primary); font-family: var(--font-sans);
-        }
-        input:focus, select:focus, textarea:focus {
-          outline: none; border-color: var(--accent);
-        }
-        select { appearance: auto; }
-      `}</style>
       {children}
       {hint && (
         <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{hint}</p>
