@@ -85,6 +85,29 @@ export default function SequencePageClient() {
         setVersions(versionData)
         const current = versionData.find(v => v.id === seq.current_version_id) ?? versionData[0]
         setSelectedVersion(current)
+      } else {
+        // No version rows exist. This sequence was posted through the legacy
+        // post form which writes directly to the sequences table without
+        // creating a sequence_versions row. Synthesize a version-shaped object
+        // from the sequence columns so the copy button and sidebar fields render.
+        setSelectedVersion({
+          id: seq.id,
+          sequence_id: seq.id,
+          version_number: 1,
+          version_label: 'v1.0',
+          grip_string: seq.grip_string ?? '',
+          raw_steps: seq.raw_steps ?? null,
+          changelog: null,
+          author_id: seq.author_id,
+          hero_talent: seq.hero_talent ?? null,
+          content_type: seq.content_type ?? null,
+          step_function: seq.step_function ?? null,
+          grip_version: seq.grip_version ?? null,
+          talent_string: seq.talent_string ?? null,
+          warcraftlogs_url: seq.warcraftlogs_url ?? null,
+          performance_notes: seq.performance_notes ?? null,
+          created_at: seq.created_at,
+        })
       }
     }
     setLoading(false)
@@ -257,7 +280,7 @@ export default function SequencePageClient() {
                   opacity: deleting ? 0.7 : 1,
                 }}
               >
-                {deleting ? 'Deleting…' : 'Delete'}
+                {deleting ? 'Deleting...' : 'Delete'}
               </button>
             </div>
           </div>
@@ -285,7 +308,7 @@ export default function SequencePageClient() {
               }}>
                 {sequence.title}
               </h1>
-              {selectedVersion && (
+              {selectedVersion && versions.length > 0 && (
                 <span style={{
                   background: 'var(--accent)',
                   color: 'white',
@@ -528,7 +551,7 @@ export default function SequencePageClient() {
                 {selectedVersion.grip_string}
               </div>
               <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
-                In-game: type /gems import and paste this string
+                In-game: type /grip import and paste this string
               </p>
             </div>
           )}
@@ -773,7 +796,7 @@ export default function SequencePageClient() {
             </div>
           )}
 
-          {/* Warcraft Logs - shown in sidebar too if present */}
+          {/* Warcraft Logs */}
           {selectedVersion?.warcraftlogs_url && (
             <div style={{
               background: 'var(--bg-primary)',
@@ -782,9 +805,8 @@ export default function SequencePageClient() {
               padding: '16px',
             }}>
               <h3 style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Warcraft Logs</h3>
-              
-                <a
-				href={selectedVersion.warcraftlogs_url}
+              <a
+                href={selectedVersion.warcraftlogs_url}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ fontSize: 12, color: 'var(--accent)', wordBreak: 'break-all' }}
@@ -799,8 +821,6 @@ export default function SequencePageClient() {
     </div>
   )
 }
-
-// --- Comment thread component ---
 
 interface CommentThreadProps {
   comment: Comment
