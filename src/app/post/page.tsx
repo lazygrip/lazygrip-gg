@@ -55,18 +55,14 @@ function applyDecodeMeta(
 ) {
   const updates: Partial<typeof EMPTY_FORM> = {}
 
-  // Only fill title if the author hasn't typed one yet
   if (!form.title.trim() && meta.name && !meta.name.startsWith('Sequence ')) {
     updates.title = meta.name
   }
 
-  // Map classID to class_id string
   if (meta.classID) {
     const cls = WOW_CLASSES.find(c => c.id === meta.classID)
     if (cls) {
       updates.class_id = String(cls.id)
-
-      // Map specID to spec_name within that class
       if (meta.specID) {
         const spec = cls.specs.find(s => s.id === meta.specID)
         if (spec) {
@@ -76,7 +72,6 @@ function applyDecodeMeta(
     }
   }
 
-  // Map stepFunction from GRIP to our STEP_FUNCTIONS values
   if (meta.stepFunction) {
     const gripToForm: Record<string, string> = {
       'Sequential': 'Sequential',
@@ -213,7 +208,6 @@ function PostForm() {
       setSequenceOptions(null)
       setPendingExportString(null)
 
-      // Auto-fill form fields from decoded metadata
       if (data.meta) {
         setForm(current => {
           const updates: Partial<typeof EMPTY_FORM> = {}
@@ -347,13 +341,30 @@ function PostForm() {
         router.push(`/sequences/${editSlug}`)
       } else {
         const slug = slugify(form.title) + '-' + Date.now().toString(36)
-        const { data, error: insertError } = await supabase
-          .from('sequences')
-          .insert({ ...payload, author_id: user.id, slug, is_published: true })
-          .select('slug')
-          .single()
+        const { data, error: rpcError } = await supabase.rpc('create_sequence_with_version', {
+          p_author_id: user.id,
+          p_title: payload.title,
+          p_slug: slug,
+          p_description: payload.description,
+          p_class_id: payload.class_id,
+          p_class_name: payload.class_name,
+          p_spec_id: selectedSpec?.id ?? null,
+          p_spec_name: payload.spec_name,
+          p_content_type: payload.content_type,
+          p_hero_talent: payload.hero_talent,
+          p_patch_version: payload.patch_version,
+          p_grip_version: payload.grip_version,
+          p_step_function: payload.step_function,
+          p_step_count: payload.step_count,
+          p_grip_string: payload.grip_string,
+          p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
+          p_talent_string: payload.talent_string,
+          p_warcraftlogs_url: payload.warcraftlogs_url,
+          p_performance_notes: payload.performance_notes,
+          p_changelog: null,
+        })
 
-        if (insertError) throw insertError
+        if (rpcError) throw rpcError
         if (data) router.push(`/sequences/${data.slug}`)
       }
     } catch (err: unknown) {
