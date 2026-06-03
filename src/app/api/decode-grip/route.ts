@@ -40,9 +40,17 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    const seq = sequences[targetIndex]
+
     return NextResponse.json({
       multipleSequences: false,
-      steps: sequences[targetIndex].steps,
+      steps: seq.steps,
+      meta: {
+        name: seq.name,
+        classID: seq.classID,
+        specID: seq.specID,
+        stepFunction: seq.stepFunction,
+      },
     })
   } catch (err: unknown) {
     const message =

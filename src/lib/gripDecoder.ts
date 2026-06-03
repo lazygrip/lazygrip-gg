@@ -42,6 +42,9 @@ interface NormalizedSequence {
   description: string
   class: string
   spec: string
+  classID: number | null
+  specID: number | null
+  stepFunction: string
   defaultVersion: number
   versions: NormalizedVersion[]
   steps: RawStep[]
@@ -114,13 +117,22 @@ export function decodeEMSExport(input: string): DecodedExport {
  * caller can present a picker to the author.
  */
 export function decodeGripString(input: string): {
-  sequences: Array<{ name: string; steps: SequenceStep[] }>
+  sequences: Array<{
+    name: string
+    steps: SequenceStep[]
+    classID: number | null
+    specID: number | null
+    stepFunction: string
+  }>
 } {
   const result = decodeEMSExport(input)
 
   const sequences = result.sequences.map((seq) => ({
     name: seq.name,
     steps: rawStepsToSequenceSteps(seq.steps),
+    classID: seq.classID,
+    specID: seq.specID,
+    stepFunction: seq.stepFunction,
   }))
 
   if (sequences.length === 0) {
@@ -166,6 +178,12 @@ function rawStepsToSequenceSteps(rawSteps: RawStep[]): SequenceStep[] {
 // ---------------------------------------------------------------------------
 
 function normalizeSequences(decoded: Record<string, unknown>): NormalizedSequence[] {
+  // classID and specID sit on the top-level decoded object for single-sequence
+  // exports. For collections they may be on each entry. We read from the top
+  // level first and fall back to the entry.
+  const topClassID = decoded.classID ?? decoded.ClassID ?? null
+  const topSpecID = decoded.specID ?? decoded.specId ?? decoded.SpecID ?? null
+
   const entries = findSequenceEntries(decoded)
 
   return entries
@@ -177,6 +195,18 @@ function normalizeSequences(decoded: Record<string, unknown>): NormalizedSequenc
       const activeVersion =
         versions[defaultVersion - 1] || versions.find((v) => v.steps.length > 0)
       const steps = activeVersion ? activeVersion.steps : fallbackSteps
+
+      const classID = Number(
+        sequence.classID ?? sequence.ClassID ?? sequence.class_id ?? topClassID ?? 0
+      ) || null
+      const specID = Number(
+        sequence.specID ?? sequence.specId ?? sequence.SpecID ?? sequence.spec_id ?? topSpecID ?? 0
+      ) || null
+      const stepFunction =
+        activeVersion?.stepFunction ||
+        (sequence.stepFunction as string) ||
+        (sequence.StepFunction as string) ||
+        ''
 
       return {
         name:
@@ -190,6 +220,9 @@ function normalizeSequences(decoded: Record<string, unknown>): NormalizedSequenc
           (sequence.description as string) || (sequence.Description as string) || '',
         class: (sequence.class as string) || (sequence.Class as string) || '',
         spec: (sequence.spec as string) || (sequence.Spec as string) || '',
+        classID,
+        specID,
+        stepFunction,
         defaultVersion,
         versions,
         steps,

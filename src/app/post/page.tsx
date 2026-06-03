@@ -8,7 +8,7 @@ import TiptapEditor from '@/components/editor/TiptapEditor'
 import type { SequenceStep } from '@/types'
 
 const PATCH_VERSIONS = ['12.0', '12.0.5', '12.0.7']
-const DEFAULT_GRIP_VERSION = '2.1.10'
+const DEFAULT_GRIP_VERSION = '2.1.7'
 
 const EMPTY_FORM = {
   title: '',
@@ -32,6 +32,13 @@ interface SequenceOption {
   index: number
 }
 
+interface DecodeMeta {
+  name: string
+  classID: number | null
+  specID: number | null
+  stepFunction: string
+}
+
 function stepGripVersion(version: string, direction: 'up' | 'down'): string {
   const parts = version.split('.')
   if (parts.length !== 3) return version
@@ -39,6 +46,53 @@ function stepGripVersion(version: string, direction: 'up' | 'down'): string {
   if (isNaN(patch)) return version
   patch = direction === 'up' ? patch + 1 : Math.max(0, patch - 1)
   return `${parts[0]}.${parts[1]}.${patch}`
+}
+
+function applyDecodeMeta(
+  form: typeof EMPTY_FORM,
+  meta: DecodeMeta,
+  setForm: (f: typeof EMPTY_FORM) => void
+) {
+  const updates: Partial<typeof EMPTY_FORM> = {}
+
+  // Only fill title if the author hasn't typed one yet
+  if (!form.title.trim() && meta.name && !meta.name.startsWith('Sequence ')) {
+    updates.title = meta.name
+  }
+
+  // Map classID to class_id string
+  if (meta.classID) {
+    const cls = WOW_CLASSES.find(c => c.id === meta.classID)
+    if (cls) {
+      updates.class_id = String(cls.id)
+
+      // Map specID to spec_name within that class
+      if (meta.specID) {
+        const spec = cls.specs.find(s => s.id === meta.specID)
+        if (spec) {
+          updates.spec_name = spec.name
+        }
+      }
+    }
+  }
+
+  // Map stepFunction from GRIP to our STEP_FUNCTIONS values
+  if (meta.stepFunction) {
+    const gripToForm: Record<string, string> = {
+      'Sequential': 'Sequential',
+      'Priority': 'Priority',
+      'ReversePriority': 'Rev. Priority',
+      'Reverse Priority': 'Rev. Priority',
+      'Rev. Priority': 'Rev. Priority',
+      'Random': 'Random',
+    }
+    const mapped = gripToForm[meta.stepFunction]
+    if (mapped) updates.step_function = mapped
+  }
+
+  if (Object.keys(updates).length > 0) {
+    setForm({ ...form, ...updates })
+  }
 }
 
 function PostForm() {
@@ -60,8 +114,6 @@ function PostForm() {
   const [stepsAutoPopulated, setStepsAutoPopulated] = useState(false)
   const [sequenceOptions, setSequenceOptions] = useState<SequenceOption[] | null>(null)
   const [pendingExportString, setPendingExportString] = useState<string | null>(null)
-  // Stores the structured steps from the decoder so submit uses them directly
-  // rather than re-parsing the textarea text, which would split multiline steps.
   const [decodedSteps, setDecodedSteps] = useState<SequenceStep[] | null>(null)
   const decodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -121,8 +173,6 @@ function PostForm() {
     loadSequence()
   }, [editId])
 
-  // When the author edits the steps textarea manually, discard the decoded
-  // steps so the form falls back to parsing the textarea text on submit.
   function handleStepsChange(value: string) {
     setField('raw_steps_text', value)
     if (stepsAutoPopulated) {
@@ -156,14 +206,50 @@ function PostForm() {
       }
 
       const steps: SequenceStep[] = data.steps
-      // Store the structured steps for use at submit time.
       setDecodedSteps(steps)
-      // Display in textarea with newlines so each step's macro lines are readable.
       const stepsText = steps.map(s => s.text).join('\n---\n')
       setField('raw_steps_text', stepsText)
       setStepsAutoPopulated(true)
       setSequenceOptions(null)
       setPendingExportString(null)
+
+      // Auto-fill form fields from decoded metadata
+      if (data.meta) {
+        setForm(current => {
+          const updates: Partial<typeof EMPTY_FORM> = {}
+          const meta: DecodeMeta = data.meta
+
+          if (!current.title.trim() && meta.name && !meta.name.startsWith('Sequence ')) {
+            updates.title = meta.name
+          }
+
+          if (meta.classID) {
+            const cls = WOW_CLASSES.find(c => c.id === meta.classID)
+            if (cls) {
+              updates.class_id = String(cls.id)
+              if (meta.specID) {
+                const spec = cls.specs.find(s => s.id === meta.specID)
+                if (spec) updates.spec_name = spec.name
+              }
+            }
+          }
+
+          if (meta.stepFunction) {
+            const map: Record<string, string> = {
+              'Sequential': 'Sequential',
+              'Priority': 'Priority',
+              'ReversePriority': 'Rev. Priority',
+              'Reverse Priority': 'Rev. Priority',
+              'Rev. Priority': 'Rev. Priority',
+              'Random': 'Random',
+            }
+            const mapped = map[meta.stepFunction]
+            if (mapped) updates.step_function = mapped
+          }
+
+          return { ...current, ...updates }
+        })
+      }
     } catch {
       setDecodeError('Could not reach the decode API. Check your connection.')
     } finally {
@@ -199,8 +285,6 @@ function PostForm() {
     setForm(f => ({ ...f, [key]: value }))
   }
 
-  // Only used when the author typed steps manually rather than decoding.
-  // Splits on newlines that precede a slash command or numbered line.
   function parseSteps(text: string) {
     if (!text.trim()) return null
     return text.split(/\n(?=\/|\d+\.)/).map((block, i) => ({
@@ -231,9 +315,6 @@ function PostForm() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/auth/login'); return }
 
-      // Use the structured decoded steps if available, otherwise fall back to
-      // parsing the textarea text. This prevents multiline GRIP steps from
-      // being split into individual lines when storing to the database.
       const raw_steps = decodedSteps ?? parseSteps(form.raw_steps_text)
 
       const payload = {
@@ -292,25 +373,15 @@ function PostForm() {
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 24px' }}>
 
-      {/* Sequence picker modal */}
       {sequenceOptions && (
         <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0,0,0,0.6)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
         }}>
           <div style={{
-            background: 'var(--bg-primary)',
-            border: '0.5px solid var(--border-strong)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '24px',
-            maxWidth: 440,
-            width: '100%',
-            margin: '0 16px',
+            background: 'var(--bg-primary)', border: '0.5px solid var(--border-strong)',
+            borderRadius: 'var(--radius-lg)', padding: '24px', maxWidth: 440,
+            width: '100%', margin: '0 16px',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)' }}>
@@ -328,21 +399,12 @@ function PostForm() {
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {sequenceOptions.map(opt => (
-                <button
-                  key={opt.index}
-                  onClick={() => handleSequencePick(opt.index)}
-                  style={{
-                    padding: '10px 14px',
-                    background: 'var(--bg-secondary)',
-                    border: '0.5px solid var(--border)',
-                    borderRadius: 'var(--radius-md)',
-                    fontSize: 13,
-                    color: 'var(--text-primary)',
-                    fontFamily: 'var(--font-sans)',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                >
+                <button key={opt.index} onClick={() => handleSequencePick(opt.index)} style={{
+                  padding: '10px 14px', background: 'var(--bg-secondary)',
+                  border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)',
+                  fontSize: 13, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)',
+                  cursor: 'pointer', textAlign: 'left',
+                }}>
                   {opt.name}
                 </button>
               ))}
@@ -362,6 +424,107 @@ function PostForm() {
 
       <form onSubmit={handleSubmit}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+          <Section title="Sequence data">
+            {!isEditMode && (
+              <div style={{
+                display: 'flex',
+                gap: 10,
+                padding: '12px 14px',
+                background: 'rgba(29,158,117,0.07)',
+                border: '0.5px solid rgba(29,158,117,0.3)',
+                borderRadius: 'var(--radius-md)',
+              }}>
+                <span style={{ fontSize: 16, flexShrink: 0, lineHeight: 1.4 }}>👆</span>
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-sans)', marginBottom: 3 }}>
+                    Start here: paste your GRIP export string
+                  </p>
+                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', lineHeight: 1.5 }}>
+                    In GRIP-EMS, open your sequence and click Export. Paste the string below and LazyGrip will automatically fill in your class, spec, step function, and steps. You only need to add a title and description.
+                  </p>
+                </div>
+              </div>
+            )}
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 5 }}>
+                GRIP export string
+              </label>
+              <style>{`
+                input, select, textarea {
+                  width: 100%; padding: 8px 12px;
+                  border: 0.5px solid var(--border-strong);
+                  border-radius: var(--radius-md);
+                  font-size: 13px; background: var(--bg-secondary);
+                  color: var(--text-primary); font-family: var(--font-sans);
+                }
+                input:focus, select:focus, textarea:focus {
+                  outline: none; border-color: var(--accent);
+                }
+                select { appearance: auto; }
+              `}</style>
+              <textarea
+                value={form.grip_string}
+                onChange={e => handleGripStringChange(e.target.value)}
+                placeholder="Paste your GRIP1 export string here. Class, spec, and step function will fill automatically."
+                rows={4}
+                style={{ fontFamily: 'var(--font-mono)', fontSize: 12, resize: 'vertical' }}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', flex: 1 }}>
+                  Paste your export string and class, spec, step function, and steps will decode automatically.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => form.grip_string.trim() && runDecode(form.grip_string.trim())}
+                  disabled={decoding || !form.grip_string.trim()}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    padding: '5px 10px', background: decoding ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
+                    border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)',
+                    fontSize: 12, color: decoding ? 'var(--text-muted)' : 'var(--text-secondary)',
+                    cursor: decoding || !form.grip_string.trim() ? 'not-allowed' : 'pointer',
+                    fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap',
+                  }}
+                >
+                  <Wand2 size={12} />
+                  {decoding ? 'Decoding...' : 'Decode'}
+                </button>
+              </div>
+              {decodeError && (
+                <p style={{ fontSize: 12, color: '#c41e3a', marginTop: 6, fontFamily: 'var(--font-sans)' }}>
+                  {decodeError}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
+                  Steps (plain text)
+                </label>
+                {stepsAutoPopulated && (
+                  <span style={{
+                    fontSize: 11, color: 'var(--accent)', fontFamily: 'var(--font-sans)',
+                    padding: '2px 7px', background: 'rgba(29,158,117,0.1)',
+                    borderRadius: 'var(--radius-sm)', border: '0.5px solid rgba(29,158,117,0.3)',
+                  }}>
+                    Auto-decoded
+                  </span>
+                )}
+              </div>
+              <textarea
+                value={form.raw_steps_text}
+                onChange={e => handleStepsChange(e.target.value)}
+                placeholder={`/targetenemy [noharm][dead]\n/cast [noform:1] Bear Form\n/cast Mangle`}
+                rows={8}
+                style={{ fontFamily: 'var(--font-mono)', fontSize: 12, resize: 'vertical' }}
+              />
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                Paste steps one per line, or decode from your export string above. Users can read these without importing.
+              </p>
+            </div>
+          </Section>
 
           <Section title="Basic info">
             <Field label="Sequence title *">
@@ -459,153 +622,32 @@ function PostForm() {
             </div>
           </Section>
 
-          <Section title="Sequence data">
-            <div>
-              <label style={{
-                display: 'block',
-                fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)',
-                marginBottom: 5,
-              }}>
-                GRIP export string
-              </label>
-              <style>{`
-                input, select, textarea {
-                  width: 100%; padding: 8px 12px;
-                  border: 0.5px solid var(--border-strong);
-                  border-radius: var(--radius-md);
-                  font-size: 13px; background: var(--bg-secondary);
-                  color: var(--text-primary); font-family: var(--font-sans);
-                }
-                input:focus, select:focus, textarea:focus {
-                  outline: none; border-color: var(--accent);
-                }
-                select { appearance: auto; }
-              `}</style>
-              <textarea
-                value={form.grip_string}
-                onChange={e => handleGripStringChange(e.target.value)}
-                placeholder="Paste your GRIP1 export string here..."
-                rows={4}
-                style={{ fontFamily: 'var(--font-mono)', fontSize: 12, resize: 'vertical' }}
-              />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
-                <p style={{ fontSize: 11, color: 'var(--text-muted)', flex: 1 }}>
-                  Export from GRIP-EMS using the Export button, then paste here. Steps will decode automatically.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => form.grip_string.trim() && runDecode(form.grip_string.trim())}
-                  disabled={decoding || !form.grip_string.trim()}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 5,
-                    padding: '5px 10px',
-                    background: decoding ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
-                    border: '0.5px solid var(--border-strong)',
-                    borderRadius: 'var(--radius-md)',
-                    fontSize: 12,
-                    color: decoding ? 'var(--text-muted)' : 'var(--text-secondary)',
-                    cursor: decoding || !form.grip_string.trim() ? 'not-allowed' : 'pointer',
-                    fontFamily: 'var(--font-sans)',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  <Wand2 size={12} />
-                  {decoding ? 'Decoding...' : 'Decode steps'}
-                </button>
-              </div>
-              {decodeError && (
-                <p style={{ fontSize: 12, color: '#c41e3a', marginTop: 6, fontFamily: 'var(--font-sans)' }}>
-                  {decodeError}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                <label style={{
-                  fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)',
-                }}>
-                  Steps (plain text)
-                </label>
-                {stepsAutoPopulated && (
-                  <span style={{
-                    fontSize: 11,
-                    color: 'var(--accent)',
-                    fontFamily: 'var(--font-sans)',
-                    padding: '2px 7px',
-                    background: 'rgba(29,158,117,0.1)',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '0.5px solid rgba(29,158,117,0.3)',
-                  }}>
-                    Auto-decoded
-                  </span>
-                )}
-              </div>
-              <textarea
-                value={form.raw_steps_text}
-                onChange={e => handleStepsChange(e.target.value)}
-                placeholder={`/targetenemy [noharm][dead]\n/cast [noform:1] Bear Form\n/cast Mangle`}
-                rows={8}
-                style={{ fontFamily: 'var(--font-mono)', fontSize: 12, resize: 'vertical' }}
-              />
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                Paste steps one per line, or decode from your export string above. Users can read these without importing.
-              </p>
-            </div>
-
+          <Section title="Optional extras">
             <Field label="GRIP version" hint="Which version of GRIP-EMS was this sequence built with?">
               <div style={{ display: 'flex', alignItems: 'stretch', width: '100%' }}>
                 <input
                   value={form.grip_version}
                   onChange={e => setField('grip_version', e.target.value)}
-                  style={{
-                    flex: 1,
-                    borderRight: 'none',
-                    borderTopRightRadius: 0,
-                    borderBottomRightRadius: 0,
-                  }}
+                  style={{ flex: 1, borderRight: 'none', borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
                 />
                 <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  border: '0.5px solid var(--border-strong)',
-                  borderLeft: 'none',
-                  borderTopRightRadius: 'var(--radius-md)',
-                  borderBottomRightRadius: 'var(--radius-md)',
-                  overflow: 'hidden',
-                  background: 'var(--bg-secondary)',
+                  display: 'flex', flexDirection: 'column',
+                  border: '0.5px solid var(--border-strong)', borderLeft: 'none',
+                  borderTopRightRadius: 'var(--radius-md)', borderBottomRightRadius: 'var(--radius-md)',
+                  overflow: 'hidden', background: 'var(--bg-secondary)',
                 }}>
-                  <button
-                    type="button"
-                    onClick={() => setField('grip_version', stepGripVersion(form.grip_version, 'up'))}
-                    style={{
-                      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      padding: '0 8px', background: 'transparent', border: 'none',
-                      borderBottom: '0.5px solid var(--border-strong)', cursor: 'pointer',
-                      color: 'var(--text-secondary)', width: 28,
-                    }}
-                  >
+                  <button type="button" onClick={() => setField('grip_version', stepGripVersion(form.grip_version, 'up'))}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px', background: 'transparent', border: 'none', borderBottom: '0.5px solid var(--border-strong)', cursor: 'pointer', color: 'var(--text-secondary)', width: 28 }}>
                     <ChevronUp size={12} />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setField('grip_version', stepGripVersion(form.grip_version, 'down'))}
-                    style={{
-                      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      padding: '0 8px', background: 'transparent', border: 'none',
-                      cursor: 'pointer', color: 'var(--text-secondary)', width: 28,
-                    }}
-                  >
+                  <button type="button" onClick={() => setField('grip_version', stepGripVersion(form.grip_version, 'down'))}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', width: 28 }}>
                     <ChevronDown size={12} />
                   </button>
                 </div>
               </div>
             </Field>
-          </Section>
 
-          <Section title="Optional extras">
             <Field label="Talent string" hint="Paste your WoW talent import string so others can match your build.">
               <input
                 value={form.talent_string}
@@ -652,12 +694,11 @@ function PostForm() {
               type="submit"
               disabled={submitting}
               style={{
-                background: 'var(--accent)', color: 'white',
-                border: 'none', borderRadius: 'var(--radius-md)',
-                padding: '12px 24px', fontSize: 14, fontWeight: 500,
+                background: 'var(--accent)', color: 'white', border: 'none',
+                borderRadius: 'var(--radius-md)', padding: '12px 24px',
+                fontSize: 14, fontWeight: 500,
                 cursor: submitting ? 'not-allowed' : 'pointer',
-                opacity: submitting ? 0.7 : 1,
-                fontFamily: 'var(--font-sans)',
+                opacity: submitting ? 0.7 : 1, fontFamily: 'var(--font-sans)',
               }}
             >
               {submitting
@@ -672,10 +713,9 @@ function PostForm() {
                 disabled={submitting}
                 style={{
                   background: 'var(--bg-secondary)', color: 'var(--text-secondary)',
-                  border: '0.5px solid var(--border-strong)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '12px 20px', fontSize: 14,
-                  cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                  border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)',
+                  padding: '12px 20px', fontSize: 14, cursor: 'pointer',
+                  fontFamily: 'var(--font-sans)',
                 }}
               >
                 Cancel
@@ -704,10 +744,8 @@ export default function PostPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{
-      background: 'var(--bg-primary)',
-      border: '0.5px solid var(--border)',
-      borderRadius: 'var(--radius-lg)',
-      padding: '20px',
+      background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
+      borderRadius: 'var(--radius-lg)', padding: '20px',
     }}>
       <h2 style={{ fontSize: 14, fontWeight: 500, marginBottom: 16, color: 'var(--text-primary)' }}>
         {title}
@@ -719,16 +757,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-function Field({ label, hint, children }: {
-  label: string; hint?: string; children: React.ReactNode
-}) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label style={{
-        display: 'block',
-        fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)',
-        marginBottom: 5,
-      }}>
+      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 5 }}>
         {label}
       </label>
       {children}
