@@ -60,7 +60,7 @@ export default function BuildingSequencesPage() {
           The framework: five questions before you build
         </h2>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 16 }}>
-          Every structural decision in a sequence — step count, step function, step order, reset conditions — follows from answers to five questions about your spec and your content. Answer these before you open the editor and the sequence design becomes straightforward. Skip them and you end up tweaking by feel until the numbers eventually converge on something that works.
+          Every structural decision in a sequence, meaning step count, step function, step order, and reset conditions, follows from answers to five questions about your spec and your content. Answer these before you open the editor and the sequence design becomes straightforward. Skip them and you end up tweaking by feel until the numbers eventually converge on something that works.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -99,13 +99,13 @@ export default function BuildingSequencesPage() {
           Worked example: Guardian Druid Mythic+ (tank)
         </h2>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 16 }}>
-          This dissects Slowdog&apos;s Elune&apos;s Chosen M+ sequence, which is published on this site and has been validated through plus 13 and plus 14 keys. The point is not to tell you to play Guardian Druid — it is to show what the framework looks like when a spec has strict uptime requirements and the sequence structure has to enforce them.
+          This uses Slowdog&apos;s Elune&apos;s Chosen M+ sequence as the example because it is publicly available on this site, fully validated, and mechanically complex enough that every principle covered in the framework above shows up in the step design. Guardian Druid has strict uptime requirements that force explicit structural decisions, which makes it a better teaching example than a simpler rotation would be. The five questions, the step function reasoning, the modifier patterns, all of it applies identically to your spec, and the goal here is to show you what those decisions look like when they have real consequences in logs.
         </p>
 
         <div style={{ padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', marginBottom: 20 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             {[
-              ['Spec', 'Guardian Druid — Elune\'s Chosen'],
+              ['Spec', 'Guardian Druid, Elune\'s Chosen'],
               ['Step function', 'Sequential'],
               ['Reset', 'On combat end'],
               ['Steps', '30'],
@@ -133,7 +133,7 @@ export default function BuildingSequencesPage() {
 
         <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 14 }}>Why Sequential and not Priority</h3>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 16 }}>
-          Guardian&apos;s two most important outputs are Thrash damage and Ironfur uptime. Both depend on specific spells firing at specific frequencies — Thrash needs to refresh before it falls off, and Ironfur needs to cast before the previous stack expires. Priority step function would always try Thrash first on every keypress, which sounds efficient but means Ironfur only fires when Thrash is on cooldown. Sequential puts Ironfur at fixed step positions so it fires on schedule regardless of what Thrash is doing.
+          Guardian&apos;s two most important outputs are Thrash damage and Ironfur uptime. Both depend on specific spells firing at specific frequencies: Thrash needs to refresh before it falls off, and Ironfur needs to cast before the previous stack expires. Priority step function would always try Thrash first on every keypress, which sounds efficient but means Ironfur only fires when Thrash is on cooldown. Sequential puts Ironfur at fixed step positions so it fires on schedule regardless of what Thrash is doing.
         </p>
 
         <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 14 }}>The structural pattern</h3>
@@ -156,7 +156,7 @@ export default function BuildingSequencesPage() {
           <CodeBlock>{`/cast [noform:1, nochanneling] Bear Form; [mod:shift] Frenzied Regeneration; [mod:ctrl] Ironfur
 /cast [nomod:shift, nomod:ctrl, combat] Thrash`}</CodeBlock>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65, marginTop: 10 }}>
-            Thrash fires first because it is the highest priority ability for Guardian damage and healing. The [combat] guard prevents the sequence from attempting Thrash pre-pull during a buffer press. The [nomod:shift, nomod:ctrl] pair on the combat spell is what makes the modifier system work — without those guards, pressing Shift for Frenzied Regeneration would also attempt Thrash on the same press.
+            Thrash fires first because it is the highest priority ability for Guardian damage and healing. The [combat] guard prevents the sequence from attempting Thrash pre-pull during a buffer press. The [nomod:shift, nomod:ctrl] pair on the combat spell is what makes the modifier system work, because without those guards, pressing Shift for Frenzied Regeneration would also attempt Thrash on the same press.
           </p>
         </StepBlock>
 
@@ -165,7 +165,7 @@ export default function BuildingSequencesPage() {
 /cast [combat] Incarnation: Guardian of Ursoc
 /cast [nomod:shift, nomod:ctrl, combat] Mangle`}</CodeBlock>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65, marginTop: 10 }}>
-            Incarnation uses [combat] only and not the [nomod] guards. This is intentional — you never want to accidentally skip a major cooldown by holding Shift for a Frenzied Regen at the wrong moment. Incarnation fires regardless of modifier state. Mangle follows as the filler if Incarnation is on cooldown.
+            Incarnation uses [combat] only and not the [nomod] guards. This is intentional, because you never want to accidentally skip a major cooldown by holding Shift for a Frenzied Regen at the wrong moment. Incarnation fires regardless of modifier state. Mangle follows as the filler if Incarnation is on cooldown.
           </p>
         </StepBlock>
 
@@ -204,7 +204,7 @@ export default function BuildingSequencesPage() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
           {[
-            { q: 'Highest priority spell?', a: 'Your main spender or the proc ability that must never clip. Check your spec Priority section on Icy Veins — whatever sits at the top of that list is step 1.' },
+            { q: 'Highest priority spell?', a: 'Your main spender or the proc ability that must never clip. Check your spec Priority section on Icy Veins and whatever sits at the top of that list is step 1.' },
             { q: 'Pull cooldown?', a: 'Your major DPS cooldown goes at step 2 or 3 with a [combat] guard. If your spec has a pre-pull setup ability like a debuff or a buff to apply before the pull, that lives at step 1 without a [combat] guard.' },
             { q: 'Can spells be skipped?', a: 'For most DPS rotations, yes. If your filler fires but your spender is not ready, you want the sequence to try the spender on the next press and not stall waiting for the filler to finish. This is where Priority step function makes sense over Sequential.' },
             { q: 'Modifier needs?', a: 'Shift for a burst cooldown you want on demand without breaking the rotation. Same [nomod] guard rules apply as in the tank example.' },

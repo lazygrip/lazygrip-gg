@@ -31,7 +31,7 @@ export default function ValidatingPage() {
           Validating your work
         </h1>
         <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.75, maxWidth: 620 }}>
-          Gut feel is not validation. Dummy parsing is not validation. A sequence that feels smooth in the training area can still have structural problems that only appear under real pressure. This section covers how to actually verify your sequence is working — starting with the tools built into GRIP-EMS and ending with Warcraft Logs, which is the only standard that tells you the full picture.
+          Gut feel is not validation. Dummy parsing is not validation. A sequence that feels smooth in the training area can still have structural problems that only appear under real pressure. This section covers how to actually verify your sequence is working, starting with the tools built into GRIP-EMS and ending with Warcraft Logs, which is the only standard that tells you the full picture.
         </p>
       </div>
 
@@ -51,7 +51,7 @@ export default function ValidatingPage() {
             { cmd: '/gems repair <name>', desc: 'Scan and repair a single sequence by name' },
             { cmd: '/gems repairall', desc: 'Scan every sequence you own in one pass' },
             { cmd: '/gems validate', desc: 'Check all sequences specifically for stale or renamed spells' },
-            { cmd: '/gems revalidate', desc: 'Force a full spell revalidation — run this after a patch' },
+            { cmd: '/gems revalidate', desc: 'Force a full spell revalidation, run this after a patch' },
           ].map(item => (
             <div key={item.cmd} style={{ display: 'flex', gap: 12, alignItems: 'baseline', padding: '9px 14px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
               <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--accent-text)', flexShrink: 0, minWidth: 200 }}>{item.cmd}</code>
@@ -61,7 +61,7 @@ export default function ValidatingPage() {
         </div>
 
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75 }}>
-          A clean repair pass with a green health score badge means the sequence is structurally sound. It does not mean the step ordering and timing are optimal for your spec — that is what logs are for. Run repair first, then run content, then check logs.
+          A clean repair pass with a green health score badge means the sequence is structurally sound. It does not mean the step ordering and timing are optimal for your spec, and that is what logs are for. Run repair first, then run content, then check logs.
         </p>
         <InfoBox>
           Run /gems repairall after every game patch that touches your spec. Blizzard renames and reshuffles spells with some patches and sequences that were working silently stop working because a spell name no longer resolves. The Repair module catches these and fixes most of them automatically.
@@ -121,7 +121,7 @@ export default function ValidatingPage() {
             {
               step: '6',
               title: 'Adjust and rerun',
-              desc: "When you find a number that is out of range, trace it back to the sequence structure. A maintenance buff with low uptime usually means the step spacing is wrong or the spell is being blocked by a failed step ahead of it. A major cooldown firing late usually means resetOnCombat is disabled or something is advancing the sequence pre-pull. Make one structural change at a time and rerun before making another — changing multiple things at once makes it impossible to know which change fixed the problem.",
+              desc: "When you find a number that is out of range, trace it back to the sequence structure. A maintenance buff with low uptime usually means the step spacing is wrong or the spell is being blocked by a failed step ahead of it. A major cooldown firing late usually means resetOnCombat is disabled or something is advancing the sequence pre-pull. Make one structural change at a time and rerun before making another, because changing multiple things at once makes it impossible to know which change fixed the problem.",
             },
           ].map(item => (
             <div key={item.step} style={{ display: 'flex', gap: 16, padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
@@ -142,7 +142,7 @@ export default function ValidatingPage() {
           Worked example: applying the framework to a real build
         </h2>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 16 }}>
-          The numbers below come from five validated keys at plus 13 and plus 14 with the Elune&apos;s Chosen Guardian Druid sequence published on this site, and they are here because a concrete example of what the framework actually produces is more useful than a generic description of what it could produce. Your spec will have different spells, different uptime targets, and different CPM expectations — none of these numbers are benchmarks you are trying to match, and if you are playing anything other than Guardian Druid they are not relevant to you directly. What is relevant is the shape of the table: two or three key metrics, a specific target range for each, and a clear diagnostic if the number falls outside it. That structure is the same for every spec.
+          The numbers below come from five validated keys at plus 13 and plus 14 with the Elune&apos;s Chosen Guardian Druid sequence published on this site, and they are here because a concrete example of what the framework actually produces is more useful than a generic description of what it could produce. Your spec will have different spells, different uptime targets, and different CPM expectations and none of these numbers are benchmarks you are trying to match, and if you are playing anything other than Guardian Druid they are not relevant to you directly. What is relevant is the shape of the table: two or three key metrics, a specific target range for each, and a clear diagnostic if the number falls outside it. That structure is the same for every spec.
         </p>
 
         <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: 16 }}>
@@ -169,7 +169,7 @@ export default function ValidatingPage() {
         </div>
 
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75 }}>
-          To build the equivalent table for your spec, take your two or three highest value spells from the Icy Veins priority list, find their expected CPM or uptime percentage from SimCraft or your spec Discord, and use those as your targets. The diagnostic logic is the same — if a spell is significantly below target, trace it back to the step structure.
+          To build the equivalent table for your spec, take your two or three highest value spells from the Icy Veins priority list, find their expected CPM or uptime percentage from SimCraft or your spec Discord, and use those as your targets. The diagnostic logic is the same: if a spell is significantly below target, trace it back to the step structure.
         </p>
       </section>
 
@@ -202,7 +202,7 @@ export default function ValidatingPage() {
             },
             {
               signal: 'The editor shows an orange warning on a spell that is actually working',
-              cause: 'Some abilities change names mid-combat based on talents or procs — Raptor Strike becomes Raptor Swipe, Slam upgrades to Heroic Strike via Bloodsurge, hero talent overrides replace the base spell name. GRIP-EMS flags these because the stored name no longer matches what is in your spellbook, but the spell still fires correctly. Run /gems repair to confirm the sequence is structurally sound. If repair comes back clean and the spell is casting in logs, the warning is cosmetic and safe to ignore. GRIP-EMS v2.1.10 resolved most of these for known override cases.',
+              cause: 'Some abilities change names mid-combat based on talents or procs, like Raptor Strike becoming Raptor Swipe, Slam upgrading to Heroic Strike via Bloodsurge, or hero talent overrides replacing the base spell name. GRIP-EMS flags these because the stored name no longer matches what is in your spellbook, but the spell still fires correctly. Run /gems repair to confirm the sequence is structurally sound. If repair comes back clean and the spell is casting in logs, the warning is cosmetic and safe to ignore. GRIP-EMS v2.1.10 resolved most of these for known override cases.',
             },
           ].map(item => (
             <div key={item.signal} style={{ padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
