@@ -75,6 +75,9 @@ export default function FromGSEPage() {
           After importing, run <Code>/gems repairall</Code> to scan every transferred sequence across 13 diagnostic categories. Most issues from format differences get flagged and fixed automatically. This takes about thirty seconds and saves you from discovering problems mid-pull.
         </p>
         <InfoBox>
+          GSE sequences frequently overshoot WoW&apos;s 255-character step limit because GSE builds longer individual step strings than GRIP-EMS allows. The Repair module flags these on import and the fix is to split the oversized step into two shorter steps carrying the same spells. This is one of the most common issues when porting sequences from GSE, so if repair comes back with character limit violations do not be alarmed — it is normal and fixable in a few minutes.
+        </InfoBox>
+        <InfoBox>
           Sequences shared in English by another player import and translate to your client language automatically as of v2.1.10. Spell names stored as IDs under the hood re-render in your locale on import, so a sequence built on an English client works for German or French players without any manual editing.
         </InfoBox>
       </section>

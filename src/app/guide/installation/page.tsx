@@ -138,6 +138,9 @@ export default function InstallationPage() {
             GRIP-EMS advances one step per keypress, so your hardware needs to send repeated keypresses at a consistent interval. The right number depends on your setup and your spec, but 150ms is a reliable starting point for most hardware and latency combinations. If you use Razer hardware, set your repeat rate to 150ms in Synapse. If you use Logitech, set it in G Hub.
           </p>
           <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 10 }}>
+            On macOS, AHK is not available. The community has used Hammerspoon and Keyboard Maestro as alternatives, though both can have issues with key repeat when WASD movement keys are held simultaneously. If you experience your character moving unexpectedly while the sequence runs, the repeat tool is likely sending the wrong key when movement input overlaps. Hammerspoon scripts built with AI assistance are a known workaround but require careful configuration. The Tempo Advisor in GRIP-EMS helps you dial in the correct interval once you have a repeat method working.
+          </p>
+          <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 10 }}>
             Once you have a sequence running and some combat data, use the built-in Tempo Advisor. It analyzes your actual click rate and tells you whether to speed up or slow down based on your specific sequence and connection. Enable it with <Code>/gems fs on</Code> and it shows a live overlay while you play.
           </p>
         </Step>
