@@ -41,7 +41,7 @@ export default function FromGSEPage() {
           Coming from GSE
         </h1>
         <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.75, maxWidth: 620 }}>
-          If you use GnomeSequencer Enhanced and are evaluating whether to switch, this section is written specifically for you. GSE works and a lot of good sequences exist for it. The reason to use GRIP-EMS is a specific mechanical difference that matters for certain content at certain difficulty levels, and a set of diagnostic tools that do not exist in GSE. This is not a pitch — it is an honest breakdown of what is different.
+          If you use GnomeSequencer Enhanced and are evaluating whether to switch, this section is written specifically for you. GSE works and a lot of good sequences exist for it. The reason to use GRIP-EMS is a specific mechanical difference that matters for certain content at certain difficulty levels, and a set of diagnostic tools that do not exist in GSE. This is not a pitch, it is an honest breakdown of what is different.
         </p>
       </div>
 
@@ -57,7 +57,7 @@ export default function FromGSEPage() {
           {[
             {
               title: 'Option 1: In-game migration (recommended)',
-              desc: 'If GSE is still installed alongside GRIP-EMS, open the editor with /gems and click Migrate in the sequence list. GRIP-EMS detects your GSE sequences and transfers everything automatically — steps, variables, metadata, multi-version data. A report in chat tells you what came across and what, if anything, needed attention.',
+              desc: 'If GSE is still installed alongside GRIP-EMS, open the editor with /gems and click Migrate in the sequence list. GRIP-EMS detects your GSE sequences and transfers everything automatically, including steps, variables, metadata, and multi-version data. A report in chat tells you what came across and what, if anything, needed attention.',
             },
             {
               title: 'Option 2: Clipboard import',
@@ -75,7 +75,7 @@ export default function FromGSEPage() {
           After importing, run <Code>/gems repairall</Code> to scan every transferred sequence across 13 diagnostic categories. Most issues from format differences get flagged and fixed automatically. This takes about thirty seconds and saves you from discovering problems mid-pull.
         </p>
         <InfoBox>
-          GSE sequences frequently overshoot WoW&apos;s 255-character step limit because GSE builds longer individual step strings than GRIP-EMS allows. The Repair module flags these on import and the fix is to split the oversized step into two shorter steps carrying the same spells. This is one of the most common issues when porting sequences from GSE, so if repair comes back with character limit violations do not be alarmed — it is normal and fixable in a few minutes.
+          GSE sequences frequently overshoot WoW&apos;s 255-character step limit because GSE builds longer individual step strings than GRIP-EMS allows. The Repair module flags these on import and the fix is to split the oversized step into two shorter steps carrying the same spells. This is one of the most common issues when porting sequences from GSE, so if repair comes back with character limit violations do not be alarmed, it is normal and fixable in a few minutes.
         </InfoBox>
         <InfoBox>
           Sequences shared in English by another player import and translate to your client language automatically as of v2.1.10. Spell names stored as IDs under the hood re-render in your locale on import, so a sequence built on an English client works for German or French players without any manual editing.
@@ -93,7 +93,7 @@ export default function FromGSEPage() {
           For DPS sequences at normal or heroic difficulty, this difference is minor. A skipped Fireball because you were moving costs you one cast and the rotation recovers quickly. For tank sequences in Mythic+ it compounds in a way that matters. When Ironfur fails because the GCD has not cleared and the sequence skips ahead, that Ironfur step does not appear again until the next full loop rotation. At 30 steps and 150ms intervals that is roughly 4.5 seconds. If three Ironfur steps skip on the same pull, your uptime collapses for that window and your healer feels it before your logs do.
         </p>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75 }}>
-          Hold behavior means the sequence waits for the cast to land before moving on. Step positions stay meaningful and uptime numbers stay consistent pull to pull. This is also what makes log-based validation reliable — if the sequence advanced unpredictably you could not compare two runs meaningfully.
+          Hold behavior means the sequence waits for the cast to land before moving on. Step positions stay meaningful and uptime numbers stay consistent pull to pull. This is also what makes log-based validation reliable, because if the sequence advanced unpredictably you could not compare two runs meaningfully.
         </p>
       </section>
 
@@ -112,7 +112,7 @@ export default function FromGSEPage() {
             <CompareRow label="Failed cast" grip="Holds until cast succeeds" gse="Skips the step, advances" />
             <CompareRow label="Action bar button" grip="No bar button, keybind fires directly through the addon" gse="Creates a draggable button you place on a bar" />
             <CompareRow label="Keybinds" grip="Assigned inside GRIP-EMS per spec, auto-switch on spec change" gse="Via the action bar button you place and bind" />
-            <CompareRow label="Import format" grip="!EMS1! format — import GSE strings with /gems import" gse="Base64 string with version prefix" />
+            <CompareRow label="Import format" grip="!EMS1! format, import GSE strings with /gems import" gse="Base64 string with version prefix" />
             <CompareRow label="Step functions" grip="Sequential, Priority, Reverse Priority, Random" gse="Sequential, Priority, and others depending on version" />
             <CompareRow label="Opener logic" grip="True single-block loop, step 1 is only the opener" gse="Block 1 fires between every loop step when compiled, not just once" />
             <CompareRow label="Spell validation" grip="Built-in scanner with patch-aware auto-translation" gse="Limited or absent depending on version" />
@@ -140,7 +140,7 @@ export default function FromGSEPage() {
             },
             {
               title: 'Multi-block opener logic behaving unexpectedly',
-              desc: "In GSE, putting your opener in Block 1 and your main rotation in a Loop block seems like clean architecture, but Block 1 fires between every loop step when the sequence compiles — not just once at the start. Opener spells end up firing far more often than intended. GRIP-EMS does not have this problem because Sequential step function advances linearly. Step 1 is step 1 and not a recurring block. If you are porting a GSE sequence that used this pattern, rebuild it as a flat Sequential loop in GRIP-EMS.",
+              desc: "In GSE, putting your opener in Block 1 and your main rotation in a Loop block seems like clean architecture, but Block 1 fires between every loop step when the sequence compiles, not just once at the start. Opener spells end up firing far more often than intended. GRIP-EMS does not have this problem because Sequential step function advances linearly. Step 1 is step 1 and not a recurring block. If you are porting a GSE sequence that used this pattern, rebuild it as a flat Sequential loop in GRIP-EMS.",
             },
             {
               title: 'Reverse Priority for finisher steps',
@@ -164,7 +164,7 @@ export default function FromGSEPage() {
           You do not have to choose permanently
         </h2>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
-          Both addons can be installed at the same time and the sequence formats do not cross-contaminate. A reasonable approach is to run GRIP-EMS for your main spec in content where consistent uptime actually matters — Mythic+ tanking being the obvious case — and keep your existing GSE sequences for everything else until you have validated that GRIP-EMS produces better numbers for those specs too.
+          Both addons can be installed at the same time and the sequence formats do not cross-contaminate. A reasonable approach is to run GRIP-EMS for your main spec in content where consistent uptime actually matters, Mythic+ tanking being the obvious case, and keep your existing GSE sequences for everything else until you have validated that GRIP-EMS produces better numbers for those specs too.
         </p>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75 }}>
           Translating sequences between the formats is not automatic, but the underlying macro logic is the same since both addons use WoW&apos;s standard macro conditional syntax. A GSE sequence can be rebuilt in GRIP-EMS step by step without starting from scratch. The step spacing and timing will differ because the execution models are different, so plan on a validation pass after porting rather than assuming the numbers will be identical.

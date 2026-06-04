@@ -75,7 +75,7 @@ export default function InstallationPage() {
 
         <Step n={1} title="Download from CurseForge, Wago, or WoWInterface">
           <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-            GRIP-EMS is free on all three platforms. Use whichever addon manager you already have. Retail only — the addon depends on APIs that do not exist in Classic or Anniversary builds.
+            GRIP-EMS is free on all three platforms. Use whichever addon manager you already have. Retail only, because the addon depends on APIs that do not exist in Classic or Anniversary builds.
           </p>
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
             {[
@@ -108,7 +108,7 @@ export default function InstallationPage() {
           This is what most installation guides skip entirely. GRIP-EMS needs three specific WoW client settings before sequences will fire, and none of them are correct by default. If you set a keybind, press it, and nothing happens, this section is why. Go through all three before you assume something else is broken.
         </p>
 
-        <Step n={1} title="Fix your Cvar Health — do this first, every time">
+        <Step n={1} title="Fix your Cvar Health, do this first, every time">
           <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
             GRIP-EMS fires through WoW&apos;s <strong style={{ color: 'var(--text-primary)' }}>key-down</strong> event system. WoW defaults to key-up, meaning a keypress registers when you release the key rather than when you press it. The difference is invisible when you test manually but completely breaks automated repeat firing at any useful interval.
           </p>
@@ -170,7 +170,7 @@ export default function InstallationPage() {
             'Cvar Health tab shows green with no Fix button visible',
             'You have at least one sequence imported or created',
             'That sequence has a keybind assigned in the Keybinds tab',
-            'You are in the correct form or stance for your spec when testing — Guardian Druids need Bear Form, Warriors need the right stance, and so on',
+            'You are in the correct form or stance for your spec when testing. Guardian Druids need Bear Form, Warriors need the right stance, and so on',
           ].map((item, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
               <CheckCircle size={14} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 2 }} />
@@ -195,7 +195,7 @@ export default function InstallationPage() {
             { cmd: '/gems debug on', desc: 'Enables debug output to chat when you need to diagnose a firing problem' },
             { cmd: '/gems debugwindow', desc: 'Opens a scrollback debug window so output does not flood your chat' },
             { cmd: '/gems validate', desc: 'Checks all sequences for stale or renamed spells' },
-            { cmd: '/gems revalidate', desc: 'Forces a full revalidation — run this after a patch or a talent change' },
+            { cmd: '/gems revalidate', desc: 'Forces a full revalidation, run this after a patch or a talent change' },
           ].map(item => (
             <div key={item.cmd} style={{ display: 'flex', gap: 12, alignItems: 'baseline', padding: '9px 14px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
               <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--accent-text)', flexShrink: 0, minWidth: 200 }}>{item.cmd}</code>
