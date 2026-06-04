@@ -139,10 +139,10 @@ export default function ValidatingPage() {
 
       <section style={{ marginBottom: 40 }}>
         <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
-          Worked example: Guardian Druid target metrics
+          Worked example: applying the framework to a real build
         </h2>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 16 }}>
-          This is what the validation framework looks like applied to the Elune&apos;s Chosen Guardian Druid sequence published on this site. These numbers come from five validated keys at plus 13 and plus 14 difficulty. They are not targets you need to hit on your spec — they are an example of what the framework produces when it is applied correctly to a specific build.
+          The numbers below come from five validated keys at plus 13 and plus 14 with the Elune&apos;s Chosen Guardian Druid sequence published on this site, and they are here because a concrete example of what the framework actually produces is more useful than a generic description of what it could produce. Your spec will have different spells, different uptime targets, and different CPM expectations — none of these numbers are benchmarks you are trying to match, and if you are playing anything other than Guardian Druid they are not relevant to you directly. What is relevant is the shape of the table: two or three key metrics, a specific target range for each, and a clear diagnostic if the number falls outside it. That structure is the same for every spec.
         </p>
 
         <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: 16 }}>
