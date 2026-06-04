@@ -200,6 +200,10 @@ export default function ValidatingPage() {
               signal: 'A spell drops to zero casts entirely',
               cause: 'A conditional is misconfigured and blocking the spell completely. Check for typos in the spell name, a [known:] conditional for a talent you do not have, or a modifier guard that is preventing the spell from firing under any conditions.',
             },
+            {
+              signal: 'The editor shows an orange warning on a spell that is actually working',
+              cause: 'Some abilities change names mid-combat based on talents or procs — Raptor Strike becomes Raptor Swipe, Slam upgrades to Heroic Strike via Bloodsurge, hero talent overrides replace the base spell name. GRIP-EMS flags these because the stored name no longer matches what is in your spellbook, but the spell still fires correctly. Run /gems repair to confirm the sequence is structurally sound. If repair comes back clean and the spell is casting in logs, the warning is cosmetic and safe to ignore. GRIP-EMS v2.1.10 resolved most of these for known override cases.',
+            },
           ].map(item => (
             <div key={item.signal} style={{ padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{item.signal}</div>
