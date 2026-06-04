@@ -3,7 +3,6 @@ import { decodeGripString } from '@/lib/gripDecoder'
 
 export async function POST(req: NextRequest) {
   let body: { exportString?: string; sequenceIndex?: number }
-
   try {
     body = await req.json()
   } catch {
@@ -22,17 +21,24 @@ export async function POST(req: NextRequest) {
   try {
     const { sequences } = decodeGripString(exportString)
 
-    // Multiple sequences and no index specified: return the names so the UI
-    // can present a picker to the author.
+    // Multiple sequences and no index specified: return full data for all
+    // sequences so the post form can render the collection UI without a
+    // second round trip when the user submits.
     if (sequences.length > 1 && sequenceIndex === undefined) {
       return NextResponse.json({
         multipleSequences: true,
-        sequences: sequences.map((s, i) => ({ name: s.name, index: i })),
+        sequences: sequences.map((s, i) => ({
+          index: i,
+          name: s.name,
+          steps: s.steps,
+          classID: s.classID,
+          specID: s.specID,
+          stepFunction: s.stepFunction,
+        })),
       })
     }
 
     const targetIndex = sequenceIndex ?? 0
-
     if (targetIndex < 0 || targetIndex >= sequences.length) {
       return NextResponse.json(
         { error: `Sequence index ${targetIndex} is out of range.` },
@@ -41,7 +47,6 @@ export async function POST(req: NextRequest) {
     }
 
     const seq = sequences[targetIndex]
-
     return NextResponse.json({
       multipleSequences: false,
       steps: seq.steps,

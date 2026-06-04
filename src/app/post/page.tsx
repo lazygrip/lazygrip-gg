@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { WOW_CLASSES, CONTENT_TYPES, STEP_FUNCTIONS, slugify } from '@/lib/wow-data'
-import { AlertCircle, ChevronUp, ChevronDown, Wand2, X } from 'lucide-react'
+import { AlertCircle, ChevronUp, ChevronDown, Wand2 } from 'lucide-react'
 import TiptapEditor from '@/components/editor/TiptapEditor'
 import type { SequenceStep } from '@/types'
 
@@ -27,16 +27,17 @@ const EMPTY_FORM = {
   performance_notes: '',
 }
 
-interface SequenceOption {
-  name: string
+// Per-sequence data for collection imports
+interface CollectionSequence {
   index: number
-}
-
-interface DecodeMeta {
   name: string
+  title: string           // editable by user, pre-filled from name
+  talent_string: string   // per-sequence, may differ between ST/AOE
+  steps: SequenceStep[]
+  stepFunction: string
   classID: number | null
   specID: number | null
-  stepFunction: string
+  checked: boolean
 }
 
 function stepGripVersion(version: string, direction: 'up' | 'down'): string {
@@ -46,48 +47,6 @@ function stepGripVersion(version: string, direction: 'up' | 'down'): string {
   if (isNaN(patch)) return version
   patch = direction === 'up' ? patch + 1 : Math.max(0, patch - 1)
   return `${parts[0]}.${parts[1]}.${patch}`
-}
-
-function applyDecodeMeta(
-  form: typeof EMPTY_FORM,
-  meta: DecodeMeta,
-  setForm: (f: typeof EMPTY_FORM) => void
-) {
-  const updates: Partial<typeof EMPTY_FORM> = {}
-
-  if (!form.title.trim() && meta.name && !meta.name.startsWith('Sequence ')) {
-    updates.title = meta.name
-  }
-
-  if (meta.classID) {
-    const cls = WOW_CLASSES.find(c => c.id === meta.classID)
-    if (cls) {
-      updates.class_id = String(cls.id)
-      if (meta.specID) {
-        const spec = cls.specs.find(s => s.id === meta.specID)
-        if (spec) {
-          updates.spec_name = spec.name
-        }
-      }
-    }
-  }
-
-  if (meta.stepFunction) {
-    const gripToForm: Record<string, string> = {
-      'Sequential': 'Sequential',
-      'Priority': 'Priority',
-      'ReversePriority': 'Rev. Priority',
-      'Reverse Priority': 'Rev. Priority',
-      'Rev. Priority': 'Rev. Priority',
-      'Random': 'Random',
-    }
-    const mapped = gripToForm[meta.stepFunction]
-    if (mapped) updates.step_function = mapped
-  }
-
-  if (Object.keys(updates).length > 0) {
-    setForm({ ...form, ...updates })
-  }
 }
 
 function PostForm() {
@@ -107,10 +66,11 @@ function PostForm() {
   const [decoding, setDecoding] = useState(false)
   const [decodeError, setDecodeError] = useState<string | null>(null)
   const [stepsAutoPopulated, setStepsAutoPopulated] = useState(false)
-  const [sequenceOptions, setSequenceOptions] = useState<SequenceOption[] | null>(null)
-  const [pendingExportString, setPendingExportString] = useState<string | null>(null)
   const [decodedSteps, setDecodedSteps] = useState<SequenceStep[] | null>(null)
   const decodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Collection state -- non-null when a collection export is detected
+  const [collectionSequences, setCollectionSequences] = useState<CollectionSequence[] | null>(null)
 
   const selectedClass = WOW_CLASSES.find(c => c.id === Number(form.class_id))
   const selectedSpec = selectedClass?.specs.find(s => s.name === form.spec_name)
@@ -176,15 +136,17 @@ function PostForm() {
     }
   }
 
-  async function runDecode(exportString: string, sequenceIndex?: number) {
+  async function runDecode(exportString: string) {
     setDecoding(true)
     setDecodeError(null)
+    // Clear any previous collection state
+    setCollectionSequences(null)
 
     try {
       const res = await fetch('/api/decode-grip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ exportString, sequenceIndex }),
+        body: JSON.stringify({ exportString }),
       })
 
       const data = await res.json()
@@ -195,40 +157,87 @@ function PostForm() {
       }
 
       if (data.multipleSequences) {
-        setPendingExportString(exportString)
-        setSequenceOptions(data.sequences)
+        // Collection export: build per-sequence state, apply shared metadata
+        // from the first sequence that has class/spec resolved.
+        const anchor = data.sequences.find((s: CollectionSequence) => s.classID) ?? data.sequences[0]
+
+        // Apply shared metadata to the form fields.
+        if (anchor.classID) {
+          const cls = WOW_CLASSES.find(c => c.id === anchor.classID)
+          if (cls) {
+            const updates: Partial<typeof EMPTY_FORM> = {
+              class_id: String(cls.id),
+            }
+            if (anchor.specID) {
+              const spec = cls.specs.find(s => s.id === anchor.specID)
+              if (spec) updates.spec_name = spec.name
+            }
+            if (anchor.stepFunction) {
+              const map: Record<string, string> = {
+                'Sequential': 'Sequential',
+                'Priority': 'Priority',
+                'ReversePriority': 'Rev. Priority',
+                'Reverse Priority': 'Rev. Priority',
+                'Rev. Priority': 'Rev. Priority',
+                'Random': 'Random',
+              }
+              const mapped = map[anchor.stepFunction]
+              if (mapped) updates.step_function = mapped
+            }
+            setForm(f => ({ ...f, ...updates }))
+          }
+        }
+
+        setCollectionSequences(
+          data.sequences.map((s: {
+            index: number
+            name: string
+            steps: SequenceStep[]
+            stepFunction: string
+            classID: number | null
+            specID: number | null
+          }) => ({
+            index: s.index,
+            name: s.name,
+            title: s.name,
+            talent_string: '',
+            steps: s.steps,
+            stepFunction: s.stepFunction,
+            classID: s.classID,
+            specID: s.specID,
+            checked: true,
+          }))
+        )
         return
       }
 
+      // Single sequence -- existing behaviour.
       const steps: SequenceStep[] = data.steps
       setDecodedSteps(steps)
       const stepsText = steps.map(s => s.text).join('\n---\n')
       setField('raw_steps_text', stepsText)
       setStepsAutoPopulated(true)
-      setSequenceOptions(null)
-      setPendingExportString(null)
 
       if (data.meta) {
         setForm(current => {
           const updates: Partial<typeof EMPTY_FORM> = {}
-          const meta: DecodeMeta = data.meta
 
-          if (!current.title.trim() && meta.name && !meta.name.startsWith('Sequence ')) {
-            updates.title = meta.name
+          if (!current.title.trim() && data.meta.name && !data.meta.name.startsWith('Sequence ')) {
+            updates.title = data.meta.name
           }
 
-          if (meta.classID) {
-            const cls = WOW_CLASSES.find(c => c.id === meta.classID)
+          if (data.meta.classID) {
+            const cls = WOW_CLASSES.find(c => c.id === data.meta.classID)
             if (cls) {
               updates.class_id = String(cls.id)
-              if (meta.specID) {
-                const spec = cls.specs.find(s => s.id === meta.specID)
+              if (data.meta.specID) {
+                const spec = cls.specs.find(s => s.id === data.meta.specID)
                 if (spec) updates.spec_name = spec.name
               }
             }
           }
 
-          if (meta.stepFunction) {
+          if (data.meta.stepFunction) {
             const map: Record<string, string> = {
               'Sequential': 'Sequential',
               'Priority': 'Priority',
@@ -237,7 +246,7 @@ function PostForm() {
               'Rev. Priority': 'Rev. Priority',
               'Random': 'Random',
             }
-            const mapped = map[meta.stepFunction]
+            const mapped = map[data.meta.stepFunction]
             if (mapped) updates.step_function = mapped
           }
 
@@ -256,6 +265,7 @@ function PostForm() {
     setDecodeError(null)
     setStepsAutoPopulated(false)
     setDecodedSteps(null)
+    setCollectionSequences(null)
 
     if (decodeTimeoutRef.current) clearTimeout(decodeTimeoutRef.current)
 
@@ -269,10 +279,10 @@ function PostForm() {
     }, 800)
   }
 
-  function handleSequencePick(index: number) {
-    if (!pendingExportString) return
-    setSequenceOptions(null)
-    runDecode(pendingExportString, index)
+  function updateCollectionSequence(index: number, updates: Partial<CollectionSequence>) {
+    setCollectionSequences(prev =>
+      prev ? prev.map(s => s.index === index ? { ...s, ...updates } : s) : prev
+    )
   }
 
   function setField(key: string, value: string) {
@@ -298,7 +308,83 @@ function PostForm() {
     e.preventDefault()
     setError('')
 
-    if (!form.title || !form.class_id || !form.content_type) {
+    if (!form.class_id || !form.content_type) {
+      setError('Class and content type are required.')
+      return
+    }
+
+    // Collection submit path
+    if (collectionSequences) {
+      const checked = collectionSequences.filter(s => s.checked)
+      if (checked.length === 0) {
+        setError('Select at least one sequence to post.')
+        return
+      }
+      for (const s of checked) {
+        if (!s.title.trim()) {
+          setError(`Title is required for ${s.name}.`)
+          return
+        }
+      }
+
+      setSubmitting(true)
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) { router.push('/auth/login'); return }
+
+        const cls = WOW_CLASSES.find(c => c.id === Number(form.class_id))
+        const spec = cls?.specs.find(s => s.name === form.spec_name)
+
+        for (const seq of checked) {
+          const slug = slugify(seq.title) + '-' + Date.now().toString(36)
+          const { error: rpcError } = await supabase.rpc('create_sequence_with_version', {
+            p_author_id: user.id,
+            p_title: seq.title.trim(),
+            p_slug: slug,
+            p_description: descriptionIsEmpty(form.description) ? null : form.description,
+            p_class_id: Number(form.class_id),
+            p_class_name: cls?.name ?? '',
+            p_spec_id: spec?.id ?? null,
+            p_spec_name: form.spec_name || null,
+            p_content_type: form.content_type,
+            p_hero_talent: form.hero_talent || null,
+            p_patch_version: form.patch_version || null,
+            p_grip_version: form.grip_version || null,
+            p_step_function: (() => {
+              const map: Record<string, string> = {
+                'Sequential': 'Sequential',
+                'Priority': 'Priority',
+                'ReversePriority': 'Rev. Priority',
+                'Reverse Priority': 'Rev. Priority',
+                'Rev. Priority': 'Rev. Priority',
+                'Random': 'Random',
+              }
+              return map[seq.stepFunction] || form.step_function
+            })(),
+            p_step_count: seq.steps.length,
+            p_grip_string: form.grip_string.trim() || null,
+            p_raw_steps: JSON.stringify(seq.steps),
+            p_talent_string: seq.talent_string.trim() || null,
+            p_warcraftlogs_url: form.warcraftlogs_url.trim() || null,
+            p_performance_notes: form.performance_notes.trim() || null,
+            p_changelog: null,
+          })
+          if (rpcError) throw rpcError
+        }
+
+        router.push('/browse')
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
+        setError(message)
+      } finally {
+        setSubmitting(false)
+      }
+      return
+    }
+
+    // Single sequence submit path
+    if (!form.title) {
       setError('Title, class, and content type are required.')
       return
     }
@@ -384,46 +470,6 @@ function PostForm() {
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 24px' }}>
 
-      {sequenceOptions && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-        }}>
-          <div style={{
-            background: 'var(--bg-primary)', border: '0.5px solid var(--border-strong)',
-            borderRadius: 'var(--radius-lg)', padding: '24px', maxWidth: 440,
-            width: '100%', margin: '0 16px',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)' }}>
-                Multiple sequences found
-              </h3>
-              <button
-                onClick={() => { setSequenceOptions(null); setPendingExportString(null) }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
-              This export contains {sequenceOptions.length} sequences. Pick the one you want to use for this post.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {sequenceOptions.map(opt => (
-                <button key={opt.index} onClick={() => handleSequencePick(opt.index)} style={{
-                  padding: '10px 14px', background: 'var(--bg-secondary)',
-                  border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)',
-                  fontSize: 13, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)',
-                  cursor: 'pointer', textAlign: 'left',
-                }}>
-                  {opt.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
       <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 6 }}>
         {isEditMode ? 'Edit sequence' : 'Post a sequence'}
       </h1>
@@ -439,9 +485,7 @@ function PostForm() {
           <Section title="Sequence data">
             {!isEditMode && (
               <div style={{
-                display: 'flex',
-                gap: 10,
-                padding: '12px 14px',
+                display: 'flex', gap: 10, padding: '12px 14px',
                 background: 'rgba(29,158,117,0.07)',
                 border: '0.5px solid rgba(29,158,117,0.3)',
                 borderRadius: 'var(--radius-md)',
@@ -452,7 +496,7 @@ function PostForm() {
                     Start here: paste your GRIP export string
                   </p>
                   <p style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', lineHeight: 1.5 }}>
-                    In GRIP-EMS, open your sequence and click Export. Paste the string below and LazyGrip will automatically fill in your class, spec, step function, and steps. You only need to add a title and description.
+                    In GRIP-EMS, open your sequence and click Export. Paste the string below and LazyGrip will automatically fill in your class, spec, step function, and steps. Collection exports with multiple sequences are supported.
                   </p>
                 </div>
               </div>
@@ -477,7 +521,7 @@ function PostForm() {
               <textarea
                 value={form.grip_string}
                 onChange={e => handleGripStringChange(e.target.value)}
-                placeholder="Paste your GRIP1 export string here. Class, spec, and step function will fill automatically."
+                placeholder="Paste your GRIP1 export string here. Class, spec, and step function will fill automatically. Collection exports with multiple sequences are supported."
                 rows={4}
                 style={{ fontFamily: 'var(--font-mono)', fontSize: 12, resize: 'vertical' }}
               />
@@ -509,55 +553,191 @@ function PostForm() {
               )}
             </div>
 
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
-                  Steps (plain text)
-                </label>
-                {stepsAutoPopulated && (
-                  <span style={{
-                    fontSize: 11, color: 'var(--accent)', fontFamily: 'var(--font-sans)',
-                    padding: '2px 7px', background: 'rgba(29,158,117,0.1)',
-                    borderRadius: 'var(--radius-sm)', border: '0.5px solid rgba(29,158,117,0.3)',
-                  }}>
-                    Auto-decoded
-                  </span>
-                )}
+            {/* Single sequence steps textarea -- hidden when collection detected */}
+            {!collectionSequences && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                  <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
+                    Steps (plain text)
+                  </label>
+                  {stepsAutoPopulated && (
+                    <span style={{
+                      fontSize: 11, color: 'var(--accent)', fontFamily: 'var(--font-sans)',
+                      padding: '2px 7px', background: 'rgba(29,158,117,0.1)',
+                      borderRadius: 'var(--radius-sm)', border: '0.5px solid rgba(29,158,117,0.3)',
+                    }}>
+                      Auto-decoded
+                    </span>
+                  )}
+                </div>
+                <textarea
+                  value={form.raw_steps_text}
+                  onChange={e => handleStepsChange(e.target.value)}
+                  placeholder={`/targetenemy [noharm][dead]\n/cast [noform:1] Bear Form\n/cast Mangle`}
+                  rows={8}
+                  style={{ fontFamily: 'var(--font-mono)', fontSize: 12, resize: 'vertical' }}
+                />
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                  Paste steps one per line, or decode from your export string above. Users can read these without importing.
+                </p>
               </div>
-              <textarea
-                value={form.raw_steps_text}
-                onChange={e => handleStepsChange(e.target.value)}
-                placeholder={`/targetenemy [noharm][dead]\n/cast [noform:1] Bear Form\n/cast Mangle`}
-                rows={8}
-                style={{ fontFamily: 'var(--font-mono)', fontSize: 12, resize: 'vertical' }}
-              />
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
-                Paste steps one per line, or decode from your export string above. Users can read these without importing.
-              </p>
-            </div>
+            )}
           </Section>
 
-          <Section title="Basic info">
-            <Field label="Sequence title *">
-              <input
-                value={form.title}
-                onChange={e => setField('title', e.target.value)}
-                placeholder="e.g. Slowdog's Guardian Druid DotC M+ V14"
-                required
-              />
-            </Field>
+          {/* Collection sequences UI */}
+          {collectionSequences && (
+            <Section title="Collection sequences">
+              <div style={{
+                padding: '10px 14px',
+                background: 'rgba(29,158,117,0.07)',
+                border: '0.5px solid rgba(29,158,117,0.3)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: 13,
+                color: 'var(--text-secondary)',
+                fontFamily: 'var(--font-sans)',
+              }}>
+                Collection export detected with {collectionSequences.length} sequences. Each checked sequence will be posted as its own page. Shared metadata below applies to all.
+              </div>
 
-            <Field
-              label="Description"
-              hint="Use the toolbar for headings, lists, code blocks, and links. Keyboard shortcuts work too (Ctrl+B, Ctrl+I)."
-            >
-              <TiptapEditor
-                content={form.description}
-                onChange={(html) => setField('description', html)}
-                placeholder="Describe your sequence -- build, talents, key modifiers, what it's optimised for..."
-              />
-            </Field>
-          </Section>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {collectionSequences.map(seq => (
+                  <div
+                    key={seq.index}
+                    style={{
+                      border: `0.5px solid ${seq.checked ? 'var(--accent)' : 'var(--border)'}`,
+                      borderRadius: 'var(--radius-md)',
+                      padding: '16px',
+                      background: seq.checked ? 'rgba(29,158,117,0.04)' : 'var(--bg-secondary)',
+                      transition: 'border-color 0.15s, background 0.15s',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                      <input
+                        type="checkbox"
+                        checked={seq.checked}
+                        onChange={e => updateCollectionSequence(seq.index, { checked: e.target.checked })}
+                        style={{
+                          width: 16, height: 16, marginTop: 2,
+                          accentColor: 'var(--accent)', cursor: 'pointer', flexShrink: 0,
+                        }}
+                      />
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{
+                            fontSize: 11, color: 'var(--text-muted)',
+                            fontFamily: 'var(--font-mono)',
+                            padding: '2px 6px',
+                            background: 'var(--bg-primary)',
+                            border: '0.5px solid var(--border)',
+                            borderRadius: 'var(--radius-sm)',
+                          }}>
+                            {seq.name}
+                          </span>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>
+                            {seq.steps.length} steps
+                          </span>
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                            Title
+                          </label>
+                          <input
+                            type="text"
+                            value={seq.title}
+                            onChange={e => updateCollectionSequence(seq.index, { title: e.target.value })}
+                            placeholder="Sequence title..."
+                            disabled={!seq.checked}
+                            style={{ opacity: seq.checked ? 1 : 0.5 }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                            Talent string <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional, per-sequence)</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={seq.talent_string}
+                            onChange={e => updateCollectionSequence(seq.index, { talent_string: e.target.value })}
+                            placeholder="Paste talent import string if different from the other sequence..."
+                            disabled={!seq.checked}
+                            style={{ fontFamily: 'var(--font-mono)', fontSize: 12, opacity: seq.checked ? 1 : 0.5 }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setCollectionSequences(prev => prev ? prev.map(s => ({ ...s, checked: true })) : prev)}
+                  style={{
+                    fontSize: 12, color: 'var(--text-secondary)', background: 'transparent',
+                    border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)',
+                    padding: '4px 10px', cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  Select all
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCollectionSequences(prev => prev ? prev.map(s => ({ ...s, checked: false })) : prev)}
+                  style={{
+                    fontSize: 12, color: 'var(--text-secondary)', background: 'transparent',
+                    border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)',
+                    padding: '4px 10px', cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  Deselect all
+                </button>
+              </div>
+            </Section>
+          )}
+
+          {/* Single sequence title -- hidden for collections */}
+          {!collectionSequences && (
+            <Section title="Basic info">
+              <Field label="Sequence title *">
+                <input
+                  value={form.title}
+                  onChange={e => setField('title', e.target.value)}
+                  placeholder="e.g. Slowdog's Guardian Druid DotC M+ V14"
+                  required={!collectionSequences}
+                />
+              </Field>
+
+              <Field
+                label="Description"
+                hint="Use the toolbar for headings, lists, code blocks, and links. Keyboard shortcuts work too (Ctrl+B, Ctrl+I)."
+              >
+                <TiptapEditor
+                  content={form.description}
+                  onChange={(html) => setField('description', html)}
+                  placeholder="Describe your sequence -- build, talents, key modifiers, what it's optimised for..."
+                />
+              </Field>
+            </Section>
+          )}
+
+          {/* Description for collections lives here separately */}
+          {collectionSequences && (
+            <Section title="Description">
+              <Field
+                label="Description"
+                hint="Applies to all sequences in this collection. Use the toolbar for headings, lists, code blocks, and links."
+              >
+                <TiptapEditor
+                  content={form.description}
+                  onChange={(html) => setField('description', html)}
+                  placeholder="Describe your sequences -- build, talents, key modifiers, what they're optimised for..."
+                />
+              </Field>
+            </Section>
+          )}
 
           <Section title="WoW metadata">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -631,6 +811,11 @@ function PostForm() {
                 </select>
               </Field>
             </div>
+            {collectionSequences && (
+              <p style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginTop: 4 }}>
+                These fields apply to all sequences in this collection. Step function per sequence is read from the export string automatically.
+              </p>
+            )}
           </Section>
 
           <Section title="Optional extras">
@@ -659,14 +844,17 @@ function PostForm() {
               </div>
             </Field>
 
-            <Field label="Talent string" hint="Paste your WoW talent import string so others can match your build.">
-              <input
-                value={form.talent_string}
-                onChange={e => setField('talent_string', e.target.value)}
-                placeholder="Paste talent string..."
-                style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}
-              />
-            </Field>
+            {/* Single sequence talent string -- collection sequences have per-sequence talent fields above */}
+            {!collectionSequences && (
+              <Field label="Talent string" hint="Paste your WoW talent import string so others can match your build.">
+                <input
+                  value={form.talent_string}
+                  onChange={e => setField('talent_string', e.target.value)}
+                  placeholder="Paste talent string..."
+                  style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}
+                />
+              </Field>
+            )}
 
             <Field label="Warcraft Logs URL">
               <input
@@ -713,8 +901,10 @@ function PostForm() {
               }}
             >
               {submitting
-                ? (isEditMode ? 'Saving...' : 'Publishing...')
-                : (isEditMode ? 'Save changes' : 'Publish sequence')}
+                ? (isEditMode ? 'Saving...' : collectionSequences ? 'Publishing...' : 'Publishing...')
+                : (isEditMode ? 'Save changes' : collectionSequences
+                    ? `Publish ${collectionSequences.filter(s => s.checked).length} sequence${collectionSequences.filter(s => s.checked).length !== 1 ? 's' : ''}`
+                    : 'Publish sequence')}
             </button>
 
             {isEditMode && (
