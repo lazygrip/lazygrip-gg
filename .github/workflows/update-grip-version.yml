@@ -2,7 +2,6 @@ name: Update GRIP-EMS Version
 
 on:
   schedule:
-    # Runs every day at 10:00 UTC
     - cron: '0 10 * * *'
   workflow_dispatch:
 
@@ -14,40 +13,36 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Fetch latest GRIP-EMS version from CurseForge
+      - name: Fetch latest GRIP-EMS version from CurseForge page
         id: fetch_version
         run: |
-          RESPONSE=$(curl -s \
-            -H "x-api-key: ${{ secrets.CURSEFORGE_API_KEY }}" \
-            -H "Accept: application/json" \
-            "https://api.curseforge.com/v1/mods/1489414/files?pageSize=1&sortField=5&sortOrder=desc")
+          # Fetch the CurseForge addon page and extract version
+          RESPONSE=$(curl -s -L \
+            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+            "https://www.curseforge.com/wow/addons/grip-enhanced-macro-sequencer")
           
-          echo "Raw response: $RESPONSE"
-          
+          # Extract version from the page - CurseForge shows it as "v2.x.x" in the file name
           VERSION=$(echo "$RESPONSE" | python3 -c "
-          import json, sys, re
-          raw = sys.stdin.read().strip()
-          if not raw:
-              print('Empty response from CurseForge', file=sys.stderr)
-              sys.exit(1)
-          try:
-              data = json.loads(raw)
-          except Exception as e:
-              print(f'JSON parse error: {e}', file=sys.stderr)
-              print(f'Response was: {raw[:500]}', file=sys.stderr)
-              sys.exit(1)
-          files = data.get('data', [])
-          if not files:
-              print(f'No files in response: {data}', file=sys.stderr)
-              sys.exit(1)
-          name = files[0].get('displayName', '')
-          print(f'File name: {name}', file=sys.stderr)
-          match = re.search(r'v?(\d+\.\d+\.\d+)', name)
-          if match:
-              print('v' + match.group(1))
+          import sys, re
+          html = sys.stdin.read()
+          # Look for version patterns like v2.1.12 in the page
+          matches = re.findall(r'\"displayName\":\"[^\"]*?(v?\d+\.\d+\.\d+)[^\"]*?\"', html)
+          if matches:
+              v = matches[0]
+              if not v.startswith('v'):
+                  v = 'v' + v
+              print(v)
           else:
-              print(f'Could not parse version from: {name}', file=sys.stderr)
-              sys.exit(1)
+              # Try alternate pattern
+              matches = re.findall(r'GRIP[^\"]*?(v?\d+\.\d+\.\d+)', html)
+              if matches:
+                  v = matches[0]
+                  if not v.startswith('v'):
+                      v = 'v' + v
+                  print(v)
+              else:
+                  print('Could not find version in page', file=sys.stderr)
+                  sys.exit(1)
           ")
           
           echo "version=$VERSION" >> $GITHUB_OUTPUT
