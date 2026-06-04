@@ -5,6 +5,9 @@ on:
     - cron: '0 10 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   update-version:
     runs-on: ubuntu-latest
@@ -16,32 +19,36 @@ jobs:
       - name: Fetch latest GRIP-EMS version from CurseForge page
         id: fetch_version
         run: |
-          # Fetch the CurseForge addon page and extract version
           RESPONSE=$(curl -s -L \
             -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
             "https://www.curseforge.com/wow/addons/grip-enhanced-macro-sequencer")
           
-          # Extract version from the page - CurseForge shows it as "v2.x.x" in the file name
           VERSION=$(echo "$RESPONSE" | python3 -c "
           import sys, re
           html = sys.stdin.read()
-          # Look for version patterns like v2.1.12 in the page
-          matches = re.findall(r'\"displayName\":\"[^\"]*?(v?\d+\.\d+\.\d+)[^\"]*?\"', html)
-          if matches:
-              v = matches[0]
-              if not v.startswith('v'):
-                  v = 'v' + v
-              print(v)
+          # Look for GRIP-EMS version strings like v2.1.12 - exclude WoW patch versions
+          # WoW versions look like 12.0.x, addon versions look like 2.x.x or 1.x.x
+          matches = re.findall(r'GRIP[^\"<>]{0,30}(v?[12]\.\d+\.\d+)', html)
+          addon_versions = []
+          for m in matches:
+              # Skip WoW game versions (12.x.x) and keep addon versions (1.x.x or 2.x.x)
+              parts = m.lstrip('v').split('.')
+              if int(parts[0]) <= 9:
+                  v = m if m.startswith('v') else 'v' + m
+                  addon_versions.append(v)
+          
+          if addon_versions:
+              print(addon_versions[0])
           else:
-              # Try alternate pattern
-              matches = re.findall(r'GRIP[^\"]*?(v?\d+\.\d+\.\d+)', html)
+              # Fallback: find any version that looks like an addon version
+              matches = re.findall(r'\"displayName\":\"GRIP[^\"]*?(v?[12]\.\d+\.\d+)', html)
               if matches:
                   v = matches[0]
                   if not v.startswith('v'):
                       v = 'v' + v
                   print(v)
               else:
-                  print('Could not find version in page', file=sys.stderr)
+                  print('Could not find addon version', file=sys.stderr)
                   sys.exit(1)
           ")
           
