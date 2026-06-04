@@ -5,7 +5,6 @@ on:
     # Runs every day at 10:00 UTC
     - cron: '0 10 * * *'
   workflow_dispatch:
-    # Also allows manual trigger from GitHub Actions tab
 
 jobs:
   update-version:
@@ -20,20 +19,34 @@ jobs:
         run: |
           RESPONSE=$(curl -s \
             -H "x-api-key: ${{ secrets.CURSEFORGE_API_KEY }}" \
-            "https://api.curseforge.com/v1/mods/1489414/files?pageSize=1&sortField=5&sortOrder=desc&gameVersionTypeId=517")
+            -H "Accept: application/json" \
+            "https://api.curseforge.com/v1/mods/1489414/files?pageSize=1&sortField=5&sortOrder=desc")
+          
+          echo "Raw response: $RESPONSE"
           
           VERSION=$(echo "$RESPONSE" | python3 -c "
           import json, sys, re
-          data = json.load(sys.stdin)
+          raw = sys.stdin.read().strip()
+          if not raw:
+              print('Empty response from CurseForge', file=sys.stderr)
+              sys.exit(1)
+          try:
+              data = json.loads(raw)
+          except Exception as e:
+              print(f'JSON parse error: {e}', file=sys.stderr)
+              print(f'Response was: {raw[:500]}', file=sys.stderr)
+              sys.exit(1)
           files = data.get('data', [])
           if not files:
+              print(f'No files in response: {data}', file=sys.stderr)
               sys.exit(1)
           name = files[0].get('displayName', '')
-          # Extract version like v2.1.12 from the file name
+          print(f'File name: {name}', file=sys.stderr)
           match = re.search(r'v?(\d+\.\d+\.\d+)', name)
           if match:
               print('v' + match.group(1))
           else:
+              print(f'Could not parse version from: {name}', file=sys.stderr)
               sys.exit(1)
           ")
           
@@ -64,13 +77,8 @@ jobs:
         if: steps.check.outputs.needed == 'true'
         run: |
           NEW_VERSION="${{ steps.fetch_version.outputs.version }}"
-          
-          # Update layout.tsx sidebar
           sed -i "s/GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*/GRIP-EMS ${NEW_VERSION}/g" src/app/guide/layout.tsx
-          
-          # Update guide/page.tsx footer
           sed -i "s/GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*/GRIP-EMS ${NEW_VERSION}/g" src/app/guide/page.tsx
-          
           echo "Updated files to $NEW_VERSION"
 
       - name: Commit and push changes
