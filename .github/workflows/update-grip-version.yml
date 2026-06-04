@@ -1,0 +1,83 @@
+name: Update GRIP-EMS Version
+
+on:
+  schedule:
+    # Runs every day at 10:00 UTC
+    - cron: '0 10 * * *'
+  workflow_dispatch:
+    # Also allows manual trigger from GitHub Actions tab
+
+jobs:
+  update-version:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Fetch latest GRIP-EMS version from CurseForge
+        id: fetch_version
+        run: |
+          RESPONSE=$(curl -s \
+            -H "x-api-key: ${{ secrets.CURSEFORGE_API_KEY }}" \
+            "https://api.curseforge.com/v1/mods/1489414/files?pageSize=1&sortField=5&sortOrder=desc&gameVersionTypeId=517")
+          
+          VERSION=$(echo "$RESPONSE" | python3 -c "
+          import json, sys, re
+          data = json.load(sys.stdin)
+          files = data.get('data', [])
+          if not files:
+              sys.exit(1)
+          name = files[0].get('displayName', '')
+          # Extract version like v2.1.12 from the file name
+          match = re.search(r'v?(\d+\.\d+\.\d+)', name)
+          if match:
+              print('v' + match.group(1))
+          else:
+              sys.exit(1)
+          ")
+          
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Found version: $VERSION"
+
+      - name: Read current version from layout.tsx
+        id: current_version
+        run: |
+          CURRENT=$(grep -o 'GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*' src/app/guide/layout.tsx | head -1)
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          echo "Current version: $CURRENT"
+
+      - name: Check if update is needed
+        id: check
+        run: |
+          NEW="GRIP-EMS ${{ steps.fetch_version.outputs.version }}"
+          CURRENT="${{ steps.current_version.outputs.current }}"
+          if [ "$NEW" = "$CURRENT" ]; then
+            echo "needed=false" >> $GITHUB_OUTPUT
+            echo "Already up to date: $CURRENT"
+          else
+            echo "needed=true" >> $GITHUB_OUTPUT
+            echo "Update needed: $CURRENT -> $NEW"
+          fi
+
+      - name: Update version strings in files
+        if: steps.check.outputs.needed == 'true'
+        run: |
+          NEW_VERSION="${{ steps.fetch_version.outputs.version }}"
+          
+          # Update layout.tsx sidebar
+          sed -i "s/GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*/GRIP-EMS ${NEW_VERSION}/g" src/app/guide/layout.tsx
+          
+          # Update guide/page.tsx footer
+          sed -i "s/GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*/GRIP-EMS ${NEW_VERSION}/g" src/app/guide/page.tsx
+          
+          echo "Updated files to $NEW_VERSION"
+
+      - name: Commit and push changes
+        if: steps.check.outputs.needed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/app/guide/layout.tsx src/app/guide/page.tsx
+          git commit -m "Auto-update GRIP-EMS version to ${{ steps.fetch_version.outputs.version }}"
+          git push
