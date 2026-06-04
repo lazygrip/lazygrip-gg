@@ -497,7 +497,7 @@ function normalizeVersions(sequence: Record<string, unknown>): NormalizedVersion
   const versions = entries
     .map((entry, index) => {
       const version = normalizeRecord(entry.value)
-      const steps = stepsFromActions(version.actions ?? version.Actions as unknown[])
+      const steps = stepsFromActions((version.actions ?? version.Actions) as unknown[])
       const fallbackSteps = steps.length ? steps : stepsFromRecord(version)
       const keyName = entry.key && !/^\d+$/.test(String(entry.key)) ? entry.key : ''
 
@@ -582,7 +582,7 @@ function extractSteps(
   versions: Record<string, unknown>[]
 ): RawStep[] {
   for (const version of versions) {
-    const steps = stepsFromActions(version.actions ?? version.Actions as unknown[])
+    const steps = stepsFromActions((version.actions ?? version.Actions) as unknown[])
     if (steps.length) return steps
   }
   return stepsFromRecord(sequence)
