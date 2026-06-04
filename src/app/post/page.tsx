@@ -357,7 +357,7 @@ function PostForm() {
           p_step_function: payload.step_function,
           p_step_count: payload.step_count,
           p_grip_string: payload.grip_string,
-          p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
+          p_raw_steps: raw_steps ?? null,
           p_talent_string: payload.talent_string,
           p_warcraftlogs_url: payload.warcraftlogs_url,
           p_performance_notes: payload.performance_notes,
