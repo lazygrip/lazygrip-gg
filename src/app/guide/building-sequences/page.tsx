@@ -257,6 +257,10 @@ export default function BuildingSequencesPage() {
               desc: 'EC_V7, BDK_M+_V4, FireMage_Raid_V2. When you iterate on a sequence, create a new one rather than editing in place. You want to be able to roll back to a previous version if the new one underperforms in logs.',
             },
             {
+              title: 'Keep Interleave intervals within your step count',
+              desc: 'The Interleave feature weaves a spell every N steps automatically, but N cannot exceed your total step count or the spell never fires. A 5-step sequence with an Interleave interval of 6 will never reach step 6 and the interleaved spell is silently skipped every loop. Set your interval to a number smaller than your total step count.',
+            },
+            {
               title: 'Run /gems repair after every import and after every patch',
               desc: 'The Repair module checks your sequence across 13 diagnostic categories including stale spells, character limit violations, keybind conflicts, and broken variables. It catches most structural problems before you ever run content and fixes the majority of them in one click.',
             },
