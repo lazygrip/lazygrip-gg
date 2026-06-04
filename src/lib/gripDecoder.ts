@@ -2,15 +2,80 @@ import { inflateRawSync } from 'zlib'
 import type { SequenceStep } from '@/types'
 
 // Passthrough stub - spell token translation is not needed for LazyGrip display.
-// Beard3d_Gamer's original decoder translates spell IDs to names via spellCatalog;
-// we skip that and preserve the raw macro text as-is.
 function translateSpellTokens(text: string): string {
   return text
 }
 
 // ---------------------------------------------------------------------------
+// Class / spec lookup tables (ported from Beard3d_Gamer's emsDecoder.js)
+// ---------------------------------------------------------------------------
+
+const CLASS_BY_ID: Record<number, string> = {
+  1: 'Warrior',
+  2: 'Paladin',
+  3: 'Hunter',
+  4: 'Rogue',
+  5: 'Priest',
+  6: 'Death Knight',
+  7: 'Shaman',
+  8: 'Mage',
+  9: 'Warlock',
+  10: 'Monk',
+  11: 'Druid',
+  12: 'Demon Hunter',
+  13: 'Evoker',
+}
+
+const SPEC_BY_ID: Record<number, { name: string; classId: number }> = {
+  62: { name: 'Arcane', classId: 8 },
+  63: { name: 'Fire', classId: 8 },
+  64: { name: 'Frost', classId: 8 },
+  65: { name: 'Holy', classId: 2 },
+  66: { name: 'Protection', classId: 2 },
+  70: { name: 'Retribution', classId: 2 },
+  71: { name: 'Arms', classId: 1 },
+  72: { name: 'Fury', classId: 1 },
+  73: { name: 'Protection', classId: 1 },
+  102: { name: 'Balance', classId: 11 },
+  103: { name: 'Feral', classId: 11 },
+  104: { name: 'Guardian', classId: 11 },
+  105: { name: 'Restoration', classId: 11 },
+  250: { name: 'Blood', classId: 6 },
+  251: { name: 'Frost', classId: 6 },
+  252: { name: 'Unholy', classId: 6 },
+  253: { name: 'Beast Mastery', classId: 3 },
+  254: { name: 'Marksmanship', classId: 3 },
+  255: { name: 'Survival', classId: 3 },
+  256: { name: 'Discipline', classId: 5 },
+  257: { name: 'Holy', classId: 5 },
+  258: { name: 'Shadow', classId: 5 },
+  259: { name: 'Assassination', classId: 4 },
+  260: { name: 'Outlaw', classId: 4 },
+  261: { name: 'Subtlety', classId: 4 },
+  262: { name: 'Elemental', classId: 7 },
+  263: { name: 'Enhancement', classId: 7 },
+  264: { name: 'Restoration', classId: 7 },
+  265: { name: 'Affliction', classId: 9 },
+  266: { name: 'Demonology', classId: 9 },
+  267: { name: 'Destruction', classId: 9 },
+  268: { name: 'Brewmaster', classId: 10 },
+  269: { name: 'Windwalker', classId: 10 },
+  270: { name: 'Mistweaver', classId: 10 },
+  577: { name: 'Havoc', classId: 12 },
+  581: { name: 'Vengeance', classId: 12 },
+  1467: { name: 'Devastation', classId: 13 },
+  1468: { name: 'Preservation', classId: 13 },
+  1473: { name: 'Augmentation', classId: 13 },
+}
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+
+interface ClassProfile {
+  classID: number | null
+  specID: number | null
+}
 
 interface RawStep {
   text: string
@@ -61,19 +126,177 @@ interface DecodedExport {
 }
 
 // ---------------------------------------------------------------------------
+// Talent string header parser
+// Reads the spec ID encoded in the binary header of a WoW talent import string.
+// ---------------------------------------------------------------------------
+
+const BASE64_TO_VALUE: Record<string, number> = Object.fromEntries(
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+    .split('')
+    .map((char, index) => [char, index])
+)
+
+function readProfileFromTalentString(talentString: string | null | undefined): ClassProfile {
+  if (!talentString || typeof talentString !== 'string') return { classID: null, specID: null }
+
+  try {
+    const chars = [...talentString.trim()].map(c => BASE64_TO_VALUE[c])
+    if (!chars.length || chars.some(v => v === undefined)) return { classID: null, specID: null }
+
+    // Read 8-bit serialization version then 16-bit spec ID from the binary header.
+    let index = 0
+    let extractedBits = 0
+    let remainingValue = chars[0]
+
+    function extractValue(bitWidth: number): number | null {
+      let value = 0
+      let bitsNeeded = bitWidth
+      let outputBits = 0
+
+      while (bitsNeeded > 0) {
+        if (index >= chars.length) return null
+        const remainingBits = 6 - extractedBits
+        const bitsToExtract = Math.min(remainingBits, bitsNeeded)
+        extractedBits += bitsToExtract
+        const maxStorable = 1 << bitsToExtract
+        const remainder = remainingValue % maxStorable
+        remainingValue = Math.floor(remainingValue / maxStorable)
+        value += remainder << outputBits
+        outputBits += bitsToExtract
+        bitsNeeded -= bitsToExtract
+
+        if (bitsToExtract < remainingBits) break
+
+        index += 1
+        extractedBits = 0
+        remainingValue = chars[index]
+      }
+
+      return value
+    }
+
+    if (chars.length * 6 < 8 + 16 + 128) return { classID: null, specID: null }
+
+    extractValue(8) // serialization version, discard
+    const specId = extractValue(16)
+
+    if (!specId) return { classID: null, specID: null }
+
+    const specInfo = SPEC_BY_ID[specId]
+    if (!specInfo) return { classID: null, specID: specId }
+
+    return { classID: specInfo.classId, specID: specId }
+  } catch {
+    return { classID: null, specID: null }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Class info resolution (ported from Beard3d_Gamer's emsDecoder.js)
+// Covers all known field name variants and MetaData nesting.
+// ---------------------------------------------------------------------------
+
+function readClassInfo(record: Record<string, unknown>): ClassProfile {
+  const metadata = normalizeRecord(
+    record.MetaData ?? record.metaData ?? record.Metadata ?? record.metadata ?? {}
+  )
+  const source = { ...metadata, ...record }
+
+  const classID = firstNumber(source, [
+    'classID', 'classId', 'ClassID', 'ClassId', 'class_id',
+    'playerClassID', 'playerClassId',
+  ])
+  const specID = firstNumber(source, [
+    'specID', 'specId', 'SpecID', 'SpecId', 'spec_id',
+    'specializationID', 'specializationId',
+    'playerSpecID', 'playerSpecId',
+  ])
+
+  const specInfo = specID ? SPEC_BY_ID[specID] : null
+  const resolvedClassID = classID ?? (specInfo ? specInfo.classId : null)
+
+  return {
+    classID: resolvedClassID ?? null,
+    specID: specID ?? null,
+  }
+}
+
+function findClassInfoDeep(
+  value: unknown,
+  seen = new Set<object>()
+): ClassProfile {
+  if (!value || typeof value !== 'object' || seen.has(value as object)) {
+    return { classID: null, specID: null }
+  }
+
+  seen.add(value as object)
+  const record = normalizeRecord(value)
+  const direct = readClassInfo(record)
+  if (direct.classID || direct.specID) return direct
+
+  for (const child of Object.values(record)) {
+    const nested = findClassInfoDeep(child, seen)
+    if (nested.classID || nested.specID) return nested
+  }
+
+  return { classID: null, specID: null }
+}
+
+function resolveProfile(
+  decoded: Record<string, unknown>,
+  sequences: NormalizedSequence[],
+  talentString?: string | null
+): ClassProfile {
+  // 1. Direct field lookup on common top-level and meta locations.
+  const candidates = [
+    decoded,
+    normalizeRecord(decoded.meta),
+    normalizeRecord(decoded.Meta),
+    normalizeRecord(decoded.metadata),
+    normalizeRecord(decoded.Metadata),
+    normalizeRecord(decoded.exportMeta),
+    normalizeRecord(decoded.ExportMeta),
+    normalizeRecord(decoded.sequence),
+    normalizeRecord(decoded.Sequence),
+  ]
+
+  for (const candidate of candidates) {
+    const profile = readClassInfo(candidate)
+    if (profile.classID || profile.specID) return profile
+  }
+
+  // 2. Deep recursive walk of the entire decoded payload.
+  const deep = findClassInfoDeep(decoded)
+  if (deep.classID || deep.specID) return deep
+
+  // 3. If all sequences agree on one class/spec, use that.
+  const unique: ClassProfile[] = []
+  for (const seq of sequences) {
+    if (!seq.classID && !seq.specID) continue
+    const key = `${seq.classID}|${seq.specID}`
+    if (!unique.some(u => `${u.classID}|${u.specID}` === key)) {
+      unique.push({ classID: seq.classID, specID: seq.specID })
+    }
+  }
+  if (unique.length === 1) return unique[0]
+
+  // 4. Parse spec from talent string header as last resort.
+  if (talentString) {
+    const fromTalent = readProfileFromTalentString(talentString)
+    if (fromTalent.classID || fromTalent.specID) return fromTalent
+  }
+
+  return { classID: null, specID: null }
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
-/**
- * Decodes a GRIP/EMS export string and returns the decoded export including
- * all sequences. Throws on malformed input.
- */
 export function decodeEMSExport(input: string): DecodedExport {
   const cleaned = String(input || '').trim().replace(/\s+/g, '')
 
-  if (!cleaned) {
-    throw new Error('Paste a GRIP EMS export code first.')
-  }
+  if (!cleaned) throw new Error('Paste a GRIP EMS export code first.')
 
   const PREFIX = /^!(EMS1|GRIP1)!/i
   if (!PREFIX.test(cleaned)) {
@@ -95,7 +318,15 @@ export function decodeEMSExport(input: string): DecodedExport {
   }
 
   const decoded = new CborReader(inflated).decode() as Record<string, unknown>
-  const sequences = normalizeSequences(decoded)
+
+  // Extract talent string from exportMeta for last-resort profile resolution.
+  const exportMetaRecord = normalizeRecord(decoded.exportMeta ?? decoded.ExportMeta ?? {})
+  const talentString =
+    (exportMetaRecord.talentString as string) ||
+    (exportMetaRecord.TalentString as string) ||
+    null
+
+  const sequences = normalizeSequences(decoded, talentString)
 
   return {
     meta: {
@@ -108,14 +339,6 @@ export function decodeEMSExport(input: string): DecodedExport {
   }
 }
 
-/**
- * Decodes a GRIP/EMS export string and returns LazyGrip SequenceStep arrays
- * for each sequence found. Markers are folded inline into step text.
- *
- * When one sequence is present, returns a single-element array.
- * When multiple sequences are present, returns one entry per sequence so the
- * caller can present a picker to the author.
- */
 export function decodeGripString(input: string): {
   sequences: Array<{
     name: string
@@ -143,50 +366,31 @@ export function decodeGripString(input: string): {
 }
 
 // ---------------------------------------------------------------------------
-// Step conversion: RawStep[] -> SequenceStep[]
+// Step conversion
 // ---------------------------------------------------------------------------
 
 function rawStepsToSequenceSteps(rawSteps: RawStep[]): SequenceStep[] {
   return rawSteps.map((raw, i) => {
     const parts: string[] = []
-
-    if (raw.preMarkers && raw.preMarkers.length > 0) {
-      parts.push(raw.preMarkers.join(' '))
-    }
-
-    if (raw.text) {
-      parts.push(raw.text)
-    }
-
-    if (raw.postMarkers && raw.postMarkers.length > 0) {
-      parts.push(raw.postMarkers.join(' '))
-    }
-
+    if (raw.preMarkers?.length) parts.push(raw.preMarkers.join(' '))
+    if (raw.text) parts.push(raw.text)
+    if (raw.postMarkers?.length) parts.push(raw.postMarkers.join(' '))
     const text = parts.join(' ').trim()
-
-    return {
-      index: i,
-      text,
-      char_count: Buffer.byteLength(text, 'utf8'),
-    }
+    return { index: i, text, char_count: Buffer.byteLength(text, 'utf8') }
   })
 }
 
 // ---------------------------------------------------------------------------
-// Sequence normalization (ported from Beard3d_Gamer's emsDecoder.js)
-// All credit for the decode logic to Beard3d_Gamer.
+// Sequence normalization
 // ---------------------------------------------------------------------------
 
-function normalizeSequences(decoded: Record<string, unknown>): NormalizedSequence[] {
-  // classID and specID sit on the top-level decoded object for single-sequence
-  // exports. For collections they may be on each entry. We read from the top
-  // level first and fall back to the entry.
-  const topClassID = decoded.classID ?? decoded.ClassID ?? null
-  const topSpecID = decoded.specID ?? decoded.specId ?? decoded.SpecID ?? null
-
+function normalizeSequences(
+  decoded: Record<string, unknown>,
+  talentString: string | null
+): NormalizedSequence[] {
   const entries = findSequenceEntries(decoded)
 
-  return entries
+  const sequences = entries
     .map((entry, index) => {
       const sequence = normalizeRecord(entry.value)
       const versions = normalizeVersions(sequence)
@@ -196,12 +400,9 @@ function normalizeSequences(decoded: Record<string, unknown>): NormalizedSequenc
         versions[defaultVersion - 1] || versions.find((v) => v.steps.length > 0)
       const steps = activeVersion ? activeVersion.steps : fallbackSteps
 
-      const classID = Number(
-        sequence.classID ?? sequence.ClassID ?? sequence.class_id ?? topClassID ?? 0
-      ) || null
-      const specID = Number(
-        sequence.specID ?? sequence.specId ?? sequence.SpecID ?? sequence.spec_id ?? topSpecID ?? 0
-      ) || null
+      // Per-sequence profile: full readClassInfo on the sequence record itself.
+      const seqProfile = readClassInfo(sequence)
+
       const stepFunction =
         activeVersion?.stepFunction ||
         (sequence.stepFunction as string) ||
@@ -218,10 +419,10 @@ function normalizeSequences(decoded: Record<string, unknown>): NormalizedSequenc
           `Sequence ${index + 1}`,
         description:
           (sequence.description as string) || (sequence.Description as string) || '',
-        class: (sequence.class as string) || (sequence.Class as string) || '',
-        spec: (sequence.spec as string) || (sequence.Spec as string) || '',
-        classID,
-        specID,
+        class: seqProfile.classID ? (CLASS_BY_ID[seqProfile.classID] || '') : '',
+        spec: seqProfile.specID ? (SPEC_BY_ID[seqProfile.specID]?.name || '') : '',
+        classID: seqProfile.classID,
+        specID: seqProfile.specID,
         stepFunction,
         defaultVersion,
         versions,
@@ -229,27 +430,40 @@ function normalizeSequences(decoded: Record<string, unknown>): NormalizedSequenc
       }
     })
     .filter((seq) => seq.steps.length > 0 || seq.versions.length > 0)
+
+  // If any sequence is missing class/spec, try to resolve from the export-level
+  // profile and fill it in -- same pattern as Beard3d's post-normalization pass.
+  const exportProfile = resolveProfile(decoded, sequences, talentString)
+
+  if (exportProfile.classID || exportProfile.specID) {
+    for (const seq of sequences) {
+      if (!seq.classID && exportProfile.classID) {
+        seq.classID = exportProfile.classID
+        seq.class = CLASS_BY_ID[exportProfile.classID] || ''
+      }
+      if (!seq.specID && exportProfile.specID) {
+        seq.specID = exportProfile.specID
+        seq.spec = SPEC_BY_ID[exportProfile.specID]?.name || ''
+      }
+    }
+  }
+
+  return sequences
 }
 
 function findSequenceEntries(
   decoded: Record<string, unknown>
 ): Array<{ name: string; value: unknown }> {
   if (decoded.type === 'COLLECTION') {
-    return entriesFromSequenceValue(
-      (decoded.sequences || decoded.Sequences) as unknown
-    )
+    return entriesFromSequenceValue(decoded.sequences ?? decoded.Sequences)
   }
-
   if (decoded.sequence || decoded.Sequence) {
-    return [
-      {
-        name: (decoded.name as string) || (decoded.Name as string) || '',
-        value: decoded.sequence || decoded.Sequence,
-      },
-    ]
+    return [{
+      name: (decoded.name as string) || (decoded.Name as string) || '',
+      value: decoded.sequence || decoded.Sequence,
+    }]
   }
-
-  return entriesFromSequenceValue((decoded.sequences || decoded.Sequences) as unknown)
+  return entriesFromSequenceValue(decoded.sequences ?? decoded.Sequences)
 }
 
 function entriesFromSequenceValue(
@@ -269,14 +483,12 @@ function entriesFromSequenceValue(
       }
     })
   }
-
   if (value && typeof value === 'object') {
     return Object.entries(value as Record<string, unknown>).map(([name, seq]) => ({
       name,
       value: seq,
     }))
   }
-
   return []
 }
 
@@ -285,12 +497,9 @@ function normalizeVersions(sequence: Record<string, unknown>): NormalizedVersion
   const versions = entries
     .map((entry, index) => {
       const version = normalizeRecord(entry.value)
-      const steps = stepsFromActions(
-        (version.actions || version.Actions) as unknown[]
-      )
+      const steps = stepsFromActions(version.actions ?? version.Actions as unknown[])
       const fallbackSteps = steps.length ? steps : stepsFromRecord(version)
-      const keyName =
-        entry.key && !/^\d+$/.test(String(entry.key)) ? entry.key : ''
+      const keyName = entry.key && !/^\d+$/.test(String(entry.key)) ? entry.key : ''
 
       return {
         index: index + 1,
@@ -301,14 +510,9 @@ function normalizeVersions(sequence: Record<string, unknown>): NormalizedVersion
           (version.Label as string) ||
           keyName ||
           `Version ${index + 1}`,
-        stepFunction:
-          (version.stepFunction as string) ||
-          (version.StepFunction as string) ||
-          '',
-        keyPress:
-          (version.keyPress as string) || (version.KeyPress as string) || '',
-        keyRelease:
-          (version.keyRelease as string) || (version.KeyRelease as string) || '',
+        stepFunction: (version.stepFunction as string) || (version.StepFunction as string) || '',
+        keyPress: (version.keyPress as string) || (version.KeyPress as string) || '',
+        keyRelease: (version.keyRelease as string) || (version.KeyRelease as string) || '',
         resetOnCombat: Boolean(version.resetOnCombat || version.Combat),
         resetOnTarget: Boolean(version.resetOnTarget || version.Head),
         resetOnGear: Boolean(version.resetOnGear),
@@ -324,30 +528,20 @@ function normalizeVersions(sequence: Record<string, unknown>): NormalizedVersion
 
   const steps = stepsFromRecord(sequence)
   return steps.length
-    ? [
-        {
-          index: 1,
-          name: 'Version 1',
-          stepFunction:
-            (sequence.stepFunction as string) ||
-            (sequence.StepFunction as string) ||
-            '',
-          keyPress:
-            (sequence.keyPress as string) || (sequence.KeyPress as string) || '',
-          keyRelease:
-            (sequence.keyRelease as string) ||
-            (sequence.KeyRelease as string) ||
-            '',
-          resetOnCombat: Boolean(sequence.resetOnCombat || sequence.Combat),
-          resetOnTarget: Boolean(sequence.resetOnTarget || sequence.Head),
-          resetOnGear: Boolean(sequence.resetOnGear),
-          resetOnSpec: Boolean(sequence.resetOnSpec),
-          resetTimer:
-            (sequence.resetTimer as number) || (sequence.Timer as number) || 0,
-          steps,
-          source: sequence,
-        },
-      ]
+    ? [{
+        index: 1,
+        name: 'Version 1',
+        stepFunction: (sequence.stepFunction as string) || (sequence.StepFunction as string) || '',
+        keyPress: (sequence.keyPress as string) || (sequence.KeyPress as string) || '',
+        keyRelease: (sequence.keyRelease as string) || (sequence.KeyRelease as string) || '',
+        resetOnCombat: Boolean(sequence.resetOnCombat || sequence.Combat),
+        resetOnTarget: Boolean(sequence.resetOnTarget || sequence.Head),
+        resetOnGear: Boolean(sequence.resetOnGear),
+        resetOnSpec: Boolean(sequence.resetOnSpec),
+        resetTimer: (sequence.resetTimer as number) || (sequence.Timer as number) || 0,
+        steps,
+        source: sequence,
+      }]
     : []
 }
 
@@ -355,12 +549,9 @@ function findVersionEntries(
   sequence: Record<string, unknown>
 ): Array<{ key: string; value: unknown }> {
   const candidates = [
-    sequence.versions,
-    sequence.Versions,
-    sequence.versionData,
-    sequence.VersionData,
-    sequence.sequenceVersions,
-    sequence.SequenceVersions,
+    sequence.versions, sequence.Versions,
+    sequence.versionData, sequence.VersionData,
+    sequence.sequenceVersions, sequence.SequenceVersions,
   ].filter(Boolean)
 
   for (const candidate of candidates) {
@@ -373,20 +564,13 @@ function findVersionEntries(
       )
     }
   }
-
   return []
 }
 
-function readDefaultVersion(
-  sequence: Record<string, unknown>,
-  versionCount: number
-): number {
+function readDefaultVersion(sequence: Record<string, unknown>, versionCount: number): number {
   const raw = Number(
-    sequence.defaultVersion ||
-      sequence.DefaultVersion ||
-      sequence.default ||
-      sequence.Default ||
-      1
+    sequence.defaultVersion ?? sequence.DefaultVersion ??
+    sequence.default ?? sequence.Default ?? 1
   )
   if (!Number.isFinite(raw) || raw < 1) return 1
   if (versionCount > 0 && raw > versionCount) return 1
@@ -398,9 +582,7 @@ function extractSteps(
   versions: Record<string, unknown>[]
 ): RawStep[] {
   for (const version of versions) {
-    const steps = stepsFromActions(
-      (version.actions || version.Actions) as unknown[]
-    )
+    const steps = stepsFromActions(version.actions ?? version.Actions as unknown[])
     if (steps.length) return steps
   }
   return stepsFromRecord(sequence)
@@ -408,14 +590,14 @@ function extractSteps(
 
 function stepsFromActions(actions: unknown[]): RawStep[] {
   if (!Array.isArray(actions) || actions.length === 0) return []
-  const flattened: RawStep[] = []
+  const flattened: RawStepInternal[] = []
   flattenActions(actions, flattened)
   return flattened.map((step, index) => ({
     number: index + 1,
     text: step.text,
     preMarkers: step.preMarkers || [],
     postMarkers: step.postMarkers || [],
-    chars: stepCharCount(step),
+    chars: stepCharCount(step as RawStep),
     limit: 255,
     source: step.source || null,
   }))
@@ -423,14 +605,7 @@ function stepsFromActions(actions: unknown[]): RawStep[] {
 
 function stepCharCount(step: RawStep): number {
   const markers = [...(step.preMarkers || []), ...(step.postMarkers || [])]
-  const markerText = markers.join('')
-  const markerSeparators = markers.length
-  return (
-    Buffer.byteLength(
-      (step.charText || step.text || '') + markerText,
-      'utf8'
-    ) + markerSeparators
-  )
+  return Buffer.byteLength((step.charText || step.text || '') + markers.join(''), 'utf8') + markers.length
 }
 
 interface RawStepInternal {
@@ -444,28 +619,23 @@ interface RawStepInternal {
 function flattenActions(actions: unknown[], output: RawStepInternal[]): void {
   for (const action of actions) {
     const node = normalizeRecord(action)
-    const type = String(node.type || node.Type || '').toLowerCase()
+    const type = String(node.type ?? node.Type ?? '').toLowerCase()
 
     if (type === 'action') {
-      appendMacroSteps(
-        output,
-        (node.macro || node.Macro || '') as string,
-        node
-      )
+      appendMacroSteps(output, (node.macro ?? node.Macro ?? '') as string, node)
       continue
     }
 
     if (type === 'loop') {
-      const stepFunction = node.stepFunction || node.StepFunction || 'Sequential'
-      const label = `(/Loop-${stepFunction}-Start)`
-      const endLabel = `(/Loop-${stepFunction}-End)`
+      const sf = node.stepFunction || node.StepFunction || 'Sequential'
+      const label = `(/Loop-${sf}-Start)`
+      const endLabel = `(/Loop-${sf}-End)`
       const before = output.length
       const children = Array.isArray(node.children) ? node.children : []
       let attachedStart = false
 
       if (output[output.length - 1]) {
-        output[output.length - 1].postMarkers =
-          output[output.length - 1].postMarkers || []
+        output[output.length - 1].postMarkers = output[output.length - 1].postMarkers || []
         output[output.length - 1].postMarkers!.push(label)
         attachedStart = true
       }
@@ -477,20 +647,14 @@ function flattenActions(actions: unknown[], output: RawStepInternal[]): void {
           output[before].preMarkers = output[before].preMarkers || []
           output[before].preMarkers!.push(label)
         }
-        output[output.length - 1].postMarkers =
-          output[output.length - 1].postMarkers || []
+        output[output.length - 1].postMarkers = output[output.length - 1].postMarkers || []
         output[output.length - 1].postMarkers!.push(endLabel)
       }
       continue
     }
 
     if (type === 'if') {
-      const condition =
-        (node.variable as string) ||
-        (node.Variable as string) ||
-        (node.condition as string) ||
-        (node.Condition as string) ||
-        ''
+      const condition = (node.variable ?? node.Variable ?? node.condition ?? node.Condition ?? '') as string
       appendMarker(output, `(/If ${condition})`)
       const children = Array.isArray(node.children) ? node.children : []
       for (const branch of children) {
@@ -513,50 +677,32 @@ function flattenActions(actions: unknown[], output: RawStepInternal[]): void {
     if (type === 'embed') {
       appendMacroSteps(
         output,
-        `/embed ${(node.sequence as string) || (node.Sequence as string) || ''}`.trim(),
+        `/embed ${(node.sequence ?? node.Sequence ?? '') as string}`.trim(),
         node
       )
     }
   }
 }
 
-function appendMacroSteps(
-  output: RawStepInternal[],
-  macro: string,
-  source: unknown
-): void {
+function appendMacroSteps(output: RawStepInternal[], macro: string, source: unknown): void {
   const block = String(macro || '').replace(/\r\n/g, '\n').trimEnd()
   if (!block.trim()) return
-
-  // Each action in GRIP is a multi-line macro block that constitutes a single
-  // step. We preserve the full block as one entry rather than splitting on
-  // newlines, because GRIP stores and executes each action as a unit and that
-  // is what users expect to see when reading steps on LazyGrip.
   const translated = translateSpellTokens(block)
-  output.push({
-    text: translated,
-    charText: translated,
-    source,
-  })
+  output.push({ text: translated, charText: translated, source })
 }
 
 function appendMarker(output: RawStepInternal[], marker: string): void {
   if (output[output.length - 1]) {
-    output[output.length - 1].postMarkers =
-      output[output.length - 1].postMarkers || []
+    output[output.length - 1].postMarkers = output[output.length - 1].postMarkers || []
     output[output.length - 1].postMarkers!.push(marker)
   }
 }
 
 function stepsFromRecord(record: Record<string, unknown>): RawStep[] {
-  const normalized = normalizeRecord(record)
   const candidates = [
-    normalized.steps,
-    normalized.Steps,
-    normalized.actions,
-    normalized.Actions,
-    normalized.macroSteps,
-    normalized.MacroSteps,
+    record.steps, record.Steps,
+    record.actions, record.Actions,
+    record.macroSteps, record.MacroSteps,
   ].filter(Boolean)
 
   for (const candidate of candidates) {
@@ -570,13 +716,13 @@ function normalizeStepList(value: unknown): RawStep[] {
   if (Array.isArray(value)) {
     return value
       .map((step, index) => normalizeStep(step, index))
-      .filter((s) => s.text || (s.postMarkers && s.postMarkers.length > 0))
+      .filter((s) => s.text || s.postMarkers?.length)
   }
   if (value && typeof value === 'object') {
     return Object.entries(value as Record<string, unknown>)
       .sort(([a], [b]) => Number(a) - Number(b))
       .map(([, step], index) => normalizeStep(step, index))
-      .filter((s) => s.text || (s.postMarkers && s.postMarkers.length > 0))
+      .filter((s) => s.text || s.postMarkers?.length)
   }
   return []
 }
@@ -587,39 +733,16 @@ function normalizeStep(step: unknown, index: number): RawStep {
 
   const record = normalizeRecord(step)
   const text = firstString(record, [
-    'macrotext',
-    'macroText',
-    'MacroText',
-    'text',
-    'Text',
-    'body',
-    'Body',
-    'value',
-    'Value',
-    'line',
-    'Line',
+    'macrotext', 'macroText', 'MacroText',
+    'text', 'Text', 'body', 'Body', 'value', 'Value', 'line', 'Line',
   ])
-  const marker = firstString(record, [
-    'marker',
-    'Marker',
-    'label',
-    'Label',
-    'comment',
-    'Comment',
-  ])
+  const marker = firstString(record, ['marker', 'Marker', 'label', 'Label', 'comment', 'Comment'])
   return buildStep(index, text, marker, record)
 }
 
-function buildStep(
-  index: number,
-  text: string,
-  marker: string | null,
-  source: unknown
-): RawStep {
+function buildStep(index: number, text: string, marker: string | null, source: unknown): RawStep {
   const macro = translateSpellTokens(text)
-  const resolvedMarker =
-    marker && /^\(\/.+\)$/.test(marker) ? marker : null
-
+  const resolvedMarker = marker && /^\(\/.+\)$/.test(marker) ? marker : null
   return {
     text: macro,
     preMarkers: [],
@@ -632,26 +755,36 @@ function buildStep(
 
 function firstString(record: Record<string, unknown>, keys: string[]): string {
   for (const key of keys) {
-    if (typeof record[key] === 'string') return record[key] as string
+    const val = readRecordValue(record, key)
+    if (typeof val === 'string') return val
   }
   return ''
 }
 
+function firstNumber(record: Record<string, unknown>, keys: string[]): number | null {
+  for (const key of keys) {
+    const val = Number(readRecordValue(record, key))
+    if (Number.isFinite(val) && val > 0) return Math.floor(val)
+  }
+  return null
+}
+
+function readRecordValue(record: Record<string, unknown>, key: string): unknown {
+  if (Object.prototype.hasOwnProperty.call(record, key)) return record[key]
+  const lower = key.toLowerCase()
+  const match = Object.keys(record).find(k => k.toLowerCase() === lower)
+  return match ? record[match] : undefined
+}
+
 function normalizeRecord(value: unknown): Record<string, unknown> {
   if (Array.isArray(value)) return arrayToRecord(value)
-  return value && typeof value === 'object'
-    ? (value as Record<string, unknown>)
-    : {}
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
 }
 
 function arrayToRecord(value: unknown[]): Record<string, unknown> {
   const record: Record<string, unknown> = {}
   for (const item of value) {
-    if (
-      Array.isArray(item) &&
-      item.length >= 2 &&
-      typeof item[0] === 'string'
-    ) {
+    if (Array.isArray(item) && item.length >= 2 && typeof item[0] === 'string') {
       record[item[0]] = item[1]
     } else if (item && typeof item === 'object' && !Array.isArray(item)) {
       Object.assign(record, item)
@@ -662,7 +795,6 @@ function arrayToRecord(value: unknown[]): Record<string, unknown> {
 
 // ---------------------------------------------------------------------------
 // CBOR reader (ported from Beard3d_Gamer's emsDecoder.js)
-// All credit for the decode logic to Beard3d_Gamer.
 // ---------------------------------------------------------------------------
 
 class CborReader {
@@ -706,23 +838,19 @@ class CborReader {
     }
     const length = this.readLength(additional)
     const result: unknown[] = []
-    for (let i = 0; i < length; i += 1) result.push(this.readValue())
+    for (let i = 0; i < length; i++) result.push(this.readValue())
     return result
   }
 
   private readMap(additional: number): Record<string, unknown> {
     const result: Record<string, unknown> = {}
     if (additional === 31) {
-      while (!this.nextIsBreak()) {
-        result[String(this.readValue())] = this.readValue()
-      }
+      while (!this.nextIsBreak()) result[String(this.readValue())] = this.readValue()
       this.offset += 1
       return result
     }
     const length = this.readLength(additional)
-    for (let i = 0; i < length; i += 1) {
-      result[String(this.readValue())] = this.readValue()
-    }
+    for (let i = 0; i < length; i++) result[String(this.readValue())] = this.readValue()
     return result
   }
 
@@ -786,9 +914,7 @@ class CborReader {
       this.require(8)
       const value = this.buffer.readBigUInt64BE(this.offset)
       this.offset += 8
-      return value <= BigInt(Number.MAX_SAFE_INTEGER)
-        ? Number(value)
-        : Number(value)
+      return value <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(value) : Number(value)
     }
     throw new Error(`Unsupported CBOR length marker ${additional}.`)
   }
@@ -841,9 +967,7 @@ function decodeLuaStrings(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(decodeLuaStrings)
   if (value && typeof value === 'object') {
     const result: Record<string, unknown> = {}
-    for (const [key, child] of Object.entries(
-      value as Record<string, unknown>
-    )) {
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
       result[key] = decodeLuaStrings(child)
     }
     return result
