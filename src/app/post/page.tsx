@@ -31,8 +31,8 @@ const EMPTY_FORM = {
 interface CollectionSequence {
   index: number
   name: string
-  title: string           // editable by user, pre-filled from name
-  talent_string: string   // per-sequence, may differ between ST/AOE
+  title: string           // editable label stored inside collection_sequences
+  talent_string: string   // per-sequence, may differ between ST/MT
   steps: SequenceStep[]
   stepFunction: string
   classID: number | null
@@ -71,6 +71,8 @@ function PostForm() {
 
   // Collection state -- non-null when a collection export is detected
   const [collectionSequences, setCollectionSequences] = useState<CollectionSequence[] | null>(null)
+  // Shared title for the collection page
+  const [collectionTitle, setCollectionTitle] = useState('')
 
   const selectedClass = WOW_CLASSES.find(c => c.id === Number(form.class_id))
   const selectedSpec = selectedClass?.specs.find(s => s.name === form.spec_name)
@@ -139,8 +141,8 @@ function PostForm() {
   async function runDecode(exportString: string) {
     setDecoding(true)
     setDecodeError(null)
-    // Clear any previous collection state
     setCollectionSequences(null)
+    setCollectionTitle('')
 
     try {
       const res = await fetch('/api/decode-grip', {
@@ -157,11 +159,8 @@ function PostForm() {
       }
 
       if (data.multipleSequences) {
-        // Collection export: build per-sequence state, apply shared metadata
-        // from the first sequence that has class/spec resolved.
         const anchor = data.sequences.find((s: CollectionSequence) => s.classID) ?? data.sequences[0]
 
-        // Apply shared metadata to the form fields.
         if (anchor.classID) {
           const cls = WOW_CLASSES.find(c => c.id === anchor.classID)
           if (cls) {
@@ -266,6 +265,7 @@ function PostForm() {
     setStepsAutoPopulated(false)
     setDecodedSteps(null)
     setCollectionSequences(null)
+    setCollectionTitle('')
 
     if (decodeTimeoutRef.current) clearTimeout(decodeTimeoutRef.current)
 
@@ -313,18 +313,16 @@ function PostForm() {
       return
     }
 
-    // Collection submit path
+    // Collection submit path -- one record, collection_sequences jsonb
     if (collectionSequences) {
       const checked = collectionSequences.filter(s => s.checked)
       if (checked.length === 0) {
         setError('Select at least one sequence to post.')
         return
       }
-      for (const s of checked) {
-        if (!s.title.trim()) {
-          setError(`Title is required for ${s.name}.`)
-          return
-        }
+      if (!collectionTitle.trim()) {
+        setError('A title is required for the collection page.')
+        return
       }
 
       setSubmitting(true)
@@ -335,45 +333,49 @@ function PostForm() {
 
         const cls = WOW_CLASSES.find(c => c.id === Number(form.class_id))
         const spec = cls?.specs.find(s => s.name === form.spec_name)
+        const slug = slugify(collectionTitle) + '-' + Date.now().toString(36)
 
-        for (const seq of checked) {
-          const slug = slugify(seq.title) + '-' + Date.now().toString(36)
-          const { error: rpcError } = await supabase.rpc('create_sequence_with_version', {
-            p_author_id: user.id,
-            p_title: seq.title.trim(),
-            p_slug: slug,
-            p_description: descriptionIsEmpty(form.description) ? null : form.description,
-            p_class_id: Number(form.class_id),
-            p_class_name: cls?.name ?? '',
-            p_spec_id: spec?.id ?? null,
-            p_spec_name: form.spec_name || null,
-            p_content_type: form.content_type,
-            p_hero_talent: form.hero_talent || null,
-            p_patch_version: form.patch_version || null,
-            p_grip_version: form.grip_version || null,
-            p_step_function: (() => {
-              const map: Record<string, string> = {
-                'Sequential': 'Sequential',
-                'Priority': 'Priority',
-                'ReversePriority': 'Rev. Priority',
-                'Reverse Priority': 'Rev. Priority',
-                'Rev. Priority': 'Rev. Priority',
-                'Random': 'Random',
-              }
-              return map[seq.stepFunction] || form.step_function
-            })(),
-            p_step_count: seq.steps.length,
-            p_grip_string: form.grip_string.trim() || null,
-            p_raw_steps: JSON.stringify(seq.steps),
-            p_talent_string: seq.talent_string.trim() || null,
-            p_warcraftlogs_url: form.warcraftlogs_url.trim() || null,
-            p_performance_notes: form.performance_notes.trim() || null,
-            p_changelog: null,
+        // Build the collection_sequences array from checked sequences only
+        const collectionData = checked.map(seq => ({
+          name: seq.title.trim() || seq.name,
+          steps: seq.steps,
+          stepFunction: seq.stepFunction || form.step_function,
+          talent_string: seq.talent_string.trim() || null,
+        }))
+
+        // Use the first checked sequence's step count as the representative value
+        const totalSteps = checked.reduce((sum, s) => sum + s.steps.length, 0)
+
+        const { data: inserted, error: insertError } = await supabase
+          .from('sequences')
+          .insert({
+            author_id: user.id,
+            title: collectionTitle.trim(),
+            slug,
+            description: descriptionIsEmpty(form.description) ? null : form.description,
+            class_id: Number(form.class_id),
+            class_name: cls?.name ?? '',
+            spec_id: spec?.id ?? null,
+            spec_name: form.spec_name || null,
+            content_type: form.content_type,
+            hero_talent: form.hero_talent || null,
+            patch_version: form.patch_version || null,
+            grip_version: form.grip_version || null,
+            step_function: form.step_function,
+            step_count: totalSteps,
+            grip_string: form.grip_string.trim() || null,
+            raw_steps: null,
+            talent_string: null,
+            warcraftlogs_url: form.warcraftlogs_url.trim() || null,
+            performance_notes: form.performance_notes.trim() || null,
+            collection_sequences: collectionData,
+            is_published: true,
           })
-          if (rpcError) throw rpcError
-        }
+          .select('slug')
+          .single()
 
-        router.push('/browse')
+        if (insertError) throw insertError
+        if (inserted) router.push(`/sequences/${inserted.slug}`)
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
         setError(message)
@@ -596,7 +598,23 @@ function PostForm() {
                 color: 'var(--text-secondary)',
                 fontFamily: 'var(--font-sans)',
               }}>
-                Collection export detected with {collectionSequences.length} sequences. Each checked sequence will be posted as its own page. Shared metadata below applies to all.
+                Collection export detected with {collectionSequences.length} sequences. These will be posted as a single page with tabs — one tab per sequence. Give the page a title below, then label each sequence.
+              </div>
+
+              {/* Collection page title */}
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 5 }}>
+                  Page title *
+                </label>
+                <input
+                  type="text"
+                  value={collectionTitle}
+                  onChange={e => setCollectionTitle(e.target.value)}
+                  placeholder="e.g. Slowdog's Ret Paladin M+ — Templar ST & MT V1.0"
+                />
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                  This is the title of the sequence page. Each tab inside will use the label you give it below.
+                </p>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -640,13 +658,13 @@ function PostForm() {
 
                         <div>
                           <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                            Title
+                            Tab label
                           </label>
                           <input
                             type="text"
                             value={seq.title}
                             onChange={e => updateCollectionSequence(seq.index, { title: e.target.value })}
-                            placeholder="Sequence title..."
+                            placeholder="e.g. Single Target"
                             disabled={!seq.checked}
                             style={{ opacity: seq.checked ? 1 : 0.5 }}
                           />
@@ -813,7 +831,7 @@ function PostForm() {
             </div>
             {collectionSequences && (
               <p style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginTop: 4 }}>
-                These fields apply to all sequences in this collection. Step function per sequence is read from the export string automatically.
+                These fields apply to the collection page. Step function per sequence is read from the export string automatically.
               </p>
             )}
           </Section>
@@ -901,10 +919,12 @@ function PostForm() {
               }}
             >
               {submitting
-                ? (isEditMode ? 'Saving...' : collectionSequences ? 'Publishing...' : 'Publishing...')
-                : (isEditMode ? 'Save changes' : collectionSequences
-                    ? `Publish ${collectionSequences.filter(s => s.checked).length} sequence${collectionSequences.filter(s => s.checked).length !== 1 ? 's' : ''}`
-                    : 'Publish sequence')}
+                ? 'Publishing...'
+                : isEditMode
+                  ? 'Save changes'
+                  : collectionSequences
+                    ? 'Publish collection'
+                    : 'Publish sequence'}
             </button>
 
             {isEditMode && (

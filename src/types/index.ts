@@ -36,6 +36,13 @@ export type LinkedSequence = {
   hero_talent: string | null
 }
 
+export type CollectionSequenceEntry = {
+  name: string
+  steps: SequenceStep[]
+  stepFunction: string | null
+  talent_string: string | null
+}
+
 export type Sequence = {
   id: string
   author_id: string
@@ -64,6 +71,7 @@ export type Sequence = {
   is_published: boolean
   is_featured: boolean
   set_id: string | null
+  collection_sequences: CollectionSequenceEntry[] | null
   current_version_id: string | null
   current_version_label: string | null
   created_at: string

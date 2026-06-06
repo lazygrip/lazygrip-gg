@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Copy, Check, Bookmark, ExternalLink, ChevronDown, ChevronUp, Pencil, Trash2, CornerDownRight, Link2, Link2Off } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { Sequence, Comment, SequenceVersion, LinkedSequence } from '@/types'
+import { Sequence, Comment, SequenceVersion, LinkedSequence, CollectionSequenceEntry } from '@/types'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { formatDistanceToNow } from 'date-fns'
 import RenderedContent from '@/components/editor/RenderedContent'
@@ -35,6 +35,7 @@ export default function SequencePageClient() {
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
   const [showAllSteps, setShowAllSteps] = useState(false)
+  const [activeCollectionTab, setActiveCollectionTab] = useState(0)
   const [userRating, setUserRating] = useState<number | null>(null)
   const [hoveredRating, setHoveredRating] = useState<number | null>(null)
   const [commentText, setCommentText] = useState('')
@@ -225,7 +226,6 @@ export default function SequencePageClient() {
     setLinkLoading(true)
     setLinkError(null)
 
-    // Accept either a full URL or just the trailing path segment
     const targetSlug = linkSlug.trim().toLowerCase().replace(/^.*\/sequences\//, '').replace(/\/$/, '')
 
     const { data: target, error: lookupError } = await supabase
@@ -320,9 +320,16 @@ export default function SequencePageClient() {
   )
 
   const classColor = getClassColor(sequence.class_id)
+  const contentLabel = CONTENT_TYPES.find(c => c.value === sequence.content_type)?.label ?? sequence.content_type
+
+  // Collection sequences tab data
+  const collectionEntries: CollectionSequenceEntry[] = sequence.collection_sequences ?? []
+  const isCollection = collectionEntries.length > 0
+  const activeEntry = collectionEntries[activeCollectionTab] ?? null
+
+  // Steps for non-collection display
   const steps = sequence.raw_steps || []
   const visibleSteps = showAllSteps ? steps : steps.slice(0, 8)
-  const contentLabel = CONTENT_TYPES.find(c => c.value === sequence.content_type)?.label ?? sequence.content_type
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px' }}>
@@ -656,8 +663,109 @@ export default function SequencePageClient() {
             </div>
           )}
 
-          {/* Steps display */}
-          {steps.length > 0 && (
+          {/* Collection tab display */}
+          {isCollection && activeEntry && (
+            <div style={{
+              background: 'var(--bg-primary)',
+              border: '0.5px solid var(--border)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '18px',
+            }}>
+              {/* Tab bar */}
+              <div style={{
+                display: 'flex', gap: 4, marginBottom: 16,
+                borderBottom: '0.5px solid var(--border)',
+                paddingBottom: 12,
+              }}>
+                {collectionEntries.map((entry, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { setActiveCollectionTab(i); setShowAllSteps(false) }}
+                    style={{
+                      padding: '5px 14px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: activeCollectionTab === i
+                        ? '0.5px solid var(--accent)'
+                        : '0.5px solid var(--border-strong)',
+                      background: activeCollectionTab === i ? 'var(--accent)' : 'var(--bg-secondary)',
+                      color: activeCollectionTab === i ? 'white' : 'var(--text-secondary)',
+                      cursor: 'pointer', fontSize: 12, fontWeight: activeCollectionTab === i ? 600 : 400,
+                      fontFamily: 'var(--font-sans)',
+                    }}
+                  >
+                    {entry.name}
+                  </button>
+                ))}
+              </div>
+
+              {/* Active tab metadata */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+                {activeEntry.stepFunction && (
+                  <Badge color="#888">{activeEntry.stepFunction}</Badge>
+                )}
+                <Badge color="#888">{activeEntry.steps.length} steps</Badge>
+              </div>
+
+              {/* Per-sequence talent string if present */}
+              {activeEntry.talent_string && (
+                <div style={{
+                  marginBottom: 14,
+                  padding: '8px',
+                  background: 'var(--bg-tertiary)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '0.5px solid var(--border)',
+                }}>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Talent build</p>
+                  <div style={{
+                    fontFamily: 'var(--font-mono)', fontSize: 10,
+                    wordBreak: 'break-all', color: 'var(--text-secondary)',
+                  }}>
+                    {activeEntry.talent_string}
+                  </div>
+                </div>
+              )}
+
+              {/* Steps */}
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+                {(showAllSteps ? activeEntry.steps : activeEntry.steps.slice(0, 8)).map((step: any, i: number) => (
+                  <div key={i} style={{
+                    display: 'flex', gap: 10, padding: '6px 0',
+                    borderBottom: '0.5px solid var(--border)',
+                  }}>
+                    <span style={{ color: 'var(--text-muted)', minWidth: 24, textAlign: 'right' }}>
+                      {i + 1}
+                    </span>
+                    <div style={{ flex: 1 }}>
+                      {(typeof step === 'string' ? step : step.text || '').split('\n').map((line: string, j: number) => (
+                        <div key={j} style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                          <StepLine text={line} />
+                        </div>
+                      ))}
+                    </div>
+                    <span style={{ fontSize: 10, color: 'var(--text-muted)', alignSelf: 'flex-start', paddingTop: 2 }}>
+                      {typeof step === 'object' && step.char_count ? `${step.char_count}/255` : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {activeEntry.steps.length > 8 && (
+                <button onClick={() => setShowAllSteps(s => !s)} style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  marginTop: 12, background: 'none', border: 'none',
+                  cursor: 'pointer', fontSize: 12, color: 'var(--accent)',
+                  fontFamily: 'var(--font-sans)',
+                }}>
+                  {showAllSteps
+                    ? <><ChevronUp size={13} /> Show fewer steps</>
+                    : <><ChevronDown size={13} /> Show all {activeEntry.steps.length} steps</>
+                  }
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Single sequence steps display -- hidden for collections */}
+          {!isCollection && steps.length > 0 && (
             <div style={{
               background: 'var(--bg-primary)',
               border: '0.5px solid var(--border)',
@@ -858,8 +966,8 @@ export default function SequencePageClient() {
             </table>
           </div>
 
-          {/* ST / MT linked variant */}
-          {(linkedSequence || canManageLinks) && (
+          {/* ST / MT linked variant -- only shown for non-collection sequences */}
+          {!isCollection && (linkedSequence || canManageLinks) && (
             <div style={{
               background: 'var(--bg-primary)',
               border: '0.5px solid var(--border)',
@@ -1015,8 +1123,8 @@ export default function SequencePageClient() {
             </div>
           )}
 
-          {/* Talent string */}
-          {selectedVersion?.talent_string && (
+          {/* Talent string -- only for non-collection sequences */}
+          {!isCollection && selectedVersion?.talent_string && (
             <div style={{
               background: 'var(--bg-primary)',
               border: '0.5px solid var(--border)',
