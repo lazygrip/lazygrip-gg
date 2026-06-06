@@ -225,9 +225,9 @@ export default function SequencePageClient() {
     setLinkLoading(true)
     setLinkError(null)
 
-    const targetSlug = linkSlug.trim().toLowerCase()
+    // Accept either a full URL or just the trailing path segment
+    const targetSlug = linkSlug.trim().toLowerCase().replace(/^.*\/sequences\//, '').replace(/\/$/, '')
 
-    // Look up target sequence
     const { data: target, error: lookupError } = await supabase
       .from('sequences')
       .select('id, title, slug, content_type, class_name, spec_name, hero_talent, set_id')
@@ -236,7 +236,7 @@ export default function SequencePageClient() {
       .single()
 
     if (lookupError || !target) {
-      setLinkError('Sequence not found. Check the slug and try again.')
+      setLinkError('Sequence not found. Check the URL and try again.')
       setLinkLoading(false)
       return
     }
@@ -260,7 +260,6 @@ export default function SequencePageClient() {
       return
     }
 
-    // Update local state without a full refetch
     setSequence(s => s ? { ...s, set_id: setId } : s)
     setLinkedSequence(target)
     setLinkSlug('')
@@ -274,7 +273,6 @@ export default function SequencePageClient() {
 
     const setId = sequence.set_id
 
-    // Clear this sequence's set_id
     const { error: clearSelf } = await supabase
       .from('sequences')
       .update({ set_id: null })
@@ -286,7 +284,6 @@ export default function SequencePageClient() {
       return
     }
 
-    // If only one sequence remains in the set, clear that too
     const { data: remaining } = await supabase
       .from('sequences')
       .select('id')
@@ -955,14 +952,14 @@ export default function SequencePageClient() {
                   ) : (
                     <div>
                       <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, lineHeight: 1.5 }}>
-                        Enter the slug of the sequence to link (e.g. <span style={{ fontFamily: 'var(--font-mono)' }}>ret-paladin-m-plus</span>).
+                        Open the other sequence on lazygrip.net, copy its URL, and paste it below. You can paste the full URL or just the last part after <span style={{ fontFamily: 'var(--font-mono)' }}>/sequences/</span>.
                       </p>
                       <input
                         type="text"
                         value={linkSlug}
                         onChange={e => setLinkSlug(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') handleLink() }}
-                        placeholder="sequence-slug"
+                        placeholder="lazygrip.net/sequences/your-sequence"
                         autoFocus
                         style={{
                           width: '100%', padding: '7px 10px',
