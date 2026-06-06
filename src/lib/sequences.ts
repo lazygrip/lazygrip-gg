@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { Sequence, SequenceFilters, PaginatedResponse } from '@/types'
+import { Sequence, SequenceFilters, PaginatedResponse, LinkedSequence } from '@/types'
 
 export async function getSequences(
   filters: SequenceFilters = {}
@@ -77,10 +77,26 @@ export async function getSequenceBySlug(slug: string): Promise<Sequence | null> 
 
   await supabase.rpc('increment_view_count', { seq_id: data.id })
 
+  let linked_sequence: LinkedSequence | null = null
+
+  if (data.set_id) {
+    const { data: linked } = await supabase
+      .from('sequences')
+      .select('id, title, slug, content_type, class_name, spec_name, hero_talent')
+      .eq('set_id', data.set_id)
+      .eq('is_published', true)
+      .neq('id', data.id)
+      .limit(1)
+      .single()
+
+    if (linked) linked_sequence = linked
+  }
+
   return {
     ...data,
     avg_score: data.rating_data?.[0]?.avg_score ?? null,
     rating_count: data.rating_data?.[0]?.rating_count ?? 0,
+    linked_sequence,
   }
 }
 
@@ -119,4 +135,77 @@ export async function getFeaturedSequences(): Promise<Sequence[]> {
     avg_score: row.rating_data?.[0]?.avg_score ?? null,
     rating_count: row.rating_data?.[0]?.rating_count ?? 0,
   }))
+}
+
+// Link two sequences together as ST/MT variants.
+// Looks up the target by slug, then assigns a shared set_id to both rows.
+// If one already has a set_id that value is reused; otherwise a new one is generated.
+export async function linkSequences(
+  sourceId: string,
+  targetSlug: string,
+  sourceSetId: string | null
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+
+  const { data: target, error: lookupError } = await supabase
+    .from('sequences')
+    .select('id, set_id')
+    .eq('slug', targetSlug)
+    .eq('is_published', true)
+    .single()
+
+  if (lookupError || !target) {
+    return { error: 'Sequence not found. Check the slug and try again.' }
+  }
+
+  if (target.id === sourceId) {
+    return { error: 'A sequence cannot be linked to itself.' }
+  }
+
+  // Prefer an existing set_id from either side, otherwise generate a new one.
+  const setId = sourceSetId ?? target.set_id ?? crypto.randomUUID()
+
+  const { error: updateError } = await supabase
+    .from('sequences')
+    .update({ set_id: setId })
+    .in('id', [sourceId, target.id])
+
+  if (updateError) {
+    return { error: 'Failed to link sequences. Please try again.' }
+  }
+
+  return { error: null }
+}
+
+// Remove a sequence from its set. If the set_id is only shared by two sequences
+// this effectively dissolves the link on both sides.
+export async function unlinkSequence(
+  sequenceId: string,
+  setId: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient()
+
+  // Clear this sequence's set_id first.
+  const { error: clearSelf } = await supabase
+    .from('sequences')
+    .update({ set_id: null })
+    .eq('id', sequenceId)
+
+  if (clearSelf) return { error: 'Failed to unlink. Please try again.' }
+
+  // If only one sequence remains in the set it no longer has a partner,
+  // so clear it too rather than leaving an orphaned set_id.
+  const { data: remaining } = await supabase
+    .from('sequences')
+    .select('id')
+    .eq('set_id', setId)
+
+  if (remaining && remaining.length === 1) {
+    await supabase
+      .from('sequences')
+      .update({ set_id: null })
+      .eq('id', remaining[0].id)
+  }
+
+  return { error: null }
 }

@@ -26,6 +26,16 @@ export type Profile = {
   created_at: string
 }
 
+export type LinkedSequence = {
+  id: string
+  title: string
+  slug: string
+  content_type: ContentType
+  class_name: string
+  spec_name: string | null
+  hero_talent: string | null
+}
+
 export type Sequence = {
   id: string
   author_id: string
@@ -53,6 +63,7 @@ export type Sequence = {
   comment_count: number
   is_published: boolean
   is_featured: boolean
+  set_id: string | null
   current_version_id: string | null
   current_version_label: string | null
   created_at: string
@@ -63,6 +74,7 @@ export type Sequence = {
   rating_count?: number
   user_has_saved?: boolean
   user_rating?: number
+  linked_sequence?: LinkedSequence | null
 }
 
 export type SequenceStep = {

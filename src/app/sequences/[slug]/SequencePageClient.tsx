@@ -1,9 +1,9 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Copy, Check, Bookmark, ExternalLink, ChevronDown, ChevronUp, Pencil, Trash2, CornerDownRight } from 'lucide-react'
+import { Copy, Check, Bookmark, ExternalLink, ChevronDown, ChevronUp, Pencil, Trash2, CornerDownRight, Link2, Link2Off } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { Sequence, Comment, SequenceVersion } from '@/types'
+import { Sequence, Comment, SequenceVersion, LinkedSequence } from '@/types'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { formatDistanceToNow } from 'date-fns'
 import RenderedContent from '@/components/editor/RenderedContent'
@@ -44,6 +44,14 @@ export default function SequencePageClient() {
   const [saved, setSaved] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  // ST/MT linking state
+  const [linkedSequence, setLinkedSequence] = useState<LinkedSequence | null>(null)
+  const [showLinkInput, setShowLinkInput] = useState(false)
+  const [linkSlug, setLinkSlug] = useState('')
+  const [linkLoading, setLinkLoading] = useState(false)
+  const [linkError, setLinkError] = useState<string | null>(null)
+  const [unlinkLoading, setUnlinkLoading] = useState(false)
 
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
@@ -86,10 +94,6 @@ export default function SequencePageClient() {
         const current = versionData.find(v => v.id === seq.current_version_id) ?? versionData[0]
         setSelectedVersion(current)
       } else {
-        // No version rows exist. This sequence was posted through the legacy
-        // post form which writes directly to the sequences table without
-        // creating a sequence_versions row. Synthesize a version-shaped object
-        // from the sequence columns so the copy button and sidebar fields render.
         setSelectedVersion({
           id: seq.id,
           sequence_id: seq.id,
@@ -108,6 +112,20 @@ export default function SequencePageClient() {
           performance_notes: seq.performance_notes ?? null,
           created_at: seq.created_at,
         })
+      }
+
+      // Fetch linked ST/MT variant if a set_id exists
+      if (seq.set_id) {
+        const { data: linked } = await supabase
+          .from('sequences')
+          .select('id, title, slug, content_type, class_name, spec_name, hero_talent')
+          .eq('set_id', seq.set_id)
+          .eq('is_published', true)
+          .neq('id', seq.id)
+          .limit(1)
+          .single()
+
+        if (linked) setLinkedSequence(linked)
       }
     }
     setLoading(false)
@@ -202,8 +220,93 @@ export default function SequencePageClient() {
     }
   }
 
+  async function handleLink() {
+    if (!sequence || !linkSlug.trim()) return
+    setLinkLoading(true)
+    setLinkError(null)
+
+    const targetSlug = linkSlug.trim().toLowerCase()
+
+    // Look up target sequence
+    const { data: target, error: lookupError } = await supabase
+      .from('sequences')
+      .select('id, title, slug, content_type, class_name, spec_name, hero_talent, set_id')
+      .eq('slug', targetSlug)
+      .eq('is_published', true)
+      .single()
+
+    if (lookupError || !target) {
+      setLinkError('Sequence not found. Check the slug and try again.')
+      setLinkLoading(false)
+      return
+    }
+
+    if (target.id === sequence.id) {
+      setLinkError('A sequence cannot be linked to itself.')
+      setLinkLoading(false)
+      return
+    }
+
+    const setId = sequence.set_id ?? target.set_id ?? crypto.randomUUID()
+
+    const { error: updateError } = await supabase
+      .from('sequences')
+      .update({ set_id: setId })
+      .in('id', [sequence.id, target.id])
+
+    if (updateError) {
+      setLinkError('Failed to link sequences. Please try again.')
+      setLinkLoading(false)
+      return
+    }
+
+    // Update local state without a full refetch
+    setSequence(s => s ? { ...s, set_id: setId } : s)
+    setLinkedSequence(target)
+    setLinkSlug('')
+    setShowLinkInput(false)
+    setLinkLoading(false)
+  }
+
+  async function handleUnlink() {
+    if (!sequence?.set_id) return
+    setUnlinkLoading(true)
+
+    const setId = sequence.set_id
+
+    // Clear this sequence's set_id
+    const { error: clearSelf } = await supabase
+      .from('sequences')
+      .update({ set_id: null })
+      .eq('id', sequence.id)
+
+    if (clearSelf) {
+      console.error('Unlink failed:', clearSelf)
+      setUnlinkLoading(false)
+      return
+    }
+
+    // If only one sequence remains in the set, clear that too
+    const { data: remaining } = await supabase
+      .from('sequences')
+      .select('id')
+      .eq('set_id', setId)
+
+    if (remaining && remaining.length === 1) {
+      await supabase
+        .from('sequences')
+        .update({ set_id: null })
+        .eq('id', remaining[0].id)
+    }
+
+    setSequence(s => s ? { ...s, set_id: null } : s)
+    setLinkedSequence(null)
+    setUnlinkLoading(false)
+  }
+
   const isAuthor = user && sequence && user.id === sequence.author_id
   const isOwner = user?.id === SITE_OWNER_ID
+  const canManageLinks = isAuthor || isOwner
   const totalComments = flattenComments(comments).length
   const isCurrentVersion = selectedVersion?.id === sequence?.current_version_id
 
@@ -757,6 +860,163 @@ export default function SequencePageClient() {
               </tbody>
             </table>
           </div>
+
+          {/* ST / MT linked variant */}
+          {(linkedSequence || canManageLinks) && (
+            <div style={{
+              background: 'var(--bg-primary)',
+              border: '0.5px solid var(--border)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '16px',
+            }}>
+              <h3 style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>
+                ST / MT variant
+              </h3>
+
+              {linkedSequence ? (
+                <div>
+                  <a
+                    href={`/sequences/${linkedSequence.slug}`}
+                    style={{
+                      display: 'block',
+                      padding: '10px 12px',
+                      background: 'var(--bg-secondary)',
+                      border: '0.5px solid var(--border-strong)',
+                      borderRadius: 'var(--radius-md)',
+                      textDecoration: 'none',
+                      marginBottom: canManageLinks ? 10 : 0,
+                    }}
+                  >
+                    <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>
+                      {linkedSequence.title}
+                    </div>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      <span style={{
+                        fontSize: 10, padding: '1px 5px',
+                        borderRadius: 'var(--radius-sm)',
+                        background: 'var(--accent-subtle)',
+                        color: 'var(--accent-text)',
+                      }}>
+                        {CONTENT_TYPES.find(c => c.value === linkedSequence.content_type)?.label ?? linkedSequence.content_type}
+                      </span>
+                      {linkedSequence.hero_talent && (
+                        <span style={{
+                          fontSize: 10, padding: '1px 5px',
+                          borderRadius: 'var(--radius-sm)',
+                          background: 'rgba(163,48,201,0.1)',
+                          color: '#a330c9',
+                        }}>
+                          {linkedSequence.hero_talent}
+                        </span>
+                      )}
+                    </div>
+                  </a>
+
+                  {canManageLinks && (
+                    <button
+                      onClick={handleUnlink}
+                      disabled={unlinkLoading}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        width: '100%', padding: '6px 10px',
+                        borderRadius: 'var(--radius-md)',
+                        border: '0.5px solid var(--border-strong)',
+                        background: 'none',
+                        color: 'var(--text-muted)',
+                        cursor: unlinkLoading ? 'not-allowed' : 'pointer',
+                        fontSize: 11, fontFamily: 'var(--font-sans)',
+                        opacity: unlinkLoading ? 0.6 : 1,
+                      }}
+                    >
+                      <Link2Off size={11} />
+                      {unlinkLoading ? 'Unlinking...' : 'Remove link'}
+                    </button>
+                  )}
+                </div>
+              ) : canManageLinks ? (
+                <div>
+                  {!showLinkInput ? (
+                    <button
+                      onClick={() => { setShowLinkInput(true); setLinkError(null) }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 5,
+                        width: '100%', padding: '7px 10px',
+                        borderRadius: 'var(--radius-md)',
+                        border: '0.5px solid var(--border-strong)',
+                        background: 'var(--bg-secondary)',
+                        color: 'var(--text-secondary)',
+                        cursor: 'pointer', fontSize: 12,
+                        fontFamily: 'var(--font-sans)',
+                      }}
+                    >
+                      <Link2 size={12} />
+                      Link ST / MT variant
+                    </button>
+                  ) : (
+                    <div>
+                      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, lineHeight: 1.5 }}>
+                        Enter the slug of the sequence to link (e.g. <span style={{ fontFamily: 'var(--font-mono)' }}>ret-paladin-m-plus</span>).
+                      </p>
+                      <input
+                        type="text"
+                        value={linkSlug}
+                        onChange={e => setLinkSlug(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleLink() }}
+                        placeholder="sequence-slug"
+                        autoFocus
+                        style={{
+                          width: '100%', padding: '7px 10px',
+                          border: `0.5px solid ${linkError ? '#c0392b' : 'var(--border-strong)'}`,
+                          borderRadius: 'var(--radius-md)', fontSize: 12,
+                          background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                          fontFamily: 'var(--font-mono)',
+                          marginBottom: 6,
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                      {linkError && (
+                        <p style={{ fontSize: 11, color: '#c0392b', marginBottom: 6 }}>{linkError}</p>
+                      )}
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          onClick={handleLink}
+                          disabled={!linkSlug.trim() || linkLoading}
+                          style={{
+                            flex: 1, padding: '6px 10px',
+                            borderRadius: 'var(--radius-md)',
+                            border: 'none',
+                            background: 'var(--accent)',
+                            color: 'white',
+                            cursor: (!linkSlug.trim() || linkLoading) ? 'not-allowed' : 'pointer',
+                            fontSize: 12, fontWeight: 500,
+                            fontFamily: 'var(--font-sans)',
+                            opacity: (!linkSlug.trim() || linkLoading) ? 0.6 : 1,
+                          }}
+                        >
+                          {linkLoading ? 'Linking...' : 'Link'}
+                        </button>
+                        <button
+                          onClick={() => { setShowLinkInput(false); setLinkSlug(''); setLinkError(null) }}
+                          disabled={linkLoading}
+                          style={{
+                            padding: '6px 10px',
+                            borderRadius: 'var(--radius-md)',
+                            border: '0.5px solid var(--border-strong)',
+                            background: 'none',
+                            color: 'var(--text-muted)',
+                            cursor: 'pointer', fontSize: 12,
+                            fontFamily: 'var(--font-sans)',
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </div>
+          )}
 
           {/* Talent string */}
           {selectedVersion?.talent_string && (
