@@ -118,7 +118,7 @@ export default function GuidePage() {
       </section>
 
       <div style={{ padding: '14px 18px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Guide version: GRIP-EMS v2.1.14</span>
+        <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Guide version: GRIP-EMS v2.1.16</span>
         <Link href="/guide/installation" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
           Start with Installation <ArrowRight size={13} />
         </Link>
