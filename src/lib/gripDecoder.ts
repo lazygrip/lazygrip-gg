@@ -1,8 +1,70 @@
 import { inflateRawSync } from 'zlib'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import type { SequenceStep } from '@/types'
 
-// Passthrough stub - spell token translation is not needed for LazyGrip display.
+// ---------------------------------------------------------------------------
+// Spell ID → name catalog (parsed once at module load from CrossClassSpellCatalog.lua)
+// Credit: Beard3d_Gamer (decode pipeline) / Sataana (GRIP-EMS addon)
+// ---------------------------------------------------------------------------
+
+function buildSpellCatalog(): Map<number, string> {
+  const catalog = new Map<number, string>()
+  try {
+    const luaPath = join(process.cwd(), 'lib', 'data', 'CrossClassSpellCatalog.lua')
+    const text = readFileSync(luaPath, 'utf8')
+    // id and n are always on the same line or n is on the immediately following line.
+    const pattern = /id\s*=\s*(\d+),\s*\n?\s*n\s*=\s*"([^"]+)"/g
+    let match: RegExpExecArray | null
+    while ((match = pattern.exec(text)) !== null) {
+      catalog.set(parseInt(match[1], 10), match[2])
+    }
+  } catch {
+    // Non-fatal: if the file is missing, spell IDs are shown as-is.
+  }
+  return catalog
+}
+
+const SPELL_CATALOG = buildSpellCatalog()
+
+// Replaces bare spell IDs in /cast and /castsequence lines with readable names
+// from the catalog. Preserves all WoW macro syntax: conditionals, target
+// suffixes, mixed name+ID sequences.
+// Examples:
+//   /cast 19574                        → /cast Bestial Wrath
+//   /cast [combat] 47541              → /cast [combat] Death Coil
+//   /castsequence 5217, 1822          → /castsequence Tiger's Fury, Rake
+//   /castsequence Shred, 1822, Shred  → /castsequence Shred, Rake, Shred
 function translateSpellTokens(text: string): string {
+  if (SPELL_CATALOG.size === 0) return text
+
+  // Pass 1: /castsequence -- resolve only digit-only comma tokens.
+  text = text.replace(
+    /(\/castsequence)(\s*(?:\[[^\]]*\]\s*)?)([^\n]+)/g,
+    (_: string, keyword: string, cond: string, rest: string) => {
+      const resolved = rest
+        .split(',')
+        .map((t) => {
+          const trimmed = t.trim()
+          if (/^\d+$/.test(trimmed)) {
+            return SPELL_CATALOG.get(parseInt(trimmed, 10)) ?? trimmed
+          }
+          return trimmed
+        })
+        .join(', ')
+      return keyword + cond + resolved
+    }
+  )
+
+  // Pass 2: /cast with a single ID after optional conditionals.
+  text = text.replace(
+    /(\/cast\s*(?:\[[^\]]*\]\s*)?)(\d+)/g,
+    (_: string, prefix: string, idStr: string) => {
+      const name = SPELL_CATALOG.get(parseInt(idStr, 10))
+      return name ? `${prefix}${name}` : `${prefix}${idStr}`
+    }
+  )
+
   return text
 }
 
