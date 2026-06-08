@@ -57,7 +57,7 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
 
           <div style={{ marginTop: 24, padding: '12px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Current version</div>
-            <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>GRIP-EMS v2.1.14</div>
+            <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>GRIP-EMS v2.1.16</div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>All specs supported</div>
           </div>
         </aside>
