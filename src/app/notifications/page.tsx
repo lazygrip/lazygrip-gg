@@ -156,7 +156,7 @@ function NotificationRow({ notification: n }: { notification: any }) {
 
   if (n.sequence?.slug) {
     return (
-      <Link href={`/sequence/${n.sequence.slug}`} style={{ textDecoration: 'none' }}>
+      <Link href={`/sequences/${n.sequence.slug}`} style={{ textDecoration: 'none' }}>
         {inner}
       </Link>
     )
