@@ -65,6 +65,11 @@ function translateSpellTokens(text: string): string {
     }
   )
 
+  // Pass 3: {spell:N} tokens (GRIP's internal format for spell references).
+  text = text.replace(/\{spell:(\d+)\}/g, (_: string, idStr: string) => {
+    return SPELL_CATALOG.get(parseInt(idStr, 10)) ?? `{spell:${idStr}}`
+  })
+
   return text
 }
 
