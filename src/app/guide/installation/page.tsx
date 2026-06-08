@@ -1,245 +1,240 @@
-import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowLeft, ExternalLink } from 'lucide-react'
+import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Validating Your Work | GRIP-EMS Guide | LazyGrip.net',
-  description: 'How to know your GRIP-EMS sequence is actually working. The Repair module as a first-pass diagnostic, and Warcraft Logs CSV exports as the proof standard for any spec.',
+  title: 'Installation | GRIP-EMS Guide | LazyGrip.net',
+  description: 'How to install GRIP-EMS correctly, including the three post-install steps that most guides skip and that cause most new user problems.',
 }
 
-function Code({ children }: { children: React.ReactNode }) {
+export default function InstallationPage() {
   return (
-    <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12, background: 'var(--bg-tertiary)', border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', padding: '1px 6px', color: 'var(--accent-text)' }}>
-      {children}
-    </code>
-  )
-}
+    <div style={{ maxWidth: 720 }}>
+      <nav style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 24, display: 'flex', gap: 6, alignItems: 'center' }}>
+        <Link href="/guide" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Guide</Link>
+        <span>/</span>
+        <span style={{ color: 'var(--text-primary)' }}>Installation</span>
+      </nav>
 
-function InfoBox({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '14px 16px', marginTop: 14, marginBottom: 4 }}>
-      <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7 }}>{children}</div>
+      <h1 style={{ fontSize: 32, fontWeight: 700, letterSpacing: '-0.03em', marginBottom: 12 }}>
+        Installation
+      </h1>
+      <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 40 }}>
+        Installing GRIP-EMS takes about two minutes. The part most guides skip is what comes after. There are three in-game settings that have to be configured before anything will work, and none of them are set correctly by default. This page covers all of it.
+      </p>
+
+      <Section title="Step 1: Download and enable">
+        <Step number={1} label="Download from CurseForge, Wago, or WoWInterface">
+          <p>GRIP-EMS is free on all three platforms. Use whichever addon manager you already have.</p>
+          <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+            {[
+              { label: 'CurseForge', href: 'https://www.curseforge.com/wow/addons/grip-enhanced-macro-sequencer' },
+              { label: 'Wago', href: 'https://addons.wago.io/addons/qGZODqNd' },
+              { label: 'WoWInterface', href: 'https://www.wowinterface.com/downloads/info27081' },
+            ].map(link => (
+              <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer" style={{
+                fontSize: 13, fontWeight: 500, color: 'var(--accent)',
+                border: '0.5px solid var(--accent)', borderRadius: 'var(--radius-md)',
+                padding: '6px 14px', textDecoration: 'none',
+                background: 'var(--accent-subtle)',
+              }}>
+                {link.label}
+              </a>
+            ))}
+          </div>
+        </Step>
+
+        <Step number={2} label="Enable the addon in-game">
+          <p>At the character select screen, click <strong>AddOns</strong> in the bottom left corner and make sure GRIP-EMS is checked. Log into your character.</p>
+          <p style={{ marginTop: 8 }}>If you do not see GRIP-EMS in the list, your addon manager did not install it correctly. Try a manual download and drop the folder into your <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>World of Warcraft\_retail_\Interface\AddOns</code> directory.</p>
+        </Step>
+      </Section>
+
+      <Section title="Step 2: The three settings you must configure">
+        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 20 }}>
+          This is what most installation guides do not tell you. GRIP-EMS needs three specific WoW client settings to be correct before sequences will fire. None of them are set to the right value by default. If you skip this section and wonder why pressing your keybind does nothing, this is why.
+        </p>
+
+        <Step number={1} label="Fix your Cvar Health, the most important step">
+          <p>GRIP-EMS fires through WoW's <strong>key-down</strong> event system. By default WoW uses key-up, which means your sequence registers the press only when you release the key rather than when you press it. At 150ms intervals this is the difference between a functioning rotation and nothing happening at all.</p>
+          <p style={{ marginTop: 8 }}>Open the GRIP-EMS settings and navigate to the Cvar Health tab:</p>
+          <Code>/gems settings</Code>
+          <p style={{ marginTop: 8 }}>Go to the <strong>Cvar Health</strong> tab. If the status indicator is not green, click <strong>Fix</strong>. That sets <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>ActionButtonUseKeyDown</code> to enabled.</p>
+          <Callout>This is the single most common reason new users post about keybinds doing nothing. Check this before anything else. It takes thirty seconds and solves the problem roughly half the time.</Callout>
+        </Step>
+
+        <Step number={2} label="Verify your SpellQueueWindow">
+          <p>The SpellQueueWindow controls how many milliseconds before a GCD ends WoW will accept your next cast. GRIP-EMS recommends a value between 100 and 400ms. Too low and spells clip. Too high and you get false casts queuing through. The Cvar Health tab shows your current value and flags it if it is outside the recommended range.</p>
+        </Step>
+
+        <Step number={3} label="Set your click rate">
+          <p>GRIP-EMS advances one step per keypress. Your hardware or software needs to send repeated keypresses at a consistent interval. The right value depends on your setup but 150ms is a reliable starting point that works across most hardware and latency combinations. If you are using Razer hardware, set your repeat rate to 150ms in Synapse.</p>
+          <p style={{ marginTop: 8 }}>GRIP-EMS has a built-in Tempo Advisor that analyzes your actual click rate from log data and tells you whether to click faster or slower. Once you have a sequence running and some combat data, use it.</p>
+        </Step>
+      </Section>
+
+      <Section title="What you will not see and why">
+        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+          GRIP-EMS does not put a button on your action bar. This trips up almost every new user who comes from GSE, which does create a draggable button that you place on a bar and bind. GRIP-EMS works differently. You bind a key directly to a sequence inside the addon, and the keybind fires the sequence without going through the action bar at all. There is nothing to drag. If you are looking for a button to appear and it is not appearing, that is expected behavior and not a bug.
+        </p>
+        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 12 }}>
+          To bind a key to a sequence, open the sequence in the GRIP-EMS editor, go to the Keybinds tab, and assign a key there. The bind is stored per-spec, so switching specs gives you a clean slate for a different rotation on the same key.
+        </p>
+      </Section>
+
+      <Section title="Quick sanity check">
+        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 16 }}>Before moving on, confirm these four things are true:</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[
+            'Cvar Health tab shows green with no Fix button visible',
+            'You have at least one sequence imported or created',
+            'That sequence has a keybind assigned in the Keybinds tab',
+            'You are in Bear Form or your spec\'s required form when testing',
+          ].map((item, i) => (
+            <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, color: 'var(--text-secondary)' }}>
+              <span style={{ color: 'var(--accent)', fontWeight: 700, flexShrink: 0 }}>✓</span>
+              <span>{item}</span>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Troubleshooting common problems">
+        <TroubleshootItem
+          problem="Keybind is set but nothing fires"
+          solution="Run /gems settings and go to the Cvar Health tab. If the Fix button is visible, click it. This solves the majority of new-user keybind problems. If everything shows green and the sequence still does not fire, check that you have a target selected and that the sequence has a keybind assigned in the Keybinds tab inside the editor, not just in WoW's default keybind menu."
+        />
+        <TroubleshootItem
+          problem="Sequence fires once then stops"
+          solution="GRIP-EMS requires continuous repeated keypresses, not a single press and hold. Your hardware or software needs to be configured to send repeated keypress events. At 150ms that is roughly 6 to 7 presses per second. A single press fires one step and stops."
+        />
+        <TroubleshootItem
+          problem="Sequence shows greyed out after a /reload in arena or M+"
+          solution="This was a known bug where the addon waited on a match flag that never cleared mid-fight, leaving sequences inactive until the match ended. It is fixed in v2.1.17. If you are hitting this, update GRIP-EMS through your addon manager. Clicking a greyed-out sequence row in the editor also re-activates it on the spot in v2.1.17 and later."
+        />
+        <TroubleshootItem
+          problem="Sequence key stops working randomly while grinding, mount and dismount fixes it"
+          solution="This was a bug where the game skipped its own bar-change signal after messy dismounts, leaving a stale keybind eating keypresses. A watchdog fix was added in v2.1.16 that checks actual mount and vehicle state rather than trusting the bar-change signal. Update to v2.1.16 or later. You can run /gems debug to watch the watchdog catch a stale bind in real time."
+        />
+        <TroubleshootItem
+          problem="Sequence key dies after skyriding or leaving a vehicle"
+          solution="Fixed in v2.1.14. The keybind suspend-and-restore now runs inside the secure engine and survives skyriding, vehicle exits, and possession. Update GRIP-EMS if you are on an older version. As of v2.1.16 you can also press your sequence key while skyriding over an attackable target and it will dismount and fire step 1 in a single press."
+        />
+        <TroubleshootItem
+          problem="Lua error spam about tainted table iteration in arena or BG"
+          solution="This is typically caused by another addon tainting the environment before GRIP-EMS runs, not a GRIP-EMS bug itself. A common culprit is PvPCallouts. Try disabling other addons one at a time with BugSack and BugGrabber installed to identify the source. If the error text says execution tainted by GRIP-EMS specifically, file a bug report in the Discord with the full error and your addon list."
+        />
+      </Section>
+
+      <Section title="Commands worth knowing">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[
+            { cmd: '/gems', desc: 'Opens the GRIP-EMS sequence editor' },
+            { cmd: '/gems settings', desc: 'Opens settings including Cvar Health' },
+            { cmd: '/gems binds', desc: 'Shows all currently bound sequences for your active spec' },
+            { cmd: '/gems debug on', desc: 'Enables debug output to chat, useful when something is not firing' },
+            { cmd: '/gems debugwindow', desc: 'Opens the debug window with additional diagnostic information' },
+            { cmd: '/gems validate', desc: 'Runs spell validation across all your sequences and reports stale spells' },
+            { cmd: '/gems revalidate', desc: 'Forces a full revalidation, useful after a patch or respec' },
+          ].map(item => (
+            <div key={item.cmd} style={{ display: 'flex', gap: 16, alignItems: 'baseline', fontSize: 14 }}>
+              <code style={{
+                fontFamily: 'var(--font-mono)', fontSize: 12,
+                color: 'var(--accent)', background: 'var(--accent-subtle)',
+                padding: '2px 8px', borderRadius: 'var(--radius-sm)',
+                flexShrink: 0, whiteSpace: 'nowrap',
+              }}>
+                {item.cmd}
+              </code>
+              <span style={{ color: 'var(--text-secondary)' }}>{item.desc}</span>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 48, paddingTop: 24, borderTop: '0.5px solid var(--border)' }}>
+        <Link href="/guide/how-it-works" style={{
+          fontSize: 14, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500,
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          Next: How it works →
+        </Link>
+      </div>
     </div>
   )
 }
 
-export default function ValidatingPage() {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div>
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.2, marginBottom: 12, color: 'var(--text-primary)' }}>
-          Validating your work
-        </h1>
-        <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.75, maxWidth: 620 }}>
-          Gut feel is not validation. Dummy parsing is not validation. A sequence that feels smooth in the training area can still have structural problems that only appear under real pressure. This section covers how to actually verify your sequence is working, starting with the tools built into GRIP-EMS and ending with Warcraft Logs, which is the only standard that tells you the full picture.
-        </p>
+    <div style={{ marginBottom: 48 }}>
+      <h2 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 20, color: 'var(--text-primary)' }}>
+        {title}
+      </h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {children}
       </div>
+    </div>
+  )
+}
 
-      <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
-          Start with the Repair module
-        </h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
-          Before you run any content, run the Repair module. It is the fastest way to catch structural problems that would otherwise waste a key or a raid attempt finding out.
-        </p>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
-          GRIP-EMS scans your sequence across 13 diagnostic categories: empty steps, oversized steps that exceed WoW&apos;s 255-character limit, stale or renamed spells, duplicate steps, missing variables, broken reset conditions, keybind conflicts, missing metadata, and more. Each issue gets flagged in the editor with a colored health score badge and most can be fixed in a single click.
-        </p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
-          {[
-            { cmd: '/gems repair <name>', desc: 'Scan and repair a single sequence by name' },
-            { cmd: '/gems repairall', desc: 'Scan every sequence you own in one pass' },
-            { cmd: '/gems validate', desc: 'Check all sequences specifically for stale or renamed spells' },
-            { cmd: '/gems revalidate', desc: 'Force a full spell revalidation, run this after a patch' },
-          ].map(item => (
-            <div key={item.cmd} style={{ display: 'flex', gap: 12, alignItems: 'baseline', padding: '9px 14px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
-              <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--accent-text)', flexShrink: 0, minWidth: 200 }}>{item.cmd}</code>
-              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{item.desc}</span>
-            </div>
-          ))}
-        </div>
-
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75 }}>
-          A clean repair pass with a green health score badge means the sequence is structurally sound. It does not mean the step ordering and timing are optimal for your spec, and that is what logs are for. Run repair first, then run content, then check logs.
-        </p>
-        <InfoBox>
-          Run /gems repairall after every game patch that touches your spec. Blizzard renames and reshuffles spells with some patches and sequences that were working silently stop working because a spell name no longer resolves. The Repair module catches these and fixes most of them automatically.
-        </InfoBox>
-      </section>
-
-      <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
-          Why logs are the proof standard
-        </h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
-          When you are iterating on a sequence, you are making decisions about step order, step frequency, and timing. Your gut tells you the sequence felt good, but your gut does not know whether your primary maintenance buff was up for 94% of the fight or 71%. Logs do.
-        </p>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
-          The specific problem with tank and buffer validation is that the consequences of a bad sequence are sometimes invisible in the moment. A sequence with poor defensive uptime does not feel dramatically different on a plus 10 where you are significantly overgearing the content. It shows up on a plus 13 when the healer goes dry covering gaps. Logs let you find those gaps before the key tells you about them the hard way.
-        </p>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75 }}>
-          Target dummies have none of the variables that real content introduces: movement, interrupts, crowd control, latency spikes, or the reaction time that interrupts your keypress rhythm. A sequence that looks perfect on a dummy degrades in live content in ways that are only visible in logs. This is exactly the scenario where hold-on-failure behavior matters most and where the gap between a well-structured sequence and a poorly-structured one becomes measurable.
-        </p>
-      </section>
-
-      <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
-          The validation framework for any spec
-        </h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 16 }}>
-          The process is the same regardless of what class you play. The targets you are looking for differ, but the method does not.
-        </p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-          {[
-            {
-              step: '1',
-              title: 'Identify your two or three most important spells',
-              desc: "Before you run anything, know what you are measuring. For a tank this is your primary defensive buff and your main damage ability. For a DPS spec it is your highest priority spell and your major cooldown. Check Icy Veins or your spec Discord for the expected casts per minute of each. These are your targets.",
-            },
-            {
-              step: '2',
-              title: 'Enable Advanced Combat Logging before the run',
-              desc: "In-game, type /combatlog or go to System > Network and enable Advanced Combat Logging. This must be on before you enter the instance. If you forget, the log will not contain the data you need for cast analysis.",
-            },
-            {
-              step: '3',
-              title: 'Run at least two sessions at relevant difficulty',
-              desc: "Run the content at the difficulty level you are building the sequence for. A plus 10 gives you different data than a plus 13 because mob damage, movement requirements, and latency pressure are different. Two runs at the same difficulty lets you see whether your numbers are consistent or varying, which tells you whether the sequence is stable.",
-            },
-            {
-              step: '4',
-              title: 'Upload to Warcraft Logs and pull your cast data',
-              desc: "Upload your combat log at warcraftlogs.com, navigate to your report, click on your character to filter to your casts, and go to the Casts tab. Export the CSV. This gives you spell name, cast count, and cast time for every ability you used.",
-            },
-            {
-              step: '5',
-              title: 'Compare against your targets',
-              desc: "Filter the CSV by each of your key spells. Divide cast count by fight duration in minutes to get casts per minute. Compare against your Icy Veins or SimCraft targets. If you are within 15% of the expected number, the sequence is in the right range. If a spell is more than 20% below target, there is a structural problem. If a spell drops to zero casts entirely, something is blocking it and it needs immediate attention.",
-            },
-            {
-              step: '6',
-              title: 'Adjust and rerun',
-              desc: "When you find a number that is out of range, trace it back to the sequence structure. A maintenance buff with low uptime usually means the step spacing is wrong or the spell is being blocked by a failed step ahead of it. A major cooldown firing late usually means resetOnCombat is disabled or something is advancing the sequence pre-pull. Make one structural change at a time and rerun before making another, because changing multiple things at once makes it impossible to know which change fixed the problem.",
-            },
-          ].map(item => (
-            <div key={item.step} style={{ display: 'flex', gap: 16, padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
-              <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--accent)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
-                {item.step}
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{item.title}</div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65 }}>{item.desc}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
-          Worked example: applying the framework to a real build
-        </h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 16 }}>
-          The numbers below come from five validated keys at plus 13 and plus 14 with the Elune&apos;s Chosen Guardian Druid sequence published on this site, and they are here because a concrete example of what the framework actually produces is more useful than a generic description of what it could produce. Your spec will have different spells, different uptime targets, and different CPM expectations and none of these numbers are benchmarks you are trying to match, and if you are playing anything other than Guardian Druid they are not relevant to you directly. What is relevant is the shape of the table: two or three key metrics, a specific target range for each, and a clear diagnostic if the number falls outside it. That structure is the same for every spec.
-        </p>
-
-        <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: 1, background: 'var(--border)' }}>
-            {['Metric', 'Target', 'What it tells you'].map(h => (
-              <div key={h} style={{ padding: '10px 14px', background: 'var(--bg-secondary)', fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</div>
-            ))}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'var(--border)' }}>
-            {[
-              ['Thrash % of total damage', '~47%', 'Primary damage and healing source. Below 40% means step spacing is off or Thrash is failing too often.'],
-              ['Ironfur uptime', '91 to 97%', 'Anything below 85% on a single-target fight is a structural problem. Check the step spacing at positions 7, 14, 21, and 28.'],
-              ['Moonfire CPM', '~1.3 CPM', 'Above 3 CPM means MOONSPAM is misconfigured or replaced with a direct /cast Moonfire. The castsequence gate exists specifically to hold this number.'],
-              ['Incarnation timing', '3rd keypress', 'Should fire on the third press of every pull. Firing later means something is advancing the sequence before combat starts.'],
-              ['Mangle presence', 'Regular throughout', 'If Mangle disappears from the log entirely, a misconfigured conditional is blocking it.'],
-            ].map(([metric, target, note], i) => (
-              <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: 1, background: 'var(--border)' }}>
-                <div style={{ padding: '10px 14px', background: 'var(--bg-primary)', fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>{metric}</div>
-                <div style={{ padding: '10px 14px', background: 'var(--accent-subtle)', fontSize: 13, color: 'var(--accent)' }}>{target}</div>
-                <div style={{ padding: '10px 14px', background: 'var(--bg-primary)', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{note}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75 }}>
-          To build the equivalent table for your spec, take your two or three highest value spells from the Icy Veins priority list, find their expected CPM or uptime percentage from SimCraft or your spec Discord, and use those as your targets. The diagnostic logic is the same: if a spell is significantly below target, trace it back to the step structure.
-        </p>
-      </section>
-
-      <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
-          What bad numbers tell you
-        </h2>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {[
-            {
-              signal: 'A high-priority spell has significantly lower CPM than expected',
-              cause: 'Step spacing is wrong, or the spell is getting held too long by failed steps ahead of it. Count how many times that spell appears in your step loop and compare to total steps. If it appears at the right frequency in the sequence but not in logs, something earlier in the loop is stalling.',
-            },
-            {
-              signal: 'A maintenance buff shows below 80% uptime',
-              cause: 'Steps for that buff are too far apart in the loop, or [combat] guards are incorrectly blocking it. Check that the buff step does not carry a [combat] conditional that prevents it from firing when you need it, and verify the spacing matches the buff duration.',
-            },
-            {
-              signal: 'Your major cooldown is firing late or not on pull',
-              cause: 'resetOnCombat is disabled so the sequence starts mid-loop, or the sequence is advancing pre-pull due to missing [combat] guards on early steps. Check both.',
-            },
-            {
-              signal: 'Numbers look fine on a dummy but fall apart in keys',
-              cause: 'Dummies have no movement, interrupts, or latency spikes. A sequence that cannot handle brief holds on failed steps looks clean on a dummy and degrades in live content. This is exactly the scenario where the hold-on-failure behavior matters most and where the dummy gives you a false positive.',
-            },
-            {
-              signal: 'A spell drops to zero casts entirely',
-              cause: 'A conditional is misconfigured and blocking the spell completely. Check for typos in the spell name, a [known:] conditional for a talent you do not have, or a modifier guard that is preventing the spell from firing under any conditions.',
-            },
-            {
-              signal: 'The editor shows an orange warning on a spell that is actually working',
-              cause: 'Some abilities change names mid-combat based on talents or procs, like Raptor Strike becoming Raptor Swipe, Slam upgrading to Heroic Strike via Bloodsurge, or hero talent overrides replacing the base spell name. GRIP-EMS flags these because the stored name no longer matches what is in your spellbook, but the spell still fires correctly. Run /gems repair to confirm the sequence is structurally sound. If repair comes back clean and the spell is casting in logs, the warning is cosmetic and safe to ignore. Most known hero talent override cases are handled automatically.',
-            },
-          ].map(item => (
-            <div key={item.signal} style={{ padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{item.signal}</div>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65 }}>{item.cause}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
-          Validating a sequence you did not write
-        </h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
-          When you import someone else&apos;s sequence, run the same validation process before relying on it in serious content. Published sequences are validated against specific talent builds and specific content levels, and those conditions may not match yours exactly. A sequence validated on one hero talent path with one set of tier bonuses will produce different numbers on a different configuration because the spells and their interactions are different.
-        </p>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75 }}>
-          Every sequence on LazyGrip includes the talent string it was validated with. If your talents do not match, the sequence is worth importing as a structural reference but treat it as a starting point rather than a finished product. Two runs at your target difficulty with log analysis takes about thirty minutes and tells you everything you need to know about whether it needs tuning for your setup.
-        </p>
-        <InfoBox>
-          The validation workflow used for every sequence published on LazyGrip is: run the content, export the Warcraft Logs CSV, check the key metrics, adjust one thing if a metric is out of range, rerun. No sequence gets published before at least two validated runs at relevant difficulty.
-        </InfoBox>
-      </section>
-
-      <div style={{ padding: '14px 18px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Ready to find a validated sequence to start from?</span>
-        <Link href="/browse" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
-          Browse sequences <ExternalLink size={12} />
-        </Link>
+function Step({ number, label, children }: { number: number; label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+      <div style={{
+        width: 28, height: 28, borderRadius: '50%',
+        background: 'var(--accent)', color: 'white',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 13, fontWeight: 700, flexShrink: 0, marginTop: 2,
+      }}>
+        {number}
       </div>
-
-      <div style={{ display: 'flex', justifyContent: 'flex-start', paddingTop: 16, borderTop: '0.5px solid var(--border)' }}>
-        <Link href="/guide/from-gse" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, color: 'var(--text-tertiary)', textDecoration: 'none' }}>
-          <ArrowLeft size={14} /> Coming from GSE
-        </Link>
+      <div style={{ flex: 1 }}>
+        <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 8, color: 'var(--text-primary)' }}>{label}</p>
+        <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+          {children}
+        </div>
       </div>
+    </div>
+  )
+}
+
+function Code({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      fontFamily: 'var(--font-mono)', fontSize: 13,
+      background: 'var(--bg-tertiary)', border: '0.5px solid var(--border)',
+      borderRadius: 'var(--radius-md)', padding: '10px 14px',
+      color: 'var(--accent)', marginTop: 8,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function Callout({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      marginTop: 12, padding: '12px 14px',
+      background: 'rgba(29,158,117,0.07)',
+      border: '0.5px solid rgba(29,158,117,0.25)',
+      borderLeft: '3px solid var(--accent)',
+      borderRadius: 'var(--radius-md)',
+      fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function TroubleshootItem({ problem, solution }: { problem: string; solution: string }) {
+  return (
+    <div style={{
+      padding: '16px',
+      background: 'var(--bg-primary)',
+      border: '0.5px solid var(--border)',
+      borderRadius: 'var(--radius-md)',
+    }}>
+      <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{problem}</p>
+      <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7 }}>{solution}</p>
     </div>
   )
 }

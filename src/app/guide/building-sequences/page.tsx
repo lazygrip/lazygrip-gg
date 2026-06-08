@@ -1,286 +1,274 @@
-import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowRight, ArrowLeft, ExternalLink } from 'lucide-react'
+import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Building Sequences | GRIP-EMS Guide | LazyGrip.net',
-  description: 'The decision framework behind GRIP-EMS sequence design, with a real Guardian Druid Mythic+ sequence and a generic DPS example showing how the same thinking applies to any spec.',
-}
-
-function Code({ children }: { children: React.ReactNode }) {
-  return (
-    <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12, background: 'var(--bg-tertiary)', border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', padding: '1px 6px', color: 'var(--accent-text)' }}>
-      {children}
-    </code>
-  )
-}
-
-function CodeBlock({ children }: { children: string }) {
-  return (
-    <pre style={{ fontFamily: 'var(--font-mono)', fontSize: 12, background: 'var(--bg-tertiary)', border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)', padding: '12px 14px', marginTop: 10, marginBottom: 4, overflowX: 'auto', color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-      {children}
-    </pre>
-  )
-}
-
-function InfoBox({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '14px 16px', marginTop: 14, marginBottom: 4 }}>
-      <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7 }}>{children}</div>
-    </div>
-  )
-}
-
-function StepBlock({ number, title, children }: { number: string; title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: 24, paddingBottom: 24, borderBottom: '0.5px solid var(--border)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--accent)', background: 'var(--accent-subtle)', border: '0.5px solid rgba(29,158,117,0.2)', borderRadius: 'var(--radius-sm)', padding: '2px 8px' }}>Step {number}</span>
-        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{title}</span>
-      </div>
-      {children}
-    </div>
-  )
+  description: 'A real Guardian Druid Mythic+ sequence dissected step by step, with rules for KeyPress usage, Hunter\'s Mark patterns, and the decisions behind sequence structure.',
 }
 
 export default function BuildingSequencesPage() {
   return (
-    <div>
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.2, marginBottom: 12, color: 'var(--text-primary)' }}>
-          Building sequences
-        </h1>
-        <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.75, maxWidth: 620 }}>
-          This section covers the decision framework behind sequence design first, then applies it to two real examples: a Guardian Druid tank rotation and a generic DPS rotation. The framework is the same regardless of your class. The examples show what the decisions look like in practice when your priorities are different.
-        </p>
-      </div>
+    <div style={{ maxWidth: 720 }}>
+      <nav style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 24, display: 'flex', gap: 6, alignItems: 'center' }}>
+        <Link href="/guide" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Guide</Link>
+        <span>/</span>
+        <span style={{ color: 'var(--text-primary)' }}>Building sequences</span>
+      </nav>
 
-      <section style={{ marginBottom: 44 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
-          The framework: five questions before you build
-        </h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 16 }}>
-          Every structural decision in a sequence, meaning step count, step function, step order, and reset conditions, follows from answers to five questions about your spec and your content. Answer these before you open the editor and the sequence design becomes straightforward. Skip them and you end up tweaking by feel until the numbers eventually converge on something that works.
-        </p>
+      <h1 style={{ fontSize: 32, fontWeight: 700, letterSpacing: '-0.03em', marginBottom: 12 }}>
+        Building sequences
+      </h1>
+      <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 40 }}>
+        The best way to understand how to build a GRIP-EMS sequence is to read one that works and understand why it is built the way it is. This section dissects a real Guardian Druid Mythic+ sequence step by step, then covers the patterns and decisions that apply across every spec.
+      </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {[
-            {
-              q: '1. What is your highest priority spell and how often does it need to fire?',
-              a: 'This spell drives your step count. If it needs to appear every 3 GCDs to maintain uptime, you need a step slot for it roughly every 3 steps. Check Icy Veins, your spec Discord, or SimCraft for the expected casts per minute and work backwards from there.',
-            },
-            {
-              q: '2. What is the cooldown you cannot miss on pull?',
-              a: "This is your opener logic. Cooldowns that need to land in the first few seconds of combat belong near the front of the sequence with a [combat] guard so they don't fire pre-pull. If you have an on-use trinket or a major cooldown with a long recharge, it usually lives at step 2 or 3.",
-            },
-            {
-              q: '3. Which spells can be skipped when unavailable, and which ones cannot?',
-              a: 'Spells that are critical for uptime or survival cannot be allowed to skip. Spells that are opportunistic fillers can. The hold-on-failure behavior in GRIP-EMS means critical spells will block the sequence until they land, which is what you want for tank defensives and maintenance buffs. For DPS rotations where skipping is acceptable, Priority step function handles this differently.',
-            },
-            {
-              q: '4. What are your modifier needs?',
-              a: 'Modifiers let you fire off-rotation spells without breaking the loop. Shift for an emergency heal or defensive, Ctrl for a manual cooldown override. Every step that carries modifier lines needs [nomod] guards on the main spell and [mod:x] guards on the modifier spell, otherwise pressing Shift to trigger the modifier also attempts the main spell on the same step.',
-            },
-            {
-              q: '5. Does this sequence need to behave differently in different content?',
-              a: "GRIP-EMS supports context versions that auto-switch based on what content you're in. If your opener for Mythic+ is different from your raid opener, or if you want a tighter defensive rotation in high keys than in normal content, context versions handle that without needing separate sequences.",
-            },
-          ].map(item => (
-            <div key={item.q} style={{ padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{item.q}</div>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65 }}>{item.a}</div>
-            </div>
-          ))}
-        </div>
-      </section>
+      <Section title="The sequence: Elune's Chosen M+ V7.1">
+        <MetaTable rows={[
+          ['Author', 'Slowdog'],
+          ['Spec', 'Guardian Druid'],
+          ['Hero talent', "Elune's Chosen"],
+          ['Content', 'Mythic+'],
+          ['Step function', 'Sequential'],
+          ['Reset', 'On combat'],
+          ['Steps', '30'],
+          ['Validated', '+13 Pit, +13 Darkflame Cleft, +13 Seat of the Triumvirate, +14 Ara-Kara, +14 Skyreach'],
+        ]} />
 
-      <section style={{ marginBottom: 44 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 6, color: 'var(--text-primary)' }}>
-          Worked example: Guardian Druid Mythic+ (tank)
-        </h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 16 }}>
-          This uses Slowdog&apos;s Elune&apos;s Chosen M+ sequence as the example because it is publicly available on this site, fully validated, and mechanically complex enough that every principle covered in the framework above shows up in the step design. Guardian Druid has strict uptime requirements that force explicit structural decisions, which makes it a better teaching example than a simpler rotation would be. The five questions, the step function reasoning, the modifier patterns, all of it applies identically to your spec, and the goal here is to show you what those decisions look like when they have real consequences in logs.
-        </p>
-
-        <div style={{ padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', marginBottom: 20 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            {[
-              ['Spec', 'Guardian Druid, Elune\'s Chosen'],
-              ['Step function', 'Sequential'],
-              ['Reset', 'On combat end'],
-              ['Steps', '30'],
-              ['Validated', '+13 Pit, +13 Darkflame Cleft, +14 Ara-Kara, +14 Skyreach'],
-              ['Key metrics', '~47% Thrash damage, 91–97% Ironfur uptime, 0 deaths'],
-            ].map(([label, value]) => (
-              <div key={label}>
-                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>{label}</div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{value}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ marginTop: 14, paddingTop: 12, borderTop: '0.5px solid var(--border)' }}>
-            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Talent string</div>
-            <code style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--accent-text)', wordBreak: 'break-all', lineHeight: 1.6 }}>
-              CgGA8cL7tpvige+kkmGM9zUPWDAAAAAAAAAAAgZmZmFzMjZWmZxMmZZZgZzMGNRmZWmZmZmlZmBAAAAAgZmNDYZbmBjZZAM1MLzyMzMAA2wMAWMGGYWssBYmZmNA
-            </code>
-          </div>
-          <div style={{ marginTop: 12 }}>
-            <Link href="/browse?class=druid&spec=guardian" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--accent)', textDecoration: 'none' }}>
-              View sequence on LazyGrip <ExternalLink size={11} />
-            </Link>
-          </div>
+        <div style={{
+          marginTop: 16, padding: '12px 14px',
+          background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius-md)',
+        }}>
+          <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Talent string</p>
+          <code style={{ fontFamily: 'var(--font-mono)', fontSize: 11, wordBreak: 'break-all', color: 'var(--text-secondary)' }}>
+            CgGA8cL7tpvige+kkmGM9zUPWDAAAAAAAAAAAgZmZmFzMjZWmZxMmZZZgZzMGNRmZWmZmZmlZmBAAAAAgZmNDYZbmBjZZAM1MLzyMzMAA2wMAWMGGYWssBYmZmNA
+          </code>
         </div>
 
-        <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 14 }}>Why Sequential and not Priority</h3>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 16 }}>
-          Guardian&apos;s two most important outputs are Thrash damage and Ironfur uptime. Both depend on specific spells firing at specific frequencies: Thrash needs to refresh before it falls off, and Ironfur needs to cast before the previous stack expires. Priority step function would always try Thrash first on every keypress, which sounds efficient but means Ironfur only fires when Thrash is on cooldown. Sequential puts Ironfur at fixed step positions so it fires on schedule regardless of what Thrash is doing.
-        </p>
+        <p style={{ marginTop: 16 }}>This sequence runs 30 steps in a Sequential loop with resetOnCombat enabled, meaning it fires the opener every pull and loops through the rotation continuously from there. At 150ms intervals on Razer hardware this produces Thrash at roughly 47% of total damage done, Ironfur uptime in the 91 to 97% range, and zero deaths across the validated keys.</p>
+        <p style={{ marginTop: 12 }}>Two modifiers run throughout the entire sequence. Shift fires Frenzied Regeneration on demand without breaking the loop. Ctrl fires Ironfur manually when you need it outside the automatic cycling. Every step except the two MOONSPAM steps and steps 15 and 30 carries both modifier lines so they are always available regardless of where you are in the rotation.</p>
+      </Section>
 
-        <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 14 }}>The structural pattern</h3>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 16 }}>
-          The sequence has a clear internal structure across 30 steps: an opener block at step 1, then a repeating loop of Thrash and Mangle alternating with Ironfur cycling at steps 7, 14, 21, and 28, Lunar Beam weaved at steps 5, 12, 19, and 26, and two MOONSPAM steps at positions 8 and 22 handling Moonfire delivery through an external castsequence macro. Every step except MOONSPAM carries both modifier lines so Shift fires Frenzied Regeneration and Ctrl fires a manual Ironfur at any point in the rotation.
-        </p>
+      <Section title="Step by step breakdown">
+        <p>The sequence has a clear internal structure once you see it: an opener block, then a repeating loop built around Thrash and Mangle with Ironfur cycling at fixed intervals, Lunar Beam weaved at positions 5, 12, 19, and 26, and MOONSPAM at positions 8 and 22 handling Moonfire delivery and Barkskin as a reset gate.</p>
 
-        <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 14 }}>Step breakdown</h3>
-
-        <StepBlock number="1" title="Opener: target acquisition, auto-attack, Bear Form">
-          <CodeBlock>{`/targetenemy [noharm][dead]
+        {[
+          {
+            num: 1,
+            label: 'Opener: target acquisition, auto-attack, Bear Form',
+            code: `/targetenemy [noharm][dead]
 /startattack
-/cast [noform:1, nochanneling] Bear Form; [mod:shift] Frenzied Regeneration; [mod:ctrl] Ironfur`}</CodeBlock>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65, marginTop: 10 }}>
-            Three things happen in one step. The targetenemy line acquires a target if you do not have one or your current target is dead, which is essential at the start of a pull. Startattack gets auto attacks rolling. Bear Form uses [noform:1] as a guard so it only fires when you are not already in form and does not waste a GCD mid-rotation. Because resetOnCombat is enabled, this step fires every pull and steps 2 through 30 are the loop.
-          </p>
-        </StepBlock>
-
-        <StepBlock number="2" title="Thrash">
-          <CodeBlock>{`/cast [noform:1, nochanneling] Bear Form; [mod:shift] Frenzied Regeneration; [mod:ctrl] Ironfur
-/cast [nomod:shift, nomod:ctrl, combat] Thrash`}</CodeBlock>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65, marginTop: 10 }}>
-            Thrash fires first because it is the highest priority ability for Guardian damage and healing. The [combat] guard prevents the sequence from attempting Thrash pre-pull during a buffer press. The [nomod:shift, nomod:ctrl] pair on the combat spell is what makes the modifier system work, because without those guards, pressing Shift for Frenzied Regeneration would also attempt Thrash on the same press.
-          </p>
-        </StepBlock>
-
-        <StepBlock number="3" title="Incarnation + Mangle">
-          <CodeBlock>{`/cast [noform:1, nochanneling] Bear Form; [mod:shift] Frenzied Regeneration; [mod:ctrl] Ironfur
+/cast [noform:1, nochanneling] Bear Form; [mod:shift] Frenzied Regeneration; [mod:ctrl] Ironfur`,
+            notes: `The opener does three things in one step. /targetenemy [noharm][dead] acquires a target if you do not have one or if your current target is dead, which is essential at the start of a pull when you are tabbing through packs. /startattack gets auto attacks rolling immediately. The Bear Form line shifts you in if you are not already in form, using [noform:1] as the guard so it does not waste a GCD when you are already a bear.\n\nresetOnCombat means this step fires every time you enter a new pull. Steps 2 through 30 are the loop. Step 1 is only ever the opener and not part of the repeating rotation.`,
+          },
+          {
+            num: 2,
+            label: 'Thrash',
+            code: `/cast [noform:1, nochanneling] Bear Form; [mod:shift] Frenzied Regeneration; [mod:ctrl] Ironfur
+/cast [nomod:shift, nomod:ctrl, combat] Thrash`,
+            notes: `Thrash fires first because it is the highest priority ability for Guardian damage and healing. It needs to land as early as possible in the pull and needs to refresh frequently throughout the loop. The [combat] guard on every combat spell in the sequence prevents the sequence from attempting Thrash out of combat during a pre-pull buffer and wasting the step. The [nomod:shift, nomod:ctrl] pair on the combat spells is what makes the modifier system work. Without those guards, pressing Shift for Frenzied Regeneration would also attempt to fire Thrash on the same step.`,
+          },
+          {
+            num: 3,
+            label: 'Incarnation + Mangle',
+            code: `/cast [noform:1, nochanneling] Bear Form; [mod:shift] Frenzied Regeneration; [mod:ctrl] Ironfur
 /cast [combat] Incarnation: Guardian of Ursoc
-/cast [nomod:shift, nomod:ctrl, combat] Mangle`}</CodeBlock>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65, marginTop: 10 }}>
-            Incarnation uses [combat] only and not the [nomod] guards. This is intentional, because you never want to accidentally skip a major cooldown by holding Shift for a Frenzied Regen at the wrong moment. Incarnation fires regardless of modifier state. Mangle follows as the filler if Incarnation is on cooldown.
-          </p>
-        </StepBlock>
+/cast [nomod:shift, nomod:ctrl, combat] Mangle`,
+            notes: `Step 3 is the cooldown step. Incarnation fires immediately on the third press of the key, early enough to catch the initial Thrash tick buff and late enough that Bear Form is guaranteed from step 1. Notice that Incarnation uses [combat] only and not [nomod:shift, nomod:ctrl, combat]. This is intentional. Incarnation fires regardless of what modifier you are holding because you never want to accidentally skip it by holding Shift for a Frenzied Regen at the wrong moment. Mangle follows as the filler if Incarnation is on cooldown or already active.`,
+          },
+          {
+            num: '4',
+            label: 'Thrash',
+            code: `/cast [noform:1, nochanneling] Bear Form; [mod:shift] Frenzied Regeneration; [mod:ctrl] Ironfur
+/cast [nomod:shift, nomod:ctrl, combat] Thrash`,
+            notes: `Thrash again. The pattern throughout this sequence is Thrash, Mangle, Thrash, Mangle with Ironfur and MOONSPAM interspersed at calculated intervals. Thrash appears 11 times across the 30-step loop, which is what produces the 47% damage done figure in logs.`,
+          },
+          {
+            num: 5,
+            label: 'Lunar Beam + Mangle',
+            code: `/cast [noform:1, nochanneling] Bear Form; [mod:shift] Frenzied Regeneration; [mod:ctrl] Ironfur
+/cast [known:Lunar Beam, combat] Lunar Beam
+/cast [nomod:shift, nomod:ctrl, combat] Mangle`,
+            notes: `The first Lunar Beam weave. [known:Lunar Beam] is the conditional that makes this build-agnostic. If the talent is not taken, the line silently skips and Mangle fires instead. Lunar Beam appears at steps 5, 12, 19, and 26, which spaces it at roughly every 7 steps through the loop to align with its cooldown.`,
+          },
+          {
+            num: 7,
+            label: 'Ironfur (in-sequence)',
+            code: `/cast [noform:1, nochanneling] Bear Form; [mod:shift] Frenzied Regeneration; [mod:ctrl] Ironfur
+/cast [nomod:shift, nomod:ctrl, combat] Ironfur`,
+            notes: `The first in-sequence Ironfur cast. Ironfur appears at steps 7, 14, 21, and 28, every 7 steps, intentionally aligned with its duration so the buff refreshes before it falls off. This is what produces the 91 to 97% uptime in logs. The math only works if the sequence actually reaches these steps at the right pace, which is why hold-on-failure behavior matters so much for tank rotations specifically.`,
+          },
+          {
+            num: 8,
+            label: 'MOONSPAM: Moonfire delivery and Barkskin',
+            code: `/castsequence [nomod, nochanneling] Moonfire, Barkskin
+/cast Ironfur`,
+            notes: `This is the most important step in the sequence and the one that confuses people most when they first read it. MOONSPAM is a named external macro referenced by GRIP-EMS, not a regular step. The /castsequence fires Moonfire first, then Barkskin the next time this step is reached at step 22, then resets to Moonfire again. Barkskin's roughly 60 second cooldown means it fires naturally at roughly the right frequency when paired this way without needing any cooldown tracking. The critical design detail is that MOONSPAM cannot be replaced with a direct /cast Moonfire inside the sequence. GRIP-EMS does not advance cleanly off instant-cast steps when called directly. Moonfire would fire at 12 to 14 CPM instead of the intended roughly 1.3 CPM, flooding your rotation with Moonfire casts and collapsing Thrash frequency. The external macro reference is the mechanism that prevents this. The bare /cast Ironfur on the second line fires unconditionally as an extra Ironfur attempt on this step since Ironfur is off-GCD and does not cost a GCD to attempt.\n\nTo use this sequence you need to create the MOONSPAM macro first in WoW's regular macro editor with the castsequence line. Then in GRIP-EMS, click Add at the bottom of the steps list, select Macro from the dropdown, and pick MOONSPAM from the dialog that appears. It will show as [M] MOONSPAM in your sequence list. The name must match exactly.`,
+          },
+        ].map(step => (
+          <StepBlock key={step.num} number={String(step.num)} label={step.label} code={step.code} notes={step.notes} />
+        ))}
 
-        <StepBlock number="7, 14, 21, 28" title="Ironfur (in-sequence cycling)">
-          <CodeBlock>{`/cast [noform:1, nochanneling] Bear Form; [mod:shift] Frenzied Regeneration; [mod:ctrl] Ironfur
-/cast [nomod:shift, nomod:ctrl, combat] Ironfur`}</CodeBlock>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65, marginTop: 10 }}>
-            Ironfur appears every 7 steps intentionally. Ironfur&apos;s base duration is 7 seconds and the sequence runs at roughly one step per GCD. Placing Ironfur at every 7th position means a new cast lands approximately when the previous one expires. This is the mechanical reason the validated sequence produces 91 to 97% uptime. Change the spacing and the uptime drops immediately and shows up in logs.
-          </p>
-        </StepBlock>
-
-        <StepBlock number="8, 22" title="MOONSPAM: Moonfire delivery and Barkskin">
-          <CodeBlock>{`/castsequence [nomod, nochanneling] Moonfire, Barkskin
-/cast Ironfur`}</CodeBlock>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65, marginTop: 10 }}>
-            MOONSPAM is a named external macro referenced by GRIP-EMS, not a regular step. The /castsequence fires Moonfire first, then Barkskin the next time this step is reached at position 22, then resets. Barkskin&apos;s roughly 60-second cooldown means it fires naturally at roughly the right frequency paired this way without any cooldown tracking.
-          </p>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65, marginTop: 8 }}>
-            MOONSPAM cannot be replaced with a direct /cast Moonfire inside the sequence. GRIP-EMS does not advance cleanly off instant-cast steps called directly, and Moonfire would flood the rotation at 12 to 14 casts per minute instead of the intended ~1.3 CPM, collapsing Thrash frequency. The external macro reference is what gates it. To use this sequence, create the MOONSPAM macro first in WoW&apos;s regular macro editor, then reference it inside GRIP-EMS using the Macro step type.
-          </p>
-          <InfoBox>
-            The bare /cast Ironfur on the second line fires unconditionally as an extra attempt on this step since Ironfur is off-GCD and costs nothing to attempt even when it fails.
-          </InfoBox>
-        </StepBlock>
-      </section>
-
-      <section style={{ marginBottom: 44 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 6, color: 'var(--text-primary)' }}>
-          Applying the framework to a DPS spec
-        </h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 16 }}>
-          The Guardian example is structured around strict uptime requirements that demand Sequential step function and precise step positioning. DPS rotations often have different needs. This generic example walks through a Priority-based DPS sequence to show how the same five questions produce a different structural outcome.
-        </p>
-
-        <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 12 }}>Answering the five questions for a DPS spec</h3>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
-          {[
-            { q: 'Highest priority spell?', a: 'Your main spender or the proc ability that must never clip. Check your spec Priority section on Icy Veins and whatever sits at the top of that list is step 1.' },
-            { q: 'Pull cooldown?', a: 'Your major DPS cooldown goes at step 2 or 3 with a [combat] guard. If your spec has a pre-pull setup ability like a debuff or a buff to apply before the pull, that lives at step 1 without a [combat] guard.' },
-            { q: 'Can spells be skipped?', a: 'For most DPS rotations, yes. If your filler fires but your spender is not ready, you want the sequence to try the spender on the next press and not stall waiting for the filler to finish. This is where Priority step function makes sense over Sequential.' },
-            { q: 'Modifier needs?', a: 'Shift for a burst cooldown you want on demand without breaking the rotation. Same [nomod] guard rules apply as in the tank example.' },
-            { q: 'Context versions?', a: 'Consider a separate AoE version that prioritizes your cleave spells over single target, auto-switching in dungeons. The Context tab handles this without duplicating the whole sequence.' },
-          ].map(item => (
-            <div key={item.q} style={{ padding: '12px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', display: 'grid', gridTemplateColumns: '180px 1fr', gap: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{item.q}</div>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{item.a}</div>
-            </div>
-          ))}
+        <div style={{ padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
+          <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Steps 9 through 30: the loop continues</p>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>Steps 9 through 30 repeat the same pattern established in steps 2 through 8: Thrash and Mangle alternating, Ironfur at steps 14, 21, and 28, Lunar Beam weaved at steps 12, 19, and 26, MOONSPAM at step 22, and a bare Ironfur at steps 15 and 30 without the nomod guards so it fires regardless of modifier state. Step 30 ends the loop and resets to step 2 on the next press.</p>
         </div>
+      </Section>
 
-        <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 12 }}>Why Priority works differently for DPS</h3>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
-          With Priority step function, GRIP-EMS tries step 1 on every keypress and only moves to step 2 if step 1 fails. Step 1 fails when the spell is on cooldown, out of range, or unavailable for some other reason. This means your highest priority spell fires every single time it is available, which is exactly what most DPS priority lists require.
-        </p>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
-          The tradeoff is that spells later in the sequence fire infrequently. Step 5 only fires when steps 1 through 4 all fail simultaneously, which may be rare depending on your cooldown timings. For this reason, Priority sequences typically have 4 to 6 steps covering the core rotation, rather than the 20 to 30 steps a Sequential tank sequence needs for precise cycling.
-        </p>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75 }}>
-          A typical Priority DPS sequence structure looks like: step 1 is your primary spender or highest priority proc, step 2 is your major cooldown, step 3 is your secondary priority ability, steps 4 and 5 are fillers in priority order, and a modifier on every step fires your burst cooldown on demand. If your spec has a proc that should always jump the queue, put it at step 1 and everything else falls behind it.
-        </p>
+      <Section title="The KeyPress field and what it is for">
+        <p>GRIP-EMS has a KeyPress field that fires on every single keypress regardless of where the sequence is in its step list. It is not a step in the rotation. It is a persistent header that runs before every step fires.</p>
+        <p style={{ marginTop: 12 }}>Modifier handling belongs here and only here. If you put <code style={inlineCode}>[mod:shift]</code> lines inside individual steps instead of in KeyPress, every step has to carry that conditional which eats into the 255-character step limit and reduces CPM across all abilities. Putting modifiers in KeyPress means a single line handles the modifier for every press and your steps stay clean.</p>
+        <p style={{ marginTop: 12 }}>There is a meaningful secondary benefit. When modifiers live in KeyPress, the Rotation Preview panel in the GRIP-EMS editor can display your actual spell names instead of showing only the raw conditional text. If your sequence preview shows <code style={inlineCode}>/cast [mod:shift]</code> instead of the spell name, the modifier is in the steps rather than in KeyPress.</p>
+        <Callout>
+          Do not put combat spells in KeyPress. Anything in KeyPress fires on every single keypress including before combat, during movement, and any other context where you press the key. Modifiers and channel-stop lines belong there. Rotation spells belong in steps.
+        </Callout>
+      </Section>
 
-        <InfoBox>
-          Not sure whether your spec wants Sequential or Priority? The answer is usually in how your spec Discord describes the rotation. If they say &quot;use X on cooldown and fill with Y and Z,&quot; that is Priority. If they describe a specific cast order with tight timing windows between abilities, that is Sequential.
-        </InfoBox>
-      </section>
+      <Section title="The reset=target castsequence pattern">
+        <p>Some abilities should fire once on each new target rather than on a timer or as a rotation step. Hunter's Mark is the canonical example. You want it to apply when you engage a target, reapply when you switch targets, and not spam continuously on every keypress.</p>
+        <p style={{ marginTop: 12 }}>The correct pattern for this in GRIP-EMS is a castsequence with a target reset, placed in a step near the top of the loop:</p>
 
-      <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
-          General rules that apply to every sequence
-        </h2>
+        <CodeBlock>/castsequence [nochanneling,exists] reset=target Hunter's Mark, null</CodeBlock>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {[
-            {
-              title: 'Use [combat] guards on every combat spell',
-              desc: 'Without [combat] guards, spam-pressing the key before a pull advances the sequence past the opener before combat starts. Step 1 fires correctly only if the sequence is at step 1 when the first spell lands.',
-            },
-            {
-              title: 'Always use [nomod] guards when combining modifiers with main spells',
-              desc: 'If step 3 has Mangle as the main spell and Ironfur as the Ctrl modifier, Mangle needs [nomod:ctrl] so pressing Ctrl does not attempt both. Without this, modifier presses have unpredictable effects on the main spell at that step.',
-            },
-            {
-              title: 'Use [known:SpellName] for talent-dependent spells',
-              desc: 'If a spell is only available with a specific talent, wrap it in [known:SpellName] so the step silently skips when the talent is not taken. This makes sequences adaptable across different talent builds without breaking.',
-            },
-            {
-              title: 'Name your sequences clearly and include the version',
-              desc: 'EC_V7, BDK_M+_V4, FireMage_Raid_V2. When you iterate on a sequence, create a new one rather than editing in place. You want to be able to roll back to a previous version if the new one underperforms in logs.',
-            },
-            {
-              title: 'Keep Interleave intervals within your step count',
-              desc: 'The Interleave feature weaves a spell every N steps automatically, but N cannot exceed your total step count or the spell never fires. A 5-step sequence with an Interleave interval of 6 will never reach step 6 and the interleaved spell is silently skipped every loop. Set your interval to a number smaller than your total step count.',
-            },
-            {
-              title: 'Run /gems repair after every import and after every patch',
-              desc: 'The Repair module checks your sequence across 13 diagnostic categories including stale spells, character limit violations, keybind conflicts, and broken variables. It catches most structural problems before you ever run content and fixes the majority of them in one click.',
-            },
-          ].map(rule => (
-            <div key={rule.title} style={{ padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{rule.title}</div>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65 }}>{rule.desc}</div>
-            </div>
-          ))}
-        </div>
-      </section>
+        <p style={{ marginTop: 12 }}>This fires Hunter's Mark on the first press after you acquire a target, then advances the castsequence to <code style={inlineCode}>null</code>, which is a no-op. The sequence stays on null for every subsequent press against that target, so Hunter's Mark does not repeat. When you switch targets the castsequence resets to Hunter's Mark and fires again on the first press.</p>
+        <p style={{ marginTop: 12 }}>The <code style={inlineCode}>[exists]</code> conditional prevents the line from attempting to fire when you have no target. The <code style={inlineCode}>[nochanneling]</code> prevents it from interrupting a channel. Both guards are necessary for the pattern to work cleanly in M+ where target switching is frequent.</p>
+        <p style={{ marginTop: 12 }}>The same pattern works for any ability you want to fire once per target: Faerie Fire, Misdirection to a specific target, any debuff that should land on engage and reapply on target change. Swap Hunter's Mark for the ability name and the behavior is identical.</p>
+        <Callout>
+          Do not put Hunter's Mark in KeyPress. KeyPress fires on every keypress, so Hunter's Mark would attempt to cast continuously. The reset=target castsequence is the correct approach.
+        </Callout>
+      </Section>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 16, borderTop: '0.5px solid var(--border)' }}>
-        <Link href="/guide/how-it-works" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, color: 'var(--text-tertiary)', textDecoration: 'none' }}>
-          <ArrowLeft size={14} /> How it works
+      <Section title="The decisions that matter">
+        <DecisionBlock
+          question="Why Sequential and not Priority"
+          answer="Priority would always try Thrash first on every keypress, which sounds efficient but produces a different problem. Mangle, Ironfur, and Lunar Beam would only fire when Thrash is on cooldown, which means your Ironfur uptime becomes dependent on Thrash cooldown math rather than the structured cycling the sequence enforces. Sequential gives you predictable step positions and predictable uptime."
+        />
+        <DecisionBlock
+          question="Why [combat] on every spell"
+          answer="Without [combat] guards, spam-pressing the key before a pull would advance the sequence through multiple steps before combat starts, meaning you would enter the fight at step 4 or 5 instead of step 1. The opener only fires correctly if the sequence is at step 1 when the first combat spell lands."
+        />
+        <DecisionBlock
+          question="Why Thrash at 11 of 30 steps"
+          answer="Thrash is both the primary damage source and the primary self-healing source for Guardian Druid running Soul of the Forest. More Thrash means more healing. The sequence is built around maximizing Thrash frequency while still fitting Ironfur cycling and the mandatory cooldowns. 11 steps out of 30 is the result of that tradeoff after log validation."
+        />
+        <DecisionBlock
+          question="Why Ironfur every 7 steps"
+          answer="Ironfur's base duration is 7 seconds and the sequence runs at roughly one step per GCD at 150ms. Placing Ironfur at every 7th step means a new Ironfur cast lands approximately when the previous one expires. This is the mechanism behind the 91 to 97% uptime. If you remove Ironfur steps or change their spacing, uptime drops and it shows immediately in logs."
+        />
+      </Section>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 48, paddingTop: 24, borderTop: '0.5px solid var(--border)' }}>
+        <Link href="/guide/how-it-works" style={{ fontSize: 14, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
+          ← Back: How it works
         </Link>
-        <Link href="/guide/from-gse" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
-          Next: Coming from GSE <ArrowRight size={14} />
+        <Link href="/guide/from-gse" style={{ fontSize: 14, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
+          Next: Coming from GSE →
         </Link>
       </div>
+    </div>
+  )
+}
+
+const inlineCode: React.CSSProperties = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: 12,
+  background: 'var(--bg-tertiary)',
+  padding: '1px 5px',
+  borderRadius: 3,
+  color: 'var(--accent)',
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 48 }}>
+      <h2 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 16, color: 'var(--text-primary)' }}>
+        {title}
+      </h2>
+      <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function MetaTable({ rows }: { rows: [string, string][] }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 24px', fontSize: 13, marginBottom: 4 }}>
+      {rows.map(([label, value]) => (
+        <>
+          <span key={label + 'l'} style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{label}</span>
+          <span key={label + 'v'} style={{ color: 'var(--text-secondary)' }}>{value}</span>
+        </>
+      ))}
+    </div>
+  )
+}
+
+function StepBlock({ number, label, code, notes }: { number: string; label: string; code: string; notes: string }) {
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 10 }}>
+        <div style={{
+          width: 24, height: 24, borderRadius: '50%',
+          background: 'var(--accent)', color: 'white',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 12, fontWeight: 700, flexShrink: 0, marginTop: 1,
+        }}>
+          {number}
+        </div>
+        <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{label}</p>
+      </div>
+      <div style={{
+        fontFamily: 'var(--font-mono)', fontSize: 12,
+        background: 'var(--bg-tertiary)', border: '0.5px solid var(--border)',
+        borderRadius: 'var(--radius-md)', padding: '12px 14px',
+        color: 'var(--text-secondary)', whiteSpace: 'pre', overflowX: 'auto',
+        marginBottom: 10, marginLeft: 36,
+      }}>
+        {code}
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, marginLeft: 36 }}>
+        {notes.split('\n\n').map((para, i) => (
+          <p key={i} style={{ marginBottom: i < notes.split('\n\n').length - 1 ? 10 : 0 }}>{para}</p>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function CodeBlock({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      fontFamily: 'var(--font-mono)', fontSize: 12,
+      background: 'var(--bg-tertiary)', border: '0.5px solid var(--border)',
+      borderRadius: 'var(--radius-md)', padding: '12px 14px',
+      color: 'var(--accent)', marginTop: 12, overflowX: 'auto',
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function Callout({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      marginTop: 12, padding: '12px 14px',
+      background: 'rgba(29,158,117,0.07)',
+      border: '0.5px solid rgba(29,158,117,0.25)',
+      borderLeft: '3px solid var(--accent)',
+      borderRadius: 'var(--radius-md)',
+      fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function DecisionBlock({ question, answer }: { question: string; answer: string }) {
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{question}</p>
+      <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7 }}>{answer}</p>
     </div>
   )
 }
