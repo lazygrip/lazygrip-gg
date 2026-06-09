@@ -50,9 +50,17 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
       if (filters.search) query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
 
       switch (filters.sort) {
-        case 'most_viewed': query = query.order('view_count', { ascending: false }); break
-        case 'most_saved': query = query.order('save_count', { ascending: false }); break
-        default: query = query.order('created_at', { ascending: false })
+        case 'top_rated':
+          query = query.gt('rating_count', 0).order('avg_score', { ascending: false }).order('rating_count', { ascending: false })
+          break
+        case 'most_viewed':
+          query = query.order('view_count', { ascending: false })
+          break
+        case 'most_saved':
+          query = query.order('save_count', { ascending: false })
+          break
+        default:
+          query = query.order('created_at', { ascending: false })
       }
 
       const from = ((filters.page || 1) - 1) * (filters.limit || 20)
