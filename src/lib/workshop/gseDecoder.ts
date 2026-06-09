@@ -155,7 +155,7 @@ function collectSequenceEntries(container: unknown): Array<{ name: string; value
       return [{ name: typeof container[0] === 'string' ? container[0] : 'Sequence', value: container[1] }]
     }
     return container.filter(item => item && typeof item === 'object').map((item, i) => ({
-      name: normalizeRecord(item).MetaData?.Name || normalizeRecord(item).metaData?.name || `Sequence ${i + 1}` as string,
+      name: (normalizeRecord(item).MetaData as any)?.Name || (normalizeRecord(item).metaData as any)?.name || `Sequence ${i + 1}`,
       value: item,
     }))
   }
