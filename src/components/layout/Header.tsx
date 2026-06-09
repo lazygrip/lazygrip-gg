@@ -124,6 +124,7 @@ export default function Header() {
             { href: '/browse?content_type=mythic_plus', label: 'Mythic+' },
             { href: '/browse?content_type=raid', label: 'Raid' },
             { href: '/guide', label: 'Guide' },
+            { href: '/workshop', label: 'Workshop' },
           ].map(link => (
             <Link key={link.href} href={link.href} style={{
               fontSize: 13,
