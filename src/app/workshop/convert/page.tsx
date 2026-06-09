@@ -5,6 +5,19 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Copy, Check } from 'lucide-react'
 
+interface ActionNode {
+  index: number
+  kind: 'Loop' | 'Action' | 'Repeat' | 'If' | 'Pause' | 'Embed'
+  depth: number
+  label: string
+  text?: string
+  stepFunction?: string
+  repeat?: number
+  interval?: number
+  variable?: string
+  children?: ActionNode[]
+}
+
 interface ConvertResult {
   export: string
   format: string
@@ -28,9 +41,169 @@ interface DecodeResult {
       stepFunction: string
       keyPress: string
       keyRelease: string
+      actions: ActionNode[]
       steps: Array<{ text: string; preMarkers?: string[]; postMarkers?: string[] }>
     }>
   }>
+}
+
+function ActionTree({ nodes, counter }: { nodes: ActionNode[]; counter: { n: number } }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {nodes.map((node, i) => {
+        if (node.kind === 'Loop') {
+          return (
+            <div key={i} style={{
+              border: '0.5px solid var(--border-strong)',
+              borderRadius: 'var(--radius-md)',
+              overflow: 'hidden',
+            }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '6px 10px',
+                background: 'var(--bg-tertiary)',
+                borderBottom: '0.5px solid var(--border)',
+              }}>
+                <span style={{
+                  fontSize: 11, fontWeight: 600, padding: '2px 7px',
+                  background: 'var(--accent)', color: 'white',
+                  borderRadius: 'var(--radius-sm)', letterSpacing: '0.03em',
+                }}>
+                  Loop
+                </span>
+                {node.stepFunction && (
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                    {node.stepFunction}
+                  </span>
+                )}
+                {node.repeat && node.repeat > 1 && (
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>×{node.repeat}</span>
+                )}
+              </div>
+              <div style={{ padding: '8px 10px' }}>
+                {node.children && node.children.length > 0
+                  ? <ActionTree nodes={node.children} counter={counter} />
+                  : <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Empty loop</span>
+                }
+              </div>
+            </div>
+          )
+        }
+
+        if (node.kind === 'If') {
+          return (
+            <div key={i} style={{
+              border: '0.5px solid var(--border)',
+              borderRadius: 'var(--radius-md)',
+              overflow: 'hidden',
+            }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '6px 10px', background: 'var(--bg-tertiary)',
+                borderBottom: '0.5px solid var(--border)',
+              }}>
+                <span style={{
+                  fontSize: 11, fontWeight: 600, padding: '2px 7px',
+                  background: 'var(--bg-secondary)', color: 'var(--text-secondary)',
+                  border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)',
+                }}>If</span>
+                {node.variable && (
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{node.variable}</span>
+                )}
+              </div>
+              <div style={{ padding: '8px 10px' }}>
+                {node.children && node.children.length > 0
+                  ? <ActionTree nodes={node.children} counter={counter} />
+                  : <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Empty branch</span>
+                }
+              </div>
+            </div>
+          )
+        }
+
+        if (node.kind === 'Action' || node.kind === 'Repeat') {
+          const n = ++counter.n
+          const lines = (node.text || '').split('\n').filter(Boolean)
+          return (
+            <div key={i} style={{
+              display: 'flex', gap: 10, padding: '5px 4px',
+              borderBottom: '0.5px solid var(--border)', fontSize: 12,
+            }}>
+              <span style={{ color: 'var(--text-muted)', flexShrink: 0, minWidth: 20, textAlign: 'right' }}>{n}</span>
+              <div style={{ flex: 1 }}>
+                {node.kind === 'Repeat' && (
+                  <span style={{
+                    fontSize: 10, fontWeight: 600, padding: '1px 5px', marginBottom: 3, display: 'inline-block',
+                    background: 'var(--bg-tertiary)', color: 'var(--text-muted)',
+                    border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)',
+                  }}>Repeat · every {node.interval}</span>
+                )}
+                <pre style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', margin: 0, whiteSpace: 'pre-wrap' }}>
+                  {lines.join('\n')}
+                </pre>
+              </div>
+            </div>
+          )
+        }
+
+        return (
+          <div key={i} style={{
+            display: 'flex', gap: 10, padding: '5px 4px',
+            borderBottom: '0.5px solid var(--border)', fontSize: 12,
+          }}>
+            <span style={{ color: 'var(--text-muted)', flexShrink: 0, minWidth: 20, textAlign: 'right' }}>–</span>
+            <pre style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', margin: 0, whiteSpace: 'pre-wrap', flex: 1 }}>
+              {node.label}
+            </pre>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function VersionStepView({ version }: { version: DecodeResult['sequences'][0]['versions'][0] }) {
+  const hasActions = Array.isArray(version.actions) && version.actions.length > 0
+  const counter = { n: 0 }
+
+  return (
+    <div style={{ padding: '14px 16px' }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>{version.name}</span>
+        {version.stepFunction && (
+          <span style={{ fontSize: 11, padding: '2px 7px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-muted)' }}>
+            {version.stepFunction}
+          </span>
+        )}
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+          {hasActions ? version.actions.length : version.steps.length} steps
+        </span>
+      </div>
+
+      {version.keyPress && (
+        <div style={{ marginBottom: 10, padding: '8px 10px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)' }}>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>KeyPress</span>
+          <pre style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--accent)', margin: 0, whiteSpace: 'pre-wrap' }}>{version.keyPress}</pre>
+        </div>
+      )}
+
+      {hasActions
+        ? <ActionTree nodes={version.actions} counter={counter} />
+        : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {version.steps.map((step: any, i: number) => (
+              <div key={i} style={{ display: 'flex', gap: 10, padding: '5px 0', borderBottom: '0.5px solid var(--border)', fontSize: 12 }}>
+                <span style={{ color: 'var(--text-muted)', flexShrink: 0, minWidth: 20, textAlign: 'right' }}>{i + 1}</span>
+                <pre style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', margin: 0, whiteSpace: 'pre-wrap', flex: 1 }}>
+                  {[...(step.preMarkers || []), step.text, ...(step.postMarkers || [])].filter(Boolean).join(' ')}
+                </pre>
+              </div>
+            ))}
+          </div>
+        )
+      }
+    </div>
+  )
 }
 
 export default function WorkshopConvertPage() {
@@ -79,13 +252,12 @@ export default function WorkshopConvertPage() {
       else {
         setResult(data)
         setError(null)
-        // Decode the resulting GRIP export to show step view
         if (data.export) {
           try {
             const decRes = await fetch('/api/workshop/decode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: data.export }) })
             const decData = await decRes.json()
             if (decRes.ok) setDecoded(decData)
-          } catch { /* non-fatal, step view just won't show */ }
+          } catch { /* non-fatal */ }
         }
       }
     } catch { setError('Network error. Please try again.') }
@@ -110,7 +282,6 @@ export default function WorkshopConvertPage() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 24, alignItems: 'start' }}>
-        {/* Input panel */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
             <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 4 }}>Transform</p>
@@ -164,7 +335,6 @@ export default function WorkshopConvertPage() {
           {error && <p style={{ fontSize: 12, color: '#c0392b' }}>{error}</p>}
         </div>
 
-        {/* Result panel */}
         <div style={{ minHeight: 400 }}>
           {!result && !error && (
             <div style={{
@@ -177,7 +347,6 @@ export default function WorkshopConvertPage() {
 
           {result && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Status */}
               <div style={{ padding: '14px 16px', background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>
                   Converted to GRIP: <strong style={{ color: 'var(--text-primary)' }}>{result.sequenceCount}</strong> sequence{result.sequenceCount !== 1 ? 's' : ''} — ready to import into GRIP.
@@ -189,7 +358,6 @@ export default function WorkshopConvertPage() {
                 </div>
               </div>
 
-              {/* GRIP export string */}
               <div style={{ background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '0.5px solid var(--border)' }}>
                   <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>GRIP export string</span>
@@ -218,7 +386,6 @@ export default function WorkshopConvertPage() {
                 </div>
               </div>
 
-              {/* Warnings */}
               {result.warnings.length > 0 && (
                 <div style={{ padding: '14px 16px', background: 'rgba(255,180,0,0.07)', border: '0.5px solid rgba(255,180,0,0.25)', borderRadius: 'var(--radius-lg)' }}>
                   <p style={{ fontSize: 12, fontWeight: 600, color: '#c8960c', marginBottom: 8 }}>Conversion notes</p>
@@ -228,35 +395,14 @@ export default function WorkshopConvertPage() {
                 </div>
               )}
 
-              {/* Decoded step view */}
               {decoded && decoded.sequences.map((seq, si) => (
                 <div key={si} style={{ background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
                   <div style={{ padding: '14px 16px', borderBottom: '0.5px solid var(--border)' }}>
                     <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{seq.name}</h2>
                   </div>
                   {seq.versions.map((version, vi) => (
-                    <div key={vi} style={{ padding: '14px 16px', borderBottom: vi < seq.versions.length - 1 ? '0.5px solid var(--border)' : undefined }}>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>{version.name}</span>
-                        {version.stepFunction && <span style={{ fontSize: 11, padding: '2px 7px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-muted)' }}>{version.stepFunction}</span>}
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{version.steps.length} steps</span>
-                      </div>
-                      {version.keyPress && (
-                        <div style={{ marginBottom: 10, padding: '8px 10px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)' }}>
-                          <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>KeyPress</span>
-                          <pre style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--accent)', margin: 0, whiteSpace: 'pre-wrap' }}>{version.keyPress}</pre>
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                        {version.steps.map((step: any, i: number) => (
-                          <div key={i} style={{ display: 'flex', gap: 10, padding: '5px 0', borderBottom: '0.5px solid var(--border)', fontSize: 12 }}>
-                            <span style={{ color: 'var(--text-muted)', flexShrink: 0, minWidth: 20, textAlign: 'right' }}>{i + 1}</span>
-                            <pre style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', margin: 0, whiteSpace: 'pre-wrap', flex: 1 }}>
-                              {[...(step.preMarkers || []), step.text, ...(step.postMarkers || [])].filter(Boolean).join(' ')}
-                            </pre>
-                          </div>
-                        ))}
-                      </div>
+                    <div key={vi} style={{ borderBottom: vi < seq.versions.length - 1 ? '0.5px solid var(--border)' : undefined }}>
+                      <VersionStepView version={version} />
                     </div>
                   ))}
                 </div>
