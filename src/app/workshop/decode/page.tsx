@@ -68,6 +68,11 @@ export default function WorkshopDecodePage() {
     setTimeout(() => setCopiedTalent(null), 1500)
   }
 
+  function handleConvertToGRIP() {
+    sessionStorage.setItem('workshop_convert_input', input.trim())
+    router.push('/workshop/convert')
+  }
+
   if (loading) return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading...</span></div>
 
   const isGSE = result?.meta?.format === 'GSE3'
@@ -129,14 +134,18 @@ export default function WorkshopDecodePage() {
               Clear
             </button>
             {isGSE && (
-              <Link href="/workshop/convert" style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '8px 14px', background: 'var(--bg-tertiary)',
-                border: '0.5px solid var(--accent)', borderRadius: 'var(--radius-md)',
-                fontSize: 13, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500,
-              }}>
+              <button
+                onClick={handleConvertToGRIP}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '8px 14px', background: 'var(--bg-tertiary)',
+                  border: '0.5px solid var(--accent)', borderRadius: 'var(--radius-md)',
+                  fontSize: 13, color: 'var(--accent)', fontWeight: 500,
+                  cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                }}
+              >
                 <ArrowRightLeft size={13} /> Convert to GRIP
-              </Link>
+              </button>
             )}
           </div>
 

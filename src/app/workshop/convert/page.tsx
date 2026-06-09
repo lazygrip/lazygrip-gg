@@ -15,10 +15,29 @@ interface ConvertResult {
   warnings: string[]
 }
 
+interface DecodeResult {
+  meta: Record<string, unknown>
+  sequences: Array<{
+    name: string
+    class: string
+    spec: string
+    defaultVersion: number
+    versions: Array<{
+      index: number
+      name: string
+      stepFunction: string
+      keyPress: string
+      keyRelease: string
+      steps: Array<{ text: string; preMarkers?: string[]; postMarkers?: string[] }>
+    }>
+  }>
+}
+
 export default function WorkshopConvertPage() {
   const [loading, setLoading] = useState(true)
   const [input, setInput] = useState('')
   const [result, setResult] = useState<ConvertResult | null>(null)
+  const [decoded, setDecoded] = useState<DecodeResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [converting, setConverting] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -28,16 +47,24 @@ export default function WorkshopConvertPage() {
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) router.push('/auth/login?next=/workshop/convert')
-      else setLoading(false)
+      if (!data.user) {
+        router.push('/auth/login?next=/workshop/convert')
+      } else {
+        setLoading(false)
+        const prefill = sessionStorage.getItem('workshop_convert_input')
+        if (prefill) {
+          sessionStorage.removeItem('workshop_convert_input')
+          setInput(prefill)
+        }
+      }
     })
   }, [router])
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
     const code = input.trim()
-    if (!code) { setResult(null); setError(null); return }
-    if (!/^!GSE3!/i.test(code)) { setError('Paste a !GSE3! export code.'); setResult(null); return }
+    if (!code) { setResult(null); setDecoded(null); setError(null); return }
+    if (!/^!GSE3!/i.test(code)) { setError('Paste a !GSE3! export code.'); setResult(null); setDecoded(null); return }
     setError(null)
     timerRef.current = setTimeout(() => convert(code), 350)
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
@@ -48,8 +75,19 @@ export default function WorkshopConvertPage() {
     try {
       const res = await fetch('/api/workshop/convert', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) })
       const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Failed to convert.'); setResult(null) }
-      else { setResult(data); setError(null) }
+      if (!res.ok) { setError(data.error || 'Failed to convert.'); setResult(null); setDecoded(null) }
+      else {
+        setResult(data)
+        setError(null)
+        // Decode the resulting GRIP export to show step view
+        if (data.export) {
+          try {
+            const decRes = await fetch('/api/workshop/decode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: data.export }) })
+            const decData = await decRes.json()
+            if (decRes.ok) setDecoded(decData)
+          } catch { /* non-fatal, step view just won't show */ }
+        }
+      }
     } catch { setError('Network error. Please try again.') }
     finally { setConverting(false) }
   }
@@ -112,7 +150,7 @@ export default function WorkshopConvertPage() {
               {converting ? 'Converting...' : 'Convert to GRIP'}
             </button>
             <button
-              onClick={() => { setInput(''); setResult(null); setError(null) }}
+              onClick={() => { setInput(''); setResult(null); setDecoded(null); setError(null) }}
               style={{
                 padding: '8px 16px', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)',
                 border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: 13,
@@ -189,6 +227,40 @@ export default function WorkshopConvertPage() {
                   ))}
                 </div>
               )}
+
+              {/* Decoded step view */}
+              {decoded && decoded.sequences.map((seq, si) => (
+                <div key={si} style={{ background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+                  <div style={{ padding: '14px 16px', borderBottom: '0.5px solid var(--border)' }}>
+                    <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{seq.name}</h2>
+                  </div>
+                  {seq.versions.map((version, vi) => (
+                    <div key={vi} style={{ padding: '14px 16px', borderBottom: vi < seq.versions.length - 1 ? '0.5px solid var(--border)' : undefined }}>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>{version.name}</span>
+                        {version.stepFunction && <span style={{ fontSize: 11, padding: '2px 7px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-muted)' }}>{version.stepFunction}</span>}
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{version.steps.length} steps</span>
+                      </div>
+                      {version.keyPress && (
+                        <div style={{ marginBottom: 10, padding: '8px 10px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)' }}>
+                          <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>KeyPress</span>
+                          <pre style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--accent)', margin: 0, whiteSpace: 'pre-wrap' }}>{version.keyPress}</pre>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {version.steps.map((step: any, i: number) => (
+                          <div key={i} style={{ display: 'flex', gap: 10, padding: '5px 0', borderBottom: '0.5px solid var(--border)', fontSize: 12 }}>
+                            <span style={{ color: 'var(--text-muted)', flexShrink: 0, minWidth: 20, textAlign: 'right' }}>{i + 1}</span>
+                            <pre style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', margin: 0, whiteSpace: 'pre-wrap', flex: 1 }}>
+                              {[...(step.preMarkers || []), step.text, ...(step.postMarkers || [])].filter(Boolean).join(' ')}
+                            </pre>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
             </div>
           )}
         </div>
