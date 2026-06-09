@@ -115,8 +115,8 @@ export function decodeEMSExport(input: string): DecodedEMSExport {
   const exportProfile = readExportProfile(decoded, sequences, exportMeta)
 
   for (const sequence of sequences) {
-    if (!sequence.class && exportProfile.class) { sequence.class = exportProfile.class; sequence.classId = exportProfile.classId ?? null }
-    if (!sequence.spec && exportProfile.spec) { sequence.spec = exportProfile.spec; sequence.specId = exportProfile.specId ?? null }
+    if (!sequence.class && exportProfile.class) { sequence.class = exportProfile.class as string; sequence.classId = (exportProfile.classId as number | null) ?? null }
+    if (!sequence.spec && exportProfile.spec) { sequence.spec = exportProfile.spec as string; sequence.specId = (exportProfile.specId as number | null) ?? null }
   }
 
   if (exportMeta?.talentSource === 'description' && exportMeta.talentString) {
