@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Shield, ArrowRight, Zap, Users, Star } from 'lucide-react'
+import { Shield, ArrowRight, Zap, Users, Star, Wrench } from 'lucide-react'
 import { WOW_CLASSES } from '@/lib/wow-data'
 
 export default function HomePage() {
@@ -114,6 +114,39 @@ export default function HomePage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Workshop banner */}
+      <section style={{ borderBottom: '0.5px solid var(--border)', padding: '16px 24px' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <Link href="/workshop" style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            background: 'var(--bg-secondary)',
+            border: '0.5px solid var(--border)',
+            borderLeft: '3px solid var(--accent)',
+            borderRadius: 'var(--radius-md)',
+            padding: '12px 18px',
+            textDecoration: 'none',
+          }}>
+            <span style={{ color: 'var(--accent)', display: 'flex', flexShrink: 0 }}>
+              <Wrench size={15} />
+            </span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>New: Workshop</span>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)', marginLeft: 10 }}>
+                Decode any GRIP or GSE export string, or convert a GSE sequence to native GRIP format.
+              </span>
+            </div>
+            <span style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              fontSize: 13, color: 'var(--accent)', fontWeight: 500, flexShrink: 0,
+            }}>
+              Try it <ArrowRight size={13} />
+            </span>
+          </Link>
         </div>
       </section>
 
