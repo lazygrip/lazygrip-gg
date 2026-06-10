@@ -402,6 +402,7 @@ export default function WorkshopBuildPage() {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) router.push('/auth/login?next=/workshop/build')
+else if (data.user.id !== 'c2374192-e541-4636-9baf-84fc192cff52') router.push('/workshop')
       else {
         setLoading(false)
         const m = defaultModel()
