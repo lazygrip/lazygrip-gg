@@ -445,7 +445,7 @@ const S = {
   }),
   blockContainer: (borderColor: string): React.CSSProperties => ({
     border: `0.5px solid ${borderColor}`, borderRadius: 'var(--radius-md)',
-    overflow: 'hidden', marginBottom: 4,
+    overflow: 'visible', marginBottom: 4,
   }),
   blockHeader: (bg: string): React.CSSProperties => ({
     display: 'flex', alignItems: 'center', gap: 6, padding: '5px 8px',
