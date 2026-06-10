@@ -150,3 +150,4 @@ export function extractKeyPressFromVersion(blocks: Record<string, unknown>[]): {
   nextBlocks = stripKeyPressLinesFromBlocks(nextBlocks, keyPress)
   return { blocks: nextBlocks, keyPress, commonLineCount: splitMacroLines(keyPress).length }
 }
+export type Block = Record<string, unknown>
