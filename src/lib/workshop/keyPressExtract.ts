@@ -1,28 +1,24 @@
-// Credit: Beard3d_Gamer — keyPressExtract.js converted to TypeScript
+// Credit: Beard3d_Gamer — keypress extraction from GSE block arrays
 
-export interface Block {
-  kind: string
-  text?: string
-  children?: Block[]
-  [key: string]: unknown
+export function splitMacroLines(text: string): string[] {
+  return String(text || '')
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean)
 }
 
-function splitMacroLines(text: string): string[] {
-  return String(text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean)
-}
-
-function joinMacroLines(lines: string[]): string {
+export function joinMacroLines(lines: string[]): string {
   return lines.filter(Boolean).join('\n')
 }
 
-function isMacroBlock(block: Block | null | undefined): boolean {
-  return (block?.kind === 'Action' || block?.kind === 'Repeat') && Boolean(block?.text)
+function isMacroBlock(block: Record<string, unknown>): boolean {
+  return (block?.kind === 'Action' || block?.kind === 'Repeat') && Boolean(block.text)
 }
 
-function collectActionTexts(blocks: Block[], output: string[] = []): string[] {
+function collectActionTexts(blocks: Record<string, unknown>[], output: string[] = []): string[] {
   for (const block of blocks || []) {
-    if (isMacroBlock(block)) output.push(block.text!)
-    if (block?.children?.length) collectActionTexts(block.children, output)
+    if (isMacroBlock(block)) output.push(block.text as string)
+    if (Array.isArray(block?.children)) collectActionTexts(block.children as Record<string, unknown>[], output)
   }
   return output
 }
@@ -33,24 +29,14 @@ function requiredOccurrences(actionCount: number): number {
   return actionCount - 1
 }
 
-export function findCommonLinePrefix(texts: string[]): string[] {
-  if (!Array.isArray(texts) || texts.length < 2) return []
-  const lineLists = texts.map(splitMacroLines)
-  const minLength = Math.min(...lineLists.map(l => l.length))
-  let prefixLength = 0
-  for (let i = 0; i < minLength; i++) {
-    const line = lineLists[0][i]
-    if (lineLists.every(lines => lines[i] === line)) prefixLength++
-    else break
-  }
-  return prefixLength > 0 ? lineLists[0].slice(0, prefixLength) : []
-}
-
 function findSharedLines(texts: string[]): string[] {
   if (!Array.isArray(texts) || texts.length < 2) return []
   const lineLists = texts.map(splitMacroLines)
   const minimumMatches = requiredOccurrences(texts.length)
-  const orderSource = lineLists.reduce((longest, lines) => lines.length > longest.length ? lines : longest, lineLists[0])
+  const orderSource = lineLists.reduce(
+    (longest, lines) => (lines.length > longest.length ? lines : longest),
+    lineLists[0]
+  )
   const seen = new Set<string>()
   return orderSource.filter(line => {
     if (seen.has(line)) return false
@@ -59,22 +45,27 @@ function findSharedLines(texts: string[]): string[] {
   })
 }
 
-function applyLineRemovalToBlocks(blocks: Block[], linesToRemove: string[]): Block[] {
+function applyLineRemovalToBlocks(
+  blocks: Record<string, unknown>[],
+  linesToRemove: string[]
+): Record<string, unknown>[] {
   const removeSet = new Set(linesToRemove)
   if (!removeSet.size) return blocks
-  return (blocks || []).map(block => {
-    if (isMacroBlock(block)) {
-      const text = joinMacroLines(splitMacroLines(block.text!).filter(l => !removeSet.has(l)))
-      if (!text) return null
-      return { ...block, text }
-    }
-    if (block.children?.length) {
-      const children = applyLineRemovalToBlocks(block.children, linesToRemove)
-      if (!children.length) return null
-      return { ...block, children }
-    }
-    return block
-  }).filter(Boolean) as Block[]
+  return (blocks || [])
+    .map(block => {
+      if (isMacroBlock(block)) {
+        const text = joinMacroLines(splitMacroLines(block.text as string).filter(line => !removeSet.has(line)))
+        if (!text) return null
+        return { ...block, text }
+      }
+      if (Array.isArray(block.children) && block.children.length) {
+        const children = applyLineRemovalToBlocks(block.children as Record<string, unknown>[], linesToRemove)
+        if (!children.length) return null
+        return { ...block, children }
+      }
+      return block
+    })
+    .filter(Boolean) as Record<string, unknown>[]
 }
 
 export function mergeKeyPress(...parts: string[]): string {
@@ -90,7 +81,11 @@ export function mergeKeyPress(...parts: string[]): string {
   return joinMacroLines(lines)
 }
 
-function extractCommonKeyPress(blocks: Block[]): { blocks: Block[]; keyPress: string; commonLineCount: number } {
+function extractCommonKeyPress(blocks: Record<string, unknown>[]): {
+  blocks: Record<string, unknown>[]
+  keyPress: string
+  commonLineCount: number
+} {
   const actionTexts = collectActionTexts(blocks)
   const sharedLines = findSharedLines(actionTexts)
   if (!sharedLines.length) return { blocks, keyPress: '', commonLineCount: 0 }
@@ -101,40 +96,52 @@ function extractCommonKeyPress(blocks: Block[]): { blocks: Block[]; keyPress: st
   }
 }
 
-function stripKeyPressLinesFromBlocks(blocks: Block[], keyPress: string): Block[] {
+function stripKeyPressLinesFromBlocks(
+  blocks: Record<string, unknown>[],
+  keyPress: string
+): Record<string, unknown>[] {
   const keyPressLines = new Set(splitMacroLines(keyPress))
   if (!keyPressLines.size) return blocks
   return applyLineRemovalToBlocks(blocks, [...keyPressLines])
 }
 
-function hasLineSourceChildren(children: Block[]): boolean {
-  return (children || []).filter(c => isMacroBlock(c)).length >= 2
+function hasLineSourceChildren(children: Record<string, unknown>[]): boolean {
+  return (children || []).filter(child => isMacroBlock(child)).length >= 2
 }
 
-function filterBlocksWithContent(blocks: Block[]): Block[] {
+function filterBlocksWithContent(blocks: Record<string, unknown>[]): Record<string, unknown>[] {
   return (blocks || []).filter(block => {
-    if (block.kind === 'Loop') return block.children?.length
+    if (block.kind === 'Loop') return Array.isArray(block.children) && (block.children as unknown[]).length > 0
     return Boolean(block.text)
   })
 }
 
-function applyLoopKeyPressPasses(blocks: Block[], keyPressParts: string[]): Block[] {
-  return (blocks || []).map(block => {
-    if (block.kind !== 'Loop') return block
-    let children = block.children || []
-    if (hasLineSourceChildren(children)) {
-      const loopExtract = extractCommonKeyPress(children)
-      if (loopExtract.keyPress) keyPressParts.push(loopExtract.keyPress)
-      children = filterBlocksWithContent(loopExtract.blocks)
-    } else {
-      children = applyLoopKeyPressPasses(children, keyPressParts)
-    }
-    if (!children.length) return null
-    return { ...block, children }
-  }).filter(Boolean) as Block[]
+function applyLoopKeyPressPasses(
+  blocks: Record<string, unknown>[],
+  keyPressParts: string[]
+): Record<string, unknown>[] {
+  return (blocks || [])
+    .map(block => {
+      if (block.kind !== 'Loop') return block
+      let children = (block.children as Record<string, unknown>[]) || []
+      if (hasLineSourceChildren(children)) {
+        const loopExtract = extractCommonKeyPress(children)
+        if (loopExtract.keyPress) keyPressParts.push(loopExtract.keyPress)
+        children = filterBlocksWithContent(loopExtract.blocks)
+      } else {
+        children = applyLoopKeyPressPasses(children, keyPressParts)
+      }
+      if (!children.length) return null
+      return { ...block, children }
+    })
+    .filter(Boolean) as Record<string, unknown>[]
 }
 
-export function extractKeyPressFromVersion(blocks: Block[]): { blocks: Block[]; keyPress: string; commonLineCount: number } {
+export function extractKeyPressFromVersion(blocks: Record<string, unknown>[]): {
+  blocks: Record<string, unknown>[]
+  keyPress: string
+  commonLineCount: number
+} {
   const keyPressParts: string[] = []
   const global = extractCommonKeyPress(blocks)
   if (global.keyPress) keyPressParts.push(global.keyPress)

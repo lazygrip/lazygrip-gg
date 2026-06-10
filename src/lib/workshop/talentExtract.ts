@@ -1,16 +1,14 @@
-// Credit: Beard3d_Gamer — talentExtract.js converted to TypeScript
+// Credit: Beard3d_Gamer — talent string extraction and parsing
 
 const TALENT_LABEL_PATTERN = /(?:^|[\r\n])\s*(?:talent|talents|loadout|build)\s*[-:]\s*([A-Za-z0-9+/=]+)/i
 const INLINE_TALENT_PATTERN = /(?:talent|talents|loadout|build)\s*[-:]\s*([A-Za-z0-9+/=]{20,})/i
 const TALENT_TOKEN_PATTERN = /^[A-Za-z0-9+/=]+$/
 const MIN_TALENT_LENGTH = 40
-
 const BASE64_TO_VALUE: Record<string, number> = Object.fromEntries(
   'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
     .split('')
     .map((char, index) => [char, index])
 )
-
 const BITS_PER_CHAR = 6
 const HEADER_VERSION_BITS = 8
 const SPEC_ID_BITS = 16
@@ -57,9 +55,9 @@ class ImportDataStream {
   }
 }
 
-export function parseTalentImportHeader(talentString: string | null | undefined): { serializationVersion: number; specId: number } | null {
+export function parseTalentImportHeader(talentString: string | null): { serializationVersion: number; specId: number } | null {
+  if (!talentString) return null
   try {
-    if (!talentString) return null
     const stream = new ImportDataStream(talentString)
     const headerBits = HEADER_VERSION_BITS + SPEC_ID_BITS + 128
     if (stream['values'].length * BITS_PER_CHAR < headerBits) return null
@@ -73,7 +71,7 @@ export function parseTalentImportHeader(talentString: string | null | undefined)
   }
 }
 
-export function extractTalentStringFromText(text: string | null | undefined): string | null {
+export function extractTalentStringFromText(text: string): string | null {
   const cleaned = String(text || '').trim()
   if (!cleaned) return null
   const labeledMatch = cleaned.match(TALENT_LABEL_PATTERN) || cleaned.match(INLINE_TALENT_PATTERN)
@@ -86,7 +84,7 @@ export function extractTalentStringFromText(text: string | null | undefined): st
 }
 
 export function findTalentStringInComments(
-  exportMeta: Record<string, unknown> | null | undefined,
+  exportMeta: Record<string, unknown>,
   sequences: Array<{ description?: string }>
 ): string | null {
   const sources = [
@@ -94,6 +92,7 @@ export function findTalentStringInComments(
     ...sequences.map(s => s.description),
   ]
   for (const source of sources) {
+    if (!source) continue
     const extracted = extractTalentStringFromText(source)
     if (extracted) return extracted
   }
@@ -124,8 +123,14 @@ export function stripTalentFromText(text: string, talentString: string): string 
   if (!cleaned.trim() || !token) return cleaned
   const escaped = escapeRegex(token)
   let result = cleaned
-  result = result.replace(new RegExp(`(?:^|[\\r\\n])\\s*(?:talent|talents|loadout|build)\\s*[-:]\\s*${escaped}\\s*`, 'gi'), '\n')
-  result = result.replace(new RegExp(`(?:talent|talents|loadout|build)\\s*[-:]\\s*${escaped}`, 'gi'), '')
+  result = result.replace(
+    new RegExp(`(?:^|[\\r\\n])\\s*(?:talent|talents|loadout|build)\\s*[-:]\\s*${escaped}\\s*`, 'gi'),
+    '\n'
+  )
+  result = result.replace(
+    new RegExp(`(?:talent|talents|loadout|build)\\s*[-:]\\s*${escaped}`, 'gi'),
+    ''
+  )
   result = result.replace(new RegExp(`^\\s*${escaped}\\s*$`, 'gm'), '')
   return result.replace(/\n{3,}/g, '\n\n').trim()
 }

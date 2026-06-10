@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Search, ArrowRightLeft } from 'lucide-react'
+import { Search, ArrowRightLeft, Wrench } from 'lucide-react'
 
 export default function WorkshopPage() {
   const [loading, setLoading] = useState(true)
@@ -32,8 +32,8 @@ export default function WorkshopPage() {
         <h1 style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 10, letterSpacing: '-0.02em' }}>
           Macro Export Tools
         </h1>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 520 }}>
-          Inspect GRIP or GSE exports, or convert GSE3 macros to native GRIP-EMS format with proper loop and keypress placement.
+        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 540 }}>
+          Inspect GRIP or GSE exports, convert GSE3 macros to native GRIP-EMS format, or build sequences from scratch in the browser.
         </p>
         <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
           Tools built by{' '}
@@ -44,7 +44,7 @@ export default function WorkshopPage() {
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
         <ToolCard
           href="/workshop/decode"
           eyebrow="Inspect"
@@ -60,6 +60,14 @@ export default function WorkshopPage() {
           description="Paste a GSE3 export and get a native !GRIP1! string with proper loop architecture and keypress handling."
           icon={<ArrowRightLeft size={20} />}
           cta="Open converter"
+        />
+        <ToolCard
+          href="/workshop/build"
+          eyebrow="Create"
+          title="Build Sequence"
+          description="Build collections with multiple sequences, versions, loops, If branches, and reset conditions. Import any export to edit."
+          icon={<Wrench size={20} />}
+          cta="Open builder"
           accent
         />
       </div>
@@ -86,23 +94,18 @@ function ToolCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '24px',
+        display: 'flex', flexDirection: 'column', padding: '24px',
         background: hovered ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
         border: `0.5px solid ${hovered ? 'var(--border-strong)' : 'var(--border)'}`,
-        borderRadius: 'var(--radius-lg)',
-        textDecoration: 'none',
-        transition: 'background 0.15s, border-color 0.15s',
-        gap: 12,
+        borderRadius: 'var(--radius-lg)', textDecoration: 'none',
+        transition: 'background 0.15s, border-color 0.15s', gap: 12,
       }}
     >
       <div style={{
         width: 40, height: 40, borderRadius: 'var(--radius-md)',
         background: accent ? 'var(--accent)' : 'var(--bg-tertiary)',
         color: accent ? 'white' : 'var(--accent)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
       }}>
         {icon}
       </div>
