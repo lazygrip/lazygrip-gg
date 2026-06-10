@@ -255,7 +255,7 @@ function readExportProfile(
 }
 
 function readProfileFromTalentString(talentString: string | null | undefined): { class: string; classId: number | null; spec: string; specId: number | null } {
-  const header = parseTalentImportHeader(talentString)
+  const header = parseTalentImportHeader(talentString ?? null)
   if (!header?.specId) return { class: '', classId: null, spec: '', specId: null }
   const specInfo = SPEC_BY_ID[header.specId]
   if (!specInfo) return { class: '', classId: null, spec: '', specId: header.specId }
