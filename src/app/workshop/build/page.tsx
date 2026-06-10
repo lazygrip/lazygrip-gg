@@ -1,9 +1,11 @@
 'use client'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Copy, Check, Plus, Trash2, ChevronUp, ChevronDown } from 'lucide-react'
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 type StepFunction = 'Sequential' | 'Priority' | 'ReversePriority' | 'Random'
 
@@ -57,12 +59,63 @@ interface BuilderModel {
   sequences: BuilderSequence[]
 }
 
+interface Suggestion {
+  kind: 'command' | 'spell' | 'conditional' | 'hint'
+  label: string
+  detail?: string
+  insert: string
+  replaceStart?: number
+  replaceEnd?: number
+  keepOpen?: boolean
+}
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
 const STEP_FUNCTIONS: StepFunction[] = ['Sequential', 'Priority', 'ReversePriority', 'Random']
 const CLASS_OPTIONS = [
   [0, 'Any / unknown'], [1, 'Warrior'], [2, 'Paladin'], [3, 'Hunter'], [4, 'Rogue'],
   [5, 'Priest'], [6, 'Death Knight'], [7, 'Shaman'], [8, 'Mage'], [9, 'Warlock'],
   [10, 'Monk'], [11, 'Druid'], [12, 'Demon Hunter'], [13, 'Evoker'],
 ] as [number, string][]
+
+const MACRO_COMMANDS = [
+  { key: '/cast', label: 'Cast spell or ability', detail: 'Most common macro command' },
+  { key: '/castsequence', label: 'Cast sequence', detail: 'Rotate through listed spells' },
+  { key: '/use', label: 'Use item or slot', detail: 'Items, trinkets, or slots 0-19' },
+  { key: '/targetenemy', label: 'Target nearest enemy', detail: 'Use with [noharm][dead]' },
+  { key: '/petattack', label: 'Send pet to attack', detail: 'Pet command' },
+  { key: '/stopcasting', label: 'Stop current cast', detail: 'Interrupt self' },
+  { key: '/cancelaura', label: 'Cancel aura/buff', detail: '/cancelaura BuffName' },
+  { key: '/startattack', label: 'Start auto attack', detail: 'Begins auto-attack' },
+]
+
+const CONDITIONALS = [
+  { key: 'mod:shift', label: 'Shift held' },
+  { key: 'mod:alt', label: 'Alt held' },
+  { key: 'mod:ctrl', label: 'Ctrl held' },
+  { key: 'nomod', label: 'No modifier' },
+  { key: 'combat', label: 'In combat' },
+  { key: 'nocombat', label: 'Out of combat' },
+  { key: 'exists', label: 'Target exists' },
+  { key: 'harm', label: 'Hostile target' },
+  { key: 'noharm', label: 'Not hostile' },
+  { key: 'help', label: 'Friendly target' },
+  { key: 'dead', label: 'Target dead' },
+  { key: 'nodead', label: 'Target alive' },
+  { key: '@mouseover', label: 'Mouseover unit' },
+  { key: '@focus', label: 'Focus target' },
+  { key: '@player', label: 'Yourself' },
+  { key: '@pet', label: 'Your pet' },
+  { key: 'nopet', label: 'No pet active' },
+  { key: 'mounted', label: 'Mounted' },
+  { key: 'flying', label: 'Flying' },
+  { key: 'channeling', label: 'Channeling' },
+  { key: 'spec:1', label: 'Primary spec' },
+  { key: 'spec:2', label: 'Secondary spec' },
+  { key: 'stealth', label: 'In stealth' },
+  { key: 'form:1', label: 'Shapeshift form 1' },
+  { key: 'group', label: 'In group' },
+]
 
 let _nodeId = 1
 let _seqId = 1
@@ -88,6 +141,302 @@ function defaultSequence(): BuilderSequence {
 function defaultModel(): BuilderModel {
   return { exportMeta: { collectionName: '', author: '', description: '' }, variables: [], standaloneMacros: [], sequences: [defaultSequence()] }
 }
+
+// ─── Autocomplete logic ───────────────────────────────────────────────────────
+
+function getLineStart(text: string, cursorPos: number): number {
+  return text.slice(0, cursorPos).lastIndexOf('\n') + 1
+}
+
+function getLineCommand(line: string): string | null {
+  const firstSegment = line.split(';')[0] || ''
+  const match = firstSegment.trim().match(/^(\/(?:castsequence|cast|use))\b/i)
+  return match ? match[1].toLowerCase() : null
+}
+
+function stripConditionals(text: string): string {
+  return text.replace(/^(\s*\[[^\]]*\]\s*)+/, '').trim()
+}
+
+function getContext(text: string, cursorPos: number) {
+  const before = text.slice(0, cursorPos)
+  const lineStart = getLineStart(text, cursorPos)
+  const line = before.slice(lineStart)
+  const semiIdx = line.lastIndexOf(';')
+  const segmentLocalStart = semiIdx >= 0 ? semiIdx + 1 : 0
+  const segmentStart = lineStart + segmentLocalStart
+  const segment = before.slice(segmentStart)
+  const leading = segment.match(/^\s*/)?.[0] || ''
+  const trimmed = segment.slice(leading.length)
+  const cmdMatch = trimmed.match(/^(\/(?:castsequence|cast|use))\b/i)
+  const command = cmdMatch ? cmdMatch[1].toLowerCase() : (segmentLocalStart > 0 ? getLineCommand(line) : null)
+  const afterCommand = cmdMatch ? trimmed.slice(cmdMatch[0].length) : (command ? trimmed : trimmed)
+
+  return { lineStart, segmentStart, segment, trimmed, command, afterCommand, cursorPos, continued: segmentLocalStart > 0 }
+}
+
+function isCastCommand(cmd: string | null): boolean {
+  return ['/cast', '/castsequence', '/use'].includes(String(cmd || '').toLowerCase())
+}
+
+interface AutocompleteQuery {
+  mode: 'command' | 'spell' | 'conditional' | 'conditional-inner'
+  query: string
+  replaceStart: number
+  replaceEnd: number
+  classId?: number
+}
+
+function getAutocompleteQuery(text: string, cursorPos: number): AutocompleteQuery | null {
+  const before = text.slice(0, cursorPos)
+  const lineStart = getLineStart(text, cursorPos)
+  const line = before.slice(lineStart)
+  const segmentLocalStart = Math.max(0, line.lastIndexOf(';') + 1)
+  const segment = line.slice(segmentLocalStart)
+  const leading = segment.match(/^\s*/)?.[0] || ''
+  const cmdPart = segment.slice(leading.length)
+  const replaceBase = lineStart + segmentLocalStart + leading.length
+
+  // Command suggestion: starts with /
+  if (cmdPart.startsWith('/') && !/[\s[\];]/.test(cmdPart.slice(1))) {
+    return { mode: 'command', query: cmdPart, replaceStart: replaceBase, replaceEnd: cursorPos }
+  }
+
+  const ctx = getContext(text, cursorPos)
+
+  // Inside a [ ] conditional bracket
+  const bracketMatch = before.match(/\[([^\]]*)$/)
+  if (bracketMatch) {
+    const inner = bracketMatch[1]
+    const bracketStart = before.lastIndexOf('[')
+    const lastComma = inner.lastIndexOf(',')
+    const tokenStart = bracketStart + 1 + (lastComma >= 0 ? lastComma + 1 : 0)
+    const token = before.slice(tokenStart).trimStart()
+    return { mode: 'conditional-inner', query: token, replaceStart: tokenStart, replaceEnd: cursorPos }
+  }
+
+  if (!ctx.command || !isCastCommand(ctx.command)) return null
+
+  // After command and conditionals, ready for spell name
+  const spellPart = stripConditionals(ctx.afterCommand)
+  if (spellPart.length >= 1) {
+    const afterCond = ctx.afterCommand.replace(/^(\s*\[[^\]]*\]\s*)+/, '')
+    const spellStart = cursorPos - spellPart.length
+    return { mode: 'spell', query: spellPart, replaceStart: spellStart, replaceEnd: cursorPos }
+  }
+
+  // Just typed the command, offer [ to start conditional or show spell prompt
+  if (/^\s*$/.test(ctx.afterCommand)) {
+    return { mode: 'conditional', query: '', replaceStart: cursorPos, replaceEnd: cursorPos }
+  }
+
+  return null
+}
+
+// ─── Autocomplete Hook ────────────────────────────────────────────────────────
+
+function useMacroAutocomplete(classId: number) {
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [activeIndex, setActiveIndex] = useState(0)
+  const [query, setQuery] = useState<AutocompleteQuery | null>(null)
+  const fetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const classIdRef = useRef(classId)
+  useEffect(() => { classIdRef.current = classId }, [classId])
+
+  const close = useCallback(() => {
+    setSuggestions([])
+    setActiveIndex(0)
+    setQuery(null)
+  }, [])
+
+  const fetchSuggestions = useCallback(async (q: AutocompleteQuery) => {
+    if (q.mode === 'command') {
+      const lower = q.query.toLowerCase()
+      const results = MACRO_COMMANDS
+        .filter(c => c.key.startsWith(lower))
+        .map(c => ({ kind: 'command' as const, label: c.key, detail: c.label, insert: c.key + ' ', replaceStart: q.replaceStart, replaceEnd: q.replaceEnd }))
+      setSuggestions(results)
+      setActiveIndex(0)
+      return
+    }
+
+    if (q.mode === 'conditional' || q.mode === 'conditional-inner') {
+      const lower = q.query.toLowerCase()
+      const results = CONDITIONALS
+        .filter(c => !lower || c.key.toLowerCase().startsWith(lower) || c.label.toLowerCase().includes(lower))
+        .slice(0, 12)
+        .map(c => ({
+          kind: 'conditional' as const,
+          label: q.mode === 'conditional-inner' ? c.key : `[${c.key}]`,
+          detail: c.label,
+          insert: q.mode === 'conditional-inner' ? c.key : `[${c.key}] `,
+          replaceStart: q.replaceStart,
+          replaceEnd: q.replaceEnd,
+        }))
+      setSuggestions(results)
+      setActiveIndex(0)
+      return
+    }
+
+    if (q.mode === 'spell' && q.query.length >= 2) {
+      try {
+        const params = new URLSearchParams({ q: q.query, classId: String(classIdRef.current), limit: '12' })
+        const res = await fetch(`/api/workshop/spells?${params}`)
+        const data = await res.json()
+        const results = (data.results || []).map((spell: { id: number; name: string }) => ({
+          kind: 'spell' as const,
+          label: spell.name,
+          detail: `ID: ${spell.id}`,
+          insert: spell.name,
+          replaceStart: q.replaceStart,
+          replaceEnd: q.replaceEnd,
+        }))
+        setSuggestions(results)
+        setActiveIndex(0)
+      } catch { setSuggestions([]) }
+      return
+    }
+
+    setSuggestions([])
+  }, [])
+
+  const onTextareaChange = useCallback((text: string, cursorPos: number) => {
+    if (fetchTimer.current) clearTimeout(fetchTimer.current)
+    const q = getAutocompleteQuery(text, cursorPos)
+    if (!q) { close(); return }
+    setQuery(q)
+    const delay = q.mode === 'spell' ? 200 : 0
+    fetchTimer.current = setTimeout(() => fetchSuggestions(q), delay)
+  }, [close, fetchSuggestions])
+
+  const applySuggestion = useCallback((suggestion: Suggestion, textarea: HTMLTextAreaElement) => {
+    const q = query
+    if (!q) return
+    const start = suggestion.replaceStart ?? q.replaceStart
+    const end = suggestion.replaceEnd ?? q.replaceEnd
+    const value = textarea.value
+    const newValue = value.slice(0, start) + suggestion.insert + value.slice(end)
+    const newCursor = start + suggestion.insert.length
+    textarea.value = newValue
+    textarea.setSelectionRange(newCursor, newCursor)
+    textarea.dispatchEvent(new Event('input', { bubbles: true }))
+    if (!suggestion.keepOpen) close()
+    else {
+      const updatedQ = getAutocompleteQuery(newValue, newCursor)
+      if (updatedQ) { setQuery(updatedQ); fetchSuggestions(updatedQ) }
+      else close()
+    }
+  }, [query, close, fetchSuggestions])
+
+  return { suggestions, activeIndex, setActiveIndex, close, onTextareaChange, applySuggestion }
+}
+
+// ─── Autocomplete Dropdown ────────────────────────────────────────────────────
+
+function AutocompleteDropdown({ suggestions, activeIndex, onSelect, onSetActive }: {
+  suggestions: Suggestion[]
+  activeIndex: number
+  onSelect: (s: Suggestion) => void
+  onSetActive: (i: number) => void
+}) {
+  if (!suggestions.length) return null
+  const colors: Record<string, string> = { command: '#2980b9', spell: 'var(--accent)', conditional: '#7c5cbf', hint: 'var(--text-muted)' }
+  return (
+    <div style={{
+      position: 'absolute', zIndex: 1000, minWidth: 280, maxWidth: 380,
+      background: 'var(--bg-secondary)', border: '0.5px solid var(--border-strong)',
+      borderRadius: 'var(--radius-md)', boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+      overflow: 'hidden', top: '100%', left: 0, marginTop: 2,
+    }}>
+      {suggestions.map((s, i) => (
+        <div
+          key={i}
+          onMouseDown={e => { e.preventDefault(); onSelect(s) }}
+          onMouseEnter={() => onSetActive(i)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
+            background: i === activeIndex ? 'var(--bg-tertiary)' : 'transparent',
+            cursor: 'pointer', borderBottom: i < suggestions.length - 1 ? '0.5px solid var(--border)' : undefined,
+          }}
+        >
+          <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 'var(--radius-sm)', background: colors[s.kind] || 'var(--text-muted)', color: 'white', flexShrink: 0, textTransform: 'uppercase' }}>{s.kind}</span>
+          <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', flex: 1 }}>{s.label}</span>
+          {s.detail && <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>{s.detail}</span>}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Macro Textarea with Autocomplete ────────────────────────────────────────
+
+function MacroTextarea({ value, onChange, placeholder, rows, classId, style }: {
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+  rows?: number
+  classId: number
+  style?: React.CSSProperties
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const { suggestions, activeIndex, setActiveIndex, close, onTextareaChange, applySuggestion } = useMacroAutocomplete(classId)
+
+  function handleInput(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    onChange(e.target.value)
+    const ta = e.target
+    onTextareaChange(ta.value, ta.selectionStart)
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (!suggestions.length) return
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex(i => Math.min(i + 1, suggestions.length - 1)) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIndex(i => Math.max(i - 1, 0)) }
+    else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault()
+      if (suggestions[activeIndex] && textareaRef.current) {
+        applySuggestion(suggestions[activeIndex], textareaRef.current)
+        onChange(textareaRef.current.value)
+      }
+    }
+    else if (e.key === 'Escape') close()
+  }
+
+  function handleClick(e: React.MouseEvent<HTMLTextAreaElement>) {
+    const ta = e.target as HTMLTextAreaElement
+    onTextareaChange(ta.value, ta.selectionStart)
+  }
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative' }}>
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={handleInput}
+        onKeyDown={handleKeyDown}
+        onClick={handleClick}
+        onBlur={() => setTimeout(close, 150)}
+        placeholder={placeholder}
+        rows={rows || 3}
+        spellCheck={false}
+        style={style}
+      />
+      <AutocompleteDropdown
+        suggestions={suggestions}
+        activeIndex={activeIndex}
+        onSelect={s => {
+          if (textareaRef.current) {
+            applySuggestion(s, textareaRef.current)
+            onChange(textareaRef.current.value)
+          }
+        }}
+        onSetActive={setActiveIndex}
+      />
+    </div>
+  )
+}
+
+// ─── Styles ──────────────────────────────────────────────────────────────────
 
 const S = {
   badge: (color: string): React.CSSProperties => ({
@@ -132,9 +481,11 @@ const S = {
   }),
 }
 
-function ActionBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown }: {
+// ─── Block Components ─────────────────────────────────────────────────────────
+
+function ActionBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, classId }: {
   action: BuilderAction; onUpdate: (u: BuilderAction) => void
-  onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void
+  onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void; classId: number
 }) {
   const charCount = (action.macro || '').length
   return (
@@ -157,7 +508,14 @@ function ActionBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown }: {
         </div>
       </div>
       <div style={{ padding: '8px 10px' }}>
-        <textarea value={action.macro || ''} onChange={e => onUpdate({ ...action, macro: e.target.value })} placeholder="/cast Spell Name" spellCheck={false} style={{ ...S.textarea(), minHeight: 56 }} />
+        <MacroTextarea
+          value={action.macro || ''}
+          onChange={v => onUpdate({ ...action, macro: v })}
+          placeholder="/cast Spell Name"
+          rows={3}
+          classId={classId}
+          style={{ ...S.textarea(), minHeight: 56 }}
+        />
         <div style={{ fontSize: 10, color: charCount > 255 ? '#c0392b' : charCount > 200 ? '#c8960c' : 'var(--text-muted)', textAlign: 'right', marginTop: 2 }}>
           {charCount} / 255 characters
         </div>
@@ -205,9 +563,9 @@ function EmbedBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown }: {
   )
 }
 
-function LoopBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, depth }: {
+function LoopBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, depth, classId }: {
   action: BuilderAction; onUpdate: (u: BuilderAction) => void
-  onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void; depth: number
+  onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void; depth: number; classId: number
 }) {
   function updateChild(index: number, updated: BuilderAction) {
     const children = [...(action.children || [])]; children[index] = updated; onUpdate({ ...action, children })
@@ -243,16 +601,16 @@ function LoopBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, depth }: 
         </div>
       </div>
       <div style={{ padding: '8px 10px' }}>
-        <BlockList actions={action.children || []} onUpdate={updateChild} onDelete={deleteChild} onMove={moveChild} depth={depth + 1} />
+        <BlockList actions={action.children || []} onUpdate={updateChild} onDelete={deleteChild} onMove={moveChild} depth={depth + 1} classId={classId} />
         <AddBlockBar onAdd={addChild} />
       </div>
     </div>
   )
 }
 
-function IfBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, depth }: {
+function IfBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, depth, classId }: {
   action: BuilderAction; onUpdate: (u: BuilderAction) => void
-  onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void; depth: number
+  onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void; depth: number; classId: number
 }) {
   function updateBranch(branch: 'then' | 'else', index: number, updated: BuilderAction) {
     const arr = [...(action[branch] || [])]; arr[index] = updated; onUpdate({ ...action, [branch]: arr })
@@ -281,7 +639,7 @@ function IfBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, depth }: {
         {(['then', 'else'] as const).map(branch => (
           <div key={branch}>
             <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{branch}</div>
-            <BlockList actions={action[branch] || []} onUpdate={(i, u) => updateBranch(branch, i, u)} onDelete={i => deleteBranch(branch, i)} onMove={(i, d) => moveBranch(branch, i, d)} depth={depth + 1} />
+            <BlockList actions={action[branch] || []} onUpdate={(i, u) => updateBranch(branch, i, u)} onDelete={i => deleteBranch(branch, i)} onMove={(i, d) => moveBranch(branch, i, d)} depth={depth + 1} classId={classId} />
             <button onClick={() => onUpdate({ ...action, [branch]: [...(action[branch] || []), { id: nid(), type: 'action' as const, macro: '' }] })} style={{ ...S.btn(), fontSize: 11, marginTop: 4 }}>
               <Plus size={10} style={{ marginRight: 3 }} /> Step
             </button>
@@ -292,15 +650,15 @@ function IfBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, depth }: {
   )
 }
 
-function BlockList({ actions, onUpdate, onDelete, onMove, depth = 0 }: {
+function BlockList({ actions, onUpdate, onDelete, onMove, depth = 0, classId }: {
   actions: BuilderAction[]; onUpdate: (i: number, u: BuilderAction) => void
-  onDelete: (i: number) => void; onMove: (i: number, dir: -1 | 1) => void; depth?: number
+  onDelete: (i: number) => void; onMove: (i: number, dir: -1 | 1) => void; depth?: number; classId: number
 }) {
   if (!actions.length) return <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '8px 0', fontStyle: 'italic' }}>No blocks yet. Add blocks above or drop here.</div>
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       {actions.map((action, i) => {
-        const props = { key: action.id, action, onUpdate: (u: BuilderAction) => onUpdate(i, u), onDelete: () => onDelete(i), onMoveUp: () => onMove(i, -1), onMoveDown: () => onMove(i, 1), depth }
+        const props = { key: action.id, action, onUpdate: (u: BuilderAction) => onUpdate(i, u), onDelete: () => onDelete(i), onMoveUp: () => onMove(i, -1), onMoveDown: () => onMove(i, 1), depth, classId }
         if (action.type === 'action') return <ActionBlock {...props} />
         if (action.type === 'loop') return <LoopBlock {...props} />
         if (action.type === 'pause') return <PauseBlock {...props} />
@@ -322,7 +680,7 @@ function AddBlockBar({ onAdd }: { onAdd: (type: BuilderAction['type']) => void }
   )
 }
 
-function VersionPanel({ version, onUpdate }: { version: BuilderVersion; onUpdate: (v: BuilderVersion) => void }) {
+function VersionPanel({ version, onUpdate, classId }: { version: BuilderVersion; onUpdate: (v: BuilderVersion) => void; classId: number }) {
   function updateActions(actions: BuilderAction[]) { onUpdate({ ...version, actions }) }
   function updateAction(index: number, updated: BuilderAction) { const a = [...version.actions]; a[index] = updated; updateActions(a) }
   function deleteAction(index: number) { updateActions(version.actions.filter((_, i) => i !== index)) }
@@ -362,22 +720,24 @@ function VersionPanel({ version, onUpdate }: { version: BuilderVersion; onUpdate
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <div>
           <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Key Press</label>
-          <textarea value={version.keyPress} onChange={e => onUpdate({ ...version, keyPress: e.target.value })} rows={3} spellCheck={false} style={S.textarea()} />
+          <MacroTextarea value={version.keyPress} onChange={v => onUpdate({ ...version, keyPress: v })} rows={3} classId={classId} style={S.textarea()} />
         </div>
         <div>
           <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Key Release</label>
-          <textarea value={version.keyRelease} onChange={e => onUpdate({ ...version, keyRelease: e.target.value })} placeholder="Optional" rows={3} spellCheck={false} style={S.textarea()} />
+          <MacroTextarea value={version.keyRelease} onChange={v => onUpdate({ ...version, keyRelease: v })} placeholder="Optional" rows={3} classId={classId} style={S.textarea()} />
         </div>
       </div>
       <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: 12 }}>
         <AddBlockBar onAdd={addAction} />
         <div style={{ marginTop: 8 }}>
-          <BlockList actions={version.actions} onUpdate={updateAction} onDelete={deleteAction} onMove={moveAction} />
+          <BlockList actions={version.actions} onUpdate={updateAction} onDelete={deleteAction} onMove={moveAction} classId={classId} />
         </div>
       </div>
     </div>
   )
 }
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function WorkshopBuildPage() {
   const [loading, setLoading] = useState(true)
@@ -402,7 +762,7 @@ export default function WorkshopBuildPage() {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) router.push('/auth/login?next=/workshop/build')
-else if (data.user.id !== 'c2374192-e541-4636-9baf-84fc192cff52') router.push('/workshop')
+      else if (data.user.id !== 'c2374192-e541-4636-9baf-84fc192cff52') router.push('/workshop')
       else {
         setLoading(false)
         const m = defaultModel()
@@ -592,7 +952,7 @@ else if (data.user.id !== 'c2374192-e541-4636-9baf-84fc192cff52') router.push('/
 
         {activeVer && (
           <div style={{ border: '0.5px solid var(--accent)', borderRadius: '0 var(--radius-md) var(--radius-md) var(--radius-md)', padding: '14px' }}>
-            <VersionPanel version={activeVer} onUpdate={updateVer} />
+            <VersionPanel version={activeVer} onUpdate={updateVer} classId={activeSeq.classId} />
           </div>
         )}
       </div>
