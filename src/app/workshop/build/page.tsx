@@ -419,7 +419,7 @@ const S = {
 
 function BlockControls({ onMoveUp, onMoveDown, onClone, onDelete, dragHandleProps }: {
   onMoveUp: () => void; onMoveDown: () => void; onClone: () => void; onDelete: () => void
-  dragHandleProps?: Record<string, unknown>
+  dragHandleProps?: Record<string, unknown> | null
 }) {
   return (
     <div style={{ display: 'flex', gap: 2, marginLeft: 'auto', alignItems: 'center' }}>
@@ -596,11 +596,11 @@ function BlockList({ actions, onUpdate, onDelete, onMove, onClone, depth = 0, cl
                     {...dragProvided.draggableProps}
                     style={{ ...dragProvided.draggableProps.style, opacity: dragSnapshot.isDragging ? 0.85 : 1 }}
                   >
-                    {action.type === 'action' && <ActionBlock {...props} dragHandleProps={dragProvided.dragHandleProps as Record<string, unknown>} />}
-                    {action.type === 'loop' && <LoopBlock {...props} droppableId={`loop:${action.id}`} dragHandleProps={dragProvided.dragHandleProps as Record<string, unknown>} />}
-                    {action.type === 'pause' && <PauseBlock {...props} dragHandleProps={dragProvided.dragHandleProps as Record<string, unknown>} />}
-                    {action.type === 'if' && <IfBlock {...props} droppableThenId={`if-then:${action.id}`} droppableElseId={`if-else:${action.id}`} dragHandleProps={dragProvided.dragHandleProps as Record<string, unknown>} />}
-                    {action.type === 'embed' && <EmbedBlock {...props} dragHandleProps={dragProvided.dragHandleProps as Record<string, unknown>} />}
+                    {action.type === 'action' && <ActionBlock {...props} dragHandleProps={dragProvided.dragHandleProps as unknown as Record<string, unknown>} />}
+                    {action.type === 'loop' && <LoopBlock {...props} droppableId={`loop:${action.id}`} dragHandleProps={dragProvided.dragHandleProps as unknown as Record<string, unknown>} />}
+                    {action.type === 'pause' && <PauseBlock {...props} dragHandleProps={dragProvided.dragHandleProps as unknown as Record<string, unknown>} />}
+                    {action.type === 'if' && <IfBlock {...props} droppableThenId={`if-then:${action.id}`} droppableElseId={`if-else:${action.id}`} dragHandleProps={dragProvided.dragHandleProps as unknown as Record<string, unknown>} />}
+                    {action.type === 'embed' && <EmbedBlock {...props} dragHandleProps={dragProvided.dragHandleProps as unknown as Record<string, unknown>} />}
                   </div>
                 )}
               </Draggable>
@@ -766,44 +766,45 @@ function VersionPanel({ version, onUpdate, classId }: { version: BuilderVersion;
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-        <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-          Step Function
-          <select value={version.stepFunction} onChange={e => onUpdate({ ...version, stepFunction: e.target.value as StepFunction })} style={S.select()}>
-            {STEP_FUNCTIONS.map(sf => <option key={sf} value={sf}>{sf}</option>)}
-          </select>
-        </label>
-        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginRight: 4 }}>RESET ON:</span>
-          {([['resetOnCombat', 'Combat'], ['resetOnTarget', 'Target'], ['resetOnGear', 'Gear'], ['resetOnSpec', 'Spec']] as const).map(([field, label]) => (
-            <label key={field} style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', marginRight: 8 }}>
-              <input type="checkbox" checked={Boolean(version[field])} onChange={e => onUpdate({ ...version, [field]: e.target.checked })} />{label}
-            </label>
-          ))}
-          <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-            Idle <input type="number" min={0} value={version.resetTimer} onChange={e => onUpdate({ ...version, resetTimer: Math.max(0, Number(e.target.value)) })} style={{ ...S.input(), width: 52 }} /> sec
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+          <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            Step Function
+            <select value={version.stepFunction} onChange={e => onUpdate({ ...version, stepFunction: e.target.value as StepFunction })} style={S.select()}>
+              {STEP_FUNCTIONS.map(sf => <option key={sf} value={sf}>{sf}</option>)}
+            </select>
           </label>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginRight: 4 }}>RESET ON:</span>
+            {([['resetOnCombat', 'Combat'], ['resetOnTarget', 'Target'], ['resetOnGear', 'Gear'], ['resetOnSpec', 'Spec']] as const).map(([field, label]) => (
+              <label key={field} style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', marginRight: 8 }}>
+                <input type="checkbox" checked={Boolean(version[field])} onChange={e => onUpdate({ ...version, [field]: e.target.checked })} />{label}
+              </label>
+            ))}
+            <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+              Idle <input type="number" min={0} value={version.resetTimer} onChange={e => onUpdate({ ...version, resetTimer: Math.max(0, Number(e.target.value)) })} style={{ ...S.input(), width: 52 }} /> sec
+            </label>
+          </div>
         </div>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <div>
-          <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Key Press</label>
-          <MacroTextarea value={version.keyPress} onChange={v => onUpdate({ ...version, keyPress: v })} rows={3} classId={classId} style={S.textarea()} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Key Press</label>
+            <MacroTextarea value={version.keyPress} onChange={v => onUpdate({ ...version, keyPress: v })} rows={3} classId={classId} style={S.textarea()} />
+          </div>
+          <div>
+            <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Key Release</label>
+            <MacroTextarea value={version.keyRelease} onChange={v => onUpdate({ ...version, keyRelease: v })} placeholder="Optional" rows={3} classId={classId} style={S.textarea()} />
+          </div>
         </div>
-        <div>
-          <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Key Release</label>
-          <MacroTextarea value={version.keyRelease} onChange={v => onUpdate({ ...version, keyRelease: v })} placeholder="Optional" rows={3} classId={classId} style={S.textarea()} />
+        <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <AddBlockBar onAdd={addAction} />
+            <button onClick={() => onUpdate({ ...version, actions: [] })} style={{ ...S.btn(), fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }} title="Reset all blocks">
+              <RotateCcw size={11} /> Reset all
+            </button>
+          </div>
+          <BlockList actions={version.actions} onUpdate={updateAction} onDelete={deleteAction} onMove={moveAction} onClone={cloneAction} classId={classId} keyPressLen={keyPressLen} droppableId="root" />
         </div>
-      </div>
-      <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <AddBlockBar onAdd={addAction} />
-          <button onClick={() => onUpdate({ ...version, actions: [] })} style={{ ...S.btn(), fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }} title="Reset all blocks">
-            <RotateCcw size={11} /> Reset all
-          </button>
-        </div>
-        <BlockList actions={version.actions} onUpdate={updateAction} onDelete={deleteAction} onMove={moveAction} onClone={cloneAction} classId={classId} keyPressLen={keyPressLen} droppableId="root" />
       </div>
     </DragDropContext>
   )
