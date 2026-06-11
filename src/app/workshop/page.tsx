@@ -68,7 +68,6 @@ export default function WorkshopPage() {
           description="Build collections with multiple sequences, versions, loops, If branches, and reset conditions. Import any export to edit."
           icon={<Wrench size={20} />}
           cta="Open builder"
-          accent
         />
       </div>
     </div>
@@ -103,8 +102,8 @@ function ToolCard({
     >
       <div style={{
         width: 40, height: 40, borderRadius: 'var(--radius-md)',
-        background: accent ? 'var(--accent)' : 'var(--bg-tertiary)',
-        color: accent ? 'white' : 'var(--accent)',
+        background: 'var(--bg-tertiary)',
+		color: 'var(--accent)',
         display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
       }}>
         {icon}
