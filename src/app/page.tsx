@@ -156,7 +156,7 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-            <Link href="/workshop/build" style={{
+            <Link href="/workshop" style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
@@ -170,7 +170,7 @@ export default function HomePage() {
               flexShrink: 0,
               whiteSpace: 'nowrap' as const,
             }}>
-              Open builder <ArrowRight size={13} />
+              Open Workshop <ArrowRight size={13} />
             </Link>
           </div>
         </div>
