@@ -272,15 +272,10 @@ function getAutocompleteQuery(text: string, cursorPos: number): AutocompleteQuer
   }
 
   // Inside an open bracket — conditional inner suggestion
-  // But if the bracket was just opened (cursor right after [), show full conditional suggestions
   const bracketMatch = before.match(/\[([^\]]*)$/)
   if (bracketMatch) {
     const inner = bracketMatch[1]
     const bracketStart = before.lastIndexOf('[')
-    // If nothing typed after [ yet, offer full [key] suggestions from conditional mode
-    if (inner.trim() === '') {
-      return { mode: 'conditional', query: '', replaceStart: bracketStart, replaceEnd: cursorPos }
-    }
     const lastComma = inner.lastIndexOf(',')
     const tokenStart = bracketStart + 1 + (lastComma >= 0 ? lastComma + 1 : 0)
     const token = before.slice(tokenStart).trimStart()
@@ -506,8 +501,8 @@ function ActionBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone
           Every
         </label>
         {action.interval !== undefined && <>
-          <input type="number" min={2} max={50} value={action.interval} onChange={e => onUpdate({ ...action, interval: Math.min(50, Math.max(2, Number(e.target.value))) })} style={{ ...S.input(), width: 48, marginLeft: 2 }} />
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 2 }}>steps</span>
+          <input type="number" min={2} max={50} value={action.interval} onChange={e => onUpdate({ ...action, interval: Math.min(50, Math.max(2, Number(e.target.value))) })} style={{ ...S.input(), width: 42 }} />
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>steps</span>
         </>}
         <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
       </div>
@@ -576,8 +571,8 @@ function LoopBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, 
         <select value={action.stepFunction || 'Sequential'} onChange={e => onUpdate({ ...action, stepFunction: e.target.value as StepFunction })} style={{ ...S.select(), fontSize: 11 }}>
           {STEP_FUNCTIONS.map(sf => <option key={sf} value={sf}>{sf}</option>)}
         </select>
-        <input type="number" min={1} max={50} value={action.repeat ?? 1} onChange={e => onUpdate({ ...action, repeat: Math.min(50, Math.max(1, Number(e.target.value))) })} style={{ ...S.input(), width: 48, marginLeft: 2 }} />
-        <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 2 }}>times</span>
+        <input type="number" min={1} max={50} value={action.repeat ?? 1} onChange={e => onUpdate({ ...action, repeat: Math.min(50, Math.max(1, Number(e.target.value))) })} style={{ ...S.input(), width: 42 }} />
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>times</span>
         <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
       </div>
       <div style={{ padding: '8px 10px' }}>
@@ -659,6 +654,33 @@ function BlockList({ actions, onUpdate, onDelete, onMove, onClone, depth = 0, cl
       )}
     </Droppable>
   )
+}
+
+function collectActionMacros(actions: BuilderAction[]): string[] {
+  const macros: string[] = []
+  for (const a of actions) {
+    if (a.type === 'action' && (a.macro || '').trim()) macros.push(a.macro!)
+    if (a.type === 'loop' && a.children) macros.push(...collectActionMacros(a.children))
+    if (a.type === 'if') {
+      if (a.then) macros.push(...collectActionMacros(a.then))
+      if (a.else) macros.push(...collectActionMacros(a.else))
+    }
+  }
+  return macros
+}
+
+function applyConvertedMacros(actions: BuilderAction[], texts: string[], idx: { v: number }): BuilderAction[] {
+  return actions.map(a => {
+    if (a.type === 'action' && (a.macro || '').trim()) return { ...a, macro: texts[idx.v++] }
+    if (a.type === 'loop' && a.children) return { ...a, children: applyConvertedMacros(a.children, texts, idx) }
+    if (a.type === 'if') {
+      const updated = { ...a }
+      if (a.then) updated.then = applyConvertedMacros(a.then, texts, idx)
+      if (a.else) updated.else = applyConvertedMacros(a.else, texts, idx)
+      return updated
+    }
+    return a
+  })
 }
 
 function AddBlockBar({ onAdd, useSpellIds, onToggleSpellIds }: {
@@ -857,14 +879,13 @@ function VersionPanel({ version, onUpdate, classId }: { version: BuilderVersion;
         <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <AddBlockBar onAdd={addAction} useSpellIds={Boolean((version as any).useSpellIds)} onToggleSpellIds={async (toIds) => {
-              const texts = version.actions.filter(a => a.type === 'action' && (a.macro || '').trim()).map(a => a.macro || '')
+              const texts = collectActionMacros(version.actions)
               if (!texts.length) { onUpdate({ ...version, useSpellIds: toIds } as any); return }
               try {
                 const res = await fetch('/api/workshop/convert-spell-texts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ direction: toIds ? 'toids' : 'tonames', texts }) })
                 const data = await res.json()
                 if (res.ok && data.texts) {
-                  let textIdx = 0
-                  const updatedActions = version.actions.map(a => a.type === 'action' && (a.macro || '').trim() ? { ...a, macro: data.texts[textIdx++] } : a)
+                  const updatedActions = applyConvertedMacros(version.actions, data.texts, { v: 0 })
                   onUpdate({ ...version, actions: updatedActions, useSpellIds: toIds } as any)
                 } else {
                   onUpdate({ ...version, useSpellIds: toIds } as any)
@@ -907,7 +928,8 @@ export default function WorkshopBuildPage() {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) router.push('/auth/login?next=/workshop/build')
-        else {
+      else if (!['c2374192-e541-4636-9baf-84fc192cff52', 'd5799a93-6755-4ec0-b49d-119dd2f2208f'].includes(data.user.id)) router.push('/workshop')
+      else {
         setLoading(false)
         const m = defaultModel()
         setModel(m)
