@@ -266,10 +266,12 @@ function getAutocompleteQuery(text: string, cursorPos: number): AutocompleteQuer
   const cmdPart = segment.slice(leading.length)
   const replaceBase = lineStart + segmentLocalStart + leading.length
 
+  // Command suggestion: starts with / and no spaces yet
   if (cmdPart.startsWith('/') && !/[\s[\];]/.test(cmdPart.slice(1))) {
     return { mode: 'command', query: cmdPart, replaceStart: replaceBase, replaceEnd: cursorPos }
   }
 
+  // Inside an open bracket — conditional inner suggestion
   const bracketMatch = before.match(/\[([^\]]*)$/)
   if (bracketMatch) {
     const inner = bracketMatch[1]
@@ -283,14 +285,30 @@ function getAutocompleteQuery(text: string, cursorPos: number): AutocompleteQuer
   const ctx = getContext(text, cursorPos)
   if (!ctx.command || !isCastCommand(ctx.command)) return null
 
-  const spellPart = stripConditionals(ctx.afterCommand)
-  if (spellPart.length >= 1) {
+  const afterCmd = ctx.afterCommand
+
+  // After command with only whitespace — offer conditional or spell
+  if (/^\s*$/.test(afterCmd)) {
+    return { mode: 'conditional', query: '', replaceStart: cursorPos, replaceEnd: cursorPos }
+  }
+
+  // After conditionals only (e.g. "[mod:shift] ") — offer spell name
+  const conditionalsOnly = /^(\s*\[[^\]]*\]\s*)+$/.test(afterCmd)
+  if (conditionalsOnly) {
+    return { mode: 'conditional', query: '', replaceStart: cursorPos, replaceEnd: cursorPos }
+  }
+
+  // Spell name being typed after conditionals
+  const spellPart = stripConditionals(afterCmd)
+  if (spellPart.length >= 2) {
     const spellStart = cursorPos - spellPart.length
     return { mode: 'spell', query: spellPart, replaceStart: spellStart, replaceEnd: cursorPos }
   }
 
-  if (/^\s*$/.test(ctx.afterCommand)) {
-    return { mode: 'conditional', query: '', replaceStart: cursorPos, replaceEnd: cursorPos }
+  // Single char of spell started — still offer spell suggestions
+  if (spellPart.length === 1) {
+    const spellStart = cursorPos - spellPart.length
+    return { mode: 'spell', query: spellPart, replaceStart: spellStart, replaceEnd: cursorPos }
   }
 
   return null
@@ -483,9 +501,13 @@ function ActionBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone
           Every
         </label>
         {action.interval !== undefined && <>
-          <input type="number" min={2} max={50} value={action.interval} onChange={e => onUpdate({ ...action, interval: Math.min(50, Math.max(2, Number(e.target.value))) })} style={{ ...S.input(), width: 48, marginLeft: 2 }} />
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 2 }}>steps</span>
+          <input type="number" min={2} max={50} value={action.interval} onChange={e => onUpdate({ ...action, interval: Math.min(50, Math.max(2, Number(e.target.value))) })} style={{ ...S.input(), width: 42 }} />
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>steps</span>
         </>}
+        <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, marginLeft: 4 }}>
+          <input type="checkbox" checked={Boolean(action.useSpellIds)} disabled={converting} onChange={e => toggleSpellIds(e.target.checked)} style={{ margin: 0 }} />
+          {converting ? 'Converting...' : 'Spell IDs'}
+        </label>
         <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
       </div>
       <div style={{ padding: '8px 10px' }}>
@@ -553,8 +575,8 @@ function LoopBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, 
         <select value={action.stepFunction || 'Sequential'} onChange={e => onUpdate({ ...action, stepFunction: e.target.value as StepFunction })} style={{ ...S.select(), fontSize: 11 }}>
           {STEP_FUNCTIONS.map(sf => <option key={sf} value={sf}>{sf}</option>)}
         </select>
-        <input type="number" min={1} max={50} value={action.repeat ?? 1} onChange={e => onUpdate({ ...action, repeat: Math.min(50, Math.max(1, Number(e.target.value))) })} style={{ ...S.input(), width: 48, marginLeft: 2 }} />
-        <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 2 }}>times</span>
+        <input type="number" min={1} max={50} value={action.repeat ?? 1} onChange={e => onUpdate({ ...action, repeat: Math.min(50, Math.max(1, Number(e.target.value))) })} style={{ ...S.input(), width: 42 }} />
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>times</span>
         <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
       </div>
       <div style={{ padding: '8px 10px' }}>
@@ -638,22 +660,12 @@ function BlockList({ actions, onUpdate, onDelete, onMove, onClone, depth = 0, cl
   )
 }
 
-function AddBlockBar({ onAdd, useSpellIds, onToggleSpellIds }: {
-  onAdd: (type: BuilderAction['type']) => void
-  useSpellIds?: boolean
-  onToggleSpellIds?: (v: boolean) => void
-}) {
+function AddBlockBar({ onAdd }: { onAdd: (type: BuilderAction['type']) => void }) {
   return (
-    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
       {([['action', '+ Step', BLOCK_COLORS.action.badge], ['loop', '+ Loop', BLOCK_COLORS.loop.badge], ['pause', '+ Pause', BLOCK_COLORS.pause.badge], ['if', '+ If', BLOCK_COLORS.if.badge], ['embed', '+ Embed', BLOCK_COLORS.embed.badge]] as const).map(([type, label, color]) => (
         <button key={type} onClick={() => onAdd(type)} style={{ padding: '5px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)', borderRadius: 'var(--radius-md)', border: 'none', background: color, color: 'white' }}>{label}</button>
       ))}
-      {onToggleSpellIds !== undefined && (
-        <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8, cursor: 'pointer' }}>
-          <input type="checkbox" checked={Boolean(useSpellIds)} onChange={e => onToggleSpellIds(e.target.checked)} style={{ margin: 0 }} />
-          Use Spell IDs
-        </label>
-      )}
     </div>
   )
 }
@@ -833,21 +845,7 @@ function VersionPanel({ version, onUpdate, classId }: { version: BuilderVersion;
         </div>
         <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <AddBlockBar onAdd={addAction} useSpellIds={Boolean((version as any).useSpellIds)} onToggleSpellIds={async (toIds) => {
-              const texts = version.actions.filter(a => a.type === 'action' && (a.macro || '').trim()).map(a => a.macro || '')
-              if (!texts.length) { onUpdate({ ...version, useSpellIds: toIds } as any); return }
-              try {
-                const res = await fetch('/api/workshop/convert-spell-texts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ direction: toIds ? 'toids' : 'tonames', texts }) })
-                const data = await res.json()
-                if (res.ok && data.texts) {
-                  let textIdx = 0
-                  const updatedActions = version.actions.map(a => a.type === 'action' && (a.macro || '').trim() ? { ...a, macro: data.texts[textIdx++] } : a)
-                  onUpdate({ ...version, actions: updatedActions, useSpellIds: toIds } as any)
-                } else {
-                  onUpdate({ ...version, useSpellIds: toIds } as any)
-                }
-              } catch { onUpdate({ ...version, useSpellIds: toIds } as any) }
-            }} />
+            <AddBlockBar onAdd={addAction} />
             <button onClick={() => onUpdate({ ...version, actions: [] })} style={{ ...S.btn(), fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }} title="Reset all blocks">
               <RotateCcw size={11} /> Reset all
             </button>
@@ -991,19 +989,6 @@ export default function WorkshopBuildPage() {
         <input readOnly value={exportCode} placeholder="Export updates automatically as you edit..." style={{ flex: 1, padding: '5px 8px', fontSize: 11, fontFamily: 'var(--font-mono)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }} />
         <button onClick={copyExport} disabled={!exportCode} style={{ ...S.btn(true), display: 'flex', alignItems: 'center', gap: 5, opacity: exportCode ? 1 : 0.4 }}>
           {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? 'Copied' : 'Copy'}
-        </button>
-        <button onClick={() => {
-          if (!window.confirm('Reset everything and start from scratch?')) return
-          _nodeId = 1; _seqId = 1; _verId = 1; _varId = 1; _macroId = 1
-          const m = defaultModel()
-          setModel(m)
-          setActiveSeqId(m.sequences[0].id)
-          setActiveVerId(m.sequences[0].versions[0].id)
-          setExportCode('')
-          setWarnings([])
-          lastPayload.current = ''
-        }} style={{ ...S.btn(), display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }} title="Reset builder to blank state">
-          <RotateCcw size={12} /> Reset Builder
         </button>
       </div>
 
