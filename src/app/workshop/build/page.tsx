@@ -3,7 +3,8 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Copy, Check, Plus, Trash2, ChevronUp, ChevronDown, Copy as CopyIcon, RotateCcw } from 'lucide-react'
+import { Copy, Check, Plus, Trash2, ChevronUp, ChevronDown, Copy as CopyIcon, RotateCcw, GripVertical } from 'lucide-react'
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -416,11 +417,17 @@ const S = {
 
 // ─── Block action buttons ─────────────────────────────────────────────────────
 
-function BlockControls({ onMoveUp, onMoveDown, onClone, onDelete }: {
+function BlockControls({ onMoveUp, onMoveDown, onClone, onDelete, dragHandleProps }: {
   onMoveUp: () => void; onMoveDown: () => void; onClone: () => void; onDelete: () => void
+  dragHandleProps?: Record<string, unknown>
 }) {
   return (
-    <div style={{ display: 'flex', gap: 2, marginLeft: 'auto' }}>
+    <div style={{ display: 'flex', gap: 2, marginLeft: 'auto', alignItems: 'center' }}>
+      {dragHandleProps && (
+        <div {...dragHandleProps} style={{ cursor: 'grab', padding: '2px 4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }} title="Drag to reorder">
+          <GripVertical size={13} />
+        </div>
+      )}
       <button onClick={onMoveUp} style={S.iconBtn()} title="Move up"><ChevronUp size={12} /></button>
       <button onClick={onMoveDown} style={S.iconBtn()} title="Move down"><ChevronDown size={12} /></button>
       <button onClick={onClone} style={S.iconBtn()} title="Clone"><CopyIcon size={11} /></button>
@@ -431,10 +438,10 @@ function BlockControls({ onMoveUp, onMoveDown, onClone, onDelete }: {
 
 // ─── Block Components ─────────────────────────────────────────────────────────
 
-function ActionBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, classId, keyPressLen }: {
+function ActionBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, classId, keyPressLen, dragHandleProps }: {
   action: BuilderAction; onUpdate: (u: BuilderAction) => void
   onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void; onClone: () => void
-  classId: number; keyPressLen: number
+  classId: number; keyPressLen: number; dragHandleProps?: Record<string, unknown>
 }) {
   const stepLen = (action.macro || '').length
   const total = stepLen + keyPressLen
@@ -455,7 +462,7 @@ function ActionBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone
           <input type="number" min={2} max={50} value={action.interval} onChange={e => onUpdate({ ...action, interval: Math.min(50, Math.max(2, Number(e.target.value))) })} style={{ ...S.input(), width: 42 }} />
           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>steps</span>
         </>}
-        <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} />
+        <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
       </div>
       <div style={{ padding: '8px 10px' }}>
         <MacroTextarea value={action.macro || ''} onChange={v => onUpdate({ ...action, macro: v })} placeholder="/cast Spell Name" rows={3} classId={classId} style={{ ...S.textarea(), minHeight: 56, borderColor: overLimit ? '#c0392b' : undefined }} />
@@ -467,9 +474,10 @@ function ActionBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone
   )
 }
 
-function PauseBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone }: {
+function PauseBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, dragHandleProps }: {
   action: BuilderAction; onUpdate: (u: BuilderAction) => void
   onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void; onClone: () => void
+  dragHandleProps?: Record<string, unknown>
 }) {
   return (
     <div style={S.blockContainer('pause')}>
@@ -477,31 +485,32 @@ function PauseBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone 
         <span style={S.badge(BLOCK_COLORS.pause.badge)}>Pause</span>
         <input type="number" min={1} max={20} value={action.clicks ?? 1} onChange={e => onUpdate({ ...action, clicks: Math.max(1, Number(e.target.value)) })} style={{ ...S.input(), width: 48 }} />
         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>clicks</span>
-        <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} />
+        <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
       </div>
     </div>
   )
 }
 
-function EmbedBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone }: {
+function EmbedBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, dragHandleProps }: {
   action: BuilderAction; onUpdate: (u: BuilderAction) => void
   onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void; onClone: () => void
+  dragHandleProps?: Record<string, unknown>
 }) {
   return (
     <div style={S.blockContainer('embed')}>
       <div style={S.blockHeader('embed')}>
         <span style={S.badge(BLOCK_COLORS.embed.badge)}>Embed</span>
         <input placeholder="Sequence name" value={action.sequence || ''} onChange={e => onUpdate({ ...action, sequence: e.target.value })} style={{ ...S.input(), flex: 1, minWidth: 120 }} />
-        <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} />
+        <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
       </div>
     </div>
   )
 }
 
-function LoopBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, depth, classId, keyPressLen }: {
+function LoopBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, depth, classId, keyPressLen, droppableId = 'root', dragHandleProps }: {
   action: BuilderAction; onUpdate: (u: BuilderAction) => void
   onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void; onClone: () => void
-  depth: number; classId: number; keyPressLen: number
+  depth: number; classId: number; keyPressLen: number; droppableId?: string; dragHandleProps?: Record<string, unknown>
 }) {
   function updateChild(i: number, u: BuilderAction) { const c = [...(action.children || [])]; c[i] = u; onUpdate({ ...action, children: c }) }
   function deleteChild(i: number) { onUpdate({ ...action, children: (action.children || []).filter((_, j) => j !== i) }) }
@@ -522,20 +531,20 @@ function LoopBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, 
         </select>
         <input type="number" min={1} max={50} value={action.repeat ?? 1} onChange={e => onUpdate({ ...action, repeat: Math.min(50, Math.max(1, Number(e.target.value))) })} style={{ ...S.input(), width: 42 }} />
         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>times</span>
-        <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} />
+        <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
       </div>
       <div style={{ padding: '8px 10px' }}>
-        <BlockList actions={action.children || []} onUpdate={updateChild} onDelete={deleteChild} onMove={moveChild} onClone={cloneChild} depth={depth + 1} classId={classId} keyPressLen={keyPressLen} />
+        <BlockList actions={action.children || []} onUpdate={updateChild} onDelete={deleteChild} onMove={moveChild} onClone={cloneChild} depth={depth + 1} classId={classId} keyPressLen={keyPressLen} droppableId={droppableId} />
         <AddBlockBar onAdd={addChild} />
       </div>
     </div>
   )
 }
 
-function IfBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, depth, classId, keyPressLen }: {
+function IfBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, depth, classId, keyPressLen, droppableThenId, droppableElseId, dragHandleProps }: {
   action: BuilderAction; onUpdate: (u: BuilderAction) => void
   onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void; onClone: () => void
-  depth: number; classId: number; keyPressLen: number
+  depth: number; classId: number; keyPressLen: number; droppableThenId?: string; droppableElseId?: string; dragHandleProps?: Record<string, unknown>
 }) {
   function updateBranch(branch: 'then' | 'else', i: number, u: BuilderAction) { const a = [...(action[branch] || [])]; a[i] = u; onUpdate({ ...action, [branch]: a }) }
   function deleteBranch(branch: 'then' | 'else', i: number) { onUpdate({ ...action, [branch]: (action[branch] || []).filter((_, j) => j !== i) }) }
@@ -546,13 +555,13 @@ function IfBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, de
       <div style={S.blockHeader('if')}>
         <span style={S.badge(BLOCK_COLORS.if.badge)}>If</span>
         <input placeholder="= true" value={action.variable || ''} onChange={e => onUpdate({ ...action, variable: e.target.value })} style={{ ...S.input(), flex: 1, minWidth: 100, fontSize: 11 }} />
-        <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} />
+        <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
       </div>
       <div style={{ padding: '8px 10px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         {(['then', 'else'] as const).map(branch => (
           <div key={branch}>
             <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{branch}</div>
-            <BlockList actions={action[branch] || []} onUpdate={(i, u) => updateBranch(branch, i, u)} onDelete={i => deleteBranch(branch, i)} onMove={(i, d) => moveBranch(branch, i, d)} onClone={i => cloneBranch(branch, i)} depth={depth + 1} classId={classId} keyPressLen={keyPressLen} />
+            <BlockList actions={action[branch] || []} onUpdate={(i, u) => updateBranch(branch, i, u)} onDelete={i => deleteBranch(branch, i)} onMove={(i, d) => moveBranch(branch, i, d)} onClone={i => cloneBranch(branch, i)} depth={depth + 1} classId={classId} keyPressLen={keyPressLen} droppableId={branch === 'then' ? (droppableThenId || `if-then:${action.id}`) : (droppableElseId || `if-else:${action.id}`)} />
             <button onClick={() => onUpdate({ ...action, [branch]: [...(action[branch] || []), { id: nid(), type: 'action' as const, macro: '' }] })} style={{ ...S.btn(), fontSize: 11, marginTop: 4 }}><Plus size={10} style={{ marginRight: 3 }} /> Step</button>
           </div>
         ))}
@@ -561,24 +570,46 @@ function IfBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, de
   )
 }
 
-function BlockList({ actions, onUpdate, onDelete, onMove, onClone, depth = 0, classId, keyPressLen }: {
+function BlockList({ actions, onUpdate, onDelete, onMove, onClone, depth = 0, classId, keyPressLen, droppableId = 'root' }: {
   actions: BuilderAction[]; onUpdate: (i: number, u: BuilderAction) => void
   onDelete: (i: number) => void; onMove: (i: number, dir: -1 | 1) => void; onClone: (i: number) => void
-  depth?: number; classId: number; keyPressLen: number
+  depth?: number; classId: number; keyPressLen: number; droppableId?: string
 }) {
-  if (!actions.length) return <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '8px 0', fontStyle: 'italic' }}>No blocks yet. Add blocks above or drop here.</div>
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      {actions.map((action, i) => {
-        const props = { key: action.id, action, onUpdate: (u: BuilderAction) => onUpdate(i, u), onDelete: () => onDelete(i), onMoveUp: () => onMove(i, -1), onMoveDown: () => onMove(i, 1), onClone: () => onClone(i), depth, classId, keyPressLen }
-        if (action.type === 'action') return <ActionBlock {...props} />
-        if (action.type === 'loop') return <LoopBlock {...props} />
-        if (action.type === 'pause') return <PauseBlock {...props} />
-        if (action.type === 'if') return <IfBlock {...props} />
-        if (action.type === 'embed') return <EmbedBlock {...props} />
-        return null
-      })}
-    </div>
+    <Droppable droppableId={droppableId} type={`BLOCK_${droppableId}`}>
+      {(provided, snapshot) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.droppableProps}
+          style={{ display: 'flex', flexDirection: 'column', gap: 4, minHeight: 32, background: snapshot.isDraggingOver ? 'rgba(29,158,117,0.05)' : 'transparent', borderRadius: 'var(--radius-sm)', transition: 'background 0.15s' }}
+        >
+          {actions.length === 0 && !snapshot.isDraggingOver && (
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '8px 0', fontStyle: 'italic' }}>No blocks yet. Add blocks above or drop here.</div>
+          )}
+          {actions.map((action, i) => {
+            const props = { action, onUpdate: (u: BuilderAction) => onUpdate(i, u), onDelete: () => onDelete(i), onMoveUp: () => onMove(i, -1), onMoveDown: () => onMove(i, 1), onClone: () => onClone(i), depth, classId, keyPressLen }
+            return (
+              <Draggable key={action.id} draggableId={action.id} index={i}>
+                {(dragProvided, dragSnapshot) => (
+                  <div
+                    ref={dragProvided.innerRef}
+                    {...dragProvided.draggableProps}
+                    style={{ ...dragProvided.draggableProps.style, opacity: dragSnapshot.isDragging ? 0.85 : 1 }}
+                  >
+                    {action.type === 'action' && <ActionBlock {...props} dragHandleProps={dragProvided.dragHandleProps as Record<string, unknown>} />}
+                    {action.type === 'loop' && <LoopBlock {...props} droppableId={`loop:${action.id}`} dragHandleProps={dragProvided.dragHandleProps as Record<string, unknown>} />}
+                    {action.type === 'pause' && <PauseBlock {...props} dragHandleProps={dragProvided.dragHandleProps as Record<string, unknown>} />}
+                    {action.type === 'if' && <IfBlock {...props} droppableThenId={`if-then:${action.id}`} droppableElseId={`if-else:${action.id}`} dragHandleProps={dragProvided.dragHandleProps as Record<string, unknown>} />}
+                    {action.type === 'embed' && <EmbedBlock {...props} dragHandleProps={dragProvided.dragHandleProps as Record<string, unknown>} />}
+                  </div>
+                )}
+              </Draggable>
+            )
+          })}
+          {provided.placeholder}
+        </div>
+      )}
+    </Droppable>
   )
 }
 
@@ -690,6 +721,26 @@ function StandaloneMacrosPanel({ macros, onChange, classId }: { macros: Standalo
 
 // ─── Version Panel ────────────────────────────────────────────────────────────
 
+function reorderInList<T>(list: T[], from: number, to: number): T[] {
+  const result = [...list]
+  const [removed] = result.splice(from, 1)
+  result.splice(to, 0, removed)
+  return result
+}
+
+function applyReorderToActions(actions: BuilderAction[], sourceId: string, sourceIndex: number, destId: string, destIndex: number): BuilderAction[] {
+  if (sourceId === destId) {
+    if (sourceId === 'root') return reorderInList(actions, sourceIndex, destIndex)
+    return actions.map(a => {
+      if (sourceId === `loop:${a.id}` && a.children) return { ...a, children: reorderInList(a.children, sourceIndex, destIndex) }
+      if (sourceId === `if-then:${a.id}` && a.then) return { ...a, then: reorderInList(a.then, sourceIndex, destIndex) }
+      if (sourceId === `if-else:${a.id}` && a.else) return { ...a, else: reorderInList(a.else, sourceIndex, destIndex) }
+      return a
+    })
+  }
+  return actions
+}
+
 function VersionPanel({ version, onUpdate, classId }: { version: BuilderVersion; onUpdate: (v: BuilderVersion) => void; classId: number }) {
   const keyPressLen = (version.keyPress || '').length + (version.keyRelease || '').length
 
@@ -703,7 +754,18 @@ function VersionPanel({ version, onUpdate, classId }: { version: BuilderVersion;
     updateActions([...version.actions, node])
   }
 
+  function onDragEnd(result: DropResult) {
+    if (!result.destination) return
+    const sourceId = result.source.droppableId
+    const destId = result.destination.droppableId
+    const sourceIndex = result.source.index
+    const destIndex = result.destination.index
+    if (sourceId === destId && sourceIndex === destIndex) return
+    updateActions(applyReorderToActions(version.actions, sourceId, sourceIndex, destId, destIndex))
+  }
+
   return (
+    <DragDropContext onDragEnd={onDragEnd}>
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -741,9 +803,9 @@ function VersionPanel({ version, onUpdate, classId }: { version: BuilderVersion;
             <RotateCcw size={11} /> Reset all
           </button>
         </div>
-        <BlockList actions={version.actions} onUpdate={updateAction} onDelete={deleteAction} onMove={moveAction} onClone={cloneAction} classId={classId} keyPressLen={keyPressLen} />
+        <BlockList actions={version.actions} onUpdate={updateAction} onDelete={deleteAction} onMove={moveAction} onClone={cloneAction} classId={classId} keyPressLen={keyPressLen} droppableId="root" />
       </div>
-    </div>
+    </DragDropContext>
   )
 }
 
@@ -795,7 +857,7 @@ export default function WorkshopBuildPage() {
       if (!res.ok) { setWarnings([data.error || 'Unable to build export.']); return }
       lastPayload.current = serialized
       setExportCode(data.export || '')
-      setWarnings((data.warnings || []).map((w: unknown) => typeof w === 'string' ? w : (w as any)?.message || JSON.stringify(w)).filter(Boolean))
+      setWarnings((data.warnings || []).filter(Boolean))
     } catch { setWarnings(['Network error. Please try again.']) }
   }
 
