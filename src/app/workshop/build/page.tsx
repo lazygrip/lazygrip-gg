@@ -26,6 +26,7 @@ interface BuilderAction {
   variable?: string
   then?: BuilderAction[]
   else?: BuilderAction[]
+  useSpellIds?: boolean
 }
 
 interface BuilderVersion {
@@ -447,6 +448,29 @@ function ActionBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone
   const total = stepLen + keyPressLen
   const overLimit = total > 255
   const nearLimit = total > 200
+  const [converting, setConverting] = useState(false)
+
+  async function toggleSpellIds(toIds: boolean) {
+    if (!action.macro?.trim()) { onUpdate({ ...action, useSpellIds: toIds }); return }
+    setConverting(true)
+    try {
+      const res = await fetch('/api/workshop/convert-spell-texts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ direction: toIds ? 'toids' : 'tonames', texts: [action.macro] }),
+      })
+      const data = await res.json()
+      if (res.ok && data.texts?.[0] !== undefined) {
+        onUpdate({ ...action, macro: data.texts[0], useSpellIds: toIds })
+      } else {
+        onUpdate({ ...action, useSpellIds: toIds })
+      }
+    } catch {
+      onUpdate({ ...action, useSpellIds: toIds })
+    } finally {
+      setConverting(false)
+    }
+  }
 
   return (
     <div style={S.blockContainer('action')}>
@@ -462,6 +486,10 @@ function ActionBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone
           <input type="number" min={2} max={50} value={action.interval} onChange={e => onUpdate({ ...action, interval: Math.min(50, Math.max(2, Number(e.target.value))) })} style={{ ...S.input(), width: 42 }} />
           <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>steps</span>
         </>}
+        <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, marginLeft: 4 }}>
+          <input type="checkbox" checked={Boolean(action.useSpellIds)} disabled={converting} onChange={e => toggleSpellIds(e.target.checked)} style={{ margin: 0 }} />
+          {converting ? 'Converting...' : 'Spell IDs'}
+        </label>
         <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
       </div>
       <div style={{ padding: '8px 10px' }}>
