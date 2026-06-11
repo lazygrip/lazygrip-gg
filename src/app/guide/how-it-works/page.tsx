@@ -93,6 +93,23 @@ export default function HowItWorksPage() {
         </div>
       </Section>
 
+      <Section title="The Pause step">
+        <p>GRIP-EMS includes a dedicated Pause step that holds the sequence without attempting a cast. It has three variants and they behave differently depending on what you need.</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
+          {[
+            { label: 'Clicks', desc: 'Holds for a set number of keypresses before advancing. Good for spacing out high-cost abilities that need a fixed number of GCDs between them.' },
+            { label: 'Milliseconds', desc: 'Holds for a set duration regardless of keypresses. Useful when you need a hard time gate between steps rather than an action count.' },
+            { label: 'GCD', desc: 'Holds for one or more global cooldown cycles. The safest option for finisher spacing since it adapts to your actual GCD rather than a hardcoded time value.' },
+          ].map(r => (
+            <div key={r.label} style={{ display: 'flex', gap: 14, fontSize: 14, alignItems: 'flex-start' }}>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)', flexShrink: 0, minWidth: 120 }}>{r.label}</span>
+              <span style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{r.desc}</span>
+            </div>
+          ))}
+        </div>
+        <p style={{ marginTop: 12 }}>The Pause step is most commonly needed for specs with strict GCD relationships between abilities, for example preventing Steady Shot from firing too close to a proc window in Marksmanship Hunter. If you find a spell clipping something it should not, a one-GCD pause before that step is usually the fix to try first.</p>
+      </Section>
+
       <Section title="Reset conditions">
         <p>Reset conditions send the sequence back to step 1. GRIP-EMS supports five of them and they can be combined.</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
@@ -111,6 +128,36 @@ export default function HowItWorksPage() {
         </div>
       </Section>
 
+      <Section title="Skyriding and mount behavior">
+        <p>As of v2.1.16, pressing your sequence keybind while skyriding behaves differently depending on whether you have a valid target.</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16, marginBottom: 16 }}>
+          {[
+            { label: 'Valid target below you', desc: 'One press dismounts and fires step 1 in the same action. No separate dismount required.' },
+            { label: 'No valid target', desc: 'The press falls through to your skyriding action bar as if GRIP-EMS is not active. Your normal skyriding controls are unaffected.' },
+          ].map(r => (
+            <div key={r.label} style={{ display: 'flex', gap: 14, fontSize: 14, alignItems: 'flex-start' }}>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)', flexShrink: 0, minWidth: 180 }}>{r.label}</span>
+              <span style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{r.desc}</span>
+            </div>
+          ))}
+        </div>
+        <p>This requires Auto Dismount in Flight to be enabled in your WoW settings. Druids also need Auto Unshift enabled to exit skyriding Travel Form mid-air with the same single press.</p>
+        <p style={{ marginTop: 12 }}>Getting dazed off a skyriding mount mid-pull used to leave your sequence keys dead until you dropped combat. That is fixed as of v2.1.18. The swap to your ground action bar now happens the moment you land, combat-safe, so your keys are ready the instant you hit the ground.</p>
+      </Section>
+
+      <Section title="Keybind recovery">
+        <p>GRIP-EMS v2.1.18 added automatic keybind monitoring. If your sequence keybinds go missing after a login, a loadout swap, or a deleted loadout eating its own binds, the addon now detects it and tells you. Running <code style={code}>/gems binds restore</code> puts your last working set back immediately.</p>
+        <p style={{ marginTop: 12 }}>The addon snapshots your binds on every clean load, so recovery is reliable even across sessions. If you see a warning about missing binds, run the restore command before assuming something is broken in your sequence.</p>
+        <Callout>
+          If your keys ever stop responding and you are not in a vehicle, a pet battle, or a cutscene, run <code style={code}>/gems binds restore</code> first. It takes two seconds and covers the most common cause of unexplained dead keys.
+        </Callout>
+      </Section>
+
+      <Section title="Per-step Disable and the sequence tracker">
+        <p>Individual steps can be disabled inside the editor without deleting them. A disabled step is skipped entirely by the engine, which means you can comment out a step for testing purposes without losing the macro text. Re-enable it and the engine picks it up again on the next keypress.</p>
+        <p style={{ marginTop: 12 }}>Disabled sequences are hidden from the tracker overlay and from your action bar as of v2.1.14. A sequence that is toggled off does not occupy a visible tracker slot, which keeps the display clean when you have multiple sequences loaded but only some of them active.</p>
+      </Section>
+
       <Section title="The visual display layer versus what actually executes">
         <p>This is worth knowing because it causes real confusion in the Discord regularly. GRIP-EMS has two separate things: the visual preview of your sequence in the editor, and the compiled macro output that actually runs when you press your keybind. They are not the same thing.</p>
         <p style={{ marginTop: 12 }}>The visual layer renders steps it can match against known spells in its database. Steps it cannot match, including certain raw macro lines, some conditional constructs, and hero talent override spells under specific conditions, do not show in the preview. But they still exist in the compiled output and WoW's macro engine executes them correctly. A step that is invisible in the editor is not a broken step.</p>
@@ -119,10 +166,10 @@ export default function HowItWorksPage() {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 48, paddingTop: 24, borderTop: '0.5px solid var(--border)' }}>
         <Link href="/guide/installation" style={{ fontSize: 14, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
-          ← Back: Installation
+          Back: Installation
         </Link>
         <Link href="/guide/building-sequences" style={{ fontSize: 14, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
-          Next: Building sequences →
+          Next: Building sequences
         </Link>
       </div>
     </div>
