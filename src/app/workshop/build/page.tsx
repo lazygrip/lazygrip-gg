@@ -795,7 +795,7 @@ export default function WorkshopBuildPage() {
       if (!res.ok) { setWarnings([data.error || 'Unable to build export.']); return }
       lastPayload.current = serialized
       setExportCode(data.export || '')
-      setWarnings((data.warnings || []).filter(Boolean))
+      setWarnings((data.warnings || []).map((w: unknown) => typeof w === 'string' ? w : (w as any)?.message || JSON.stringify(w)).filter(Boolean))
     } catch { setWarnings(['Network error. Please try again.']) }
   }
 
