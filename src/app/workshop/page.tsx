@@ -37,7 +37,7 @@ export default function WorkshopPage() {
         </p>
         <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
           Tools built by{' '}
-          <a href="https://ko-fi.com/gripprojects" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
+          <a href="https://ko-fi.com/beard3d_gamer" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
             Beard3d_Gamer
           </a>
           {' '}· Integrated on LazyGrip by Slowdog
