@@ -128,7 +128,7 @@ const CONDITIONALS = [
 
 const BLOCK_COLORS = {
   action: { border: '#2d7a4a', header: 'rgba(45,122,74,0.12)', badge: '#2d7a4a' },
-  loop: { border: 'var(--accent)', header: 'rgba(29,158,117,0.12)', badge: 'var(--accent)' },
+  loop: { border: '#0891b2', header: 'rgba(8,145,178,0.12)', badge: '#0891b2' },
   pause: { border: '#7c5cbf', header: 'rgba(124,92,191,0.12)', badge: '#7c5cbf' },
   if: { border: '#e67e22', header: 'rgba(230,126,34,0.12)', badge: '#e67e22' },
   embed: { border: '#2980b9', header: 'rgba(41,128,185,0.12)', badge: '#2980b9' },
@@ -407,7 +407,7 @@ const S = {
   badge: (color: string): React.CSSProperties => ({ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--radius-sm)', background: color, color: 'white', letterSpacing: '0.04em', flexShrink: 0 }),
   blockContainer: (type: keyof typeof BLOCK_COLORS): React.CSSProperties => ({ border: `0.5px solid ${BLOCK_COLORS[type].border}`, borderRadius: 'var(--radius-md)', overflow: 'visible', marginBottom: 4 }),
   blockHeader: (type: keyof typeof BLOCK_COLORS): React.CSSProperties => ({ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 8px', background: BLOCK_COLORS[type].header, borderBottom: `0.5px solid ${BLOCK_COLORS[type].border}`, flexWrap: 'wrap' as const, borderRadius: 'var(--radius-md) var(--radius-md) 0 0' }),
-  iconBtn: (danger = false): React.CSSProperties => ({ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: danger ? '#c0392b' : 'var(--text-muted)', display: 'flex', alignItems: 'center', borderRadius: 'var(--radius-sm)' }),
+  iconBtn: (danger = false): React.CSSProperties => ({ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: danger ? '#c0392b' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', borderRadius: 'var(--radius-sm)' }),
   textarea: (): React.CSSProperties => ({ width: '100%', padding: '8px 10px', fontSize: 12, fontFamily: 'var(--font-mono)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', resize: 'vertical' as const, minHeight: 72 }),
   input: (): React.CSSProperties => ({ padding: '5px 8px', fontSize: 12, fontFamily: 'var(--font-sans)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)' }),
   select: (): React.CSSProperties => ({ padding: '5px 8px', fontSize: 12, fontFamily: 'var(--font-sans)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)' }),
@@ -964,17 +964,10 @@ export default function WorkshopBuildPage() {
         <div style={{ display: 'flex', gap: 4, marginBottom: 0, flexWrap: 'wrap' }}>
           {activeSeq.versions.map((ver) => (
             <div key={ver.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: ver.id === activeVerId ? 'var(--bg-primary)' : 'var(--bg-tertiary)', border: `0.5px solid ${ver.id === activeVerId ? 'var(--accent)' : 'var(--border)'}`, borderBottom: ver.id === activeVerId ? '0.5px solid var(--bg-primary)' : undefined, borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0', cursor: 'pointer' }} onClick={() => setActiveVerId(ver.id)}>
-              {ver.id === activeVerId && <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 4px', background: 'var(--accent)', color: 'white', borderRadius: 'var(--radius-sm)', flexShrink: 0 }}>DEFAULT</span>}
-              <span style={{ fontSize: 12, color: ver.id === activeVerId ? 'var(--text-primary)' : 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>{ver.name || `Version`}</span>
-              {ver.id === activeVerId && (
-                <input
-                  value={ver.name}
-                  onChange={e => { updateVer({ ...ver, name: e.target.value }) }}
-                  onClick={e => e.stopPropagation()}
-                  title="Rename version"
-                  style={{ ...S.input(), fontSize: 11, padding: '2px 6px', width: Math.max(60, ver.name.length * 7 + 16) }}
-                />
-              )}
+              {ver.id === activeVerId
+                ? <input value={ver.name} onChange={e => { updateVer({ ...ver, name: e.target.value }) }} onClick={e => e.stopPropagation()} title="Rename" style={{ ...S.input(), fontSize: 11, padding: '2px 6px', width: Math.max(60, ver.name.length * 7 + 16), background: 'transparent' }} />
+                : <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>{ver.name || 'Version'}</span>
+              }
               <button onClick={e => { e.stopPropagation(); cloneVersion(ver.id) }} style={S.iconBtn()} title="Clone version"><CopyIcon size={10} /></button>
               {activeSeq.versions.length > 1 && <button onClick={e => { e.stopPropagation(); deleteVersion(ver.id) }} style={S.iconBtn(true)} title="Delete version"><Trash2 size={10} /></button>}
             </div>
@@ -992,7 +985,7 @@ export default function WorkshopBuildPage() {
       {warnings.length > 0 && (
         <div style={{ marginTop: 12, padding: '12px 16px', background: 'rgba(255,180,0,0.07)', border: '0.5px solid rgba(255,180,0,0.25)', borderRadius: 'var(--radius-lg)' }}>
           <p style={{ fontSize: 12, fontWeight: 600, color: '#c8960c', marginBottom: 6 }}>Build notes</p>
-          {warnings.map((w, i) => <p key={i} style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>• {w}</p>)}
+          {warnings.map((w, i) => <p key={i} style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>• {typeof w === 'string' ? w : (w as any).message || JSON.stringify(w)}</p>)}
         </div>
       )}
 
