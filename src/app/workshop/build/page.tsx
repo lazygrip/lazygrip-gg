@@ -587,7 +587,8 @@ function BlockList({ actions, onUpdate, onDelete, onMove, onClone, depth = 0, cl
             <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '8px 0', fontStyle: 'italic' }}>No blocks yet. Add blocks above or drop here.</div>
           )}
           {actions.map((action, i) => {
-            const props = { action, onUpdate: (u: BuilderAction) => onUpdate(i, u), onDelete: () => onDelete(i), onMoveUp: () => onMove(i, -1), onMoveDown: () => onMove(i, 1), onClone: () => onClone(i), depth, classId, keyPressLen, blockIndex: i }
+            const typeIndex = actions.slice(0, i).filter(a => a.type === action.type).length
+            const props = { action, onUpdate: (u: BuilderAction) => onUpdate(i, u), onDelete: () => onDelete(i), onMoveUp: () => onMove(i, -1), onMoveDown: () => onMove(i, 1), onClone: () => onClone(i), depth, classId, keyPressLen, blockIndex: typeIndex }
             return (
               <Draggable key={action.id} draggableId={action.id} index={i}>
                 {(dragProvided, dragSnapshot) => (
