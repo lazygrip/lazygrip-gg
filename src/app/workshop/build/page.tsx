@@ -419,7 +419,7 @@ const S = {
 
 function BlockControls({ onMoveUp, onMoveDown, onClone, onDelete, dragHandleProps }: {
   onMoveUp: () => void; onMoveDown: () => void; onClone: () => void; onDelete: () => void
-  dragHandleProps?: Record<string, unknown> | null
+  dragHandleProps?: Record<string, unknown>
 }) {
   return (
     <div style={{ display: 'flex', gap: 2, marginLeft: 'auto', alignItems: 'center' }}>
@@ -438,10 +438,10 @@ function BlockControls({ onMoveUp, onMoveDown, onClone, onDelete, dragHandleProp
 
 // ─── Block Components ─────────────────────────────────────────────────────────
 
-function ActionBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, classId, keyPressLen, dragHandleProps }: {
+function ActionBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, classId, keyPressLen, dragHandleProps, blockIndex }: {
   action: BuilderAction; onUpdate: (u: BuilderAction) => void
   onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void; onClone: () => void
-  classId: number; keyPressLen: number; dragHandleProps?: Record<string, unknown>
+  classId: number; keyPressLen: number; dragHandleProps?: Record<string, unknown>; blockIndex?: number
 }) {
   const stepLen = (action.macro || '').length
   const total = stepLen + keyPressLen
@@ -451,7 +451,7 @@ function ActionBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone
   return (
     <div style={S.blockContainer('action')}>
       <div style={S.blockHeader('action')}>
-        <span style={S.badge(BLOCK_COLORS.action.badge)}>Step</span>
+        <span style={S.badge(BLOCK_COLORS.action.badge)}>{blockIndex !== undefined ? `Step ${blockIndex + 1}` : 'Step'}</span>
         <input placeholder="Name (optional)" value={action.name || ''} onChange={e => onUpdate({ ...action, name: e.target.value })} style={{ ...S.input(), width: 110, fontSize: 11 }} />
         <input placeholder="Label" value={action.label || ''} onChange={e => onUpdate({ ...action, label: e.target.value })} style={{ ...S.input(), width: 80, fontSize: 11 }} />
         <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -474,15 +474,15 @@ function ActionBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone
   )
 }
 
-function PauseBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, dragHandleProps }: {
+function PauseBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, dragHandleProps, blockIndex }: {
   action: BuilderAction; onUpdate: (u: BuilderAction) => void
   onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void; onClone: () => void
-  dragHandleProps?: Record<string, unknown>
+  dragHandleProps?: Record<string, unknown>; blockIndex?: number
 }) {
   return (
     <div style={S.blockContainer('pause')}>
       <div style={S.blockHeader('pause')}>
-        <span style={S.badge(BLOCK_COLORS.pause.badge)}>Pause</span>
+        <span style={S.badge(BLOCK_COLORS.pause.badge)}>{blockIndex !== undefined ? `Pause ${blockIndex + 1}` : 'Pause'}</span>
         <input type="number" min={1} max={20} value={action.clicks ?? 1} onChange={e => onUpdate({ ...action, clicks: Math.max(1, Number(e.target.value)) })} style={{ ...S.input(), width: 48 }} />
         <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>clicks</span>
         <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
@@ -491,15 +491,15 @@ function PauseBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone,
   )
 }
 
-function EmbedBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, dragHandleProps }: {
+function EmbedBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, dragHandleProps, blockIndex }: {
   action: BuilderAction; onUpdate: (u: BuilderAction) => void
   onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void; onClone: () => void
-  dragHandleProps?: Record<string, unknown>
+  dragHandleProps?: Record<string, unknown>; blockIndex?: number
 }) {
   return (
     <div style={S.blockContainer('embed')}>
       <div style={S.blockHeader('embed')}>
-        <span style={S.badge(BLOCK_COLORS.embed.badge)}>Embed</span>
+        <span style={S.badge(BLOCK_COLORS.embed.badge)}>{blockIndex !== undefined ? `Embed ${blockIndex + 1}` : 'Embed'}</span>
         <input placeholder="Sequence name" value={action.sequence || ''} onChange={e => onUpdate({ ...action, sequence: e.target.value })} style={{ ...S.input(), flex: 1, minWidth: 120 }} />
         <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
       </div>
@@ -507,10 +507,10 @@ function EmbedBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone,
   )
 }
 
-function LoopBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, depth, classId, keyPressLen, droppableId = 'root', dragHandleProps }: {
+function LoopBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, depth, classId, keyPressLen, droppableId = 'root', dragHandleProps, blockIndex }: {
   action: BuilderAction; onUpdate: (u: BuilderAction) => void
   onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void; onClone: () => void
-  depth: number; classId: number; keyPressLen: number; droppableId?: string; dragHandleProps?: Record<string, unknown>
+  depth: number; classId: number; keyPressLen: number; droppableId?: string; dragHandleProps?: Record<string, unknown>; blockIndex?: number
 }) {
   function updateChild(i: number, u: BuilderAction) { const c = [...(action.children || [])]; c[i] = u; onUpdate({ ...action, children: c }) }
   function deleteChild(i: number) { onUpdate({ ...action, children: (action.children || []).filter((_, j) => j !== i) }) }
@@ -523,7 +523,7 @@ function LoopBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, 
   return (
     <div style={S.blockContainer('loop')}>
       <div style={S.blockHeader('loop')}>
-        <span style={S.badge(BLOCK_COLORS.loop.badge)}>Loop</span>
+        <span style={S.badge(BLOCK_COLORS.loop.badge)}>{blockIndex !== undefined ? `Loop ${blockIndex + 1}` : 'Loop'}</span>
         <input placeholder="Name" value={action.name || ''} onChange={e => onUpdate({ ...action, name: e.target.value })} style={{ ...S.input(), width: 100, fontSize: 11 }} />
         <input placeholder="Label" value={action.label || ''} onChange={e => onUpdate({ ...action, label: e.target.value })} style={{ ...S.input(), width: 80, fontSize: 11 }} />
         <select value={action.stepFunction || 'Sequential'} onChange={e => onUpdate({ ...action, stepFunction: e.target.value as StepFunction })} style={{ ...S.select(), fontSize: 11 }}>
@@ -541,10 +541,10 @@ function LoopBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, 
   )
 }
 
-function IfBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, depth, classId, keyPressLen, droppableThenId, droppableElseId, dragHandleProps }: {
+function IfBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, depth, classId, keyPressLen, droppableThenId, droppableElseId, dragHandleProps, blockIndex }: {
   action: BuilderAction; onUpdate: (u: BuilderAction) => void
   onDelete: () => void; onMoveUp: () => void; onMoveDown: () => void; onClone: () => void
-  depth: number; classId: number; keyPressLen: number; droppableThenId?: string; droppableElseId?: string; dragHandleProps?: Record<string, unknown>
+  depth: number; classId: number; keyPressLen: number; droppableThenId?: string; droppableElseId?: string; dragHandleProps?: Record<string, unknown>; blockIndex?: number
 }) {
   function updateBranch(branch: 'then' | 'else', i: number, u: BuilderAction) { const a = [...(action[branch] || [])]; a[i] = u; onUpdate({ ...action, [branch]: a }) }
   function deleteBranch(branch: 'then' | 'else', i: number) { onUpdate({ ...action, [branch]: (action[branch] || []).filter((_, j) => j !== i) }) }
@@ -553,7 +553,7 @@ function IfBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, de
   return (
     <div style={S.blockContainer('if')}>
       <div style={S.blockHeader('if')}>
-        <span style={S.badge(BLOCK_COLORS.if.badge)}>If</span>
+        <span style={S.badge(BLOCK_COLORS.if.badge)}>{blockIndex !== undefined ? `If ${blockIndex + 1}` : 'If'}</span>
         <input placeholder="= true" value={action.variable || ''} onChange={e => onUpdate({ ...action, variable: e.target.value })} style={{ ...S.input(), flex: 1, minWidth: 100, fontSize: 11 }} />
         <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
       </div>
@@ -587,7 +587,7 @@ function BlockList({ actions, onUpdate, onDelete, onMove, onClone, depth = 0, cl
             <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '8px 0', fontStyle: 'italic' }}>No blocks yet. Add blocks above or drop here.</div>
           )}
           {actions.map((action, i) => {
-            const props = { action, onUpdate: (u: BuilderAction) => onUpdate(i, u), onDelete: () => onDelete(i), onMoveUp: () => onMove(i, -1), onMoveDown: () => onMove(i, 1), onClone: () => onClone(i), depth, classId, keyPressLen }
+            const props = { action, onUpdate: (u: BuilderAction) => onUpdate(i, u), onDelete: () => onDelete(i), onMoveUp: () => onMove(i, -1), onMoveDown: () => onMove(i, 1), onClone: () => onClone(i), depth, classId, keyPressLen, blockIndex: i }
             return (
               <Draggable key={action.id} draggableId={action.id} index={i}>
                 {(dragProvided, dragSnapshot) => (
