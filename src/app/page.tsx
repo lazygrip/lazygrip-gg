@@ -118,35 +118,61 @@ export default function HomePage() {
       </section>
 
       {/* Workshop banner */}
-      <section style={{ borderBottom: '0.5px solid var(--border)', padding: '16px 24px' }}>
+      <section style={{ borderBottom: '0.5px solid var(--border)', padding: '32px 24px', background: 'var(--bg-secondary)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <Link href="/workshop" style={{
-            display: 'flex',
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr auto',
+            gap: 24,
             alignItems: 'center',
-            gap: 16,
-            background: 'var(--bg-secondary)',
+            background: 'var(--bg-primary)',
             border: '0.5px solid var(--border)',
             borderLeft: '3px solid var(--accent)',
-            borderRadius: 'var(--radius-md)',
-            padding: '12px 18px',
-            textDecoration: 'none',
+            borderRadius: 'var(--radius-lg)',
+            padding: '24px 28px',
           }}>
-            <span style={{ color: 'var(--accent)', display: 'flex', flexShrink: 0 }}>
-              <Wrench size={15} />
-            </span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>New: Workshop</span>
-              <span style={{ fontSize: 13, color: 'var(--text-secondary)', marginLeft: 10 }}>
-                Decode any GRIP or GSE export string, or convert a GSE sequence to native GRIP format.
-              </span>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ color: 'var(--accent)' }}><Wrench size={16} /></span>
+                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'var(--accent)' }}>New in Workshop</span>
+              </div>
+              <h2 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: 8 }}>
+                Build GRIP sequences in the browser
+              </h2>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 600, marginBottom: 16 }}>
+                The Workshop now includes a full sequence builder. Create collections with multiple sequences and versions, add loops, if branches, and pause blocks, set keypress macros, and export a ready-to-import GRIP string without ever opening the addon. Import any existing GRIP or GSE export to inspect and edit it directly.
+              </p>
+              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' as const }}>
+                {[
+                  'Spell autocomplete by class',
+                  'Drag and drop reordering',
+                  'Character limit warnings',
+                  'Spell ID conversion',
+                  'Clone sequences and versions',
+                ].map(feature => (
+                  <span key={feature} style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ color: 'var(--accent)', fontSize: 10 }}>&#10003;</span> {feature}
+                  </span>
+                ))}
+              </div>
             </div>
-            <span style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              fontSize: 13, color: 'var(--accent)', fontWeight: 500, flexShrink: 0,
+            <Link href="/workshop/build" style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              background: 'var(--accent)',
+              color: 'white',
+              textDecoration: 'none',
+              padding: '10px 20px',
+              borderRadius: 'var(--radius-md)',
+              fontSize: 13,
+              fontWeight: 500,
+              flexShrink: 0,
+              whiteSpace: 'nowrap' as const,
             }}>
-              Try it <ArrowRight size={13} />
-            </span>
-          </Link>
+              Open builder <ArrowRight size={13} />
+            </Link>
+          </div>
         </div>
       </section>
 
