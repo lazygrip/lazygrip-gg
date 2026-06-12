@@ -592,7 +592,7 @@ function SequenceRow({ seq, showAuthor }: { seq: any; showAuthor: boolean }) {
   const contentLabel = CONTENT_TYPES.find(c => c.value === seq.content_type)?.label ?? seq.content_type
 
   return (
-    <Link href={`/sequence/${seq.slug}`} style={{ textDecoration: 'none' }}>
+    <Link href={`/sequences/${seq.slug}`} style={{ textDecoration: 'none' }}>
       <div
         style={{
           background: 'var(--bg-primary)',
