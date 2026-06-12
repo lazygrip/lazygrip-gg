@@ -418,16 +418,34 @@ function PostForm() {
         performance_notes: form.performance_notes.trim() || null,
       }
 
-      if (isEditMode) {
-        const { error: updateError } = await supabase
-          .from('sequences')
-          .update(payload)
-          .eq('id', editId)
-          .eq('author_id', user.id)
+if (isEditMode) {
+  const { error: rpcError } = await supabase.rpc('update_sequence_with_version', {
+    p_sequence_id: editId,
+    p_author_id: user.id,
+    p_title: payload.title,
+    p_description: payload.description,
+    p_class_id: payload.class_id,
+    p_class_name: payload.class_name,
+    p_spec_id: selectedSpec?.id ?? null,
+    p_spec_name: payload.spec_name,
+    p_content_type: payload.content_type,
+    p_hero_talent: payload.hero_talent,
+    p_patch_version: payload.patch_version,
+    p_grip_version: payload.grip_version,
+    p_step_function: payload.step_function,
+    p_step_count: payload.step_count,
+    p_grip_string: payload.grip_string,
+    p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
+    p_talent_string: payload.talent_string,
+    p_warcraftlogs_url: payload.warcraftlogs_url,
+    p_performance_notes: payload.performance_notes,
+    p_changelog: null,
+    p_version_label: '1.0',
+  })
 
-        if (updateError) throw updateError
-        router.push(`/sequences/${editSlug}`)
-      } else {
+if (rpcError) throw rpcError
+  router.push(`/sequences/${editSlug}`)
+} else {
         const slug = slugify(form.title) + '-' + Date.now().toString(36)
         const { data, error: rpcError } = await supabase.rpc('create_sequence_with_version', {
           p_author_id: user.id,
