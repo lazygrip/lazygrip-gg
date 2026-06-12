@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 
 type Mode = 'login' | 'signup'
 
-export default function AuthPage({ mode = 'login' }: { mode?: Mode }) {
+export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, onSuccess?: (user: any) => void }) {
   const router = useRouter()
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
@@ -28,8 +28,13 @@ export default function AuthPage({ mode = 'login' }: { mode?: Mode }) {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
-        router.push('/browse')
-        router.refresh()
+	if (onSuccess) {
+	const { data: { user } } = await supabase.auth.getUser()
+	onSuccess(user)
+	} else {
+	router.push('/browse')
+	router.refresh()
+}
       } else {
         if (username.length < 3) throw new Error('Username must be at least 3 characters.')
         const { error } = await supabase.auth.signUp({

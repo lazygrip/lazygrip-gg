@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Copy, Check, Plus, Trash2, ChevronUp, ChevronDown, Copy as CopyIcon, RotateCcw, GripVertical } from 'lucide-react'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
+import AuthForm from '@/components/auth/AuthForm'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -917,6 +918,8 @@ export default function WorkshopBuildPage() {
   const [importOpen, setImportOpen] = useState(false)
   const [importError, setImportError] = useState('')
   const [configOpen, setConfigOpen] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const [showAuthModal, setShowAuthModal] = useState(false)
   const router = useRouter()
   const buildTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastPayload = useRef('')
@@ -927,36 +930,29 @@ export default function WorkshopBuildPage() {
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) router.push('/auth/login?next=/workshop/build')
-      else {
-        setLoading(false)
-        const pending = sessionStorage.getItem('workshop_build_import')
-        if (pending) {
-          sessionStorage.removeItem('workshop_build_import')
-          setTimeout(async () => {
-            try {
-              const res = await fetch('/api/workshop/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: pending }) })
-              const data = await res.json()
-              if (res.ok && data.model) {
-                _nodeId = 1; _seqId = 1; _verId = 1; _varId = 1; _macroId = 1
-                setModel(data.model)
-                setActiveSeqId(data.model.sequences[0].id)
-                setActiveVerId(data.model.sequences[0].versions[0].id)
-                setWarnings(data.warnings || [])
-                return
-              }
-            } catch { /* fall through to default */ }
-            const m = defaultModel()
-            setModel(m)
-            setActiveSeqId(m.sequences[0].id)
-            setActiveVerId(m.sequences[0].versions[0].id)
-          }, 0)
-        } else {
+      setUser(data.user ?? null)
+      setLoading(false)
+      const pending = sessionStorage.getItem('workshop_build_import')
+      if (pending) {
+        sessionStorage.removeItem('workshop_build_import')
+        setTimeout(async () => {
+          try {
+            const res = await fetch('/api/workshop/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: pending }) })
+            const data = await res.json()
+            if (res.ok && data.model) {
+              _nodeId = 1; _seqId = 1; _verId = 1; _varId = 1; _macroId = 1
+              setModel(data.model)
+              setActiveSeqId(data.model.sequences[0].id)
+              setActiveVerId(data.model.sequences[0].versions[0].id)
+              setWarnings(data.warnings || [])
+              return
+            }
+          } catch { /* fall through to default */ }
           const m = defaultModel()
           setModel(m)
           setActiveSeqId(m.sequences[0].id)
           setActiveVerId(m.sequences[0].versions[0].id)
-        }
+        }, 0)
       }
     })
   }, [router])
@@ -1052,26 +1048,32 @@ export default function WorkshopBuildPage() {
       </div>
 
       {/* Export bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', marginBottom: 12, background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', flexShrink: 0, letterSpacing: '0.04em' }}>!GRIP1!</span>
-        <input readOnly value={exportCode} placeholder="Export updates automatically as you edit..." style={{ flex: 1, padding: '5px 8px', fontSize: 11, fontFamily: 'var(--font-mono)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }} />
-        <button onClick={copyExport} disabled={!exportCode} style={{ ...S.btn(true), display: 'flex', alignItems: 'center', gap: 5, opacity: exportCode ? 1 : 0.4 }}>
-          {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? 'Copied' : 'Copy'}
-        </button>
-        <button onClick={() => {
-          if (!window.confirm('Reset everything and start from scratch?')) return
-          _nodeId = 1; _seqId = 1; _verId = 1; _varId = 1; _macroId = 1
-          const m = defaultModel()
-          setModel(m)
-          setActiveSeqId(m.sequences[0].id)
-          setActiveVerId(m.sequences[0].versions[0].id)
-          setExportCode('')
-          setWarnings([])
-          lastPayload.current = ''
-        }} style={{ ...S.btn(), display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }} title="Reset builder to blank state">
-          <RotateCcw size={12} /> Reset Builder
-        </button>
-      </div>
+<div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', marginBottom: 12, background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
+  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', flexShrink: 0, letterSpacing: '0.04em' }}>!GRIP1!</span>
+  <input readOnly value={user ? exportCode : '••••••••••••••••••••••••••••••••••••••••••••••••••'} placeholder="Export updates automatically as you edit..." style={{ flex: 1, padding: '5px 8px', fontSize: 11, fontFamily: 'var(--font-mono)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: user ? 'var(--text-secondary)' : 'transparent', textShadow: user ? 'none' : '0 0 8px rgba(255,255,255,0.3)', userSelect: 'none' as const }} />
+  {user ? (
+    <button onClick={copyExport} disabled={!exportCode} style={{ ...S.btn(true), display: 'flex', alignItems: 'center', gap: 5, opacity: exportCode ? 1 : 0.4 }}>
+      {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? 'Copied' : 'Copy'}
+    </button>
+  ) : (
+    <button onClick={() => setShowAuthModal(true)} style={{ ...S.btn(true), display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' as const }}>
+      Sign in to export
+    </button>
+  )}
+  <button onClick={() => {
+    if (!window.confirm('Reset everything and start from scratch?')) return
+    _nodeId = 1; _seqId = 1; _verId = 1; _varId = 1; _macroId = 1
+    const m = defaultModel()
+    setModel(m)
+    setActiveSeqId(m.sequences[0].id)
+    setActiveVerId(m.sequences[0].versions[0].id)
+    setExportCode('')
+    setWarnings([])
+    lastPayload.current = ''
+  }} style={{ ...S.btn(), display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }} title="Reset builder to blank state">
+    <RotateCcw size={12} /> Reset Builder
+  </button>
+</div>
 
       {/* Import bar */}
       <div style={{ marginBottom: 12, border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
@@ -1189,6 +1191,13 @@ export default function WorkshopBuildPage() {
               <span style={{ color: '#c0392b', fontWeight: 500 }}>• {w.path}</span> is {w.message}
             </p>
           ))}
+        </div>
+      )}
+{showAuthModal && (
+        <div onClick={() => setShowAuthModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 400, background: 'var(--bg-primary)', borderRadius: 'var(--radius-xl)', overflow: 'hidden' }}>
+            <AuthForm mode="login" onSuccess={(u: any) => { setUser(u); setShowAuthModal(false) }} />
+          </div>
         </div>
       )}
     </div>
