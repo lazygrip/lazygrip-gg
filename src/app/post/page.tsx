@@ -440,7 +440,6 @@ if (isEditMode) {
     p_warcraftlogs_url: payload.warcraftlogs_url,
     p_performance_notes: payload.performance_notes,
     p_changelog: null,
-    p_version_label: '1.0',
   })
 
 if (rpcError) throw rpcError
