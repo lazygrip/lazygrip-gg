@@ -22,9 +22,9 @@ interface Props {
 export default function BrowseContent({ initialFilters = {} }: Props) {
   const searchParams = useSearchParams()
 
-  const sortFromUrl = (searchParams.get('sort') || initialFilters.sort || 'recent') as SequenceFilters['sort']
-  const contentTypeFromUrl = (searchParams.get('content_type') || initialFilters.content_type || undefined) as SequenceFilters['content_type']
-  const classIdFromUrl = searchParams.get('class_id') ? Number(searchParams.get('class_id')) : initialFilters.class_id || undefined
+  const sortFromUrl = (searchParams.get('sort') || 'recent') as SequenceFilters['sort']
+  const contentTypeFromUrl = (searchParams.get('content_type') || undefined) as SequenceFilters['content_type']
+  const classIdFromUrl = searchParams.get('class_id') ? Number(searchParams.get('class_id')) : undefined
 
   const [sequences, setSequences] = useState<Sequence[]>([])
   const [loading, setLoading] = useState(true)
