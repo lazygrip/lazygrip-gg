@@ -138,126 +138,123 @@ function PostForm() {
     }
   }
 
-  async function runDecode(exportString: string) {
-    setDecoding(true)
-    setDecodeError(null)
-    setCollectionSequences(null)
-    setCollectionTitle('')
+async function runDecode(exportString: string) {
+  setDecoding(true)
+  setDecodeError(null)
+  setCollectionSequences(null)
+  setCollectionTitle('')
 
-    try {
-      const res = await fetch('/api/decode-grip', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: exportString }),
-      })
+  try {
+    const res = await fetch('/api/decode-grip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: exportString }),
+    })
 
-      const data = await res.json()
+    const data = await res.json()
 
-      if (!res.ok) {
-        setDecodeError(data.error || 'Decode failed.')
-        return
+    if (!res.ok) {
+      setDecodeError(data.error || 'Decode failed.')
+      return
+    }
+
+    const sequences = data.sequences ?? []
+    const meta = data.meta ?? {}
+
+    if (sequences.length > 1) {
+      // Collection export
+      const anchor = sequences.find((s: any) => s.classId) ?? sequences[0]
+
+      if (anchor.classId) {
+        const cls = WOW_CLASSES.find(c => c.id === anchor.classId)
+        if (cls) {
+          const updates: Partial<typeof EMPTY_FORM> = { class_id: String(cls.id) }
+          if (anchor.specId) {
+            const spec = cls.specs.find(s => s.id === anchor.specId)
+            if (spec) updates.spec_name = spec.name
+          }
+          const firstVersion = anchor.versions?.[0]
+          if (firstVersion?.stepFunction) {
+            const map: Record<string, string> = {
+              'Sequential': 'Sequential', 'Priority': 'Priority',
+              'ReversePriority': 'Rev. Priority', 'Reverse Priority': 'Rev. Priority',
+              'Rev. Priority': 'Rev. Priority', 'Random': 'Random',
+            }
+            const mapped = map[firstVersion.stepFunction]
+            if (mapped) updates.step_function = mapped
+          }
+          setForm(f => ({ ...f, ...updates }))
+        }
       }
 
-      if (data.multipleSequences) {
-        const anchor = data.sequences.find((s: CollectionSequence) => s.classID) ?? data.sequences[0]
-
-        if (anchor.classID) {
-          const cls = WOW_CLASSES.find(c => c.id === anchor.classID)
-          if (cls) {
-            const updates: Partial<typeof EMPTY_FORM> = {
-              class_id: String(cls.id),
-            }
-            if (anchor.specID) {
-              const spec = cls.specs.find(s => s.id === anchor.specID)
-              if (spec) updates.spec_name = spec.name
-            }
-            if (anchor.stepFunction) {
-              const map: Record<string, string> = {
-                'Sequential': 'Sequential',
-                'Priority': 'Priority',
-                'ReversePriority': 'Rev. Priority',
-                'Reverse Priority': 'Rev. Priority',
-                'Rev. Priority': 'Rev. Priority',
-                'Random': 'Random',
-              }
-              const mapped = map[anchor.stepFunction]
-              if (mapped) updates.step_function = mapped
-            }
-            setForm(f => ({ ...f, ...updates }))
-          }
-        }
-
-        setCollectionSequences(
-          data.sequences.map((s: {
-            index: number
-            name: string
-            steps: SequenceStep[]
-            stepFunction: string
-            classID: number | null
-            specID: number | null
-          }) => ({
-            index: s.index,
+      setCollectionSequences(
+        sequences.map((s: any) => {
+          const version = s.versions?.[0]
+          return {
+            index: sequences.indexOf(s),
             name: s.name,
             title: s.name,
             talent_string: '',
-            steps: s.steps,
-            stepFunction: s.stepFunction,
-            classID: s.classID,
-            specID: s.specID,
+            steps: s.steps ?? [],
+            stepFunction: version?.stepFunction ?? 'Sequential',
+            classID: s.classId ?? null,
+            specID: s.specId ?? null,
             checked: true,
-          }))
-        )
-        return
-      }
-
-      // Single sequence -- existing behaviour.
-      const steps: SequenceStep[] = data.steps
-      setDecodedSteps(steps)
-      const stepsText = steps.map(s => s.text).join('\n---\n')
-      setField('raw_steps_text', stepsText)
-      setStepsAutoPopulated(true)
-
-      if (data.meta) {
-        setForm(current => {
-          const updates: Partial<typeof EMPTY_FORM> = {}
-
-          if (!current.title.trim() && data.meta.name && !data.meta.name.startsWith('Sequence ')) {
-            updates.title = data.meta.name
           }
-
-          if (data.meta.classID) {
-            const cls = WOW_CLASSES.find(c => c.id === data.meta.classID)
-            if (cls) {
-              updates.class_id = String(cls.id)
-              if (data.meta.specID) {
-                const spec = cls.specs.find(s => s.id === data.meta.specID)
-                if (spec) updates.spec_name = spec.name
-              }
-            }
-          }
-
-          if (data.meta.stepFunction) {
-            const map: Record<string, string> = {
-              'Sequential': 'Sequential',
-              'Priority': 'Priority',
-              'ReversePriority': 'Rev. Priority',
-              'Reverse Priority': 'Rev. Priority',
-              'Rev. Priority': 'Rev. Priority',
-              'Random': 'Random',
-            }
-            const mapped = map[data.meta.stepFunction]
-            if (mapped) updates.step_function = mapped
-          }
-
-          return { ...current, ...updates }
         })
-      }
-    } catch {
-      setDecodeError('Could not reach the decode API. Check your connection.')
-    } finally {
-      setDecoding(false)
+      )
+      return
     }
+
+    // Single sequence
+    const seq = sequences[0]
+    const steps: SequenceStep[] = (seq?.steps ?? []).map((s: any) => ({
+      index: s.number,
+      text: s.text,
+      char_count: s.chars,
+    }))
+    setDecodedSteps(steps)
+    const stepsText = steps.map(s => s.text).join('\n---\n')
+    setField('raw_steps_text', stepsText)
+    setStepsAutoPopulated(true)
+
+    const classId = meta.classId ?? seq?.classId
+    const specId = meta.specId ?? seq?.specId
+    const stepFunction = seq?.versions?.[0]?.stepFunction
+
+    setForm(current => {
+      const updates: Partial<typeof EMPTY_FORM> = {}
+      if (!current.title.trim() && meta.exportMeta?.collectionName) {
+        updates.title = meta.exportMeta.collectionName
+      }
+      if (classId) {
+        const cls = WOW_CLASSES.find(c => c.id === classId)
+        if (cls) {
+          updates.class_id = String(cls.id)
+          if (specId) {
+            const spec = cls.specs.find(s => s.id === specId)
+            if (spec) updates.spec_name = spec.name
+          }
+        }
+      }
+      if (stepFunction) {
+        const map: Record<string, string> = {
+          'Sequential': 'Sequential', 'Priority': 'Priority',
+          'ReversePriority': 'Rev. Priority', 'Reverse Priority': 'Rev. Priority',
+          'Rev. Priority': 'Rev. Priority', 'Random': 'Random',
+        }
+        const mapped = map[stepFunction]
+        if (mapped) updates.step_function = mapped
+      }
+      return { ...current, ...updates }
+    })
+
+  } catch {
+    setDecodeError('Could not reach the decode API. Check your connection.')
+  } finally {
+    setDecoding(false)
   }
+}
 
   function handleGripStringChange(value: string) {
     setField('grip_string', value)
