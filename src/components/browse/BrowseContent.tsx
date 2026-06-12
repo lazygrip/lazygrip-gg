@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Search, SlidersHorizontal, X } from 'lucide-react'
 import SequenceCard from '@/components/sequence/SequenceCard'
 import { WOW_CLASSES, CONTENT_TYPES } from '@/lib/wow-data'
@@ -19,33 +20,43 @@ interface Props {
 }
 
 export default function BrowseContent({ initialFilters = {} }: Props) {
+  const searchParams = useSearchParams()
+
+  const sortFromUrl = (searchParams.get('sort') || initialFilters.sort || 'recent') as SequenceFilters['sort']
+  const contentTypeFromUrl = (searchParams.get('content_type') || initialFilters.content_type || undefined) as SequenceFilters['content_type']
+  const classIdFromUrl = searchParams.get('class_id') ? Number(searchParams.get('class_id')) : initialFilters.class_id || undefined
+
   const [sequences, setSequences] = useState<Sequence[]>([])
   const [loading, setLoading] = useState(true)
   const [count, setCount] = useState(0)
   const [filters, setFilters] = useState<SequenceFilters>({
-    sort: 'recent',
+    sort: sortFromUrl,
     page: 1,
     limit: 20,
-    ...initialFilters,
+    content_type: contentTypeFromUrl,
+    class_id: classIdFromUrl,
   })
   const [search, setSearch] = useState('')
   const [showMobileFilters, setShowMobileFilters] = useState(false)
 
   const supabase = createClient()
 
+  // Sync filters when URL params change (e.g. nav between Browse and Top Rated)
+  useEffect(() => {
+    setFilters(f => ({
+      ...f,
+      sort: sortFromUrl,
+      content_type: contentTypeFromUrl,
+      class_id: classIdFromUrl,
+      page: 1,
+    }))
+    setSearch('')
+  }, [sortFromUrl, contentTypeFromUrl, classIdFromUrl])
+
   useEffect(() => {
     fetchSequences()
   }, [filters])
-  
-useEffect(() => {
-  setFilters({
-    sort: 'recent',
-    page: 1,
-    limit: 20,
-    ...initialFilters,
-  })
-  setSearch('')
-}, [initialFilters?.sort, initialFilters?.content_type, initialFilters?.class_id])
+
   async function fetchSequences() {
     setLoading(true)
     try {
@@ -95,7 +106,13 @@ useEffect(() => {
   }
 
   function clearFilters() {
-    setFilters({ sort: 'recent', page: 1, limit: 20, ...initialFilters })
+    setFilters({
+      sort: sortFromUrl,
+      page: 1,
+      limit: 20,
+      content_type: contentTypeFromUrl,
+      class_id: classIdFromUrl,
+    })
     setSearch('')
   }
 
