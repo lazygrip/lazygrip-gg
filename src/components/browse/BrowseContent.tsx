@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Search, SlidersHorizontal, X } from 'lucide-react'
 import SequenceCard from '@/components/sequence/SequenceCard'
 import { WOW_CLASSES, CONTENT_TYPES } from '@/lib/wow-data'
@@ -36,7 +36,16 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
   useEffect(() => {
     fetchSequences()
   }, [filters])
-
+  
+useEffect(() => {
+  setFilters({
+    sort: 'recent',
+    page: 1,
+    limit: 20,
+    ...initialFilters,
+  })
+  setSearch('')
+}, [initialFilters?.sort, initialFilters?.content_type, initialFilters?.class_id])
   async function fetchSequences() {
     setLoading(true)
     try {
