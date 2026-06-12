@@ -8,7 +8,7 @@ import TiptapEditor from '@/components/editor/TiptapEditor'
 import type { SequenceStep } from '@/types'
 
 const PATCH_VERSIONS = ['12.0', '12.0.5', '12.0.7']
-const DEFAULT_GRIP_VERSION = '2.1.7'
+const DEFAULT_GRIP_VERSION = '2.1.20'
 
 const EMPTY_FORM = {
   title: '',
@@ -148,7 +148,7 @@ function PostForm() {
       const res = await fetch('/api/decode-grip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ exportString }),
+        body: JSON.stringify({ code: exportString }),
       })
 
       const data = await res.json()
