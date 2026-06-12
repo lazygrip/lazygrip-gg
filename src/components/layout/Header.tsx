@@ -121,7 +121,9 @@ export default function Header() {
         zIndex: 100,
       }}>
         <div style={{
+          maxWidth: 1200,
           width: '100%',
+          margin: '0 auto',
           display: 'flex',
           alignItems: 'center',
           gap: 16,
