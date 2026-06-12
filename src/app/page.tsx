@@ -7,6 +7,15 @@ import { WOW_CLASSES } from '@/lib/wow-data'
 export default function HomePage() {
   return (
     <div>
+      <style>{`
+        @media (max-width: 640px) {
+          .hero-heading { font-size: 28px !important; letter-spacing: -0.02em !important; }
+          .workshop-grid { grid-template-columns: 1fr !important; }
+          .workshop-cta { width: 100% !important; justify-content: center !important; }
+          .hero-stats { gap: 16px !important; flex-wrap: wrap !important; }
+        }
+      `}</style>
+
       {/* Hero */}
       <section style={{
         background: 'var(--bg-primary)',
@@ -31,7 +40,7 @@ export default function HomePage() {
             Community sequences for GRIP-EMS
           </div>
 
-          <h1 style={{
+          <h1 className="hero-heading" style={{
             fontSize: 40,
             fontWeight: 600,
             letterSpacing: '-0.03em',
@@ -89,7 +98,7 @@ export default function HomePage() {
           </div>
 
           {/* Stats */}
-          <div style={{
+          <div className="hero-stats" style={{
             display: 'flex',
             gap: 32,
             justifyContent: 'center',
@@ -120,7 +129,7 @@ export default function HomePage() {
       {/* Workshop banner */}
       <section style={{ borderBottom: '0.5px solid var(--border)', padding: '32px 24px', background: 'var(--bg-secondary)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{
+          <div className="workshop-grid" style={{
             display: 'grid',
             gridTemplateColumns: '1fr auto',
             gap: 24,
@@ -156,7 +165,7 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-            <Link href="/workshop" style={{
+            <Link href="/workshop" className="workshop-cta" style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,
