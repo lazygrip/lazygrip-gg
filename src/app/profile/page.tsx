@@ -133,8 +133,9 @@ function ProfilePageInner() {
     }
 
     const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
-    setAvatarUrl(publicUrl)
-    await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', user.id)
+	const bustUrl = `${publicUrl}?t=${Date.now()}`
+	setAvatarUrl(bustUrl)
+	await supabase.from('profiles').update({ avatar_url: bustUrl }).eq('id', user.id)
     setAvatarSaved(true)
     setTimeout(() => setAvatarSaved(false), 2000)
     setUploadingAvatar(false)
