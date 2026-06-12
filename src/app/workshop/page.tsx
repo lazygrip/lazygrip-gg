@@ -7,15 +7,10 @@ import { Search, ArrowRightLeft, Wrench } from 'lucide-react'
 
 export default function WorkshopPage() {
   const [loading, setLoading] = useState(true)
-  const router = useRouter()
 
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) router.push('/auth/login?next=/workshop')
-      else setLoading(false)
-    })
-  }, [router])
+useEffect(() => {
+    setLoading(false)
+  }, [])
 
   if (loading) return (
     <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
