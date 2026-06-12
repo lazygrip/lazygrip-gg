@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Copy, Check, Bookmark, ExternalLink, ChevronDown, ChevronUp, Pencil, Trash2, CornerDownRight, Link2, Link2Off } from 'lucide-react'
+import { Copy, Check, Bookmark, ExternalLink, ChevronDown, ChevronUp, Pencil, Trash2, CornerDownRight, Link2, Link2Off, Wrench } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Sequence, Comment, SequenceVersion, LinkedSequence, CollectionSequenceEntry } from '@/types'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
@@ -643,7 +643,23 @@ export default function SequencePageClient() {
                 justifyContent: 'space-between', marginBottom: 12,
               }}>
                 <h2 style={{ fontSize: 14, fontWeight: 500 }}>GRIP import string</h2>
-                <button onClick={copyGripString} style={{
+                <button onClick={() => {
+                  const str = selectedVersion?.grip_string
+                  if (!str) return
+                  sessionStorage.setItem('workshop_build_import', str)
+                  window.location.assign('/workshop/build')
+                }} style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '6px 12px', borderRadius: 'var(--radius-md)',
+                  border: '0.5px solid var(--accent)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--accent)',
+                  cursor: 'pointer', fontSize: 12, fontFamily: 'var(--font-sans)',
+                  marginRight: 6,
+                }}>
+                  <Wrench size={13} /> Open in Builder
+                </button>
+              <button onClick={copyGripString} style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '6px 12px', borderRadius: 'var(--radius-md)',
                   border: '0.5px solid var(--border-strong)',

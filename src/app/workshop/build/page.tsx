@@ -928,13 +928,35 @@ export default function WorkshopBuildPage() {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) router.push('/auth/login?next=/workshop/build')
-      else if (!['c2374192-e541-4636-9baf-84fc192cff52', 'd5799a93-6755-4ec0-b49d-119dd2f2208f'].includes(data.user.id)) router.push('/workshop')
       else {
         setLoading(false)
-        const m = defaultModel()
-        setModel(m)
-        setActiveSeqId(m.sequences[0].id)
-        setActiveVerId(m.sequences[0].versions[0].id)
+        const pending = sessionStorage.getItem('workshop_build_import')
+        if (pending) {
+          sessionStorage.removeItem('workshop_build_import')
+          setTimeout(async () => {
+            try {
+              const res = await fetch('/api/workshop/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: pending }) })
+              const data = await res.json()
+              if (res.ok && data.model) {
+                _nodeId = 1; _seqId = 1; _verId = 1; _varId = 1; _macroId = 1
+                setModel(data.model)
+                setActiveSeqId(data.model.sequences[0].id)
+                setActiveVerId(data.model.sequences[0].versions[0].id)
+                setWarnings(data.warnings || [])
+                return
+              }
+            } catch { /* fall through to default */ }
+            const m = defaultModel()
+            setModel(m)
+            setActiveSeqId(m.sequences[0].id)
+            setActiveVerId(m.sequences[0].versions[0].id)
+          }, 0)
+        } else {
+          const m = defaultModel()
+          setModel(m)
+          setActiveSeqId(m.sequences[0].id)
+          setActiveVerId(m.sequences[0].versions[0].id)
+        }
       }
     })
   }, [router])
