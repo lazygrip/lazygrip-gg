@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 const NAV = [
   { href: '/guide', label: 'Overview' },
   { href: '/guide/installation', label: 'Installation' },
+  { href: '/guide/settings', label: 'Settings' },
   { href: '/guide/how-it-works', label: 'How it works' },
   { href: '/guide/building-sequences', label: 'Building sequences' },
   { href: '/guide/from-gse', label: 'Coming from GSE' },

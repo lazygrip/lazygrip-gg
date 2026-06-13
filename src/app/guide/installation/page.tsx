@@ -63,7 +63,7 @@ export default function InstallationPage() {
         </Step>
 
         <Step number={2} label="Verify your SpellQueueWindow">
-          <p>The SpellQueueWindow controls how many milliseconds before a GCD ends WoW will accept your next cast. GRIP-EMS recommends a value between 100 and 400ms. Too low and spells clip. Too high and you get false casts queuing through. The Cvar Health tab shows your current value and flags it if it is outside the recommended range.</p>
+          <p>The SpellQueueWindow controls how many milliseconds before a GCD ends WoW will accept your next cast input. The Cvar Health tab shows your current value and flags it if it looks off. The default of 400ms is fine to leave alone for now. The full explanation of what SQW does, why it matters, and how to tune it for your connection is on the <Link href="/guide/settings" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Settings</Link> page.</p>
         </Step>
 
         <Step number={3} label="Set your click rate">
@@ -152,11 +152,11 @@ export default function InstallationPage() {
       </Section>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 48, paddingTop: 24, borderTop: '0.5px solid var(--border)' }}>
-        <Link href="/guide/how-it-works" style={{
+        <Link href="/guide/settings" style={{
           fontSize: 14, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500,
           display: 'flex', alignItems: 'center', gap: 6,
         }}>
-          Next: How it works →
+          Next: Settings →
         </Link>
       </div>
     </div>
