@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowRight, BookOpen, Wrench, Layers, GitBranch, BarChart2 } from 'lucide-react'
+import { ArrowRight, BookOpen, Wrench, Layers, GitBranch, BarChart2, SlidersHorizontal } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'The GRIP-EMS Guide | LazyGrip.net',
@@ -15,6 +15,13 @@ const sections = [
     time: '5 min',
     title: 'Installation',
     desc: 'Download, enable, and run the three mandatory post-install steps that most guides skip. The Cvar Health fix alone solves half of all new user problems. If your keybind is set but nothing fires, start here.',
+  },
+  {
+    href: '/guide/settings',
+    icon: SlidersHorizontal,
+    time: '6 min',
+    title: 'Settings',
+    desc: 'The in-game settings that determine whether your sequences run smoothly or feel broken. Key Down Casting, Spell Queue Window, the Dynamic SQW Optimiser, click rate, and how to configure outside programs like AHK, iCue, and Synapse.',
   },
   {
     href: '/guide/how-it-works',
@@ -118,7 +125,7 @@ export default function GuidePage() {
       </section>
 
       <div style={{ padding: '14px 18px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Guide version: GRIP-EMS v2.1.21</span>
+        <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>The GRIP-EMS Guide</span>
         <Link href="/guide/installation" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
           Start with Installation <ArrowRight size={13} />
         </Link>
