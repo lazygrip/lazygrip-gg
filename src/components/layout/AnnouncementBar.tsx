@@ -29,13 +29,10 @@ export default function AnnouncementBar() {
         <Link href={ANNOUNCEMENT.href} style={{
           fontSize: 13,
           color: 'var(--accent)',
-          textDecoration: 'none',
+          textDecoration: 'underline',
           fontWeight: 500,
           lineHeight: 1.4,
-        }}
-          onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
-          onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
-        >
+        }}>
           {ANNOUNCEMENT.text}
         </Link>
       </div>
