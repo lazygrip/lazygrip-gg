@@ -2,7 +2,7 @@
   "version": "12.0.5.67602 Live",
   "source": "CrossClassSpellCatalog.lua",
   "generatedAt": "2026-06-10T03:11:26.101Z",
-  "spellCount": 2637,
+  "spellCount": 2638,
   "spells": {
     "17": "Power Word: Shield",
     "53": "Backstab",
@@ -2640,7 +2640,8 @@
     "1291522": "Chronal Dynamo",
     "1291636": "Temporal Barrier",
     "1292996": "Negotiable Contract",
-    "1293135": "Sanguine Vial"
+    "1293135": "Sanguine Vial",
+    "205523": "Blackout Kick"
   },
   "byClass": {
     "deathknight": {
