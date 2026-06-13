@@ -146,7 +146,7 @@ export default function HowItWorksPage() {
       </Section>
 
       <Section title="Keybind recovery">
-        <p>GRIP-EMS v2.1.18 added automatic keybind monitoring. If your sequence keybinds go missing after a login, a loadout swap, or a deleted loadout eating its own binds, the addon now detects it and tells you. Running <code style={code}>/gems binds restore</code> puts your last working set back immediately.</p>
+        <p>GRIP-EMS added automatic keybind monitoring in v2.1.18. If your sequence keybinds go missing after a login, a loadout swap, or a deleted loadout eating its own binds, the addon now detects it and tells you. Running <code style={code}>/gems binds restore</code> puts your last working set back immediately.</p>
         <p style={{ marginTop: 12 }}>The addon snapshots your binds on every clean load, so recovery is reliable even across sessions. If you see a warning about missing binds, run the restore command before assuming something is broken in your sequence.</p>
         <Callout>
           If your keys ever stop responding and you are not in a vehicle, a pet battle, or a cutscene, run <code style={code}>/gems binds restore</code> first. It takes two seconds and covers the most common cause of unexplained dead keys.
@@ -165,8 +165,8 @@ export default function HowItWorksPage() {
       </Section>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 48, paddingTop: 24, borderTop: '0.5px solid var(--border)' }}>
-        <Link href="/guide/installation" style={{ fontSize: 14, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
-          Back: Installation
+        <Link href="/guide/settings" style={{ fontSize: 14, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
+          Back: Settings
         </Link>
         <Link href="/guide/building-sequences" style={{ fontSize: 14, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
           Next: Building sequences

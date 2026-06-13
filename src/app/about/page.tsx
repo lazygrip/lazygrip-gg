@@ -42,6 +42,10 @@ export default function AboutPage() {
               <a href="https://discord.gg/UUdmCNUv" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Join</a>
             </div>
             <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>GRIP-EMS Subreddit</span>
+              <a href="https://www.reddit.com/r/GRIPEMS/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Visit</a>
+            </div>
+            <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ color: 'var(--text-secondary)' }}>FAQ</span>
               <Link href="/faq" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Read</Link>
             </div>

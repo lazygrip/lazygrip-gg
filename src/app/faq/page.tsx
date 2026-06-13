@@ -33,9 +33,9 @@ export default function FAQPage() {
             <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
               <h3 style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Where do I learn how to build sequences?</h3>
               <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                The developer wrote a full guide that covers installation through building your first sequence.{' '}
-                <a href="https://jesperlive.github.io/grip-ems-guide/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
-                  jesperlive.github.io/grip-ems-guide
+                The LazyGrip guide covers installation, settings, how the step engine works, building sequences from scratch, and validating your work against logs.{' '}
+                <a href="/guide" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
+                  lazygrip.net/guide
                 </a>
               </p>
             </div>
@@ -43,9 +43,15 @@ export default function FAQPage() {
             <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
               <h3 style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>I need help with the addon itself.</h3>
               <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                That is what the GRIP-EMS Discord is for. The developer is in there along with the rest of the community.{' '}
+                The GRIP-EMS Discord is the fastest place to get help. The developer is in there along with the rest of the community.{' '}
                 <a href="https://discord.gg/UUdmCNUv" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
                   discord.gg/UUdmCNUv
+                </a>
+              </p>
+              <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 8 }}>
+                The community also has a subreddit for discussion, sharing sequences, and general GRIP-EMS questions.{' '}
+                <a href="https://www.reddit.com/r/GRIPEMS/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
+                  r/GRIPEMS
                 </a>
               </p>
             </div>
