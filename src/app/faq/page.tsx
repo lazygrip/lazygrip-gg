@@ -112,7 +112,9 @@ export default function FAQPage() {
             <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
               <h3 style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>How do I delete my account?</h3>
               <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                Email admin@lazygrip.net with your username and we will remove your account and data within 30 days.
+                Email{' '}
+                <a href="mailto:admin@lazygrip.net" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>admin@lazygrip.net</a>
+                {' '}with your username and we will remove your account and data within 30 days.
               </p>
             </div>
 
