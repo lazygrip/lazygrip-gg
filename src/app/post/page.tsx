@@ -73,7 +73,7 @@ function PostForm() {
   const [collectionSequences, setCollectionSequences] = useState<CollectionSequence[] | null>(null)
   // Shared title for the collection page
   const [collectionTitle, setCollectionTitle] = useState('')
-
+  const [minorEdit, setMinorEdit] = useState(false)
   const selectedClass = WOW_CLASSES.find(c => c.id === Number(form.class_id))
   const selectedSpec = selectedClass?.specs.find(s => s.name === form.spec_name)
   const heroTalentOptions = selectedSpec?.heroTalents ?? []
@@ -416,30 +416,54 @@ async function runDecode(exportString: string) {
       }
 
 if (isEditMode) {
-  const { error: rpcError } = await supabase.rpc('update_sequence_with_version', {
-    p_sequence_id: editId,
-    p_author_id: user.id,
-    p_title: payload.title,
-    p_description: payload.description,
-    p_class_id: payload.class_id,
-    p_class_name: payload.class_name,
-    p_spec_id: selectedSpec?.id ?? null,
-    p_spec_name: payload.spec_name,
-    p_content_type: payload.content_type,
-    p_hero_talent: payload.hero_talent,
-    p_patch_version: payload.patch_version,
-    p_grip_version: payload.grip_version,
-    p_step_function: payload.step_function,
-    p_step_count: payload.step_count,
-    p_grip_string: payload.grip_string,
-    p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
-    p_talent_string: payload.talent_string,
-    p_warcraftlogs_url: payload.warcraftlogs_url,
-    p_performance_notes: payload.performance_notes,
-    p_changelog: null,
-  })
-
-if (rpcError) throw rpcError
+  if (minorEdit) {
+    const { error: rpcError } = await supabase.rpc('update_sequence_metadata', {
+      p_sequence_id: editId,
+      p_author_id: user.id,
+      p_title: payload.title,
+      p_description: payload.description,
+      p_class_id: payload.class_id,
+      p_class_name: payload.class_name,
+      p_spec_id: selectedSpec?.id ?? null,
+      p_spec_name: payload.spec_name,
+      p_content_type: payload.content_type,
+      p_hero_talent: payload.hero_talent,
+      p_patch_version: payload.patch_version,
+      p_grip_version: payload.grip_version,
+      p_step_function: payload.step_function,
+      p_step_count: payload.step_count,
+      p_grip_string: payload.grip_string,
+      p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
+      p_talent_string: payload.talent_string,
+      p_warcraftlogs_url: payload.warcraftlogs_url,
+      p_performance_notes: payload.performance_notes,
+    })
+    if (rpcError) throw rpcError
+  } else {
+    const { error: rpcError } = await supabase.rpc('update_sequence_with_version', {
+      p_sequence_id: editId,
+      p_author_id: user.id,
+      p_title: payload.title,
+      p_description: payload.description,
+      p_class_id: payload.class_id,
+      p_class_name: payload.class_name,
+      p_spec_id: selectedSpec?.id ?? null,
+      p_spec_name: payload.spec_name,
+      p_content_type: payload.content_type,
+      p_hero_talent: payload.hero_talent,
+      p_patch_version: payload.patch_version,
+      p_grip_version: payload.grip_version,
+      p_step_function: payload.step_function,
+      p_step_count: payload.step_count,
+      p_grip_string: payload.grip_string,
+      p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
+      p_talent_string: payload.talent_string,
+      p_warcraftlogs_url: payload.warcraftlogs_url,
+      p_performance_notes: payload.performance_notes,
+      p_changelog: null,
+    })
+    if (rpcError) throw rpcError
+  }
   router.push(`/sequences/${editSlug}`)
 } else {
         const slug = slugify(form.title) + '-' + Date.now().toString(36)
@@ -940,7 +964,23 @@ if (rpcError) throw rpcError
                     ? 'Publish collection'
                     : 'Publish sequence'}
             </button>
-
+{isEditMode && (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <input
+      type="checkbox"
+      id="minor-edit"
+      checked={minorEdit}
+      onChange={e => setMinorEdit(e.target.checked)}
+      style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }}
+    />
+    <label
+      htmlFor="minor-edit"
+      style={{ fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+    >
+      Minor edit (typos, description only — skip version save)
+    </label>
+  </div>
+)}
             {isEditMode && (
               <button
                 type="button"
