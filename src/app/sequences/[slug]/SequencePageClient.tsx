@@ -1382,9 +1382,9 @@ function CommentThread({
               )}
             </div>
           </div>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            {comment.body}
-          </p>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+		  {comment.body}
+		  </p>
 
           {isReplying && (
             <div style={{ marginTop: 10 }}>
