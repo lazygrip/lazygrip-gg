@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import './globals.css'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
+import AnnouncementBar from '@/components/layout/AnnouncementBar'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import Script from 'next/script'
 
@@ -75,6 +76,7 @@ export default async function RootLayout({
         </Script>
         <ThemeProvider initialTheme={initialTheme}>
           <Header />
+          <AnnouncementBar />
           <main style={{ minHeight: 'calc(100vh - 56px - 60px)' }}>
             {children}
           </main>
