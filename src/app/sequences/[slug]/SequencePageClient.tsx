@@ -45,6 +45,8 @@ export default function SequencePageClient() {
   const [saved, setSaved] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [versionToDelete, setVersionToDelete] = useState<string | null>(null)
+  const [deletingVersion, setDeletingVersion] = useState(false)
 
   // ST/MT linking state
   const [linkedSequence, setLinkedSequence] = useState<LinkedSequence | null>(null)
@@ -115,7 +117,6 @@ export default function SequencePageClient() {
         })
       }
 
-      // Fetch linked ST/MT variant if a set_id exists
       if (seq.set_id) {
         const { data: linked } = await supabase
           .from('sequences')
@@ -221,6 +222,29 @@ export default function SequencePageClient() {
     }
   }
 
+  async function handleDeleteVersion(versionId: string) {
+    if (!user || !sequence) return
+    setDeletingVersion(true)
+    const { error } = await supabase.rpc('delete_sequence_version', {
+      p_version_id: versionId,
+      p_sequence_id: sequence.id,
+      p_author_id: user.id,
+    })
+    if (error) {
+      console.error('Version delete failed:', error)
+      setDeletingVersion(false)
+      setVersionToDelete(null)
+      return
+    }
+    setVersions(vs => vs.filter(v => v.id !== versionId))
+    if (selectedVersion?.id === versionId) {
+      const remaining = versions.filter(v => v.id !== versionId)
+      setSelectedVersion(remaining[0] ?? null)
+    }
+    setDeletingVersion(false)
+    setVersionToDelete(null)
+  }
+
   async function handleLink() {
     if (!sequence || !linkSlug.trim()) return
     setLinkLoading(true)
@@ -322,19 +346,77 @@ export default function SequencePageClient() {
   const classColor = getClassColor(sequence.class_id)
   const contentLabel = CONTENT_TYPES.find(c => c.value === sequence.content_type)?.label ?? sequence.content_type
 
-  // Collection sequences tab data
   const collectionEntries: CollectionSequenceEntry[] = sequence.collection_sequences ?? []
   const isCollection = collectionEntries.length > 0
   const activeEntry = collectionEntries[activeCollectionTab] ?? null
 
-  // Steps for non-collection display
   const steps = sequence.raw_steps || []
   const visibleSteps = showAllSteps ? steps : steps.slice(0, 8)
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px' }}>
 
-      {/* Delete confirm dialog */}
+      {/* Version delete confirm modal */}
+      {versionToDelete && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 100,
+          background: 'rgba(0,0,0,0.6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            background: 'var(--bg-primary)',
+            border: '0.5px solid var(--border)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '28px',
+            maxWidth: 400,
+            width: '100%',
+            margin: '0 24px',
+          }}>
+            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 10, color: 'var(--text-primary)' }}>
+              Delete this version?
+            </h2>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
+              This will permanently remove this version from the history. This cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setVersionToDelete(null)}
+                disabled={deletingVersion}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  border: '0.5px solid var(--border-strong)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer', fontSize: 13,
+                  fontFamily: 'var(--font-sans)',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDeleteVersion(versionToDelete)}
+                disabled={deletingVersion}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: 'var(--radius-md)',
+                  border: 'none',
+                  background: '#c0392b',
+                  color: 'white',
+                  cursor: deletingVersion ? 'not-allowed' : 'pointer',
+                  fontSize: 13, fontWeight: 500,
+                  fontFamily: 'var(--font-sans)',
+                  opacity: deletingVersion ? 0.7 : 1,
+                }}
+              >
+                {deletingVersion ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sequence delete confirm modal */}
       {showDeleteConfirm && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 100,
@@ -581,29 +663,50 @@ export default function SequencePageClient() {
                       Version:
                     </span>
                     {versions.map(v => (
-                      <button
-                        key={v.id}
-                        onClick={() => setSelectedVersion(v)}
-                        style={{
-                          padding: '3px 8px',
-                          borderRadius: 'var(--radius-sm)',
-                          border: selectedVersion.id === v.id
-                            ? '0.5px solid var(--accent)'
-                            : '0.5px solid var(--border-strong)',
-                          background: selectedVersion.id === v.id
-                            ? 'var(--accent)' : 'var(--bg-secondary)',
-                          color: selectedVersion.id === v.id ? 'white' : 'var(--text-secondary)',
-                          cursor: 'pointer',
-                          fontSize: 12,
-                          fontWeight: selectedVersion.id === v.id ? 600 : 400,
-                          fontFamily: 'var(--font-sans)',
-                        }}
-                      >
-                        {v.version_label}
-                        {v.id === sequence.current_version_id && (
-                          <span style={{ marginLeft: 4, opacity: 0.75, fontSize: 10 }}>current</span>
+                      <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <button
+                          onClick={() => setSelectedVersion(v)}
+                          style={{
+                            padding: '3px 8px',
+                            borderRadius: 'var(--radius-sm)',
+                            border: selectedVersion.id === v.id
+                              ? '0.5px solid var(--accent)'
+                              : '0.5px solid var(--border-strong)',
+                            background: selectedVersion.id === v.id
+                              ? 'var(--accent)' : 'var(--bg-secondary)',
+                            color: selectedVersion.id === v.id ? 'white' : 'var(--text-secondary)',
+                            cursor: 'pointer',
+                            fontSize: 12,
+                            fontWeight: selectedVersion.id === v.id ? 600 : 400,
+                            fontFamily: 'var(--font-sans)',
+                          }}
+                        >
+                          {v.version_label}
+                          {v.id === sequence.current_version_id && (
+                            <span style={{ marginLeft: 4, opacity: 0.75, fontSize: 10 }}>current</span>
+                          )}
+                        </button>
+                        {isAuthor && v.id !== sequence.current_version_id && (
+                          <button
+                            onClick={() => setVersionToDelete(v.id)}
+                            title="Delete this version"
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              color: 'var(--text-muted)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '2px 4px',
+                              borderRadius: 4,
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.color = '#c0392b')}
+                            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                          >
+                            <Trash2 size={12} />
+                          </button>
                         )}
-                      </button>
+                      </div>
                     ))}
                   </div>
                   {!isCurrentVersion && (
@@ -659,7 +762,7 @@ export default function SequencePageClient() {
                 }}>
                   <Wrench size={13} /> Open in Builder
                 </button>
-              <button onClick={copyGripString} style={{
+                <button onClick={copyGripString} style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '6px 12px', borderRadius: 'var(--radius-md)',
                   border: '0.5px solid var(--border-strong)',
@@ -687,7 +790,6 @@ export default function SequencePageClient() {
               borderRadius: 'var(--radius-lg)',
               padding: '18px',
             }}>
-              {/* Tab bar */}
               <div style={{
                 display: 'flex', gap: 4, marginBottom: 16,
                 borderBottom: '0.5px solid var(--border)',
@@ -714,7 +816,6 @@ export default function SequencePageClient() {
                 ))}
               </div>
 
-              {/* Active tab metadata */}
               <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
                 {activeEntry.stepFunction && (
                   <Badge color="#888">{activeEntry.stepFunction}</Badge>
@@ -722,7 +823,6 @@ export default function SequencePageClient() {
                 <Badge color="#888">{activeEntry.steps.length} steps</Badge>
               </div>
 
-              {/* Per-sequence talent string if present */}
               {activeEntry.talent_string && (
                 <div style={{
                   marginBottom: 14,
@@ -741,7 +841,6 @@ export default function SequencePageClient() {
                 </div>
               )}
 
-              {/* Steps */}
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>
                 {(showAllSteps ? activeEntry.steps : activeEntry.steps.slice(0, 8)).map((step: any, i: number) => (
                   <div key={i} style={{
@@ -780,7 +879,7 @@ export default function SequencePageClient() {
             </div>
           )}
 
-          {/* Single sequence steps display -- hidden for collections */}
+          {/* Single sequence steps display */}
           {!isCollection && steps.length > 0 && (
             <div style={{
               background: 'var(--bg-primary)',
@@ -982,7 +1081,7 @@ export default function SequencePageClient() {
             </table>
           </div>
 
-          {/* ST / MT linked variant -- only shown for non-collection sequences */}
+          {/* ST / MT linked variant */}
           {!isCollection && (linkedSequence || canManageLinks) && (
             <div style={{
               background: 'var(--bg-primary)',
@@ -1139,7 +1238,7 @@ export default function SequencePageClient() {
             </div>
           )}
 
-          {/* Talent string -- only for non-collection sequences */}
+          {/* Talent string */}
           {!isCollection && selectedVersion?.talent_string && (
             <div style={{
               background: 'var(--bg-primary)',
