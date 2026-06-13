@@ -13,9 +13,8 @@ export default function AnnouncementBar() {
 
   return (
     <div style={{
-      background: 'var(--accent-subtle)',
-      borderBottom: '0.5px solid rgba(29,158,117,0.2)',
-      padding: '8px 16px',
+      background: 'var(--accent)',
+      padding: '10px 16px',
     }}>
       <div style={{
         maxWidth: 1200,
@@ -23,15 +22,16 @@ export default function AnnouncementBar() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 8,
+        gap: 10,
       }}>
-        <Megaphone size={13} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+        <Megaphone size={15} style={{ color: 'white', flexShrink: 0 }} />
         <Link href={ANNOUNCEMENT.href} style={{
-          fontSize: 13,
-          color: 'var(--accent)',
+          fontSize: 14,
+          fontWeight: 700,
+          color: 'white',
           textDecoration: 'underline',
-          fontWeight: 500,
           lineHeight: 1.4,
+          letterSpacing: '-0.01em',
         }}>
           {ANNOUNCEMENT.text}
         </Link>
