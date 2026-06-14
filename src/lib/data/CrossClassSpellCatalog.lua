@@ -1087,6 +1087,7 @@ local CATALOG = {
     { id = 418101, n = "Potent Mana", c = "evoker" },
     { id = 429483, n = "Warp", c = "evoker" },
     { id = 431442, n = "Chrono Flame", c = "evoker" },
+	{ id = 431443, n = "Chrono Flames", c = "evoker" },
     { id = 431484, n = "Instability Matrix", c = "evoker" },
     { id = 431615, n = "Reverberations", c = "evoker" },
     { id = 431657, n = "Primacy", c = "evoker" },
