@@ -110,13 +110,13 @@ export default function UpdateSequencePage() {
         return
       }
 
-      if (data.multipleSequences) {
+      if (data.sequences && data.sequences.length > 1) {
         setPendingExportString(exportString)
-        setSequenceOptions(data.sequences)
+        setSequenceOptions(data.sequences.map((seq: { name: string }, i: number) => ({ name: seq.name, index: i })))
         return
       }
 
-      const steps: SequenceStep[] = data.steps
+      const steps: SequenceStep[] = data.sequences?.[0]?.steps ?? data.steps ?? []
       // Store the structured steps for use at submit time.
       setDecodedSteps(steps)
       // Display in textarea with step separators so multiline steps are readable.
@@ -161,7 +161,25 @@ export default function UpdateSequencePage() {
   function handleSequencePick(index: number) {
     if (!pendingExportString) return
     setSequenceOptions(null)
-    runDecode(pendingExportString, index)
+    // Re-run decode but extract the specific sequence by index from the full response
+    setDecoding(true)
+    fetch('/api/decode-grip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: pendingExportString }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        const seq = data.sequences?.[index]
+        if (!seq) { setDecodeError('Could not load that sequence.'); return }
+        const steps: SequenceStep[] = seq.steps ?? []
+        setDecodedSteps(steps)
+        setRawSteps(steps.map((s: SequenceStep) => s.text).join('\n---\n'))
+        setStepsAutoPopulated(true)
+        setPendingExportString(null)
+      })
+      .catch(() => setDecodeError('Could not reach the decode API.'))
+      .finally(() => setDecoding(false))
   }
 
   async function handlePublish() {
