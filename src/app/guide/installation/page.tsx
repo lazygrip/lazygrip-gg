@@ -19,7 +19,7 @@ export default function InstallationPage() {
         Installation
       </h1>
       <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 40 }}>
-        Installing GRIP-EMS takes about two minutes. The part most guides skip is what comes after. There are three in-game settings that have to be configured before anything will work, and none of them are set correctly by default. This page covers all of it.
+        Installing GRIP-EMS takes about two minutes. The part most guides skip is what comes after. There are in-game settings that have to be configured before anything will work, and none of them are set correctly by default. This page covers the install steps and the most critical setting. The full settings breakdown is on the <Link href="/guide/settings" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Settings</Link> page.
       </p>
 
       <Section title="Step 1: Download and enable">

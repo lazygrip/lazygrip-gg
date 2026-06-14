@@ -270,7 +270,7 @@ export default function HomePage() {
           </div>
 
           <div style={{ marginTop: 24 }}>
-            <Link href="/faq" style={{
+            <Link href="/guide" style={{
               fontSize: 13,
               color: 'var(--accent)',
               textDecoration: 'none',
