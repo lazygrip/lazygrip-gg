@@ -161,7 +161,6 @@ export default function UpdateSequencePage() {
   function handleSequencePick(index: number) {
     if (!pendingExportString) return
     setSequenceOptions(null)
-    // Re-run decode but extract the specific sequence by index from the full response
     setDecoding(true)
     fetch('/api/decode-grip', {
       method: 'POST',
@@ -173,9 +172,12 @@ export default function UpdateSequencePage() {
         const seq = data.sequences?.[index]
         if (!seq) { setDecodeError('Could not load that sequence.'); return }
         const steps: SequenceStep[] = seq.steps ?? []
+        // Preview steps from selected sequence but keep the full bundle string
         setDecodedSteps(steps)
         setRawSteps(steps.map((s: SequenceStep) => s.text).join('\n---\n'))
         setStepsAutoPopulated(true)
+        // Keep the full export string so the complete bundle is stored
+        setGripString(pendingExportString)
         setPendingExportString(null)
       })
       .catch(() => setDecodeError('Could not reach the decode API.'))
@@ -291,7 +293,7 @@ export default function UpdateSequencePage() {
               </button>
             </div>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
-              This export contains {sequenceOptions.length} sequences. Pick the one you want to use for this version.
+              This export contains {sequenceOptions.length} sequences. The full bundle will be saved. Pick one to preview its steps below.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {sequenceOptions.map(opt => (
