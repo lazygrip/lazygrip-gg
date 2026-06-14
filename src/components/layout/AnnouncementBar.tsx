@@ -4,8 +4,8 @@ import { Megaphone } from 'lucide-react'
 // Update these two lines when you have a new announcement.
 // Set ANNOUNCEMENT to null to hide the bar entirely.
 const ANNOUNCEMENT = {
-  text: 'New guide added: Settings — SQW, Key Down Casting, click rate, and how they all connect.',
-  href: '/guide/settings',
+  text: 'GRIP-EMS v2.1.21 is out — interleave fix, Tempo Advisor fix, and eight new languages.',
+  href: 'https://www.curseforge.com/wow/addons/grip-enhanced-macro-sequencer',
 }
 
 export default function AnnouncementBar() {

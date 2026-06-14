@@ -143,6 +143,7 @@ export default function HowItWorksPage() {
         </div>
         <p>This requires Auto Dismount in Flight to be enabled in your WoW settings. Druids also need Auto Unshift enabled to exit skyriding Travel Form mid-air with the same single press.</p>
         <p style={{ marginTop: 12 }}>Getting dazed off a skyriding mount mid-pull used to leave your sequence keys dead until you dropped combat. That is fixed as of v2.1.18. The swap to your ground action bar now happens the moment you land, combat-safe, so your keys are ready the instant you hit the ground.</p>
+        <p style={{ marginTop: 12 }}>There was a separate bug on first takeoff of a session where ground binds stayed live mid-air or vehicle keys never woke up at all. Fixed in v2.1.20. The out-of-combat watchdog now heals the swap at takeoff and restores it on landing, so the first flight of every session behaves the same as every other.</p>
       </Section>
 
       <Section title="Keybind recovery">
