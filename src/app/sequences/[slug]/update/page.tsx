@@ -100,7 +100,7 @@ export default function UpdateSequencePage() {
       const res = await fetch('/api/decode-grip', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ exportString, sequenceIndex }),
+        body: JSON.stringify({ code: exportString, sequenceIndex }),
       })
 
       const data = await res.json()
