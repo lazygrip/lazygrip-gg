@@ -4,7 +4,7 @@ import { Megaphone } from 'lucide-react'
 // Update these two lines when you have a new announcement.
 // Set ANNOUNCEMENT to null to hide the bar entirely.
 const ANNOUNCEMENT = {
-  text: 'GRIP-EMS v2.1.21 is out — interleave fix, Tempo Advisor fix, and eight new languages.',
+  text: 'GRIP-EMS v2.1.23 is out — major import fixes. 12.0.7 drops June 16th: report anything that feels off.',
   href: 'https://www.curseforge.com/wow/addons/grip-enhanced-macro-sequencer',
 }
 
