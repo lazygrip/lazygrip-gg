@@ -977,7 +977,7 @@ if (isEditMode) {
       htmlFor="minor-edit"
       style={{ fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
     >
-      Minor edit (typos, description only — skip version save)
+      Minor edit — updates title, description, performance notes, and metadata without creating a new version
     </label>
   </div>
 )}
