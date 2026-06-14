@@ -86,6 +86,7 @@ export default function SettingsPage() {
         <Callout>
           Pressing faster than your spells can land does not make your rotation faster. The GCD is the real speed limit, around 1.5 seconds for most specs and shorter with haste. If you are pressing at 80ms and your GCD is 1.4 seconds, you are firing roughly 17 keypresses per GCD and advancing the sequence 17 steps before a single spell lands. That is not a faster rotation; it is a broken one. The sweet spot is pressing at roughly your cast pace. The Dynamic SQW Optimiser's recommended click rate is the most personalized answer to what that number should be for your character in real time.
         </Callout>
+        <p style={{ marginTop: 12 }}>Note on the Tempo Advisor: prior to v2.1.21 it was skewing its click rate recommendation due to idle time and login data creeping into the calculation. It is accurate as of v2.1.21 and applies a one-time repair to clean up the bad data on your next login. If your Faster/Slower numbers felt off before, update and let it recalibrate.</p>
       </Section>
 
       <Section title="Outside programs: AHK, iCue, Synapse, and others">

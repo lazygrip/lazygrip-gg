@@ -120,6 +120,14 @@ export default function InstallationPage() {
           solution="Fixed in v2.1.14. The keybind suspend-and-restore now runs inside the secure engine and survives skyriding, vehicle exits, and possession. Update GRIP-EMS if you are on an older version. As of v2.1.16 you can also press your sequence key while skyriding over an attackable target and it will dismount and fire step 1 in a single press."
         />
         <TroubleshootItem
+          problem="Sequence key fires mid-air or vehicle keys are dead on first flight of the session"
+          solution="This was a first-takeoff bug where ground binds stayed live while airborne or vehicle keys never activated at all. Fixed in v2.1.20. The watchdog now heals the bar swap at takeoff and restores it on landing. Update GRIP-EMS if you are hitting this on the first flight of every login."
+        />
+        <TroubleshootItem
+          problem="Another addon keeps stealing my sequence keybinds"
+          solution="Some addons override-bind the same keys GRIP-EMS uses for vehicles and skyriding, and whoever loads last wins. As of v2.1.20, the Keybinds tab inside the editor names the contending keys directly in the vehicle and pet battle sections so you can see exactly which addon is causing the conflict. GRIP-EMS does not fight for the bind, it just tells you who took it."
+        />
+        <TroubleshootItem
           problem="Lua error spam about tainted table iteration in arena or BG"
           solution="This is typically caused by another addon tainting the environment before GRIP-EMS runs, not a GRIP-EMS bug itself. A common culprit is PvPCallouts. Try disabling other addons one at a time with BugSack and BugGrabber installed to identify the source. If the error text says execution tainted by GRIP-EMS specifically, file a bug report in the Discord with the full error and your addon list."
         />
