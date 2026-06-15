@@ -59,23 +59,21 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
     router.push(`${pathname}${query ? `?${query}` : ''}`, { scroll: false })
   }
 
-  // On mount, push any initialFilters into the URL if not already present
+  // On pathname change, sync initialFilters into URL
   useEffect(() => {
-    const updates: Record<string, string | undefined> = {}
-    if (initialFilters.class_id && !searchParams.get('class_id')) {
-      updates.class_id = String(initialFilters.class_id)
+    const params = new URLSearchParams()
+    // Preserve sort if set
+    const currentSort = searchParams.get('sort')
+    if (currentSort && currentSort !== 'recent') params.set('sort', currentSort)
+    // Apply initialFilters fresh
+    if (initialFilters.class_id) params.set('class_id', String(initialFilters.class_id))
+    if (initialFilters.content_type) params.set('content_type', initialFilters.content_type)
+    const newQuery = params.toString()
+    const currentQuery = searchParams.toString()
+    if (newQuery !== currentQuery) {
+      router.replace(`${pathname}${newQuery ? `?${newQuery}` : ''}`, { scroll: false })
     }
-    if (initialFilters.content_type && !searchParams.get('content_type')) {
-      updates.content_type = initialFilters.content_type
-    }
-    if (Object.keys(updates).length > 0) {
-      const params = new URLSearchParams(searchParams.toString())
-      for (const [key, value] of Object.entries(updates)) {
-        if (value) params.set(key, value)
-      }
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-    }
-  }, [])
+  }, [pathname])
 
   useEffect(() => {
     fetchSequences()
