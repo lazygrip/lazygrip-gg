@@ -32,13 +32,14 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
 
   const supabase = createClient()
 
-  // Derive all filter state directly from URL — single source of truth
+  // Merge URL params with initialFilters — initialFilters are the baseline from the slug route,
+  // URL params take precedence when they exist (e.g. after user interaction or back button)
   const filters: SequenceFilters = {
     sort: (searchParams.get('sort') || 'recent') as SequenceFilters['sort'],
     page: searchParams.get('page') ? Number(searchParams.get('page')) : 1,
     limit: 20,
-    content_type: (searchParams.get('content_type') || undefined) as SequenceFilters['content_type'],
-    class_id: searchParams.get('class_id') ? Number(searchParams.get('class_id')) : undefined,
+    content_type: (searchParams.get('content_type') || initialFilters.content_type || undefined) as SequenceFilters['content_type'],
+    class_id: searchParams.get('class_id') ? Number(searchParams.get('class_id')) : initialFilters.class_id,
     spec_id: searchParams.get('spec_id') ? Number(searchParams.get('spec_id')) : undefined,
     search: searchParams.get('search') || undefined,
   }
@@ -59,26 +60,24 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
     router.push(`${pathname}${query ? `?${query}` : ''}`, { scroll: false })
   }
 
-  // On pathname change, sync initialFilters into URL
+  // Sync initialFilters into URL so back button can restore them
   useEffect(() => {
-    const params = new URLSearchParams()
-    // Preserve sort if set
-    const currentSort = searchParams.get('sort')
-    if (currentSort && currentSort !== 'recent') params.set('sort', currentSort)
-    // Apply initialFilters fresh
-    if (initialFilters.class_id) params.set('class_id', String(initialFilters.class_id))
-    if (initialFilters.content_type) params.set('content_type', initialFilters.content_type)
-    const newQuery = params.toString()
-    const currentQuery = searchParams.toString()
-    if (newQuery !== currentQuery) {
-      router.replace(`${pathname}${newQuery ? `?${newQuery}` : ''}`, { scroll: false })
+    const params = new URLSearchParams(searchParams.toString())
+    let changed = false
+    if (initialFilters.class_id && !searchParams.get('class_id')) {
+      params.set('class_id', String(initialFilters.class_id))
+      changed = true
+    }
+    if (initialFilters.content_type && !searchParams.get('content_type')) {
+      params.set('content_type', initialFilters.content_type)
+      changed = true
+    }
+    if (changed) {
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
     }
   }, [pathname])
 
   useEffect(() => {
-    // Don't fetch until initialFilters are reflected in the URL to avoid showing unfiltered results
-    if (initialFilters.class_id && Number(searchParams.get('class_id')) !== initialFilters.class_id) return
-    if (initialFilters.content_type && searchParams.get('content_type') !== initialFilters.content_type) return
     fetchSequences()
   }, [searchParams.toString()])
 
