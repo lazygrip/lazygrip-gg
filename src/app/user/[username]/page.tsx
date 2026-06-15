@@ -126,18 +126,7 @@ function SequenceRow({ seq }: { seq: any }) {
           cursor: 'pointer',
           transition: 'box-shadow 0.15s',
         }}
-        onMouseEnter={e => {
-          e.currentTarget.style.borderTopColor = 'var(--border-strong)'
-          e.currentTarget.style.borderRightColor = 'var(--border-strong)'
-          e.currentTarget.style.borderBottomColor = 'var(--border-strong)'
-          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)'
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.borderTopColor = 'var(--border)'
-          e.currentTarget.style.borderRightColor = 'var(--border)'
-          e.currentTarget.style.borderBottomColor = 'var(--border)'
-          e.currentTarget.style.boxShadow = 'none'
-        }}
+
       >
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
