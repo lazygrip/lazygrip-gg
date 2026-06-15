@@ -126,11 +126,13 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
 
   function selectClass(classId: number | undefined) {
     const newId = filters.class_id === classId ? undefined : classId
-    updateUrl({
-      class_id: newId ? String(newId) : undefined,
-      spec_id: undefined,
-    })
     setShowMobileFilters(false)
+    if (!newId) {
+      router.push('/browse', { scroll: false })
+    } else {
+      const cls = WOW_CLASSES.find(c => c.id === newId)
+      if (cls) router.push(`/browse/${cls.slug}`, { scroll: false })
+    }
   }
 
   function selectSpec(specId: number) {
