@@ -35,6 +35,7 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
     limit: 20,
     content_type: contentTypeFromUrl,
     class_id: classIdFromUrl,
+    spec_id: undefined,
   })
   const [search, setSearch] = useState('')
   const [showMobileFilters, setShowMobileFilters] = useState(false)
@@ -48,6 +49,7 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
       sort: sortFromUrl,
       content_type: contentTypeFromUrl,
       class_id: classIdFromUrl,
+      spec_id: undefined,
       page: 1,
     }))
     setSearch('')
@@ -66,6 +68,7 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
         .eq('is_published', true)
 
       if (filters.class_id) query = query.eq('class_id', filters.class_id)
+      if (filters.spec_id) query = query.eq('spec_id', filters.spec_id)
       if (filters.content_type) query = query.eq('content_type', filters.content_type)
       if (filters.search) query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
 
@@ -105,6 +108,16 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
     setFilters(f => ({ ...f, [key]: value, page: 1 }))
   }
 
+  function selectClass(classId: number | undefined) {
+    setFilters(f => ({ ...f, class_id: classId, spec_id: undefined, page: 1 }))
+    setShowMobileFilters(false)
+  }
+
+  function selectSpec(specId: number) {
+    setFilters(f => ({ ...f, spec_id: f.spec_id === specId ? undefined : specId, page: 1 }))
+    setShowMobileFilters(false)
+  }
+
   function clearFilters() {
     setFilters({
       sort: sortFromUrl,
@@ -112,11 +125,12 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
       limit: 20,
       content_type: contentTypeFromUrl,
       class_id: classIdFromUrl,
+      spec_id: undefined,
     })
     setSearch('')
   }
 
-  const hasActiveFilters = filters.class_id || filters.content_type || filters.search
+  const hasActiveFilters = filters.class_id || filters.content_type || filters.search || filters.spec_id
 
   const filterPanel = (
     <div>
@@ -137,9 +151,29 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
         ))}
       </FilterSection>
       <FilterSection title="Class">
-        <FilterItem label="All classes" active={!filters.class_id} onClick={() => { setFilter('class_id', undefined); setShowMobileFilters(false) }} />
+        <FilterItem label="All classes" active={!filters.class_id} onClick={() => selectClass(undefined)} />
         {WOW_CLASSES.map(cls => (
-          <FilterItem key={cls.id} label={cls.name} active={filters.class_id === cls.id} onClick={() => { setFilter('class_id', cls.id); setShowMobileFilters(false) }} color={cls.color} />
+          <div key={cls.id}>
+            <FilterItem
+              label={cls.name}
+              active={filters.class_id === cls.id && !filters.spec_id}
+              onClick={() => selectClass(cls.id)}
+              color={cls.color}
+            />
+            {filters.class_id === cls.id && cls.specs.length > 0 && (
+              <div style={{ marginLeft: 14, marginTop: 1, marginBottom: 2, borderLeft: `1.5px solid ${cls.color}30`, paddingLeft: 8 }}>
+                {cls.specs.map(spec => (
+                  <FilterItem
+                    key={spec.id}
+                    label={spec.name}
+                    active={filters.spec_id === spec.id}
+                    onClick={() => selectSpec(spec.id)}
+                    indent
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         ))}
       </FilterSection>
     </div>
@@ -249,9 +283,9 @@ function FilterSection({ title, children }: { title: string; children: React.Rea
   )
 }
 
-function FilterItem({ label, active, onClick, color }: { label: string; active: boolean; onClick: () => void; color?: string }) {
+function FilterItem({ label, active, onClick, color, indent }: { label: string; active: boolean; onClick: () => void; color?: string; indent?: boolean }) {
   return (
-    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%', textAlign: 'left', padding: '5px 8px', borderRadius: 'var(--radius-sm)', border: 'none', background: active ? 'var(--accent-subtle)' : 'transparent', color: active ? 'var(--accent-text)' : 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontWeight: active ? 500 : 400, fontFamily: 'var(--font-sans)' }}>
+    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%', textAlign: 'left', padding: indent ? '4px 8px' : '5px 8px', borderRadius: 'var(--radius-sm)', border: 'none', background: active ? 'var(--accent-subtle)' : 'transparent', color: active ? 'var(--accent-text)' : indent ? 'var(--text-muted)' : 'var(--text-secondary)', cursor: 'pointer', fontSize: indent ? 12 : 13, fontWeight: active ? 500 : 400, fontFamily: 'var(--font-sans)' }}>
       {color && <span style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0, border: color === '#FFFFFF' ? '1px solid var(--border)' : 'none' }} />}
       {label}
     </button>

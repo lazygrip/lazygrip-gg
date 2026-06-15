@@ -147,6 +147,7 @@ export type SequenceVersion = {
 // Filter/search types
 export type SequenceFilters = {
   class_id?: number
+  spec_id?: number
   spec_name?: string
   content_type?: ContentType
   grip_version?: string
