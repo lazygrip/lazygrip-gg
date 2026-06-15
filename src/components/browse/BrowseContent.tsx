@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Search, SlidersHorizontal, X } from 'lucide-react'
 import SequenceCard from '@/components/sequence/SequenceCard'
 import { WOW_CLASSES, CONTENT_TYPES } from '@/lib/wow-data'
@@ -21,43 +21,47 @@ interface Props {
 
 export default function BrowseContent({ initialFilters = {} }: Props) {
   const searchParams = useSearchParams()
-
-  const sortFromUrl = (searchParams.get('sort') || 'recent') as SequenceFilters['sort']
-  const contentTypeFromUrl = (searchParams.get('content_type') || undefined) as SequenceFilters['content_type']
-  const classIdFromUrl = searchParams.get('class_id') ? Number(searchParams.get('class_id')) : undefined
+  const router = useRouter()
+  const pathname = usePathname()
 
   const [sequences, setSequences] = useState<Sequence[]>([])
   const [loading, setLoading] = useState(true)
   const [count, setCount] = useState(0)
-  const [filters, setFilters] = useState<SequenceFilters>({
-    sort: sortFromUrl,
-    page: 1,
-    limit: 20,
-    content_type: contentTypeFromUrl,
-    class_id: classIdFromUrl,
-    spec_id: undefined,
-  })
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(searchParams.get('search') || '')
   const [showMobileFilters, setShowMobileFilters] = useState(false)
 
   const supabase = createClient()
 
-  // Sync filters when URL params change (e.g. nav between Browse and Top Rated)
-  useEffect(() => {
-    setFilters(f => ({
-      ...f,
-      sort: sortFromUrl,
-      content_type: contentTypeFromUrl,
-      class_id: classIdFromUrl,
-      spec_id: undefined,
-      page: 1,
-    }))
-    setSearch('')
-  }, [sortFromUrl, contentTypeFromUrl, classIdFromUrl])
+  // Derive all filter state directly from URL — single source of truth
+  const filters: SequenceFilters = {
+    sort: (searchParams.get('sort') || 'recent') as SequenceFilters['sort'],
+    page: searchParams.get('page') ? Number(searchParams.get('page')) : 1,
+    limit: 20,
+    content_type: (searchParams.get('content_type') || undefined) as SequenceFilters['content_type'],
+    class_id: searchParams.get('class_id') ? Number(searchParams.get('class_id')) : undefined,
+    spec_id: searchParams.get('spec_id') ? Number(searchParams.get('spec_id')) : undefined,
+    search: searchParams.get('search') || undefined,
+  }
+
+  function updateUrl(updates: Record<string, string | undefined>) {
+    const params = new URLSearchParams(searchParams.toString())
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === undefined || value === '') {
+        params.delete(key)
+      } else {
+        params.set(key, value)
+      }
+    }
+    if (!('page' in updates)) {
+      params.delete('page')
+    }
+    const query = params.toString()
+    router.push(`${pathname}${query ? `?${query}` : ''}`, { scroll: false })
+  }
 
   useEffect(() => {
     fetchSequences()
-  }, [filters])
+  }, [searchParams.toString()])
 
   async function fetchSequences() {
     setLoading(true)
@@ -101,34 +105,29 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
-    setFilters(f => ({ ...f, search, page: 1 }))
-  }
-
-  function setFilter(key: keyof SequenceFilters, value: any) {
-    setFilters(f => ({ ...f, [key]: value, page: 1 }))
+    updateUrl({ search: search || undefined })
   }
 
   function selectClass(classId: number | undefined) {
-  const newId = filters.class_id === classId ? undefined : classId
-  setFilters(f => ({ ...f, class_id: newId, spec_id: undefined, page: 1 }))
-  setShowMobileFilters(false)
-}
+    const newId = filters.class_id === classId ? undefined : classId
+    updateUrl({
+      class_id: newId ? String(newId) : undefined,
+      spec_id: undefined,
+    })
+    setShowMobileFilters(false)
+  }
 
   function selectSpec(specId: number) {
-    setFilters(f => ({ ...f, spec_id: f.spec_id === specId ? undefined : specId, page: 1 }))
+    const newId = filters.spec_id === specId ? undefined : specId
+    updateUrl({ spec_id: newId ? String(newId) : undefined })
     setShowMobileFilters(false)
   }
 
   function clearFilters() {
-    setFilters({
-      sort: sortFromUrl,
-      page: 1,
-      limit: 20,
-      content_type: contentTypeFromUrl,
-      class_id: classIdFromUrl,
-      spec_id: undefined,
-    })
     setSearch('')
+    const params = new URLSearchParams()
+    if (filters.sort && filters.sort !== 'recent') params.set('sort', filters.sort)
+    router.push(`${pathname}${params.toString() ? `?${params.toString()}` : ''}`, { scroll: false })
   }
 
   const hasActiveFilters = filters.class_id || filters.content_type || filters.search || filters.spec_id
@@ -146,9 +145,9 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
         )}
       </div>
       <FilterSection title="Content">
-        <FilterItem label="All" active={!filters.content_type} onClick={() => { setFilter('content_type', undefined); setShowMobileFilters(false) }} />
+        <FilterItem label="All" active={!filters.content_type} onClick={() => { updateUrl({ content_type: undefined }); setShowMobileFilters(false) }} />
         {CONTENT_TYPES.map(ct => (
-          <FilterItem key={ct.value} label={ct.label} active={filters.content_type === ct.value} onClick={() => { setFilter('content_type', ct.value); setShowMobileFilters(false) }} />
+          <FilterItem key={ct.value} label={ct.label} active={filters.content_type === ct.value} onClick={() => { updateUrl({ content_type: ct.value }); setShowMobileFilters(false) }} />
         ))}
       </FilterSection>
       <FilterSection title="Class">
@@ -239,7 +238,7 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
             </div>
             <div className="sort-bar" style={{ display: 'flex', gap: 2, background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: 2 }}>
               {SORT_OPTIONS.map(opt => (
-                <button key={opt.value} onClick={() => setFilter('sort', opt.value)} style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', background: filters.sort === opt.value ? 'var(--bg-primary)' : 'transparent', color: filters.sort === opt.value ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: filters.sort === opt.value ? 500 : 400, fontFamily: 'var(--font-sans)' }}>
+                <button key={opt.value} onClick={() => updateUrl({ sort: opt.value })} style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', background: filters.sort === opt.value ? 'var(--bg-primary)' : 'transparent', color: filters.sort === opt.value ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: filters.sort === opt.value ? 500 : 400, fontFamily: 'var(--font-sans)' }}>
                   {opt.label}
                 </button>
               ))}
@@ -264,9 +263,9 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
 
           {count > (filters.limit || 20) && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 24 }}>
-              <button onClick={() => setFilter('page', Math.max(1, (filters.page || 1) - 1))} disabled={(filters.page || 1) <= 1} style={{ padding: '6px 14px', border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)' }}>Previous</button>
+              <button onClick={() => updateUrl({ page: String(Math.max(1, (filters.page || 1) - 1)) })} disabled={(filters.page || 1) <= 1} style={{ padding: '6px 14px', border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)' }}>Previous</button>
               <span style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>Page {filters.page || 1}</span>
-              <button onClick={() => setFilter('page', (filters.page || 1) + 1)} disabled={((filters.page || 1) * (filters.limit || 20)) >= count} style={{ padding: '6px 14px', border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)' }}>Next</button>
+              <button onClick={() => updateUrl({ page: String((filters.page || 1) + 1) })} disabled={((filters.page || 1) * (filters.limit || 20)) >= count} style={{ padding: '6px 14px', border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)' }}>Next</button>
             </div>
           )}
         </div>
