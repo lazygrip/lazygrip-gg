@@ -109,9 +109,10 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
   }
 
   function selectClass(classId: number | undefined) {
-    setFilters(f => ({ ...f, class_id: classId, spec_id: undefined, page: 1 }))
-    setShowMobileFilters(false)
-  }
+  const newId = filters.class_id === classId ? undefined : classId
+  setFilters(f => ({ ...f, class_id: newId, spec_id: undefined, page: 1 }))
+  setShowMobileFilters(false)
+}
 
   function selectSpec(specId: number) {
     setFilters(f => ({ ...f, spec_id: f.spec_id === specId ? undefined : specId, page: 1 }))
