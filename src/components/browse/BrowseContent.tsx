@@ -59,6 +59,24 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
     router.push(`${pathname}${query ? `?${query}` : ''}`, { scroll: false })
   }
 
+  // On mount, push any initialFilters into the URL if not already present
+  useEffect(() => {
+    const updates: Record<string, string | undefined> = {}
+    if (initialFilters.class_id && !searchParams.get('class_id')) {
+      updates.class_id = String(initialFilters.class_id)
+    }
+    if (initialFilters.content_type && !searchParams.get('content_type')) {
+      updates.content_type = initialFilters.content_type
+    }
+    if (Object.keys(updates).length > 0) {
+      const params = new URLSearchParams(searchParams.toString())
+      for (const [key, value] of Object.entries(updates)) {
+        if (value) params.set(key, value)
+      }
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    }
+  }, [])
+
   useEffect(() => {
     fetchSequences()
   }, [searchParams.toString()])
