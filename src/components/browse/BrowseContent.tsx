@@ -76,6 +76,9 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
   }, [pathname])
 
   useEffect(() => {
+    // Don't fetch until initialFilters are reflected in the URL to avoid showing unfiltered results
+    if (initialFilters.class_id && Number(searchParams.get('class_id')) !== initialFilters.class_id) return
+    if (initialFilters.content_type && searchParams.get('content_type') !== initialFilters.content_type) return
     fetchSequences()
   }, [searchParams.toString()])
 
@@ -126,13 +129,11 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
 
   function selectClass(classId: number | undefined) {
     const newId = filters.class_id === classId ? undefined : classId
+    updateUrl({
+      class_id: newId ? String(newId) : undefined,
+      spec_id: undefined,
+    })
     setShowMobileFilters(false)
-    if (!newId) {
-      router.push('/browse', { scroll: false })
-    } else {
-      const cls = WOW_CLASSES.find(c => c.id === newId)
-      if (cls) router.push(`/browse/${cls.slug}`, { scroll: false })
-    }
   }
 
   function selectSpec(specId: number) {
