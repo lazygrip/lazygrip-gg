@@ -559,9 +559,19 @@ export default function SequencePageClient() {
           borderTop: '0.5px solid var(--border)',
         }}>
           <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-            Posted by <strong style={{ color: 'var(--text-primary)' }}>
-              {sequence.author?.username}
-            </strong>
+            Posted by{' '}
+            {sequence.author?.username ? (
+              <a
+                href={`/user/${sequence.author.username}`}
+                style={{ color: 'var(--text-primary)', fontWeight: 600, textDecoration: 'none' }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-primary)')}
+              >
+                {sequence.author.username}
+              </a>
+            ) : (
+              <strong style={{ color: 'var(--text-primary)' }}>{sequence.author?.username}</strong>
+            )}
             {' · '}{formatDistanceToNow(new Date(sequence.created_at), { addSuffix: true })}
             {sequence.patch_version && ` · Patch ${sequence.patch_version}`}
           </div>
@@ -1342,7 +1352,16 @@ function CommentThread({
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', marginBottom: 4 }}>
             <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
-              {comment.author?.username}
+              {comment.author?.username ? (
+                <a
+                  href={`/user/${comment.author.username}`}
+                  style={{ color: 'var(--text-primary)', textDecoration: 'none', fontWeight: 500 }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-primary)')}
+                >
+                  {comment.author.username}
+                </a>
+              ) : comment.author?.username}
             </span>
             <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
               {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
