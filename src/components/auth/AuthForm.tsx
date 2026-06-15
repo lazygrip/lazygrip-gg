@@ -2,7 +2,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Shield, AlertCircle } from 'lucide-react'
+import { Shield, AlertCircle, Mail } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 type Mode = 'login' | 'signup'
@@ -18,23 +18,26 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [showResend, setShowResend] = useState(false)
+  const [resending, setResending] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    setShowResend(false)
     setLoading(true)
 
     try {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
-	if (onSuccess) {
-	const { data: { user } } = await supabase.auth.getUser()
-	onSuccess(user)
-	} else {
-	router.push('/browse')
-	router.refresh()
-}
+        if (onSuccess) {
+          const { data: { user } } = await supabase.auth.getUser()
+          onSuccess(user)
+        } else {
+          router.push('/browse')
+          router.refresh()
+        }
       } else {
         if (username.length < 3) throw new Error('Username must be at least 3 characters.')
         const { error } = await supabase.auth.signUp({
@@ -45,9 +48,29 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
         setSuccess('Account created! Check your email to confirm your address, then sign in.')
       }
     } catch (err: any) {
-      setError(err.message || 'Something went wrong.')
+      const message = err.message || 'Something went wrong.'
+      setError(message)
+      if (message.toLowerCase().includes('email not confirmed')) {
+        setShowResend(true)
+      }
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleResend() {
+    setResending(true)
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+    })
+    setResending(false)
+    if (error) {
+      setError('Failed to resend confirmation email. Try again.')
+    } else {
+      setError('')
+      setShowResend(false)
+      setSuccess('Confirmation email sent. Check your inbox and click the link to verify your account.')
     }
   }
 
@@ -170,12 +193,33 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
             />
 
             {error && (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                color: '#c41e3a', fontSize: 12,
-              }}>
-                <AlertCircle size={13} />
-                {error}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  color: '#c41e3a', fontSize: 12,
+                }}>
+                  <AlertCircle size={13} />
+                  {error}
+                </div>
+                {showResend && (
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resending}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      background: 'none', border: '0.5px solid var(--border-strong)',
+                      borderRadius: 'var(--radius-md)', padding: '7px 12px',
+                      cursor: resending ? 'not-allowed' : 'pointer',
+                      fontSize: 12, color: 'var(--accent)',
+                      fontFamily: 'var(--font-sans)',
+                      opacity: resending ? 0.7 : 1,
+                    }}
+                  >
+                    <Mail size={12} />
+                    {resending ? 'Sending...' : 'Resend confirmation email'}
+                  </button>
+                )}
               </div>
             )}
 
@@ -196,7 +240,7 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
         <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', marginTop: 20 }}>
           {isLogin ? "Don't have an account? " : "Already have an account? "}
           <button
-            onClick={() => { setIsLogin(!isLogin); setError(''); setSuccess('') }}
+            onClick={() => { setIsLogin(!isLogin); setError(''); setSuccess(''); setShowResend(false) }}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
               color: 'var(--accent)', fontSize: 12, fontFamily: 'var(--font-sans)',
