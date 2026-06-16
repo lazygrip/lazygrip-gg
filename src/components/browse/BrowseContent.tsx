@@ -127,12 +127,17 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
   }
 
   function selectClass(classId: number | undefined) {
-    const newId = filters.class_id === classId ? undefined : classId
-    updateUrl({
-      class_id: newId ? String(newId) : undefined,
-      spec_id: undefined,
-    })
     setShowMobileFilters(false)
+    const newId = filters.class_id === classId ? undefined : classId
+    if (!newId) {
+      // Deselecting or All classes — escape the slug route entirely
+      router.push('/browse', { scroll: false })
+    } else if (newId !== filters.class_id) {
+      // Different class — navigate to its slug route
+      const cls = WOW_CLASSES.find(c => c.id === newId)
+      if (cls) router.push(`/browse/${cls.slug}`, { scroll: false })
+    }
+    // Clicking same class (toggle off) is handled by newId being undefined above
   }
 
   function selectSpec(specId: number) {
