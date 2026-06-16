@@ -4,8 +4,8 @@ import { Megaphone } from 'lucide-react'
 // Update these two lines when you have a new announcement.
 // Set ANNOUNCEMENT to null to hide the bar entirely.
 const ANNOUNCEMENT = {
-  text: 'ADDED New Changelog to this site. 12.0.7 drops June 16th: report anything that feels off.',
-  href: 'https://www.curseforge.com/wow/addons/grip-enhanced-macro-sequencer',
+  text: 'NEW: Changelog page is live. 12.0.7 is here — report anything that feels off.',
+  href: 'https://lazygrip.net/changelog',
 }
 
 export default function AnnouncementBar() {
