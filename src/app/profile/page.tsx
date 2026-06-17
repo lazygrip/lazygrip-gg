@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { formatDistanceToNow } from 'date-fns'
 import Link from 'next/link'
-import { Upload, Check, Save } from 'lucide-react'
+import { Upload, Check, Save, BookmarkX } from 'lucide-react'
 
 const AVATAR_COLORS = [
   { bg: '#1D9E75', label: 'Emerald' },
@@ -103,6 +103,12 @@ function ProfilePageInner() {
     }
     load()
   }, [])
+
+  async function handleUnsave(seqId: string) {
+    if (!user) return
+    await supabase.from('saves').delete().eq('user_id', user.id).eq('sequence_id', seqId)
+    setSavedSequences(prev => prev.filter((s: any) => s.id !== seqId))
+  }
 
   async function saveAvatarColor(color: string) {
     if (!user) return
@@ -335,7 +341,7 @@ function ProfilePageInner() {
             </div>
           ) : (
             (activeTab === 'posted' ? postedSequences : savedSequences).map((seq: any) => (
-              <SequenceRow key={seq.id} seq={seq} showAuthor={activeTab === 'saved'} />
+              <SequenceRow key={seq.id} seq={seq} showAuthor={activeTab === 'saved'} onUnsave={activeTab === 'saved' ? handleUnsave : undefined} />
             ))
           )}
         </div>
@@ -587,7 +593,7 @@ function SettingsTab({
   )
 }
 
-function SequenceRow({ seq, showAuthor }: { seq: any; showAuthor: boolean }) {
+function SequenceRow({ seq, showAuthor, onUnsave }: { seq: any; showAuthor: boolean; onUnsave?: (id: string) => void }) {
   const classColor = getClassColor(seq.class_id)
   const contentLabel = CONTENT_TYPES.find(c => c.value === seq.content_type)?.label ?? seq.content_type
 
@@ -633,6 +639,26 @@ function SequenceRow({ seq, showAuthor }: { seq: any; showAuthor: boolean }) {
             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{seq.view_count?.toLocaleString() ?? 0} views</div>
             <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{formatDistanceToNow(new Date(seq.created_at), { addSuffix: true })}</div>
           </div>
+          {onUnsave && (
+            <button
+              onClick={e => { e.preventDefault(); e.stopPropagation(); onUnsave(seq.id) }}
+              title="Remove from saved"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 4,
+                color: 'var(--text-muted)',
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: 'var(--radius-sm)',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#c0392b')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+            >
+              <BookmarkX size={15} />
+            </button>
+          )}
         </div>
       </div>
     </Link>
