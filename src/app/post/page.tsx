@@ -17,7 +17,7 @@ const EMPTY_FORM = {
   spec_name: '',
   content_type: 'mythic_plus',
   hero_talent: '',
-  patch_version: '12.0.5',
+  patch_version: '12.0.7',
   grip_version: DEFAULT_GRIP_VERSION,
   step_function: 'Sequential',
   grip_string: '',
