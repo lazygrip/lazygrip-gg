@@ -12,31 +12,50 @@ export default function Footer() {
         maxWidth: 1200,
         margin: '0 auto',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: 12,
+        flexDirection: 'column',
+        gap: 10,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 13 }}>
-          <Shield size={14} color="var(--accent)" />
-          <span>LazyGrip.net — Not affiliated with Blizzard Entertainment or the GRIP-EMS addon.</span>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 12,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 13 }}>
+            <Shield size={14} color="var(--accent)" />
+            <span>LazyGrip.net — Not affiliated with Blizzard Entertainment or the GRIP-EMS addon.</span>
+          </div>
+          <div style={{ display: 'flex', gap: 20, fontSize: 13 }}>
+            {[
+              { href: '/guide', label: 'Guide' },
+              { href: '/changelog', label: 'Changelog' },
+              { href: '/about', label: 'About' },
+              { href: '/faq', label: 'FAQ' },
+              { href: '/tos', label: 'Terms' },
+              { href: '/privacy', label: 'Privacy' },
+              { href: 'https://forum.lazygrip.net', label: 'Forum' },
+            ].map(link => (
+              <Link key={link.href} href={link.href} style={{
+                color: 'var(--text-muted)',
+                textDecoration: 'none',
+              }}>
+                {link.label}
+              </Link>
+            ))}
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 20, fontSize: 13 }}>
-          {[
-            { href: '/guide', label: 'Guide' },
-            { href: '/changelog', label: 'Changelog' },
-            { href: '/about', label: 'About' },
-            { href: '/faq', label: 'FAQ' },
-            { href: '/tos', label: 'Terms' },
-            { href: '/privacy', label: 'Privacy' },
-          ].map(link => (
-            <Link key={link.href} href={link.href} style={{
-              color: 'var(--text-muted)',
-              textDecoration: 'none',
-            }}>
-              {link.label}
-            </Link>
-          ))}
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' }}>
+          Community content on LazyGrip.net is licensed under{' '}
+          <a
+            href="https://creativecommons.org/licenses/by-nc-sa/4.0/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'var(--text-muted)', textDecoration: 'underline' }}
+          >
+            CC BY-NC-SA 4.0
+          </a>
+          . Free to share and adapt with attribution, for non-commercial use only.
         </div>
       </div>
     </footer>
