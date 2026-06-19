@@ -77,9 +77,9 @@ export const WOW_CLASSES: WowClass[] = [
   {
     id: 4, name: 'Rogue', slug: 'rogue', color: '#FFF468',
     specs: [
-      { id: 259, name: 'Assassination', role: 'dps', heroTalents: ['Deathstalker', 'Trickster'] },
-      { id: 260, name: 'Outlaw', role: 'dps', heroTalents: ['Trickster', 'Fatebound'] },
-      { id: 261, name: 'Subtlety', role: 'dps', heroTalents: ['Deathstalker', 'Fatebound'] },
+      { id: 259, name: 'Assassination', role: 'dps', heroTalents: ['Deathstalker', 'Fatebound'] },
+{ id: 260, name: 'Outlaw', role: 'dps', heroTalents: ['Trickster', 'Fatebound'] },
+      { id: 261, name: 'Subtlety', role: 'dps', heroTalents: ['Deathstalker', 'Trickster'] },
     ]
   },
   {
