@@ -50,7 +50,7 @@ export default function FromGSEPage() {
           Getting your sequences into GRIP-EMS
         </h2>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 14 }}>
-          This is probably what you came here for first. GRIP-EMS imports sequences from GSE automatically and the process takes about two minutes.
+          This is probably what you came here for first. GRIP-EMS imports sequences from the legacy program automatically and the process takes about two minutes. Import reliability has improved significantly in recent releases, so if you tried this previously and had issues, it is worth trying again.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
@@ -78,7 +78,7 @@ export default function FromGSEPage() {
           GSE sequences frequently overshoot WoW&apos;s 255-character step limit because GSE builds longer individual step strings than GRIP-EMS allows. The Repair module flags these on import and the fix is to split the oversized step into two shorter steps carrying the same spells. This is one of the most common issues when porting sequences from GSE, so if repair comes back with character limit violations do not be alarmed, it is normal and fixable in a few minutes.
         </InfoBox>
         <InfoBox>
-          Sequences shared in English by another player import and translate to your client language automatically as of v2.1.10. Spell names stored as IDs under the hood re-render in your locale on import, so a sequence built on an English client works for German or French players without any manual editing.
+          Sequences shared in English by another player import and translate to your client language automatically. Spell names stored as IDs under the hood re-render in your locale on import, so a sequence built on an English client works for German or French players without any manual editing.
         </InfoBox>
       </section>
 
@@ -110,7 +110,7 @@ export default function FromGSEPage() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'var(--border)' }}>
             <CompareRow label="Failed cast" grip="Holds until cast succeeds" gse="Skips the step, advances" />
-            <CompareRow label="Action bar button" grip="No bar button, keybind fires directly through the addon" gse="Creates a draggable button you place on a bar" />
+            <CompareRow label="Action bar button" grip="Single-version sequences have no bar button. Multi-version sequences create a macro you can place on your bar." gse="Creates a draggable button you place on a bar" />
             <CompareRow label="Keybinds" grip="Assigned inside GRIP-EMS per spec, auto-switch on spec change" gse="Via the action bar button you place and bind" />
             <CompareRow label="Import format" grip="!EMS1! format, import GSE strings with /gems import" gse="Base64 string with version prefix" />
             <CompareRow label="Step functions" grip="Sequential, Priority, Reverse Priority, Random" gse="Sequential, Priority, and others depending on version" />
@@ -132,7 +132,7 @@ export default function FromGSEPage() {
           {[
             {
               title: 'Looking for the action bar button',
-              desc: "GSE creates a macro button you drag to your action bar and bind to a key. GRIP-EMS does not work that way. You assign a keybind inside the addon and the sequence fires through that bind without touching your action bar. There is nothing to drag. Open the sequence editor, go to the Keybinds tab, and press the key you want. That is it.",
+              desc: "GSE creates a macro button you drag to your action bar and bind to a key. GRIP-EMS works differently. You assign a keybind inside the addon directly. For single-version sequences there is nothing to drag. For sequences with multiple versions, GRIP-EMS creates a macro that can be placed on your bar, but the keybind is still assigned inside the addon. Open the sequence editor, go to the Keybinds tab, and press the key you want.",
             },
             {
               title: 'Keybind set but nothing fires',

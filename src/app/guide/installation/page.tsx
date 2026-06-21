@@ -74,7 +74,7 @@ export default function InstallationPage() {
 
       <Section title="What you will not see and why">
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          GRIP-EMS does not put a button on your action bar. This trips up almost every new user who comes from GSE, which does create a draggable button that you place on a bar and bind. GRIP-EMS works differently. You bind a key directly to a sequence inside the addon, and the keybind fires the sequence without going through the action bar at all. There is nothing to drag. If you are looking for a button to appear and it is not appearing, that is expected behavior and not a bug.
+          GRIP-EMS does not work like GSE, which creates a draggable button you place on a bar and bind. GRIP-EMS binds a key directly to a sequence inside the addon. For sequences with multiple versions, a macro is created and can be placed on your action bar, but for single-version sequences there is nothing to drag. If you are looking for a button to appear and it is not appearing, that is expected behavior and not a bug.
         </p>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 12 }}>
           To bind a key to a sequence, open the sequence in the GRIP-EMS editor, go to the Keybinds tab, and assign a key there. The bind is stored per-spec, so switching specs gives you a clean slate for a different rotation on the same key.
@@ -109,15 +109,15 @@ export default function InstallationPage() {
         />
         <TroubleshootItem
           problem="Sequence shows greyed out after a /reload in arena or M+"
-          solution="This was a known bug where the addon waited on a match flag that never cleared mid-fight, leaving sequences inactive until the match ended. It is fixed in v2.1.17. If you are hitting this, update GRIP-EMS through your addon manager. Clicking a greyed-out sequence row in the editor also re-activates it on the spot in v2.1.17 and later."
+          solution="This was a known bug where the addon waited on a match flag that never cleared mid-fight, leaving sequences inactive until the match ended. Update GRIP-EMS through your addon manager. Clicking a greyed-out sequence row in the editor also re-activates it on the spot."
         />
         <TroubleshootItem
           problem="Sequence key stops working randomly while grinding, mount and dismount fixes it"
-          solution="This was a bug where the game skipped its own bar-change signal after messy dismounts, leaving a stale keybind eating keypresses. A watchdog fix was added in v2.1.16 that checks actual mount and vehicle state rather than trusting the bar-change signal. Update to v2.1.16 or later. You can run /gems debug to watch the watchdog catch a stale bind in real time."
+          solution="This was a bug where the game skipped its own bar-change signal after messy dismounts, leaving a stale keybind eating keypresses. GRIP-EMS now checks actual mount and vehicle state rather than trusting the bar-change signal. Update GRIP-EMS through your addon manager. You can run /gems debug to watch the watchdog catch a stale bind in real time."
         />
         <TroubleshootItem
           problem="Sequence key dies after skyriding or leaving a vehicle"
-          solution="Fixed in v2.1.14. The keybind suspend-and-restore now runs inside the secure engine and survives skyriding, vehicle exits, and possession. Update GRIP-EMS if you are on an older version. As of v2.1.16 you can also press your sequence key while skyriding over an attackable target and it will dismount and fire step 1 in a single press."
+          solution="The keybind suspend-and-restore runs inside the secure engine and survives skyriding, vehicle exits, and possession. If you are hitting this, update GRIP-EMS through your addon manager. You can also press your sequence key while skyriding over an attackable target and it will dismount and fire step 1 in a single press."
         />
         <TroubleshootItem
           problem="Sequence key fires mid-air or vehicle keys are dead on first flight of the session"
@@ -125,7 +125,7 @@ export default function InstallationPage() {
         />
         <TroubleshootItem
           problem="Another addon keeps stealing my sequence keybinds"
-          solution="Some addons override-bind the same keys GRIP-EMS uses for vehicles and skyriding, and whoever loads last wins. As of v2.1.20, the Keybinds tab inside the editor names the contending keys directly in the vehicle and pet battle sections so you can see exactly which addon is causing the conflict. GRIP-EMS does not fight for the bind, it just tells you who took it."
+          solution="Some addons override-bind the same keys GRIP-EMS uses for vehicles and skyriding, and whoever loads last wins. The Keybinds tab inside the editor names the contending keys directly in the vehicle and pet battle sections so you can see exactly which addon is causing the conflict. GRIP-EMS does not fight for the bind, it just tells you who took it."
         />
         <TroubleshootItem
           problem="Lua error spam about tainted table iteration in arena or BG"
