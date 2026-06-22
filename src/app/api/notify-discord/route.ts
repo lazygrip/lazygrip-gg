@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     const res = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ embeds: [embed], username: 'LazyGrip' }),
+      body: JSON.stringify({ embeds: [embed], username: 'LazyGrip', thread_name: title }),
     })
 
     if (!res.ok) {
