@@ -6,7 +6,6 @@ import { WOW_CLASSES, CONTENT_TYPES, STEP_FUNCTIONS, slugify } from '@/lib/wow-d
 import { AlertCircle, ChevronUp, ChevronDown, Wand2 } from 'lucide-react'
 import TiptapEditor from '@/components/editor/TiptapEditor'
 import type { SequenceStep } from '@/types'
-import { notifyDiscord } from '@/lib/discord'
 
 const PATCH_VERSIONS = ['12.0', '12.0.5', '12.0.7']
 const DEFAULT_GRIP_VERSION = '2.1.20'
@@ -494,15 +493,20 @@ if (isEditMode) {
         if (rpcError) throw rpcError
         if (data) {
           const { data: { user: currentUser } } = await supabase.auth.getUser()
-          notifyDiscord({
-            title: payload.title,
-            slug: data.slug,
-            className: selectedClass?.name ?? '',
-            specName: payload.spec_name,
-            contentType: payload.content_type,
-            authorUsername: currentUser?.user_metadata?.username ?? currentUser?.email ?? 'unknown',
-            heroTalent: payload.hero_talent,
-          })
+          // Fire and forget -- a Discord failure must never block a publish
+          fetch('/api/notify-discord', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: payload.title,
+              slug: data.slug,
+              className: selectedClass?.name ?? '',
+              specName: payload.spec_name,
+              contentType: payload.content_type,
+              authorUsername: currentUser?.user_metadata?.username ?? currentUser?.email ?? 'unknown',
+              heroTalent: payload.hero_talent,
+            }),
+          }).catch(err => console.error('[notify-discord] fetch failed:', err))
           router.push(`/sequences/${data.slug}`)
         }
       }
