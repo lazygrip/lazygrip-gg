@@ -463,6 +463,22 @@ if (isEditMode) {
       p_changelog: null,
     })
     if (rpcError) throw rpcError
+    // Fire and forget -- notify Discord on real updates, not minor edits
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    fetch('/api/notify-discord', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: payload.title,
+        slug: editSlug,
+        className: selectedClass?.name ?? '',
+        specName: payload.spec_name,
+        contentType: payload.content_type,
+        authorUsername: currentUser?.user_metadata?.username ?? currentUser?.email ?? 'unknown',
+        heroTalent: payload.hero_talent,
+        isUpdate: true,
+      }),
+    }).catch(err => console.error('[notify-discord] fetch failed:', err))
   }
   router.push(`/sequences/${editSlug}`)
 } else {

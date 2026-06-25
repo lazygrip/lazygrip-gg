@@ -105,7 +105,7 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
           query = query.order('save_count', { ascending: false })
           break
         default:
-          query = query.order('created_at', { ascending: false })
+          query = query.order('updated_at', { ascending: false })
       }
 
       const from = ((filters.page || 1) - 1) * (filters.limit || 20)
