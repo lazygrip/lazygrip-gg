@@ -80,7 +80,7 @@ export default function SettingsPage() {
 
       <Section title="Click Rate">
         <p style={{ marginBottom: 4, fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Settings {'>'} General</p>
-        <p>How fast you are pressing your sequence key, in milliseconds. GRIP-EMS advances one step per keypress and does not cap how fast you press, so this number is really a reference: it feeds the Faster/Slower recommendation in the Tempo Advisor and controls the timing of any imported pauses in a sequence. The default is 250ms, and the slider will not go below 100ms.</p>
+        <p>How fast you are pressing your sequence key, in milliseconds. GRIP-EMS advances one step per keypress and does not cap how fast you press, so this number is really a reference point that also controls the timing of any imported pauses in a sequence. The default is 250ms, and the slider will not go below 100ms.</p>
         <p style={{ marginTop: 12 }}>The reason it floors at 100ms is that nobody is realistically pressing a key faster than ten times a second, and at that speed, you would be running past steps before the spells they contain can land. GRIP-EMS calls 100ms the human and hardware floor.</p>
         <p style={{ marginTop: 12 }}><strong style={{ color: 'var(--text-primary)' }}>Per-Character Click Rate</strong>, under the same menu, is a setting scoped to your current character only and overrides the global value while that character is active. Range is 0 to 1000ms in steps of 10. Set it to 0 to fall back to the shared global value. This is also the only way to go below the 100ms floor if you have an edge case that needs it, down to 10ms. GRIP-EMS will pop a warning on screen when you drop under 100.</p>
         <Callout>
