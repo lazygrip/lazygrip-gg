@@ -116,7 +116,7 @@ export default function FromGSEPage() {
             <CompareRow label="Step functions" grip="Sequential, Priority, Reverse Priority, Random" gse="Sequential, Priority, and others depending on version" />
             <CompareRow label="Opener logic" grip="True single-block loop, step 1 is only the opener" gse="Block 1 fires between every loop step when compiled, not just once" />
             <CompareRow label="Spell validation" grip="Built-in scanner with patch-aware auto-translation" gse="Limited or absent depending on version" />
-            <CompareRow label="Click rate guidance" grip="Tempo Advisor with per-sequence calibration" gse="None built in" />
+            <CompareRow label="Click rate guidance" grip="Recommended click rate shown live by the Dynamic SQW Optimiser" gse="None built in" />
             <CompareRow label="Post-patch repair" grip="Repair module fixes stale spells in one click" gse="Manual identification and replacement" />
             <CompareRow label="Cross-language sharing" grip="Spell IDs stored internally, renders in recipient's language" gse="Spell names in source language, may not fire on other clients" />
           </div>
