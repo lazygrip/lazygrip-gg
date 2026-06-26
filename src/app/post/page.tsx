@@ -383,6 +383,24 @@ async function runDecode(exportString: string) {
             p_collection_sequences: JSON.stringify(collectionData),
           })
           if (rpcError) throw rpcError
+
+          // Notify Discord -- collection edits use the minor edit indicator
+          const { data: { user: currentUser } } = await supabase.auth.getUser()
+          fetch('/api/notify-discord', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: collectionTitle.trim() || form.title.trim(),
+              slug: editSlug,
+              className: cls?.name ?? '',
+              specName: form.spec_name,
+              contentType: form.content_type,
+              authorUsername: currentUser?.user_metadata?.username ?? currentUser?.email ?? 'unknown',
+              heroTalent: form.hero_talent,
+              isMinorEdit: true,
+            }),
+          }).catch(err => console.error('[notify-discord] fetch failed:', err))
+
           router.push(`/sequences/${editSlug}`)
         } else {
           // New publish path -- insert fresh record
@@ -484,6 +502,23 @@ if (isEditMode) {
       p_performance_notes: payload.performance_notes,
     })
     if (rpcError) throw rpcError
+
+    // Notify Discord -- minor edits use the pencil indicator
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    fetch('/api/notify-discord', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: payload.title,
+        slug: editSlug,
+        className: selectedClass?.name ?? '',
+        specName: payload.spec_name,
+        contentType: payload.content_type,
+        authorUsername: currentUser?.user_metadata?.username ?? currentUser?.email ?? 'unknown',
+        heroTalent: payload.hero_talent,
+        isMinorEdit: true,
+      }),
+    }).catch(err => console.error('[notify-discord] fetch failed:', err))
   } else {
     const { error: rpcError } = await supabase.rpc('update_sequence_with_version', {
       p_sequence_id: editId,

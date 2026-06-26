@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { title, slug, className, specName, contentType, authorUsername, heroTalent, isUpdate } = await req.json()
+    const { title, slug, className, specName, contentType, authorUsername, heroTalent, isUpdate, isMinorEdit } = await req.json()
 
     const color = CLASS_COLORS[className] ?? 0x1D9E75
     const specPart = specName ? `${specName} ` : ''
@@ -39,8 +39,12 @@ export async function POST(req: NextRequest) {
     const contentLabel = CONTENT_TYPE_LABELS[contentType] ?? contentType
     const url = `https://lazygrip.net/sequences/${slug}`
 
+    let embedTitle = title
+    if (isMinorEdit) embedTitle = `✏️ ${title}`
+    else if (isUpdate) embedTitle = `🔄 ${title}`
+
     const embed = {
-      title: isUpdate ? `🔄 ${title}` : title,
+      title: embedTitle,
       url,
       color,
       description: `**${specPart}${className}${heroTalentPart}** — ${contentLabel}`,
