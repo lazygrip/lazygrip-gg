@@ -81,8 +81,7 @@ export default function WorkshopPage() {
             href="https://www.curseforge.com/wow/addons/grip-ems-modern-ui"
             eyebrow="UI Reskin"
             title="GRIP-EMS Modern UI"
-            description="A 3-column UI reskin for GRIP-EMS with sidebar navigation, a config sidebar, and an Ability Preview footer. Fully optional — GRIP-EMS works without it."
-            version="v1.0.3"
+            description="A 3-column UI reskin for GRIP-EMS with sidebar navigation, a config sidebar, and an Ability Preview footer. Fully optional, GRIP-EMS works without it."
             requires="Requires GRIP-EMS v2.2.0 or newer"
             icon={<ExternalLink size={20} />}
             cta="View on CurseForge"
@@ -145,13 +144,12 @@ function ToolCard({
 }
 
 function AddonCard({
-  href, eyebrow, title, description, version, requires, icon, cta,
+  href, eyebrow, title, description, requires, icon, cta,
 }: {
   href: string
   eyebrow: string
   title: string
   description: string
-  version: string
   requires: string
   icon: React.ReactNode
   cta: string
@@ -174,22 +172,12 @@ function AddonCard({
         maxWidth: 340,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{
-          width: 40, height: 40, borderRadius: 'var(--radius-md)',
-          background: 'var(--bg-tertiary)', color: 'var(--accent)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}>
-          {icon}
-        </div>
-        <span style={{
-          fontSize: 11, fontWeight: 600, color: 'var(--text-muted)',
-          background: 'var(--bg-tertiary)', border: '0.5px solid var(--border)',
-          borderRadius: 'var(--radius-sm)', padding: '2px 7px', letterSpacing: '0.03em',
-          whiteSpace: 'nowrap',
-        }}>
-          {version}
-        </span>
+      <div style={{
+        width: 40, height: 40, borderRadius: 'var(--radius-md)',
+        background: 'var(--bg-tertiary)', color: 'var(--accent)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
+        {icon}
       </div>
       <div>
         <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>
