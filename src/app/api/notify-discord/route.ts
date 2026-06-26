@@ -58,10 +58,11 @@ export async function POST(req: NextRequest) {
       timestamp: new Date().toISOString(),
     }
 
+    const threadPrefix = isMinorEdit ? 'Edited: ' : isUpdate ? 'Updated: ' : 'New: '
     const res = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ embeds: [embed], username: 'LazyGrip', thread_name: title }),
+      body: JSON.stringify({ embeds: [embed], username: 'LazyGrip', thread_name: `${threadPrefix}${title}` }),
     })
 
     if (!res.ok) {
