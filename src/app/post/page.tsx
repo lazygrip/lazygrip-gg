@@ -124,6 +124,24 @@ function PostForm() {
         performance_notes: data.performance_notes ?? '',
       })
 
+      // If this is a collection, pre-populate collectionTitle and collectionSequences
+      if (Array.isArray(data.collection_sequences) && data.collection_sequences.length > 0) {
+        setCollectionTitle(data.title ?? '')
+        setCollectionSequences(
+          data.collection_sequences.map((s: any, i: number) => ({
+            index: i,
+            name: s.name,
+            title: s.name,
+            talent_string: s.talent_string ?? '',
+            steps: s.steps ?? [],
+            stepFunction: s.stepFunction ?? 'Sequential',
+            classID: null,
+            specID: null,
+            checked: true,
+          }))
+        )
+      }
+
       setLoadingEdit(false)
     }
 
@@ -317,7 +335,7 @@ async function runDecode(exportString: string) {
         setError('Select at least one sequence to post.')
         return
       }
-      if (!collectionTitle.trim()) {
+      if (!isEditMode && !collectionTitle.trim()) {
         setError('A title is required for the collection page.')
         return
       }
@@ -330,9 +348,7 @@ async function runDecode(exportString: string) {
 
         const cls = WOW_CLASSES.find(c => c.id === Number(form.class_id))
         const spec = cls?.specs.find(s => s.name === form.spec_name)
-        const slug = slugify(collectionTitle) + '-' + Date.now().toString(36)
 
-        // Build the collection_sequences array from checked sequences only
         const collectionData = checked.map(seq => ({
           name: seq.title.trim() || seq.name,
           steps: seq.steps,
@@ -340,39 +356,68 @@ async function runDecode(exportString: string) {
           talent_string: seq.talent_string.trim() || null,
         }))
 
-        // Use the first checked sequence's step count as the representative value
         const totalSteps = checked.reduce((sum, s) => sum + s.steps.length, 0)
 
-        const { data: inserted, error: insertError } = await supabase
-          .from('sequences')
-          .insert({
-            author_id: user.id,
-            title: collectionTitle.trim(),
-            slug,
-            description: descriptionIsEmpty(form.description) ? null : form.description,
-            class_id: Number(form.class_id),
-            class_name: cls?.name ?? '',
-            spec_id: spec?.id ?? null,
-            spec_name: form.spec_name || null,
-            content_type: form.content_type,
-            hero_talent: form.hero_talent || null,
-            patch_version: form.patch_version || null,
-            grip_version: form.grip_version || null,
-            step_function: form.step_function,
-            step_count: totalSteps,
-            grip_string: form.grip_string.trim() || null,
-            raw_steps: null,
-            talent_string: null,
-            warcraftlogs_url: form.warcraftlogs_url.trim() || null,
-            performance_notes: form.performance_notes.trim() || null,
-            collection_sequences: collectionData,
-            is_published: true,
+        if (isEditMode) {
+          // Edit path -- update existing record, no new version
+          const { error: rpcError } = await supabase.rpc('update_sequence_metadata', {
+            p_sequence_id: editId,
+            p_author_id: user.id,
+            p_title: collectionTitle.trim() || form.title.trim(),
+            p_description: descriptionIsEmpty(form.description) ? null : form.description,
+            p_class_id: Number(form.class_id),
+            p_class_name: cls?.name ?? '',
+            p_spec_id: spec?.id ?? null,
+            p_spec_name: form.spec_name || null,
+            p_content_type: form.content_type,
+            p_hero_talent: form.hero_talent || null,
+            p_patch_version: form.patch_version || null,
+            p_grip_version: form.grip_version || null,
+            p_step_function: form.step_function,
+            p_step_count: totalSteps,
+            p_grip_string: form.grip_string.trim() || null,
+            p_raw_steps: null,
+            p_talent_string: null,
+            p_warcraftlogs_url: form.warcraftlogs_url.trim() || null,
+            p_performance_notes: form.performance_notes.trim() || null,
+            p_collection_sequences: JSON.stringify(collectionData),
           })
-          .select('slug')
-          .single()
+          if (rpcError) throw rpcError
+          router.push(`/sequences/${editSlug}`)
+        } else {
+          // New publish path -- insert fresh record
+          const slug = slugify(collectionTitle) + '-' + Date.now().toString(36)
+          const { data: inserted, error: insertError } = await supabase
+            .from('sequences')
+            .insert({
+              author_id: user.id,
+              title: collectionTitle.trim(),
+              slug,
+              description: descriptionIsEmpty(form.description) ? null : form.description,
+              class_id: Number(form.class_id),
+              class_name: cls?.name ?? '',
+              spec_id: spec?.id ?? null,
+              spec_name: form.spec_name || null,
+              content_type: form.content_type,
+              hero_talent: form.hero_talent || null,
+              patch_version: form.patch_version || null,
+              grip_version: form.grip_version || null,
+              step_function: form.step_function,
+              step_count: totalSteps,
+              grip_string: form.grip_string.trim() || null,
+              raw_steps: null,
+              talent_string: null,
+              warcraftlogs_url: form.warcraftlogs_url.trim() || null,
+              performance_notes: form.performance_notes.trim() || null,
+              collection_sequences: collectionData,
+              is_published: true,
+            })
+            .select('slug')
+            .single()
 
-        if (insertError) throw insertError
-        if (inserted) router.push(`/sequences/${inserted.slug}`)
+          if (insertError) throw insertError
+          if (inserted) router.push(`/sequences/${inserted.slug}`)
+        }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
         setError(message)
