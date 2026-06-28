@@ -53,6 +53,7 @@ function PostForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const editId = searchParams.get('edit')
+  const editMode = searchParams.get('mode') ?? 'update'
   const isEditMode = !!editId
 
   const supabase = createClient()
@@ -544,7 +545,7 @@ if (isEditMode) {
     })
     if (rpcError) throw rpcError
 
-    // Notify Discord -- full updates use the update indicator
+    // Notify Discord -- use editMode to distinguish Edit from Update
     fetch('/api/notify-discord', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -557,7 +558,8 @@ if (isEditMode) {
         contentType: payload.content_type,
         authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
         heroTalent: payload.hero_talent,
-        isUpdate: true,
+        isUpdate: editMode === 'update',
+        isEdit: editMode === 'edit',
       }),
     }).catch(err => console.error('[notify-discord] fetch failed:', err))
   }

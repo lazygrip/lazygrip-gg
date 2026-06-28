@@ -580,7 +580,7 @@ export default function SequencePageClient() {
             {isAuthor && (
               <>
                 <button
-                  onClick={() => router.push(`/post?edit=${sequence.id}`)}
+                  onClick={() => router.push(`/post?edit=${sequence.id}&mode=edit`)}
                   style={{
                     display: 'flex', alignItems: 'center', gap: 6,
                     padding: '7px 12px', borderRadius: 'var(--radius-md)',

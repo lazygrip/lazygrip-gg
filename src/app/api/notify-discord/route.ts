@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { title, slug, className, specName, contentType, authorUsername, heroTalent, isUpdate, isMinorEdit } = await req.json()
+    const { title, slug, className, specName, contentType, authorUsername, heroTalent, isUpdate, isEdit, isMinorEdit } = await req.json()
 
     const color = CLASS_COLORS[className] ?? 0x1D9E75
     const specPart = specName ? `${specName} ` : ''
@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
 
     let embedTitle = title
     if (isMinorEdit) embedTitle = `✏️ ${title}`
+    else if (isEdit) embedTitle = `📝 ${title}`
     else if (isUpdate) embedTitle = `🔄 ${title}`
 
     const embed = {
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
       timestamp: new Date().toISOString(),
     }
 
-    const threadPrefix = isMinorEdit ? 'Edited: ' : isUpdate ? 'Updated: ' : 'New: '
+    const threadPrefix = isMinorEdit ? 'Minor Edit: ' : isEdit ? 'Edit: ' : isUpdate ? 'Updated: ' : 'New: '
     const res = await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
