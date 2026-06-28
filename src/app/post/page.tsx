@@ -49,6 +49,15 @@ function stepGripVersion(version: string, direction: 'up' | 'down'): string {
   return `${parts[0]}.${parts[1]}.${patch}`
 }
 
+function notifyDiscord(payload: Record<string, unknown>) {
+  fetch('/api/notify-discord', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    keepalive: true,
+    body: JSON.stringify(payload),
+  }).catch(err => console.error('[notify-discord] fetch failed:', err))
+}
+
 function PostForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -385,28 +394,22 @@ async function runDecode(exportString: string) {
           })
           if (rpcError) throw rpcError
 
-          // Notify Discord -- collection edits use the minor edit indicator
-          fetch('/api/notify-discord', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            keepalive: true,
-            body: JSON.stringify({
-              title: collectionTitle.trim() || form.title.trim(),
-              slug: editSlug,
-              className: cls?.name ?? '',
-              specName: form.spec_name,
-              contentType: form.content_type,
-              authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
-              heroTalent: form.hero_talent,
-              isMinorEdit: true,
-            }),
-          }).catch(err => console.error('[notify-discord] fetch failed:', err))
+          notifyDiscord({
+            title: collectionTitle.trim() || form.title.trim(),
+            slug: editSlug,
+            className: cls?.name ?? '',
+            specName: form.spec_name,
+            contentType: form.content_type,
+            authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
+            heroTalent: form.hero_talent,
+            isMinorEdit: true,
+          })
 
           router.push(`/sequences/${editSlug}`)
         } else {
-          // New publish path -- insert fresh record
+          // New collection publish path
           const slug = slugify(collectionTitle) + '-' + Date.now().toString(36)
-          const { data: inserted, error: insertError } = await supabase
+          const { error: insertError } = await supabase
             .from('sequences')
             .insert({
               author_id: user.id,
@@ -431,11 +434,20 @@ async function runDecode(exportString: string) {
               collection_sequences: collectionData,
               is_published: true,
             })
-            .select('slug')
-            .single()
 
           if (insertError) throw insertError
-          if (inserted) router.push(`/sequences/${inserted.slug}`)
+
+          notifyDiscord({
+            title: collectionTitle.trim(),
+            slug,
+            className: cls?.name ?? '',
+            specName: form.spec_name,
+            contentType: form.content_type,
+            authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
+            heroTalent: form.hero_talent,
+          })
+
+          router.push(`/sequences/${slug}`)
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
@@ -479,94 +491,84 @@ async function runDecode(exportString: string) {
         performance_notes: form.performance_notes.trim() || null,
       }
 
-if (isEditMode) {
-  if (minorEdit) {
-    const { error: rpcError } = await supabase.rpc('update_sequence_metadata', {
-      p_sequence_id: editId,
-      p_author_id: user.id,
-      p_title: payload.title,
-      p_description: payload.description,
-      p_class_id: payload.class_id,
-      p_class_name: payload.class_name,
-      p_spec_id: selectedSpec?.id ?? null,
-      p_spec_name: payload.spec_name,
-      p_content_type: payload.content_type,
-      p_hero_talent: payload.hero_talent,
-      p_patch_version: payload.patch_version,
-      p_grip_version: payload.grip_version,
-      p_step_function: payload.step_function,
-      p_step_count: payload.step_count,
-      p_grip_string: payload.grip_string,
-      p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
-      p_talent_string: payload.talent_string,
-      p_warcraftlogs_url: payload.warcraftlogs_url,
-      p_performance_notes: payload.performance_notes,
-    })
-    if (rpcError) throw rpcError
+      if (isEditMode) {
+        if (minorEdit) {
+          const { error: rpcError } = await supabase.rpc('update_sequence_metadata', {
+            p_sequence_id: editId,
+            p_author_id: user.id,
+            p_title: payload.title,
+            p_description: payload.description,
+            p_class_id: payload.class_id,
+            p_class_name: payload.class_name,
+            p_spec_id: selectedSpec?.id ?? null,
+            p_spec_name: payload.spec_name,
+            p_content_type: payload.content_type,
+            p_hero_talent: payload.hero_talent,
+            p_patch_version: payload.patch_version,
+            p_grip_version: payload.grip_version,
+            p_step_function: payload.step_function,
+            p_step_count: payload.step_count,
+            p_grip_string: payload.grip_string,
+            p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
+            p_talent_string: payload.talent_string,
+            p_warcraftlogs_url: payload.warcraftlogs_url,
+            p_performance_notes: payload.performance_notes,
+          })
+          if (rpcError) throw rpcError
 
-    // Notify Discord -- minor edits use the pencil indicator
-    fetch('/api/notify-discord', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      keepalive: true,
-      body: JSON.stringify({
-        title: payload.title,
-        slug: editSlug,
-        className: selectedClass?.name ?? '',
-        specName: payload.spec_name,
-        contentType: payload.content_type,
-        authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
-        heroTalent: payload.hero_talent,
-        isMinorEdit: true,
-      }),
-    }).catch(err => console.error('[notify-discord] fetch failed:', err))
-  } else {
-    const { error: rpcError } = await supabase.rpc('update_sequence_with_version', {
-      p_sequence_id: editId,
-      p_author_id: user.id,
-      p_title: payload.title,
-      p_description: payload.description,
-      p_class_id: payload.class_id,
-      p_class_name: payload.class_name,
-      p_spec_id: selectedSpec?.id ?? null,
-      p_spec_name: payload.spec_name,
-      p_content_type: payload.content_type,
-      p_hero_talent: payload.hero_talent,
-      p_patch_version: payload.patch_version,
-      p_grip_version: payload.grip_version,
-      p_step_function: payload.step_function,
-      p_step_count: payload.step_count,
-      p_grip_string: payload.grip_string,
-      p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
-      p_talent_string: payload.talent_string,
-      p_warcraftlogs_url: payload.warcraftlogs_url,
-      p_performance_notes: payload.performance_notes,
-      p_changelog: null,
-    })
-    if (rpcError) throw rpcError
+          notifyDiscord({
+            title: payload.title,
+            slug: editSlug,
+            className: selectedClass?.name ?? '',
+            specName: payload.spec_name,
+            contentType: payload.content_type,
+            authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
+            heroTalent: payload.hero_talent,
+            isMinorEdit: true,
+          })
+        } else {
+          const { error: rpcError } = await supabase.rpc('update_sequence_with_version', {
+            p_sequence_id: editId,
+            p_author_id: user.id,
+            p_title: payload.title,
+            p_description: payload.description,
+            p_class_id: payload.class_id,
+            p_class_name: payload.class_name,
+            p_spec_id: selectedSpec?.id ?? null,
+            p_spec_name: payload.spec_name,
+            p_content_type: payload.content_type,
+            p_hero_talent: payload.hero_talent,
+            p_patch_version: payload.patch_version,
+            p_grip_version: payload.grip_version,
+            p_step_function: payload.step_function,
+            p_step_count: payload.step_count,
+            p_grip_string: payload.grip_string,
+            p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
+            p_talent_string: payload.talent_string,
+            p_warcraftlogs_url: payload.warcraftlogs_url,
+            p_performance_notes: payload.performance_notes,
+            p_changelog: null,
+          })
+          if (rpcError) throw rpcError
 
-    // Notify Discord -- use editMode to distinguish Edit from Update
-    fetch('/api/notify-discord', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      keepalive: true,
-      body: JSON.stringify({
-        title: payload.title,
-        slug: editSlug,
-        className: selectedClass?.name ?? '',
-        specName: payload.spec_name,
-        contentType: payload.content_type,
-        authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
-        heroTalent: payload.hero_talent,
-        isUpdate: editMode === 'update',
-        isEdit: editMode === 'edit',
-      }),
-    }).catch(err => console.error('[notify-discord] fetch failed:', err))
-  }
-  router.push(`/sequences/${editSlug}`)
-} else {
+          notifyDiscord({
+            title: payload.title,
+            slug: editSlug,
+            className: selectedClass?.name ?? '',
+            specName: payload.spec_name,
+            contentType: payload.content_type,
+            authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
+            heroTalent: payload.hero_talent,
+            isUpdate: editMode === 'update',
+            isEdit: editMode === 'edit',
+          })
+        }
+
+        router.push(`/sequences/${editSlug}`)
+      } else {
+        // New single sequence publish path
         const slug = slugify(form.title) + '-' + Date.now().toString(36)
-        const { data, error: rpcError } = await supabase.rpc('create_sequence_with_version', {
+        const { error: rpcError } = await supabase.rpc('create_sequence_with_version', {
           p_author_id: user.id,
           p_title: payload.title,
           p_slug: slug,
@@ -590,23 +592,19 @@ if (isEditMode) {
         })
 
         if (rpcError) throw rpcError
-          // Fire and forget -- a Discord failure must never block a publish
-          fetch('/api/notify-discord', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            keepalive: true,
-            body: JSON.stringify({
-              title: payload.title,
-              slug,
-              className: selectedClass?.name ?? '',
-              specName: payload.spec_name,
-              contentType: payload.content_type,
-              authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
-              heroTalent: payload.hero_talent,
-            }),
-          }).catch(err => console.error('[notify-discord] fetch failed:', err))
-          router.push(`/sequences/${slug}`)
-       }
+
+        notifyDiscord({
+          title: payload.title,
+          slug,
+          className: selectedClass?.name ?? '',
+          specName: payload.spec_name,
+          contentType: payload.content_type,
+          authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
+          heroTalent: payload.hero_talent,
+        })
+
+        router.push(`/sequences/${slug}`)
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
       setError(message)
@@ -1078,23 +1076,23 @@ if (isEditMode) {
                     ? 'Publish collection'
                     : 'Publish sequence'}
             </button>
-{isEditMode && (
-  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-    <input
-      type="checkbox"
-      id="minor-edit"
-      checked={minorEdit}
-      onChange={e => setMinorEdit(e.target.checked)}
-      style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }}
-    />
-    <label
-      htmlFor="minor-edit"
-      style={{ fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
-    >
-      Minor edit — updates title, description, performance notes, and metadata without creating a new version
-    </label>
-  </div>
-)}
+            {isEditMode && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="checkbox"
+                  id="minor-edit"
+                  checked={minorEdit}
+                  onChange={e => setMinorEdit(e.target.checked)}
+                  style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }}
+                />
+                <label
+                  htmlFor="minor-edit"
+                  style={{ fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                >
+                  Minor edit — updates title, description, performance notes, and metadata without creating a new version
+                </label>
+              </div>
+            )}
             {isEditMode && (
               <button
                 type="button"
