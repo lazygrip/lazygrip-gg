@@ -385,17 +385,17 @@ async function runDecode(exportString: string) {
           if (rpcError) throw rpcError
 
           // Notify Discord -- collection edits use the minor edit indicator
-          const { data: { user: currentUser } } = await supabase.auth.getUser()
           fetch('/api/notify-discord', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            keepalive: true,
             body: JSON.stringify({
               title: collectionTitle.trim() || form.title.trim(),
               slug: editSlug,
               className: cls?.name ?? '',
               specName: form.spec_name,
               contentType: form.content_type,
-              authorUsername: currentUser?.user_metadata?.username ?? currentUser?.email ?? 'unknown',
+              authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
               heroTalent: form.hero_talent,
               isMinorEdit: true,
             }),
@@ -504,17 +504,17 @@ if (isEditMode) {
     if (rpcError) throw rpcError
 
     // Notify Discord -- minor edits use the pencil indicator
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
     fetch('/api/notify-discord', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      keepalive: true,
       body: JSON.stringify({
         title: payload.title,
         slug: editSlug,
         className: selectedClass?.name ?? '',
         specName: payload.spec_name,
         contentType: payload.content_type,
-        authorUsername: currentUser?.user_metadata?.username ?? currentUser?.email ?? 'unknown',
+        authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
         heroTalent: payload.hero_talent,
         isMinorEdit: true,
       }),
@@ -543,18 +543,19 @@ if (isEditMode) {
       p_changelog: null,
     })
     if (rpcError) throw rpcError
-    // Fire and forget -- notify Discord on real updates, not minor edits
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
+
+    // Notify Discord -- full updates use the update indicator
     fetch('/api/notify-discord', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      keepalive: true,
       body: JSON.stringify({
         title: payload.title,
         slug: editSlug,
         className: selectedClass?.name ?? '',
         specName: payload.spec_name,
         contentType: payload.content_type,
-        authorUsername: currentUser?.user_metadata?.username ?? currentUser?.email ?? 'unknown',
+        authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
         heroTalent: payload.hero_talent,
         isUpdate: true,
       }),
@@ -588,18 +589,18 @@ if (isEditMode) {
 
         if (rpcError) throw rpcError
         if (data) {
-          const { data: { user: currentUser } } = await supabase.auth.getUser()
           // Fire and forget -- a Discord failure must never block a publish
           fetch('/api/notify-discord', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            keepalive: true,
             body: JSON.stringify({
               title: payload.title,
               slug: data.slug,
               className: selectedClass?.name ?? '',
               specName: payload.spec_name,
               contentType: payload.content_type,
-              authorUsername: currentUser?.user_metadata?.username ?? currentUser?.email ?? 'unknown',
+              authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
               heroTalent: payload.hero_talent,
             }),
           }).catch(err => console.error('[notify-discord] fetch failed:', err))
