@@ -590,7 +590,6 @@ if (isEditMode) {
         })
 
         if (rpcError) throw rpcError
-        if (data) {
           // Fire and forget -- a Discord failure must never block a publish
           fetch('/api/notify-discord', {
             method: 'POST',
@@ -598,7 +597,7 @@ if (isEditMode) {
             keepalive: true,
             body: JSON.stringify({
               title: payload.title,
-              slug: data.slug,
+              slug,
               className: selectedClass?.name ?? '',
               specName: payload.spec_name,
               contentType: payload.content_type,
@@ -606,9 +605,8 @@ if (isEditMode) {
               heroTalent: payload.hero_talent,
             }),
           }).catch(err => console.error('[notify-discord] fetch failed:', err))
-          router.push(`/sequences/${data.slug}`)
-        }
-      }
+          router.push(`/sequences/${slug}`)
+       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
       setError(message)
