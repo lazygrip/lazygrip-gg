@@ -146,6 +146,12 @@ export default function HowItWorksPage() {
         <p style={{ marginTop: 12 }}>There was a separate bug on first takeoff of a session where ground binds stayed live mid-air or vehicle keys never woke up at all. That is also fixed. The out-of-combat watchdog now heals the swap at takeoff and restores it on landing, so the first flight of every session behaves the same as every other.</p>
       </Section>
 
+      <Section title="Context switching and multi-version sequences">
+        <p>A single sequence in GRIP-EMS can hold more than one version, and the addon picks which one is live based on what content you are in. GRIP-EMS recognizes dozens of distinct context types across raid difficulty, dungeon difficulty, Mythic+ key ranges, delve tiers, rated PvP, and more, and it checks on zone change, difficulty change, and group roster update. If you have built a separate version of a sequence for, say, Mythic+ versus raid, walking into a dungeon swaps you to that version automatically with no manual intervention.</p>
+        <p style={{ marginTop: 12 }}>This used to have a real failure mode. Swapping versions by zoning into a dungeon or arena could drop a sequence's loop and branch grouping, and it would stay broken until you ran a manual <code style={code}>/reload</code>. That is fixed. The self-heal that rebuilds loop and branch structure now runs on the context switch itself, not just on a reload, so grouping survives the swap the moment it happens.</p>
+        <p style={{ marginTop: 12 }}>If you want to override the automatic pick, you can pin a specific version as the live one regardless of what your current content or talents would otherwise select. The pin holds until you clear it, and the version list shows a badge next to whichever version is actually firing. Useful if you are deliberately running an off-spec version of a sequence, or testing a version before letting it take over automatically for its intended content.</p>
+      </Section>
+
       <Section title="Keybind recovery">
         <p>GRIP-EMS includes automatic keybind monitoring. If your sequence keybinds go missing after a login, a loadout swap, or a deleted loadout eating its own binds, the addon detects it and tells you. Running <code style={code}>/gems binds restore</code> puts your last working set back immediately.</p>
         <p style={{ marginTop: 12 }}>The addon snapshots your binds on every clean load, so recovery is reliable even across sessions. If you see a warning about missing binds, run the restore command before assuming something is broken in your sequence.</p>
@@ -157,6 +163,13 @@ export default function HowItWorksPage() {
       <Section title="Per-step Disable and the sequence tracker">
         <p>Individual steps can be disabled inside the editor without deleting them. A disabled step is skipped entirely by the engine, which means you can comment out a step for testing purposes without losing the macro text. Re-enable it and the engine picks it up again on the next keypress.</p>
         <p style={{ marginTop: 12 }}>Disabled sequences are hidden from the tracker overlay and from your action bar. A sequence that is toggled off does not occupy a visible tracker slot, which keeps the display clean when you have multiple sequences loaded but only some of them active.</p>
+      </Section>
+
+      <Section title="Plugin support">
+        <p>GRIP-EMS exposes a public plugin API so other addons can extend it without touching its source. Everything goes through one frozen entry point, <code style={code}>GRIPEMS.API</code>, and it is owner-scoped and isolated per plugin, so a bug in someone else's plugin breaks their plugin, not your sequences. Anything a plugin adds is owned by its plugin id and reverts cleanly the moment that plugin is disabled, no leftovers in your settings or your sequences.</p>
+        <p style={{ marginTop: 12 }}>This is the kind of thing you will only ever notice if you run an addon that uses it. If a plugin adds a new export format, it shows up alongside the built-in one in the export window's format picker. If a plugin adds settings, they appear inside its own panel rather than scattered through GRIP-EMS's existing menus. None of this changes default behavior for anyone who is not running a plugin.</p>
+        <p style={{ marginTop: 12 }}>As of v2.3.0, the API extends to action bars specifically. A plugin can put one of your sequences directly on an action button, reading per-step spell data, creating and picking up that sequence's macro, and registering its own <code style={code}>/gems</code> subcommand to go with it. Same rule applies: nothing changes unless you are running a plugin built against this.</p>
+        <p style={{ marginTop: 12 }}>If you build addons and want to extend GRIP-EMS yourself, the full API reference, including the security model and every method by access tier, lives at <a href="https://jesperlive.github.io/GRIP-EMS-PluginAPI/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>jesperlive.github.io/GRIP-EMS-PluginAPI</a>. That documentation is the authoritative source for plugin development, this guide is written for sequence builders rather than addon authors.</p>
       </Section>
 
       <Section title="The visual display layer versus what actually executes">

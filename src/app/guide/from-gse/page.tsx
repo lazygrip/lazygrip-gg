@@ -50,7 +50,7 @@ export default function FromGSEPage() {
           Getting your sequences into GRIP-EMS
         </h2>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 14 }}>
-          This is probably what you came here for first. GRIP-EMS imports sequences from the legacy program automatically and the process takes about two minutes. Import reliability has improved significantly in recent releases, so if you tried this previously and had issues, it is worth trying again.
+          This is probably what you came here for first. GRIP-EMS imports sequences from GSE automatically and the process takes about two minutes. Import reliability has improved significantly in recent releases, so if you tried this previously and had issues, it is worth trying again.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
@@ -116,7 +116,7 @@ export default function FromGSEPage() {
             <CompareRow label="Step functions" grip="Sequential, Priority, Reverse Priority, Random" gse="Sequential, Priority, and others depending on version" />
             <CompareRow label="Opener logic" grip="True single-block loop, step 1 is only the opener" gse="Block 1 fires between every loop step when compiled, not just once" />
             <CompareRow label="Spell validation" grip="Built-in scanner with patch-aware auto-translation" gse="Limited or absent depending on version" />
-            <CompareRow label="Click rate guidance" grip="Recommended click rate shown live by the Dynamic SQW Optimiser" gse="None built in" />
+            <CompareRow label="Click rate guidance" grip="Tempo Advisor learns from your actual play and recommends a click rate per sequence, with a live Faster/Slower overlay" gse="None built in" />
             <CompareRow label="Post-patch repair" grip="Repair module fixes stale spells in one click" gse="Manual identification and replacement" />
             <CompareRow label="Cross-language sharing" grip="Spell IDs stored internally, renders in recipient's language" gse="Spell names in source language, may not fire on other clients" />
           </div>

@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Settings | GRIP-EMS Guide | LazyGrip.net',
-  description: 'The GRIP-EMS settings that actually determine whether your sequences run smoothly. SQW, Key Down Casting, click rate, the Dynamic SQW Optimiser, and how they all connect.',
+  description: 'The GRIP-EMS settings that actually determine whether your sequences run smoothly. SQW, Key Down Casting, click rate, the Dynamic SQW Optimiser, the Tempo Advisor, and how they all connect.',
 }
 
 export default function SettingsPage() {
@@ -63,19 +63,15 @@ export default function SettingsPage() {
         <p>This is the setting that does the SQW math for you and keeps it updated as your connection moves around during a session. It continuously monitors your world latency, using a smoothed average sampled every 10 seconds, ignoring one-off spikes that would otherwise throw your numbers off. From that, it sets SQW to your current latency plus a configurable Safety Buffer, kept inside the 50 to 400ms ceiling.</p>
         <p style={{ marginTop: 12 }}>So if your latency is 120ms and your Safety Buffer is 50ms, SQW lands at around 170ms. Your latency jumps to 160ms mid-key, SQW adjusts.</p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
-          {[
-            { label: 'Safety Buffer', desc: 'Yours to set between 50 and 200ms. Higher buffer means fewer dropped presses, lower feels snappier. 100ms is a sensible middle ground for most players. If your connection is stable and low-latency, push it lower. If it is inconsistent, go higher.' },
-            { label: 'Recommended click rate', desc: 'The Optimiser also shows a suggested click rate worked out from your live GCD, the SQW it sets, and your latency (GCD minus SQW plus latency). Treat it as a reference point rather than a hard rule, but it is a much more honest starting number than a static figure copied from someone else\'s guide.' },
-          ].map(r => (
-            <div key={r.label} style={{ padding: '12px 14px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{r.label}</div>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{r.desc}</div>
-            </div>
-          ))}
+        <div style={{ padding: '12px 14px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', marginTop: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>Safety Buffer</div>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>Yours to set between 50 and 200ms. Higher buffer means fewer dropped presses, lower feels snappier. 100ms is a sensible middle ground for most players. If your connection is stable and low-latency, push it lower. If it is inconsistent, go higher.</div>
         </div>
 
         <p style={{ marginTop: 16 }}>While the Optimiser is running, it has exclusive control over the SQW value. You will see "Managed by SQW Optimiser" in the manual control and the slider locks. If you want to set SQW by hand, turn the Optimiser off first.</p>
+        <Callout>
+          The SQW Optimiser tunes one thing: the SpellQueueWindow CVar, based on your latency. It does not look at your sequence, your spells, or your click rate. For a recommendation on how fast you should actually be pressing your keybind, that is the Tempo Advisor below, a separate system entirely.
+        </Callout>
       </Section>
 
       <Section title="Click Rate">
@@ -84,7 +80,53 @@ export default function SettingsPage() {
         <p style={{ marginTop: 12 }}>The reason it floors at 100ms is that nobody is realistically pressing a key faster than ten times a second, and at that speed, you would be running past steps before the spells they contain can land. GRIP-EMS calls 100ms the human and hardware floor.</p>
         <p style={{ marginTop: 12 }}><strong style={{ color: 'var(--text-primary)' }}>Per-Character Click Rate</strong>, under the same menu, is a setting scoped to your current character only and overrides the global value while that character is active. Range is 0 to 1000ms in steps of 10. Set it to 0 to fall back to the shared global value. This is also the only way to go below the 100ms floor if you have an edge case that needs it, down to 10ms. GRIP-EMS will pop a warning on screen when you drop under 100.</p>
         <Callout>
-          Pressing faster than your spells can land does not make your rotation faster. The GCD is the real speed limit, around 1.5 seconds for most specs and shorter with haste. If you are pressing at 80ms and your GCD is 1.4 seconds, you are firing roughly 17 keypresses per GCD and advancing the sequence 17 steps before a single spell lands. That is not a faster rotation; it is a broken one. The sweet spot is pressing at roughly your cast pace. The Dynamic SQW Optimiser's recommended click rate is the most personalized answer to what that number should be for your character in real time.
+          Pressing faster than your spells can land does not make your rotation faster. The GCD is the real speed limit, around 1.5 seconds for most specs and shorter with haste. If you are pressing at 80ms and your GCD is 1.4 seconds, you are firing roughly 17 keypresses per GCD and advancing the sequence 17 steps before a single spell lands. That is not a faster rotation; it is a broken one. The sweet spot is pressing at roughly your cast pace, and the Tempo Advisor below is the most personalized way to find that number for your character in real time.
+        </Callout>
+      </Section>
+
+      <Section title="Tempo Advisor">
+        <p style={{ marginBottom: 4, fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Settings {'>'} Faster/Slower</p>
+        <p>This is a different system from the SQW Optimiser above, and it is worth being precise about the difference because the two get confused constantly in the Discord. The SQW Optimiser tunes a WoW CVar based on your latency. The Tempo Advisor analyses your actual sequence and your actual play to recommend a click rate, in milliseconds between keypresses, that fits how that specific sequence is built and how you actually play it.</p>
+        <p style={{ marginTop: 12 }}>It starts from a theoretical estimate the moment you save a sequence: it classifies every spell into one of seven timing categories (off-GCD, on-GCD instant, on-GCD with a cast time, a long cast, a channel, a pause step, or unknown if the spell data is not cached yet), builds a transition graph between your steps, and sums GCD durations and cast times across that graph to estimate the time between presses your sequence actually needs.</p>
+        <p style={{ marginTop: 12 }}>That estimate gets more accurate the more you play. After 30 logged samples from the addon's execution tracer, the Advisor blends real combat data into the recommendation at a 70% theoretical, 30% empirical mix, and discards stale samples automatically so an old patch or a respec does not keep skewing the number. Every sequence stores its own recommendation, sample count, and blend ratio, and it persists across sessions rather than resetting every login.</p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
+          {[
+            { label: 'Estimated', desc: 'Confidence level before 30 play samples are collected. The recommendation is theory-only at this point.' },
+            { label: 'Calibrated', desc: 'Confidence level once 30 or more samples are in. The recommendation now reflects how you actually play that sequence.' },
+          ].map(r => (
+            <div key={r.label} style={{ display: 'flex', gap: 14, fontSize: 14, alignItems: 'flex-start' }}>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)', flexShrink: 0, minWidth: 110 }}>{r.label}</span>
+              <span style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{r.desc}</span>
+            </div>
+          ))}
+        </div>
+
+        <p style={{ marginTop: 16 }}>Turn it on and a movable Faster/Slower overlay shows your current click rate against the recommendation, with a delta bar so you can see at a glance how far off you are. There is an optional rolling CPS sparkline if you want to watch your actual clicks per second over the last few presses, and an opt-in audio alert that plays a sound if your rate drifts too far from the recommendation, useful if you are not watching the overlay during a pull.</p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 16 }}>
+          {[
+            { cmd: '/gems fs', desc: 'Show current Tempo Advisor status' },
+            { cmd: '/gems fs on', desc: 'Enable the Faster/Slower overlay' },
+            { cmd: '/gems fs off', desc: 'Disable the overlay' },
+            { cmd: '/gems fs reset', desc: 'Clear stored data for a sequence and start fresh' },
+          ].map(item => (
+            <div key={item.cmd} style={{ display: 'flex', gap: 16, alignItems: 'baseline', fontSize: 14 }}>
+              <code style={{
+                fontFamily: 'var(--font-mono)', fontSize: 12,
+                color: 'var(--accent)', background: 'var(--accent-subtle)',
+                padding: '2px 8px', borderRadius: 'var(--radius-sm)',
+                flexShrink: 0, whiteSpace: 'nowrap',
+              }}>
+                {item.cmd}
+              </code>
+              <span style={{ color: 'var(--text-secondary)' }}>{item.desc}</span>
+            </div>
+          ))}
+        </div>
+
+        <Callout>
+          Run /gems fs reset after a major rework of a sequence, not just a small tweak. The Advisor is learning the timing of that specific step structure, and feeding it 30 samples from the old version before you swap to the new one will skew the recommendation until enough fresh data overwrites it.
         </Callout>
       </Section>
 
@@ -95,8 +137,8 @@ export default function SettingsPage() {
       </Section>
 
       <Section title="How these settings connect">
-        <p>The outside program sends keypresses at the rate you set. GRIP-EMS turns each keypress into one sequence step. The GCD is the actual ceiling on how fast spells can land, regardless of how fast you press. SQW controls the window in which your next press is queued into that GCD. And the Dynamic SQW Optimiser ties SQW to your real latency, so the queue window is always sized correctly for your connection.</p>
-        <p style={{ marginTop: 12 }}>Get Key Down Casting right, let the Optimiser handle SQW, and set your click rate somewhere near your actual cast pace. Everything else on this page is fine-tuning from there.</p>
+        <p>The outside program sends keypresses at the rate you set. GRIP-EMS turns each keypress into one sequence step. The GCD is the actual ceiling on how fast spells can land, regardless of how fast you press. SQW controls the window in which your next press is queued into that GCD, and the SQW Optimiser ties that window to your real latency so it is always sized correctly for your connection. The Tempo Advisor is the layer above all of that: it watches your specific sequence and your actual play to tell you the click rate that fits both.</p>
+        <p style={{ marginTop: 12 }}>Get Key Down Casting right, let the Optimiser handle SQW, and let the Tempo Advisor tell you where to set your click rate once it has enough data on you. Everything else on this page is fine-tuning from there.</p>
       </Section>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 48, paddingTop: 24, borderTop: '0.5px solid var(--border)' }}>

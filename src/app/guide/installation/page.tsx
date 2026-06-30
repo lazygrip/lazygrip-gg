@@ -68,7 +68,7 @@ export default function InstallationPage() {
 
         <Step number={3} label="Set your click rate">
           <p>GRIP-EMS advances one step per keypress. Your hardware or software needs to send repeated keypresses at a consistent interval. The right value depends on your setup but 150ms is a reliable starting point that works across most hardware and latency combinations. If you are using Razer hardware, set your repeat rate to 150ms in Synapse.</p>
-          <p style={{ marginTop: 8 }}>Once you have a sequence running, the Dynamic SQW Optimiser on the Settings page shows a recommended click rate worked out from your live GCD, latency, and SQW value. That number is more accurate than any static figure and updates in real time as your connection changes.</p>
+          <p style={{ marginTop: 8 }}>Once you have a sequence running and some combat data logged, the Tempo Advisor on the Settings page shows a recommended click rate worked out from your sequence's actual step timing and how you play it. That number is more accurate than any static figure and gets sharper the more you play that sequence.</p>
         </Step>
       </Section>
 
