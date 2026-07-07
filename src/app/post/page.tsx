@@ -84,6 +84,11 @@ function PostForm() {
   // Shared title for the collection page
   const [collectionTitle, setCollectionTitle] = useState('')
   const [minorEdit, setMinorEdit] = useState(false)
+
+  // Author-lock / attribution state
+  const [lockedAuthor, setLockedAuthor] = useState<string | null>(null)
+  const [attributionAcknowledged, setAttributionAcknowledged] = useState(false)
+
   const selectedClass = WOW_CLASSES.find(c => c.id === Number(form.class_id))
   const selectedSpec = selectedClass?.specs.find(s => s.name === form.spec_name)
   const heroTalentOptions = selectedSpec?.heroTalents ?? []
@@ -171,6 +176,8 @@ async function runDecode(exportString: string) {
   setDecodeError(null)
   setCollectionSequences(null)
   setCollectionTitle('')
+  setLockedAuthor(null)
+  setAttributionAcknowledged(false)
 
   try {
     const res = await fetch('/api/decode-grip', {
@@ -188,6 +195,12 @@ async function runDecode(exportString: string) {
 
     const sequences = data.sequences ?? []
     const meta = data.meta ?? {}
+
+    // Author-lock / attribution -- captured for both collection and single paths.
+    // NOTE: assumes meta.lockedAuthor is the correct field name and that it's shared
+    // across all sequences in a collection export. Verify against a real locked
+    // collection export before trusting this for multi-author collections.
+    setLockedAuthor(meta.lockedAuthor ?? null)
 
     if (sequences.length > 1) {
       // Collection export
@@ -291,6 +304,8 @@ async function runDecode(exportString: string) {
     setDecodedSteps(null)
     setCollectionSequences(null)
     setCollectionTitle('')
+    setLockedAuthor(null)
+    setAttributionAcknowledged(false)
 
     if (decodeTimeoutRef.current) clearTimeout(decodeTimeoutRef.current)
 
@@ -369,7 +384,9 @@ async function runDecode(exportString: string) {
         const totalSteps = checked.reduce((sum, s) => sum + s.steps.length, 0)
 
         if (isEditMode) {
-          // Edit path -- update existing record, no new version
+          // Edit path -- update existing record, no new version.
+          // Attribution is intentionally not sent here: original_author is set once
+          // at creation and must not change on edit.
           const { error: rpcError } = await supabase.rpc('update_sequence_metadata', {
             p_sequence_id: editId,
             p_author_id: user.id,
@@ -407,7 +424,8 @@ async function runDecode(exportString: string) {
 
           router.push(`/sequences/${editSlug}`)
         } else {
-          // New collection publish path
+          // New collection publish path -- raw insert, not an RPC.
+          // Attribution fields added directly to the payload.
           const slug = slugify(collectionTitle) + '-' + Date.now().toString(36)
           const { error: insertError } = await supabase
             .from('sequences')
@@ -432,6 +450,8 @@ async function runDecode(exportString: string) {
               warcraftlogs_url: form.warcraftlogs_url.trim() || null,
               performance_notes: form.performance_notes.trim() || null,
               collection_sequences: collectionData,
+              original_author: lockedAuthor,
+              attribution_acknowledged_at: attributionAcknowledged ? new Date().toISOString() : null,
               is_published: true,
             })
 
@@ -492,6 +512,8 @@ async function runDecode(exportString: string) {
       }
 
       if (isEditMode) {
+        // Attribution is intentionally not sent on either edit path -- original_author
+        // is set once at creation and must not change on edit.
         if (minorEdit) {
           const { error: rpcError } = await supabase.rpc('update_sequence_metadata', {
             p_sequence_id: editId,
@@ -589,6 +611,8 @@ async function runDecode(exportString: string) {
           p_warcraftlogs_url: payload.warcraftlogs_url,
           p_performance_notes: payload.performance_notes,
           p_changelog: null,
+          p_original_author: lockedAuthor,
+          p_attribution_acknowledged: attributionAcknowledged,
         })
 
         if (rpcError) throw rpcError
@@ -1044,6 +1068,27 @@ async function runDecode(exportString: string) {
             </Field>
           </Section>
 
+          {/* Attribution acknowledgment -- shown only when the decoded sequence carries a locked/original author */}
+          {lockedAuthor && (
+            <div style={{
+              display: 'flex', gap: 10, alignItems: 'flex-start',
+              padding: '12px 14px',
+              background: 'rgba(217,119,6,0.07)',
+              border: '0.5px solid rgba(217,119,6,0.3)',
+              borderRadius: 'var(--radius-md)',
+            }}>
+              <input
+                type="checkbox"
+                checked={attributionAcknowledged}
+                onChange={e => setAttributionAcknowledged(e.target.checked)}
+                style={{ width: 16, height: 16, marginTop: 2, accentColor: 'var(--accent)', cursor: 'pointer', flexShrink: 0 }}
+              />
+              <label style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', lineHeight: 1.5 }}>
+                This sequence is attributed to <strong style={{ color: 'var(--text-primary)' }}>{lockedAuthor}</strong>. I'm publishing my own version and understand the original author will be credited on this page.
+              </label>
+            </div>
+          )}
+
           {error && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: 8,
@@ -1059,13 +1104,13 @@ async function runDecode(exportString: string) {
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || (!!lockedAuthor && !attributionAcknowledged)}
               style={{
                 background: 'var(--accent)', color: 'white', border: 'none',
                 borderRadius: 'var(--radius-md)', padding: '12px 24px',
                 fontSize: 14, fontWeight: 500,
-                cursor: submitting ? 'not-allowed' : 'pointer',
-                opacity: submitting ? 0.7 : 1, fontFamily: 'var(--font-sans)',
+                cursor: (submitting || (!!lockedAuthor && !attributionAcknowledged)) ? 'not-allowed' : 'pointer',
+                opacity: (submitting || (!!lockedAuthor && !attributionAcknowledged)) ? 0.7 : 1, fontFamily: 'var(--font-sans)',
               }}
             >
               {submitting
