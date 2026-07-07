@@ -54,6 +54,11 @@ export async function POST(req: NextRequest) {
         collectionName: model.exportMeta?.collectionName || '',
         author: model.exportMeta?.author || '',
         description: model.exportMeta?.description || '',
+        originalAuthor: model.exportMeta?.originalAuthor || '',
+        originalAuthorRealm: model.exportMeta?.originalAuthorRealm || '',
+        authorLocked: Boolean(model.exportMeta?.authorLocked),
+        lockedAuthor: model.exportMeta?.lockedAuthor || '',
+        privacyMode: model.exportMeta?.privacyMode || 'public',
       },
       variables: Array.isArray(model.variables) ? model.variables.map((v: any) => ({
         id: v.id,

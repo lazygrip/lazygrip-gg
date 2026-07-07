@@ -24,9 +24,6 @@ interface DecodeResult {
     name: string
     class: string
     spec: string
-    authorLocked?: boolean
-    lockedAuthor?: string
-    privacyMode?: string
     defaultVersion: number
     versions: Array<{
       index: number
@@ -376,16 +373,6 @@ export default function WorkshopDecodePage() {
                 <div key={si} style={{ background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
                   <div style={{ padding: '14px 16px', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{seq.name}</h2>
-                    {seq.authorLocked && (
-                      <span style={{
-                        display: 'flex', alignItems: 'center', gap: 4,
-                        fontSize: 11, fontWeight: 500, padding: '2px 8px',
-                        background: 'var(--bg-tertiary)', color: 'var(--text-muted)',
-                        border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)',
-                      }}>
-                        🔒 Locked to {seq.lockedAuthor || 'original author'}
-                      </span>
-                    )}
                   </div>
                   {seq.versions.map((version, vi) => (
                     <div key={vi} style={{ borderBottom: vi < seq.versions.length - 1 ? '0.5px solid var(--border)' : undefined }}>

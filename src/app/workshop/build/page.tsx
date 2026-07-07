@@ -71,7 +71,15 @@ interface StandaloneMacro {
 }
 
 interface BuilderModel {
-  exportMeta: { collectionName: string; author: string; description: string }
+  exportMeta: {
+    collectionName: string
+    author: string
+    description: string
+    originalAuthor?: string
+    originalAuthorRealm?: string
+    authorLocked?: boolean
+    privacyMode?: string
+  }
   variables: GripVariable[]
   standaloneMacros: StandaloneMacro[]
   sequences: BuilderSequence[]
@@ -1118,6 +1126,11 @@ export default function WorkshopBuildPage() {
                 <div>
                   <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Author</label>
                   <input value={model.exportMeta.author || ''} onChange={e => setModel(m => ({ ...m, exportMeta: { ...m.exportMeta, author: e.target.value } }))} placeholder="Your name" style={{ ...S.input(), width: '100%' }} />
+                  {model.exportMeta.authorLocked && model.exportMeta.originalAuthor && (
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span>Originally created by <strong style={{ color: 'var(--text-secondary)' }}>{model.exportMeta.originalAuthor}</strong>{model.exportMeta.originalAuthorRealm ? ` (${model.exportMeta.originalAuthorRealm})` : ''}</span>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Class</label>
