@@ -414,17 +414,6 @@ async function runDecode(exportString: string) {
           })
           if (rpcError) throw rpcError
 
-          notifyDiscord({
-            title: collectionTitle.trim() || form.title.trim(),
-            slug: editSlug,
-            className: cls?.name ?? '',
-            specName: form.spec_name,
-            contentType: form.content_type,
-            authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
-            heroTalent: form.hero_talent,
-            isMinorEdit: true,
-          })
-
           router.push(`/sequences/${editSlug}`)
         } else {
           // New collection publish path -- raw insert, not an RPC.
@@ -540,17 +529,6 @@ async function runDecode(exportString: string) {
             p_performance_notes: payload.performance_notes,
           })
           if (rpcError) throw rpcError
-
-          notifyDiscord({
-            title: payload.title,
-            slug: editSlug,
-            className: selectedClass?.name ?? '',
-            specName: payload.spec_name,
-            contentType: payload.content_type,
-            authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
-            heroTalent: payload.hero_talent,
-            isMinorEdit: true,
-          })
         } else {
           const { error: rpcError } = await supabase.rpc('update_sequence_with_version', {
             p_sequence_id: editId,

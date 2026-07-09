@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 const CONTENT_TYPE_LABELS: Record<string, string> = {
   mythic_plus: 'Mythic+',
@@ -7,7 +8,6 @@ const CONTENT_TYPE_LABELS: Record<string, string> = {
   open_world: 'Open World',
   pvp: 'PvP',
 }
-
 const CLASS_COLORS: Record<string, number> = {
   'Death Knight': 0xC41E3A,
   'Demon Hunter': 0xA330C9,
@@ -31,7 +31,28 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { title, slug, className, specName, contentType, authorUsername, heroTalent, isUpdate, isEdit, isMinorEdit } = await req.json()
+    const { title, slug, className, specName, contentType, authorUsername, heroTalent, isUpdate, isEdit } = await req.json()
+
+    if (!slug) {
+      return NextResponse.json({ ok: false, error: 'Missing slug' }, { status: 400 })
+    }
+
+    const admin = createAdminClient()
+
+    // Look up any existing Discord thread for this sequence.
+    const { data: sequenceRow, error: lookupError } = await admin
+      .from('sequences')
+      .select('discord_thread_id')
+      .eq('slug', slug)
+      .single()
+
+    if (lookupError) {
+      console.error('[notify-discord] Failed to look up sequence:', lookupError)
+      // Don't hard-fail the notification just because the lookup failed --
+      // fall back to posting a new thread rather than losing the notification entirely.
+    }
+
+    const existingThreadId = sequenceRow?.discord_thread_id ?? null
 
     const color = CLASS_COLORS[className] ?? 0x1D9E75
     const specPart = specName ? `${specName} ` : ''
@@ -40,8 +61,7 @@ export async function POST(req: NextRequest) {
     const url = `https://lazygrip.net/sequences/${slug}`
 
     let embedTitle = title
-    if (isMinorEdit) embedTitle = `✏️ ${title}`
-    else if (isEdit) embedTitle = `📝 ${title}`
+    if (isEdit) embedTitle = `📝 ${title}`
     else if (isUpdate) embedTitle = `🔄 ${title}`
 
     const embed = {
@@ -59,17 +79,54 @@ export async function POST(req: NextRequest) {
       timestamp: new Date().toISOString(),
     }
 
-    const threadPrefix = isMinorEdit ? 'Minor Edit: ' : isEdit ? 'Edit: ' : isUpdate ? 'Updated: ' : 'New: '
-    const res = await fetch(webhookUrl, {
+    // Build the target URL: post into the existing thread if we have one,
+    // otherwise post fresh (which creates a new thread, named via thread_name).
+    const postUrl = existingThreadId
+      ? `${webhookUrl}?thread_id=${existingThreadId}&wait=true`
+      : `${webhookUrl}?wait=true`
+
+    const body: Record<string, unknown> = {
+      embeds: [embed],
+      username: 'LazyGrip',
+    }
+
+    if (!existingThreadId) {
+      const threadPrefix = isEdit ? 'Edit: ' : isUpdate ? 'Updated: ' : 'New: '
+      body.thread_name = `${threadPrefix}${title}`
+    }
+
+    const res = await fetch(postUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ embeds: [embed], username: 'LazyGrip', thread_name: `${threadPrefix}${title}` }),
+      body: JSON.stringify(body),
     })
 
     if (!res.ok) {
       const text = await res.text()
       console.error('[notify-discord] Discord rejected webhook:', res.status, text)
       return NextResponse.json({ ok: false, error: 'Discord rejected the webhook' }, { status: 502 })
+    }
+
+    const responseData = await res.json()
+
+    // If this was a brand-new thread, capture its ID so future edits reuse it.
+    const newThreadId = !existingThreadId ? (responseData?.channel_id ?? responseData?.id ?? null) : null
+
+    const updatePayload: Record<string, unknown> = {
+      last_discord_notified_at: new Date().toISOString(),
+    }
+    if (newThreadId) {
+      updatePayload.discord_thread_id = newThreadId
+    }
+
+    const { error: updateError } = await admin
+      .from('sequences')
+      .update(updatePayload)
+      .eq('slug', slug)
+
+    if (updateError) {
+      console.error('[notify-discord] Failed to write back thread id:', updateError)
+      // Notification already succeeded from Discord's perspective -- don't fail the request over this.
     }
 
     return NextResponse.json({ ok: true })
