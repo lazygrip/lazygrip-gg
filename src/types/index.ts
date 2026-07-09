@@ -74,6 +74,12 @@ export type Sequence = {
   collection_sequences: CollectionSequenceEntry[] | null
   current_version_id: string | null
   current_version_label: string | null
+  // Original author as declared at creation time (from the export blob or the
+  // author-lock system). Not the same as the posting account -- see `author`
+  // below. Immutable after creation; edit RPCs never touch this column.
+  // Optional rather than required: not every Sequence-typed object in the
+  // codebase is guaranteed to be constructed from a full Supabase row.
+  original_author?: string | null
   created_at: string
   updated_at: string
   // Joined fields

@@ -574,6 +574,14 @@ export default function SequencePageClient() {
             )}
             {' · '}{formatDistanceToNow(new Date(sequence.created_at), { addSuffix: true })}
             {sequence.patch_version && ` · Patch ${sequence.patch_version}`}
+            {sequence.original_author && sequence.original_author.trim() && (
+              <>
+                <br />
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                  Originally created by <strong style={{ color: 'var(--text-secondary)' }}>{sequence.original_author}</strong>
+                </span>
+              </>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: 8 }}>

@@ -77,6 +77,9 @@ function PostForm() {
   const [decodeError, setDecodeError] = useState<string | null>(null)
   const [stepsAutoPopulated, setStepsAutoPopulated] = useState(false)
   const [decodedSteps, setDecodedSteps] = useState<SequenceStep[] | null>(null)
+  // Original author as declared in the export's exportMeta.author field, single-sequence
+  // imports only. Not user-editable; flows straight through to create_sequence_with_version.
+  const [originalAuthor, setOriginalAuthor] = useState<string | null>(null)
   const decodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Collection state -- non-null when a collection export is detected
@@ -172,6 +175,7 @@ async function runDecode(exportString: string) {
   setDecodeError(null)
   setCollectionSequences(null)
   setCollectionTitle('')
+  setOriginalAuthor(null)
 
   try {
     const res = await fetch('/api/decode-grip', {
@@ -193,6 +197,12 @@ async function runDecode(exportString: string) {
     if (sequences.length > 1) {
       // Collection export
       const anchor = sequences.find((s: any) => s.classId) ?? sequences[0]
+
+      // exportMeta.author here is collection-level only -- one name applies
+      // to the whole collection, same ceiling as resolveBuilderExportMeta's
+      // firstNonEmpty on the toolbox side. Not per-sequence.
+      const declaredAuthor = (meta.exportMeta?.author ?? '').trim()
+      setOriginalAuthor(declaredAuthor || null)
 
       if (anchor.classId) {
         const cls = WOW_CLASSES.find(c => c.id === anchor.classId)
@@ -247,6 +257,12 @@ async function runDecode(exportString: string) {
     setField('raw_steps_text', stepsText)
     setStepsAutoPopulated(true)
 
+    // exportMeta.author is whatever the export blob declares as the original
+    // author -- stored verbatim, no comparison against the uploading user.
+    // Trust decisions belong to the toolbox's author-lock system, not this form.
+    const declaredAuthor = (meta.exportMeta?.author ?? '').trim()
+    setOriginalAuthor(declaredAuthor || null)
+
     const classId = meta.classId ?? seq?.classId
     const specId = meta.specId ?? seq?.specId
     const stepFunction = seq?.versions?.[0]?.stepFunction
@@ -292,6 +308,7 @@ async function runDecode(exportString: string) {
     setDecodedSteps(null)
     setCollectionSequences(null)
     setCollectionTitle('')
+    setOriginalAuthor(null)
 
     if (decodeTimeoutRef.current) clearTimeout(decodeTimeoutRef.current)
 
@@ -411,7 +428,8 @@ async function runDecode(exportString: string) {
           router.push(`/sequences/${editSlug}`)
         } else {
           // New collection publish path -- raw insert, not an RPC.
-          // Attribution fields added directly to the payload.
+          // original_author is collection-level only (see decode branch above);
+          // no per-sequence attribution exists in this schema today.
           const slug = slugify(collectionTitle) + '-' + Date.now().toString(36)
           const { error: insertError } = await supabase
             .from('sequences')
@@ -436,6 +454,7 @@ async function runDecode(exportString: string) {
               warcraftlogs_url: form.warcraftlogs_url.trim() || null,
               performance_notes: form.performance_notes.trim() || null,
               collection_sequences: collectionData,
+              original_author: originalAuthor,
               is_published: true,
             })
 
@@ -595,6 +614,10 @@ async function runDecode(exportString: string) {
           p_warcraftlogs_url: payload.warcraftlogs_url,
           p_performance_notes: payload.performance_notes,
           p_changelog: null,
+          p_original_author: originalAuthor,
+          // p_attribution_acknowledged intentionally omitted -- defaults to false
+          // on the RPC side. Wiring this requires a real consent UI decision
+          // (checkbox + copy) that hasn't been made yet. See session notes.
         })
 
         if (rpcError) throw rpcError
