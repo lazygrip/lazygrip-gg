@@ -162,7 +162,7 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
 
         {/* Battle.net */}
         <button onClick={handleBattlenet} style={{
-          width: '100%', padding: '10px', marginBottom: 16,
+          width: '100%', padding: '10px', marginBottom: 8,
           border: 'none',
           borderRadius: 'var(--radius-md)',
           background: '#148EFF',
@@ -176,6 +176,10 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
           </svg>
           Continue with Battle.net
         </button>
+
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 16, lineHeight: 1.5 }}>
+          Already have an account with Discord or email? Sign in with that first, then connect Battle.net from your profile settings to keep one account.
+        </p>
 
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16,
