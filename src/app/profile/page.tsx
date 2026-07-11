@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { formatDistanceToNow } from 'date-fns'
 import Link from 'next/link'
-import { Upload, Check, Save, BookmarkX } from 'lucide-react'
+import { Upload, Check, Save, BookmarkX, Link2, Unlink, AlertCircle } from 'lucide-react'
 
 const AVATAR_COLORS = [
   { bg: '#1D9E75', label: 'Emerald' },
@@ -16,6 +16,11 @@ const AVATAR_COLORS = [
   { bg: '#ff7c0a', label: 'Flame' },
   { bg: '#3fc7eb', label: 'Frost' },
   { bg: '#aad372', label: 'Nature' },
+]
+
+const CONNECTABLE_PROVIDERS = [
+  { id: 'discord', label: 'Discord', color: '#5865F2' },
+  { id: 'custom:battlenet', label: 'Battle.net', color: '#148EFF' },
 ]
 
 export default function ProfilePage() {
@@ -52,6 +57,13 @@ function ProfilePageInner() {
   const [settingsSaving, setSettingsSaving] = useState(false)
   const [settingsSaved, setSettingsSaved] = useState(false)
   const [settingsError, setSettingsError] = useState<string | null>(null)
+
+  // Connected accounts state
+  const [identities, setIdentities] = useState<any[]>([])
+  const [identitiesLoading, setIdentitiesLoading] = useState(true)
+  const [linkingProvider, setLinkingProvider] = useState<string | null>(null)
+  const [unlinkingId, setUnlinkingId] = useState<string | null>(null)
+  const [identityError, setIdentityError] = useState<string | null>(null)
 
   // Read ?tab= from URL — resets tab on every navigation including from dropdown
   useEffect(() => {
@@ -100,9 +112,55 @@ function ProfilePageInner() {
 
       setSavedSequences((saves ?? []).map((s: any) => s.sequence).filter(Boolean))
       setLoading(false)
+
+      await loadIdentities()
     }
     load()
   }, [])
+
+  async function loadIdentities() {
+    setIdentitiesLoading(true)
+    const { data, error } = await supabase.auth.getUserIdentities()
+    if (!error && data) {
+      setIdentities(data.identities ?? [])
+    }
+    setIdentitiesLoading(false)
+  }
+
+  async function handleLinkProvider(providerId: string) {
+    setIdentityError(null)
+    setLinkingProvider(providerId)
+    const { data, error } = await supabase.auth.linkIdentity({
+      provider: providerId as any,
+      options: {
+        redirectTo: `${window.location.origin}/profile?tab=settings`,
+      },
+    })
+    if (error) {
+      setIdentityError(`Failed to connect: ${error.message}`)
+      setLinkingProvider(null)
+      return
+    }
+    if (data?.url) {
+      window.location.href = data.url
+    }
+  }
+
+  async function handleUnlinkProvider(identity: any) {
+    setIdentityError(null)
+    if (identities.length < 2) {
+      setIdentityError("You can't disconnect your only sign-in method. Connect another one first.")
+      return
+    }
+    setUnlinkingId(identity.identity_id)
+    const { error } = await supabase.auth.unlinkIdentity(identity)
+    if (error) {
+      setIdentityError(`Failed to disconnect: ${error.message}`)
+    } else {
+      await loadIdentities()
+    }
+    setUnlinkingId(null)
+  }
 
   async function handleUnsave(seqId: string) {
     if (!user) return
@@ -307,6 +365,13 @@ function ProfilePageInner() {
           saving={settingsSaving}
           saved={settingsSaved}
           error={settingsError}
+          identities={identities}
+          identitiesLoading={identitiesLoading}
+          linkingProvider={linkingProvider}
+          unlinkingId={unlinkingId}
+          identityError={identityError}
+          onLinkProvider={handleLinkProvider}
+          onUnlinkProvider={handleUnlinkProvider}
         />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -356,6 +421,8 @@ function SettingsTab({
   username, setUsername, displayName, setDisplayName,
   bio, setBio, battletag, setBattletag,
   onSave, saving, saved, error,
+  identities, identitiesLoading, linkingProvider, unlinkingId, identityError,
+  onLinkProvider, onUnlinkProvider,
 }: {
   user: any
   avatarUrl: string | null
@@ -379,6 +446,13 @@ function SettingsTab({
   saving: boolean
   saved: boolean
   error: string | null
+  identities: any[]
+  identitiesLoading: boolean
+  linkingProvider: string | null
+  unlinkingId: string | null
+  identityError: string | null
+  onLinkProvider: (providerId: string) => void
+  onUnlinkProvider: (identity: any) => void
 }) {
   const inputStyle: React.CSSProperties = {
     width: '100%',
@@ -488,6 +562,106 @@ function SettingsTab({
           />
           <p style={hintStyle}>Email cannot be changed here.</p>
         </div>
+      </div>
+
+      {/* Connected Accounts */}
+      <div style={{
+        background: 'var(--bg-primary)',
+        border: '0.5px solid var(--border)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '24px',
+      }}>
+        <h2 style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Connected accounts</h2>
+        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20 }}>
+          Connect Discord or Battle.net so you can sign in with either one and keep a single account.
+        </p>
+
+        {identityError && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            color: '#c41e3a', fontSize: 12, marginBottom: 14,
+          }}>
+            <AlertCircle size={13} />
+            {identityError}
+          </div>
+        )}
+
+        {identitiesLoading ? (
+          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Loading...</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {CONNECTABLE_PROVIDERS.map(p => {
+              const linked = identities.find(i => i.provider === p.id)
+              const isLinking = linkingProvider === p.id
+              const isUnlinking = linked && unlinkingId === linked.identity_id
+
+              return (
+                <div key={p.id} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '10px 14px',
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 'var(--radius-md)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 6,
+                      background: p.color,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Link2 size={14} color="white" />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{p.label}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                        {linked ? 'Connected' : 'Not connected'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {linked ? (
+                    <button
+                      onClick={() => onUnlinkProvider(linked)}
+                      disabled={isUnlinking}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '6px 12px',
+                        border: '0.5px solid var(--border-strong)',
+                        borderRadius: 'var(--radius-md)',
+                        background: 'none',
+                        color: 'var(--text-secondary)',
+                        fontSize: 12, cursor: isUnlinking ? 'not-allowed' : 'pointer',
+                        opacity: isUnlinking ? 0.6 : 1,
+                        fontFamily: 'var(--font-sans)',
+                      }}
+                    >
+                      <Unlink size={12} />
+                      {isUnlinking ? 'Disconnecting...' : 'Disconnect'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => onLinkProvider(p.id)}
+                      disabled={isLinking}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                        padding: '6px 12px',
+                        border: 'none',
+                        borderRadius: 'var(--radius-md)',
+                        background: p.color,
+                        color: 'white',
+                        fontSize: 12, cursor: isLinking ? 'not-allowed' : 'pointer',
+                        opacity: isLinking ? 0.7 : 1,
+                        fontFamily: 'var(--font-sans)',
+                      }}
+                    >
+                      <Link2 size={12} />
+                      {isLinking ? 'Connecting...' : 'Connect'}
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Avatar */}
