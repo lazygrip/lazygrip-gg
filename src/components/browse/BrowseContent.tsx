@@ -29,6 +29,7 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
   const [count, setCount] = useState(0)
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [showMobileFilters, setShowMobileFilters] = useState(false)
+  const [currentPatch, setCurrentPatch] = useState<string | null>(null)
 
   const supabase = createClient()
 
@@ -80,6 +81,28 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
   useEffect(() => {
     fetchSequences()
   }, [searchParams.toString()])
+
+  // Fetch the site-wide current patch once on mount. Not re-fetched per filter change —
+  // this value changes rarely (only when admin updates it) so one fetch per page load is enough.
+  useEffect(() => {
+    fetchCurrentPatch()
+  }, [])
+
+  async function fetchCurrentPatch() {
+    try {
+      const { data, error } = await supabase
+        .from('site_config')
+        .select('current_patch')
+        .single()
+      if (error) {
+        console.error('Failed to fetch current_patch:', error)
+        return
+      }
+      setCurrentPatch(data?.current_patch ?? null)
+    } catch (e) {
+      console.error(e)
+    }
+  }
 
   async function fetchSequences() {
     setLoading(true)
@@ -280,7 +303,7 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {sequences.map(seq => <SequenceCard key={seq.id} sequence={seq} />)}
+              {sequences.map(seq => <SequenceCard key={seq.id} sequence={seq} currentPatch={currentPatch} />)}
             </div>
           )}
 

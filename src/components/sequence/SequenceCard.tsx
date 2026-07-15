@@ -2,12 +2,15 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Eye, MessageSquare, Bookmark, Star } from 'lucide-react'
+import { Eye, MessageSquare, Bookmark, Star, AlertTriangle } from 'lucide-react'
 import { Sequence } from '@/types'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow, differenceInDays } from 'date-fns'
 
-type Props = { sequence: Sequence }
+type Props = {
+  sequence: Sequence
+  currentPatch?: string | null // site-wide current patch, passed down from BrowseContent
+}
 
 const CONTENT_LABELS: Record<string, string> = {
   raid: 'Raid',
@@ -16,11 +19,13 @@ const CONTENT_LABELS: Record<string, string> = {
   solo: 'Solo',
 }
 
+const STALE_DAYS_THRESHOLD = 60
+
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim()
 }
 
-export default function SequenceCard({ sequence }: Props) {
+export default function SequenceCard({ sequence, currentPatch }: Props) {
   const router = useRouter()
   const classColor = getClassColor(sequence.class_id)
   const contentLabel = CONTENT_LABELS[sequence.content_type] ?? sequence.content_type
@@ -36,11 +41,22 @@ export default function SequenceCard({ sequence }: Props) {
       ? '#e0a020'
       : '#c44'
 
+  // Staleness: patch mismatch (or no patch_version recorded) AND not updated in the last 60 days.
+  // Both conditions required — purely informational, does not affect sort/ranking.
+  const daysSinceUpdate = differenceInDays(new Date(), new Date(sequence.updated_at))
+  const patchMismatch = !!currentPatch && (sequence.patch_version == null || sequence.patch_version !== currentPatch)
+  const isStale = patchMismatch && daysSinceUpdate > STALE_DAYS_THRESHOLD
+
+  const staleTooltip = isStale
+    ? `Built for ${sequence.patch_version ?? 'an unrecorded patch'} — current patch is ${currentPatch}. Last updated ${daysSinceUpdate} days ago.`
+    : undefined
+
   return (
     <article
       onClick={() => router.push(`/sequences/${sequence.slug}`)}
+      title={staleTooltip}
       style={{
-        background: 'var(--bg-primary)',
+        background: isStale ? 'rgba(224,160,32,0.08)' : 'var(--bg-primary)',
         border: '0.5px solid var(--border)',
         borderRadius: 'var(--radius-lg)',
         borderLeft: `3px solid ${classColor}`,
@@ -103,12 +119,32 @@ export default function SequenceCard({ sequence }: Props) {
       </div>
 
       {/* Badges */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
         <Badge color={classColor} label={sequence.class_name} />
         {sequence.spec_name && <Badge color="#5a8dee" label={sequence.spec_name} />}
         <Badge color="#1D9E75" label={contentLabel} />
         {sequence.grip_version && <Badge color="#888" label={`GRIP ${sequence.grip_version}`} />}
         {sequence.current_version_label && <Badge color="#1D9E75" label={sequence.current_version_label} />}
+        {isStale && (
+          <span
+            title={staleTooltip}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 3,
+              fontSize: 11,
+              fontWeight: 500,
+              padding: '2px 7px',
+              borderRadius: 'var(--radius-sm)',
+              background: 'rgba(224,160,32,0.16)',
+              color: '#a06c00',
+              border: '0.5px solid rgba(224,160,32,0.4)',
+            }}
+          >
+            <AlertTriangle size={10} />
+            Needs revalidation
+          </span>
+        )}
       </div>
 
       {/* Description */}

@@ -56,13 +56,29 @@ export default function SequencePageClient() {
   const [linkError, setLinkError] = useState<string | null>(null)
   const [unlinkLoading, setUnlinkLoading] = useState(false)
 
+  // Site-wide current patch, for the staleness indicator (MFDOOM feature request)
+  const [currentPatch, setCurrentPatch] = useState<string | null>(null)
+
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
     fetchSequence()
+    fetchCurrentPatch()
   }, [slug])
+
+  async function fetchCurrentPatch() {
+    const { data, error } = await supabase
+      .from('site_config')
+      .select('current_patch')
+      .single()
+    if (error) {
+      console.error('Failed to fetch current_patch:', error)
+      return
+    }
+    setCurrentPatch(data?.current_patch ?? null)
+  }
 
   async function fetchSequence() {
     setLoading(true)
@@ -346,6 +362,13 @@ export default function SequencePageClient() {
   const classColor = getClassColor(sequence.class_id)
   const contentLabel = CONTENT_TYPES.find(c => c.value === sequence.content_type)?.label ?? sequence.content_type
 
+  // Staleness: patch mismatch (or no patch_version recorded) AND not updated in 60+ days.
+  // Same rule as SequenceCard.tsx — both conditions required, purely informational.
+  const STALE_DAYS_THRESHOLD = 60
+  const daysSinceUpdate = Math.floor((Date.now() - new Date(sequence.updated_at).getTime()) / (1000 * 60 * 60 * 24))
+  const patchMismatch = !!currentPatch && (sequence.patch_version == null || sequence.patch_version !== currentPatch)
+  const isStale = patchMismatch && daysSinceUpdate > STALE_DAYS_THRESHOLD
+
   const collectionEntries: CollectionSequenceEntry[] = sequence.collection_sequences ?? []
   const isCollection = collectionEntries.length > 0
   const activeEntry = collectionEntries[activeCollectionTab] ?? null
@@ -478,7 +501,7 @@ export default function SequencePageClient() {
 
       {/* Header card */}
       <div style={{
-        background: 'var(--bg-primary)',
+        background: isStale ? 'rgba(224,160,32,0.08)' : 'var(--bg-primary)',
         border: '0.5px solid var(--border)',
         borderRadius: 'var(--radius-lg)',
         padding: '24px',
@@ -522,6 +545,7 @@ export default function SequencePageClient() {
               {selectedVersion?.grip_version && <Badge color="#888">GRIP {selectedVersion.grip_version}</Badge>}
               {selectedVersion?.step_function && <Badge color="#888">{selectedVersion.step_function}</Badge>}
               {sequence.step_count && <Badge color="#888">{sequence.step_count} steps</Badge>}
+              {isStale && <Badge color="#e0a020">Needs revalidation</Badge>}
             </div>
 
             {sequence.description && (
@@ -574,6 +598,14 @@ export default function SequencePageClient() {
             )}
             {' · '}{formatDistanceToNow(new Date(sequence.created_at), { addSuffix: true })}
             {sequence.patch_version && ` · Patch ${sequence.patch_version}`}
+            {isStale && (
+              <>
+                <br />
+                <span style={{ fontSize: 12, color: '#a06c00' }}>
+                  Built for {sequence.patch_version ?? 'an unrecorded patch'} — current patch is {currentPatch}. Last updated {daysSinceUpdate} days ago.
+                </span>
+              </>
+            )}
             {sequence.original_author && sequence.original_author.trim() && (
               <>
                 <br />
