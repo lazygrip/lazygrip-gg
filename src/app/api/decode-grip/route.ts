@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { decodeEMSExport } from '@/lib/workshop/emsDecoder'
-import { decodeGSEExport } from '@/lib/workshop/gseDecoder'
+import { decodeEMSExport, decodeGSEExport } from '@/lib/workshop_new/index'
 
 export async function POST(req: NextRequest) {
   let body: { code?: string }
@@ -24,7 +23,7 @@ export async function POST(req: NextRequest) {
           spec: seq.spec,
           specId: seq.specId,
           defaultVersion: seq.defaultVersion,
-          versions: seq.versions.map(v => ({
+          versions: (seq.versions || []).map((v: any) => ({
             index: v.index,
             name: v.name,
             stepFunction: v.stepFunction,
@@ -50,7 +49,7 @@ export async function POST(req: NextRequest) {
           spec: seq.spec,
           specId: seq.specId,
           defaultVersion: seq.defaultVersion,
-          versions: seq.versions.map(v => ({
+          versions: (seq.versions || []).map((v: any) => ({
             index: v.index,
             name: v.name,
             stepFunction: v.stepFunction,
