@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { buildGripFromModel, enforceAuthorLock, decodeEMSExport } from '@/lib/workshop_new/index'
 
 function normalizeActionKind(node: any): any {
   const normalized = {
@@ -16,16 +17,10 @@ export async function POST(req: NextRequest) {
   try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 }) }
 
   try {
-    const res = await fetch('https://toolbox.lazygrip.net/api/build-grip', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.TOOLBOX_SECRET}`,
-      },
-      body: JSON.stringify(body),
-    })
-    const data = await res.json()
-    if (!res.ok) return NextResponse.json({ error: data.error || 'Unable to build GRIP export.' }, { status: res.status })
+    enforceAuthorLock(body as any)
+    const result = buildGripFromModel(body as any)
+    const decoded = decodeEMSExport(result.export)
+    const data: any = { ...result, decoded }
 
     if (data?.decoded?.sequences) {
       data.decoded.sequences = data.decoded.sequences.map((seq: any) => ({
@@ -38,7 +33,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(data)
-  } catch {
-    return NextResponse.json({ error: 'Toolbox service unavailable.' }, { status: 502 })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unable to build GRIP export.'
+    return NextResponse.json({ error: message }, { status: 422 })
   }
 }

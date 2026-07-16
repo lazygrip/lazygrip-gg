@@ -1,0 +1,232 @@
+﻿{
+    "exportMeta":  {
+                       "collectionName":  "Slowdog\u0027s Unholy DK || Rider of the Apocalypse || GRIP M+ Macros",
+                       "author":  "Slowdog",
+                       "description":  "",
+                       "originalAuthor":  "Slowdog",
+                       "originalAuthorRealm":  "Stormrage",
+                       "authorLocked":  true,
+                       "lockedAuthor":  "Slowdog",
+                       "authorLockTokens":  {
+                                                "Unholy DK ST V1.0":  "eyJsb2NrZWRBdXRob3IiOiJTbG93ZG9nIiwib3JpZ2luYWxBdXRob3IiOiJTbG93ZG9nIiwib3JpZ2luYWxBdXRob3JSZWFsbSI6IlN0b3JtcmFnZSIsImV4cG9ydGVyTmFtZSI6IlNsb3dkb2ciLCJleHBvcnRlclJlYWxtIjoiU3Rvcm1yYWdlIiwic2VxdWVuY2VOYW1lIjoiVW5ob2x5IERLIFNUIFYxLjAifQ.MkHFPCnrXnerK1nL33BLd0t6MiKp1__Iru--MX_njdk",
+                                                "Unholy DK MT V1.0":  "eyJsb2NrZWRBdXRob3IiOiJTbG93ZG9nIiwib3JpZ2luYWxBdXRob3IiOiJTbG93ZG9nIiwib3JpZ2luYWxBdXRob3JSZWFsbSI6IlN0b3JtcmFnZSIsImV4cG9ydGVyTmFtZSI6IlNsb3dkb2ciLCJleHBvcnRlclJlYWxtIjoiU3Rvcm1yYWdlIiwic2VxdWVuY2VOYW1lIjoiVW5ob2x5IERLIE1UIFYxLjAifQ.B-BO0ngvLHq999mbYyB7khHa_3vWJU9Y93CVmaghVa4"
+                                            },
+                       "privacyMode":  "public"
+                   },
+    "variables":  [
+
+                  ],
+    "standaloneMacros":  [
+
+                         ],
+    "sequences":  [
+                      {
+                          "id":  "1",
+                          "name":  "Unholy DK ST V1.0",
+                          "description":  "",
+                          "help":  "",
+                          "classId":  6,
+                          "specId":  252,
+                          "defaultVersion":  1,
+                          "versions":  [
+                                           {
+                                               "id":  "1",
+                                               "name":  "Version 1",
+                                               "stepFunction":  "Sequential",
+                                               "keyPress":  "/cast [nopet] Raise Dead\n/petattack [@target,harm,nodead]\n/startattack\n/cast [mod:shift,nochanneling] Death Strike\n/cast [mod:ctrl,nochanneling] Icebound Fortitude",
+                                               "keyRelease":  "",
+                                               "resetOnCombat":  true,
+                                               "resetOnTarget":  false,
+                                               "resetOnGear":  false,
+                                               "resetOnSpec":  false,
+                                               "resetTimer":  0,
+                                               "actions":  [
+                                                               {
+                                                                   "id":  "1",
+                                                                   "type":  "action",
+                                                                   "macro":  "/startattack\n/targetenemy [noharm][dead]"
+                                                               },
+                                                               {
+                                                                   "id":  "15",
+                                                                   "type":  "loop",
+                                                                   "stepFunction":  "Sequential",
+                                                                   "repeat":  1,
+                                                                   "children":  [
+                                                                                    {
+                                                                                        "id":  "2",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/petattack\n/cast [nopet] Raise Dead\n/cast Army of the Dead"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "3",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Dark Transformation"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "4",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Putrefy"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "5",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Festering Strike"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "6",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Scourge Strike"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "7",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Putrefy"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "8",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Outbreak"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "9",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Festering Strike"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "10",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Scourge Strike"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "11",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Death Coil"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "12",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Scourge Strike"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "13",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Festering Strike"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "14",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Death Coil"
+                                                                                    }
+                                                                                ],
+                                                                   "name":  "Unholy DK ST V1.0"
+                                                               }
+                                                           ]
+                                           }
+                                       ]
+                      },
+                      {
+                          "id":  "2",
+                          "name":  "Unholy DK MT V1.0",
+                          "description":  "",
+                          "help":  "",
+                          "classId":  6,
+                          "specId":  252,
+                          "defaultVersion":  1,
+                          "versions":  [
+                                           {
+                                               "id":  "2",
+                                               "name":  "Version 1",
+                                               "stepFunction":  "Sequential",
+                                               "keyPress":  "/cast [nopet] Raise Dead\n/petattack [@target,harm,nodead]\n/startattack\n/cast [mod:shift,nochanneling] Death Strike\n/cast [mod:ctrl,nochanneling] Icebound Fortitude",
+                                               "keyRelease":  "",
+                                               "resetOnCombat":  true,
+                                               "resetOnTarget":  false,
+                                               "resetOnGear":  false,
+                                               "resetOnSpec":  false,
+                                               "resetTimer":  0,
+                                               "actions":  [
+                                                               {
+                                                                   "id":  "16",
+                                                                   "type":  "action",
+                                                                   "macro":  "/startattack\n/targetenemy [noharm][dead]"
+                                                               },
+                                                               {
+                                                                   "id":  "30",
+                                                                   "type":  "loop",
+                                                                   "stepFunction":  "Sequential",
+                                                                   "repeat":  1,
+                                                                   "children":  [
+                                                                                    {
+                                                                                        "id":  "17",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/petattack\n/cast [nopet] Raise Dead\n/cast Army of the Dead"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "18",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Dark Transformation"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "19",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Putrefy"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "20",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast [@player] Death and Decay"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "21",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Festering Strike"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "22",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Scourge Strike"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "23",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Putrefy"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "24",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Outbreak"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "25",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Festering Strike"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "26",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Scourge Strike"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "27",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Epidemic"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "28",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Scourge Strike"
+                                                                                    },
+                                                                                    {
+                                                                                        "id":  "29",
+                                                                                        "type":  "action",
+                                                                                        "macro":  "/targetenemy [noharm][dead]\n/startattack\n/petattack\n/cast Epidemic"
+                                                                                    }
+                                                                                ],
+                                                                   "name":  "Unholy DK ST V1.0"
+                                                               }
+                                                           ]
+                                           }
+                                       ]
+                      }
+                  ]
+}

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { decodeExport } from '@/lib/workshop_new/exportDecode'
 
 interface ToolboxActionNode {
   index: number
@@ -33,27 +34,24 @@ export async function POST(req: NextRequest) {
 
   const cleaned = code.trim().replace(/\s+/g, '')
 
-  if (!/^!(EMS1|GRIP1|GSE3)!/i.test(cleaned)) {
-    return NextResponse.json({ error: 'Paste an !EMS1!, !GRIP1!, or !GSE3! export code.' }, { status: 422 })
+  if (!/^!(EMS1|GRIP1|GSE3|FRG1|GEMSCP1)!/i.test(cleaned)) {
+    return NextResponse.json({ error: 'Paste an !EMS1!, !GRIP1!, !GSE3!, !FRG1!, or !GEMSCP1! export code.' }, { status: 422 })
   }
 
   let data: any
   try {
-    const res = await fetch('https://toolbox.lazygrip.net/api/decode', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.TOOLBOX_SECRET}`,
-      },
-      body: JSON.stringify({ code: cleaned }),
-    })
-    data = await res.json()
-    if (!res.ok) return NextResponse.json({ error: data.error || 'Failed to decode export.' }, { status: res.status })
-  } catch {
-    return NextResponse.json({ error: 'Toolbox service unavailable.' }, { status: 502 })
+    data = decodeExport(cleaned)
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Failed to decode export.'
+    return NextResponse.json({ error: message }, { status: 422 })
   }
 
   const isGSE = data?.meta?.format === 'GSE3'
+
+  // CVar profile exports have no sequences array, shape differs (overrides list).
+  if (data?.meta?.format === 'GEMSCP1') {
+    return NextResponse.json(data)
+  }
 
   const sequences = Array.isArray(data.sequences) ? data.sequences.map((seq: any) => ({
     name: seq.name,

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { importToBuilderModel, attachAuthorLockToken } from '@/lib/workshop_new/index'
 
 export async function POST(req: NextRequest) {
   let body: { code?: string }
@@ -9,18 +10,13 @@ export async function POST(req: NextRequest) {
 
   let data: any
   try {
-    const res = await fetch('https://toolbox.lazygrip.net/api/import-to-builder', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.TOOLBOX_SECRET}`,
-      },
-      body: JSON.stringify({ code: code.trim() }),
-    })
-    data = await res.json()
-    if (!res.ok) return NextResponse.json({ error: data.error || 'Unable to import into builder.' }, { status: res.status })
-  } catch {
-    return NextResponse.json({ error: 'Toolbox service unavailable.' }, { status: 502 })
+    data = importToBuilderModel(code.trim())
+    if (data.model) {
+      attachAuthorLockToken(data.model)
+    }
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unable to import into builder.'
+    return NextResponse.json({ error: message }, { status: 422 })
   }
 
   const model = data.model || {}
@@ -58,6 +54,7 @@ export async function POST(req: NextRequest) {
         originalAuthorRealm: model.exportMeta?.originalAuthorRealm || '',
         authorLocked: Boolean(model.exportMeta?.authorLocked),
         lockedAuthor: model.exportMeta?.lockedAuthor || '',
+        authorLockTokens: model.exportMeta?.authorLockTokens || undefined,
         privacyMode: model.exportMeta?.privacyMode || 'public',
       },
       variables: Array.isArray(model.variables) ? model.variables.map((v: any) => ({

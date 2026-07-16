@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { convertGSEExportToGRIP } from '@/lib/workshop/converter'
+import { convertGSEExportToGRIP } from '@/lib/workshop_new/index'
 
 export async function POST(req: NextRequest) {
   let body: { code?: string }
