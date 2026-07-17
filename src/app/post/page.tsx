@@ -71,6 +71,13 @@ function PostForm() {
   const [loadingEdit, setLoadingEdit] = useState(isEditMode)
   const [editSlug, setEditSlug] = useState<string | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
+  // Mirrors `form` at all times. autosave() reads from this instead of the
+  // `form` closure directly, because scheduleAutosave/setField are plain
+  // functions redefined every render -- without this ref, the debounced
+  // timeout callback closes over whatever `form` was at the render that
+  // scheduled it, not the latest value by the time the timeout fires.
+  const formRef = useRef(form)
+  useEffect(() => { formRef.current = form }, [form])
 
   // Decode state
   const [decoding, setDecoding] = useState(false)
@@ -88,9 +95,99 @@ function PostForm() {
   const [collectionTitle, setCollectionTitle] = useState('')
   const [minorEdit, setMinorEdit] = useState(false)
 
+  // Draft autosave state. draftId is the sequences.id of a not-yet-published
+  // draft row created by create_draft_sequence -- distinct from editSlug/editId,
+  // which refer to an already-published sequence being edited via ?edit=.
+  // A new sequence has no draftId until the first autosave fires (requires
+  // class_id + content_type to both be set, since both are NOT NULL columns).
+  const [draftId, setDraftId] = useState<string | null>(null)
+  const draftIdRef = useRef<string | null>(null)
+  useEffect(() => { draftIdRef.current = draftId }, [draftId])
+  const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const autosaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Guards against overlapping autosave calls firing out of order (e.g. a slow
+  // create_draft_sequence response landing after a later update_draft_sequence
+  // already started). Not a full mutex, just prevents the classic double-create.
+  const autosaveInFlightRef = useRef(false)
+
   const selectedClass = WOW_CLASSES.find(c => c.id === Number(form.class_id))
   const selectedSpec = selectedClass?.specs.find(s => s.name === form.spec_name)
   const heroTalentOptions = selectedSpec?.heroTalents ?? []
+
+  // Draft recovery: sequences.id + minimal display fields for any of the
+  // user's own in-progress drafts found on page load. Populated only when
+  // more than one draft exists, since with exactly one we resume it directly
+  // without asking. Never touched when isEditMode is true.
+  const [pendingDrafts, setPendingDrafts] = useState<Array<{ id: string; title: string; class_name: string; updated_at: string }> | null>(null)
+  const [checkingDrafts, setCheckingDrafts] = useState(!isEditMode)
+
+  useEffect(() => {
+    if (editId) return
+
+    async function checkForDrafts() {
+      setCheckingDrafts(true)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setCheckingDrafts(false); return }
+
+      const { data, error } = await supabase
+        .from('sequences')
+        .select('id, title, class_name, content_type, updated_at, description, class_id, spec_name, hero_talent, patch_version, grip_version, step_function, grip_string, raw_steps, talent_string, warcraftlogs_url, performance_notes')
+        .eq('author_id', user.id)
+        .eq('is_draft', true)
+        .order('updated_at', { ascending: false })
+
+      if (error || !data || data.length === 0) { setCheckingDrafts(false); return }
+
+      if (data.length === 1) {
+        resumeDraft(data[0])
+      } else {
+        // More than one in-progress draft -- don't guess which one the
+        // person meant to come back to, surface a small chooser instead.
+        setPendingDrafts(data.map(d => ({ id: d.id, title: d.title, class_name: d.class_name, updated_at: d.updated_at })))
+      }
+      setCheckingDrafts(false)
+    }
+
+    checkForDrafts()
+  }, [editId])
+
+  function resumeDraft(data: any) {
+    setDraftId(data.id)
+    draftIdRef.current = data.id
+
+    let raw_steps_text = ''
+    if (Array.isArray(data.raw_steps)) {
+      raw_steps_text = data.raw_steps.map((s: SequenceStep) =>
+        typeof s === 'string' ? s : s.text || ''
+      ).join('\n')
+      setDecodedSteps(data.raw_steps)
+    }
+
+    setForm({
+      title: data.title === 'Untitled draft' ? '' : (data.title ?? ''),
+      description: data.description ?? '',
+      class_id: String(data.class_id ?? ''),
+      spec_name: data.spec_name ?? '',
+      content_type: data.content_type ?? 'mythic_plus',
+      hero_talent: data.hero_talent ?? '',
+      patch_version: data.patch_version ?? '12.0.7',
+      grip_version: data.grip_version ?? DEFAULT_GRIP_VERSION,
+      step_function: data.step_function ?? 'Sequential',
+      grip_string: data.grip_string ?? '',
+      raw_steps_text,
+      talent_string: data.talent_string ?? '',
+      warcraftlogs_url: data.warcraftlogs_url ?? '',
+      performance_notes: data.performance_notes ?? '',
+    })
+    setPendingDrafts(null)
+  }
+
+  async function discardDraft(id: string) {
+    // Explicit discard only -- never automatic. Deletes a draft row the
+    // person chose not to resume, from the multi-draft chooser.
+    await supabase.from('sequences').delete().eq('id', id).eq('is_draft', true)
+    setPendingDrafts(prev => prev ? prev.filter(d => d.id !== id) : prev)
+  }
 
   useEffect(() => {
     if (!editId) return
@@ -330,6 +427,7 @@ async function runDecode(exportString: string) {
 
   function setField(key: string, value: string) {
     setForm(f => ({ ...f, [key]: value }))
+    scheduleAutosave()
   }
 
   function parseSteps(text: string) {
@@ -346,6 +444,149 @@ async function runDecode(exportString: string) {
     const stripped = html.replace(/<p><\/p>/g, '').replace(/<p>\s*<\/p>/g, '').trim()
     return stripped === ''
   }
+
+  // Fires on a debounce after form changes. Two distinct branches:
+  //
+  // Edit mode (isEditMode true, editing an already-published sequence via
+  // ?edit=): calls update_sequence_metadata in the background, same RPC the
+  // minor-edit path already uses. This never creates a sequence_versions row
+  // and never touches is_draft -- the sequence stays live and published the
+  // whole time. The full versioned update (update_sequence_with_version,
+  // with a changelog) stays a manual, explicit Save Changes action, never
+  // something autosave triggers on its own.
+  //
+  // New sequence mode: skipped entirely for collections (collections have
+  // their own separate publish path with no draft support yet -- out of
+  // scope for this pass). Requires class_id + content_type before the first
+  // call, since both are NOT NULL on sequences and create_draft_sequence
+  // would fail without them. First call creates the draft row via
+  // create_draft_sequence and stores the returned id; every call after that
+  // updates the same row via update_draft_sequence.
+  async function autosave() {
+    if (collectionSequences) return // collections not wired into draft autosave yet
+    if (autosaveInFlightRef.current) return
+
+    const f = formRef.current
+    if (!f.class_id || !f.content_type) return
+
+    autosaveInFlightRef.current = true
+    setAutosaveStatus('saving')
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        // Not logged in / session expired mid-edit. Don't leave the indicator
+        // stuck on "Saving draft..." forever -- surface it as an error so
+        // it's visible something didn't save, rather than silently hanging.
+        setAutosaveStatus('error')
+        autosaveInFlightRef.current = false
+        return
+      }
+
+      const raw_steps = decodedSteps ?? parseSteps(f.raw_steps_text)
+      const cls = WOW_CLASSES.find(c => c.id === Number(f.class_id))
+      const spec = cls?.specs.find(s => s.name === f.spec_name)
+
+      if (isEditMode) {
+        const { error: rpcError } = await supabase.rpc('update_sequence_metadata', {
+          p_sequence_id: editId,
+          p_author_id: user.id,
+          p_title: f.title.trim(),
+          p_description: descriptionIsEmpty(f.description) ? null : f.description,
+          p_class_id: Number(f.class_id),
+          p_class_name: cls?.name ?? '',
+          p_spec_id: spec?.id ?? null,
+          p_spec_name: f.spec_name || null,
+          p_content_type: f.content_type,
+          p_hero_talent: f.hero_talent || null,
+          p_patch_version: f.patch_version || null,
+          p_grip_version: f.grip_version || null,
+          p_step_function: f.step_function,
+          p_step_count: raw_steps?.length ?? null,
+          p_grip_string: f.grip_string.trim() || null,
+          p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
+          p_talent_string: f.talent_string.trim() || null,
+          p_warcraftlogs_url: f.warcraftlogs_url.trim() || null,
+          p_performance_notes: f.performance_notes.trim() || null,
+        })
+        if (rpcError) throw rpcError
+      } else if (!draftIdRef.current) {
+        const slug = slugify(f.title || 'untitled-draft') + '-' + Date.now().toString(36)
+        const { data, error: rpcError } = await supabase.rpc('create_draft_sequence', {
+          p_author_id: user.id,
+          p_title: f.title.trim() || 'Untitled draft',
+          p_slug: slug,
+          p_description: descriptionIsEmpty(f.description) ? null : f.description,
+          p_class_id: Number(f.class_id),
+          p_class_name: cls?.name ?? '',
+          p_spec_id: spec?.id ?? null,
+          p_spec_name: f.spec_name || null,
+          p_content_type: f.content_type,
+          p_hero_talent: f.hero_talent || null,
+          p_patch_version: f.patch_version || null,
+          p_grip_version: f.grip_version || null,
+          p_step_function: f.step_function,
+          p_step_count: raw_steps?.length ?? null,
+          p_grip_string: f.grip_string.trim() || null,
+          p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
+          p_talent_string: f.talent_string.trim() || null,
+          p_warcraftlogs_url: f.warcraftlogs_url.trim() || null,
+          p_performance_notes: f.performance_notes.trim() || null,
+          p_original_author: originalAuthor,
+        })
+        if (rpcError) throw rpcError
+        draftIdRef.current = data?.sequence_id ?? null
+        setDraftId(data?.sequence_id ?? null)
+      } else {
+        const { error: rpcError } = await supabase.rpc('update_draft_sequence', {
+          p_sequence_id: draftIdRef.current,
+          p_author_id: user.id,
+          p_title: f.title.trim() || 'Untitled draft',
+          p_description: descriptionIsEmpty(f.description) ? null : f.description,
+          p_class_id: Number(f.class_id),
+          p_class_name: cls?.name ?? '',
+          p_spec_id: spec?.id ?? null,
+          p_spec_name: f.spec_name || null,
+          p_content_type: f.content_type,
+          p_hero_talent: f.hero_talent || null,
+          p_patch_version: f.patch_version || null,
+          p_grip_version: f.grip_version || null,
+          p_step_function: f.step_function,
+          p_step_count: raw_steps?.length ?? null,
+          p_grip_string: f.grip_string.trim() || null,
+          p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
+          p_talent_string: f.talent_string.trim() || null,
+          p_warcraftlogs_url: f.warcraftlogs_url.trim() || null,
+          p_performance_notes: f.performance_notes.trim() || null,
+        })
+        if (rpcError) throw rpcError
+      }
+
+      setAutosaveStatus('saved')
+    } catch (err) {
+      console.error('[autosave] failed:', err)
+      setAutosaveStatus('error')
+    } finally {
+      autosaveInFlightRef.current = false
+    }
+  }
+
+  // Debounced trigger, same 800ms pattern as the existing decode debounce.
+  // Called from setField and other form-mutating handlers rather than from
+  // a single useEffect watching all of `form`, so that unrelated re-renders
+  // (e.g. decode state changes) don't accidentally trigger a save.
+  function scheduleAutosave() {
+    if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current)
+    autosaveTimeoutRef.current = setTimeout(() => {
+      autosave()
+    }, 800)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (autosaveTimeoutRef.current) clearTimeout(autosaveTimeoutRef.current)
+    }
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -568,8 +809,69 @@ async function runDecode(exportString: string) {
         }
 
         router.push(`/sequences/${editSlug}`)
+      } else if (draftId) {
+        // New single sequence publish path, draft already exists from autosave.
+        // Flush any pending debounced autosave first so the draft row reflects
+        // the latest keystrokes -- otherwise a fast type-then-click-Publish
+        // could publish stale data from before the last 800ms debounce fired.
+        if (autosaveTimeoutRef.current) {
+          clearTimeout(autosaveTimeoutRef.current)
+          autosaveTimeoutRef.current = null
+        }
+        const { error: updateError } = await supabase.rpc('update_draft_sequence', {
+          p_sequence_id: draftId,
+          p_author_id: user.id,
+          p_title: payload.title,
+          p_description: payload.description,
+          p_class_id: payload.class_id,
+          p_class_name: payload.class_name,
+          p_spec_id: selectedSpec?.id ?? null,
+          p_spec_name: payload.spec_name,
+          p_content_type: payload.content_type,
+          p_hero_talent: payload.hero_talent,
+          p_patch_version: payload.patch_version,
+          p_grip_version: payload.grip_version,
+          p_step_function: payload.step_function,
+          p_step_count: payload.step_count,
+          p_grip_string: payload.grip_string,
+          p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
+          p_talent_string: payload.talent_string,
+          p_warcraftlogs_url: payload.warcraftlogs_url,
+          p_performance_notes: payload.performance_notes,
+        })
+        if (updateError) throw updateError
+
+        const { data: publishData, error: publishError } = await supabase.rpc('publish_draft_sequence', {
+          p_sequence_id: draftId,
+          p_author_id: user.id,
+          p_changelog: null,
+        })
+        if (publishError) throw publishError
+
+        // slug is stable from create_draft_sequence, not regenerated here
+        const { data: seqRow } = await supabase
+          .from('sequences')
+          .select('slug')
+          .eq('id', draftId)
+          .single()
+        const slug = seqRow?.slug
+
+        notifyDiscord({
+          title: payload.title,
+          slug,
+          className: selectedClass?.name ?? '',
+          specName: payload.spec_name,
+          contentType: payload.content_type,
+          authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
+          heroTalent: payload.hero_talent,
+        })
+
+        router.push(`/sequences/${slug}`)
       } else {
-        // New single sequence publish path
+        // Fallback: autosave never created a draft (e.g. Publish clicked before
+        // class_id/content_type were set and before the 800ms debounce fired
+        // even once). Falls back to the original direct-publish path so nobody
+        // gets blocked from publishing just because autosave didn't get a chance to run.
         const slug = slugify(form.title) + '-' + Date.now().toString(36)
         const { error: rpcError } = await supabase.rpc('create_sequence_with_version', {
           p_author_id: user.id,
@@ -620,9 +922,60 @@ async function runDecode(exportString: string) {
     }
   }
 
-  if (loadingEdit) return (
+  if (loadingEdit || checkingDrafts) return (
     <div style={{ maxWidth: 760, margin: '80px auto', padding: '0 24px', textAlign: 'center' }}>
-      <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Loading sequence...</p>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Loading...</p>
+    </div>
+  )
+
+  if (pendingDrafts && pendingDrafts.length > 0) return (
+    <div style={{ maxWidth: 760, margin: '80px auto', padding: '0 24px' }}>
+      <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>You have unfinished drafts</h1>
+      <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 20 }}>
+        Pick up where you left off, or discard the ones you don't need.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {pendingDrafts.map(d => (
+          <div key={d.id} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)',
+            padding: '14px 16px',
+          }}>
+            <div>
+              <p style={{ fontSize: 14, fontWeight: 500 }}>{d.title || 'Untitled draft'}</p>
+              <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                {d.class_name || 'No class set'} — last edited {new Date(d.updated_at).toLocaleString()}
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                type="button"
+                onClick={async () => {
+                  const { data } = await supabase.from('sequences').select('*').eq('id', d.id).single()
+                  if (data) resumeDraft(data)
+                }}
+                style={{
+                  background: 'var(--accent)', color: 'white', border: 'none',
+                  borderRadius: 'var(--radius-md)', padding: '8px 14px', fontSize: 13, cursor: 'pointer',
+                }}
+              >
+                Resume
+              </button>
+              <button
+                type="button"
+                onClick={() => discardDraft(d.id)}
+                style={{
+                  background: 'var(--bg-secondary)', color: 'var(--text-secondary)',
+                  border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)',
+                  padding: '8px 14px', fontSize: 13, cursor: 'pointer',
+                }}
+              >
+                Discard
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 
@@ -1083,6 +1436,16 @@ async function runDecode(exportString: string) {
                     ? 'Publish collection'
                     : 'Publish sequence'}
             </button>
+            {!collectionSequences && autosaveStatus !== 'idle' && (
+              <span style={{
+                fontSize: 12, fontFamily: 'var(--font-sans)',
+                color: autosaveStatus === 'error' ? '#c41e3a' : 'var(--text-muted)',
+              }}>
+                {autosaveStatus === 'saving' && 'Saving draft...'}
+                {autosaveStatus === 'saved' && (isEditMode ? 'Saved' : 'Draft saved')}
+                {autosaveStatus === 'error' && 'Autosave failed'}
+              </span>
+            )}
             {isEditMode && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <input
