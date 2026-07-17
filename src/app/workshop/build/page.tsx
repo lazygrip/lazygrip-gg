@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import { Copy, Check, Plus, Trash2, ChevronUp, ChevronDown, Copy as CopyIcon, RotateCcw, GripVertical } from 'lucide-react'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import AuthForm from '@/components/auth/AuthForm'
+import { CONTENT_TYPES } from '@/lib/wow-data'
+import { RESET_MODIFIER_LABELS, RESET_MODIFIER_GROUPS, createEmptyResetModifiers } from '@/lib/workshop_new/gripResetModifiers'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -30,6 +32,10 @@ interface BuilderAction {
   useSpellIds?: boolean
 }
 
+interface GripResetModifiers {
+  [key: string]: boolean
+}
+
 interface BuilderVersion {
   id: string
   name: string
@@ -41,6 +47,9 @@ interface BuilderVersion {
   resetOnGear: boolean
   resetOnSpec: boolean
   resetTimer: number
+  repeatCount: number
+  resetModifiers: GripResetModifiers | null
+  useSpellIds: boolean
   actions: BuilderAction[]
 }
 
@@ -49,6 +58,13 @@ interface BuilderSequence {
   name: string
   description: string
   help: string
+  comments: string
+  changelog: string
+  talentString: string
+  talentBuild: string
+  url: string
+  contentTypes: string[]
+  contextOverrides: Record<string, unknown>
   classId: number
   specId: number | null
   defaultVersion: number
@@ -79,6 +95,8 @@ interface BuilderModel {
     originalAuthorRealm?: string
     authorLocked?: boolean
     privacyMode?: string
+    wowPatch?: string
+    talentString?: string
   }
   variables: GripVariable[]
   standaloneMacros: StandaloneMacro[]
@@ -170,16 +188,21 @@ function defaultVersion(): BuilderVersion {
     id: vid(), name: 'Default', stepFunction: 'Sequential',
     keyPress: '/targetenemy [noharm][dead]', keyRelease: '',
     resetOnCombat: false, resetOnTarget: false, resetOnGear: false, resetOnSpec: false,
-    resetTimer: 0, actions: [],
+    resetTimer: 0, repeatCount: 1, resetModifiers: null, useSpellIds: false, actions: [],
   }
 }
 
 function defaultSequence(): BuilderSequence {
-  return { id: sid(), name: 'NEW_SEQUENCE', description: '', help: '', classId: 0, specId: null, defaultVersion: 1, versions: [defaultVersion()] }
+  return {
+    id: sid(), name: 'NEW_SEQUENCE', description: '', help: '',
+    comments: '', changelog: '', talentString: '', talentBuild: '', url: '',
+    contentTypes: [], contextOverrides: {},
+    classId: 0, specId: null, defaultVersion: 1, versions: [defaultVersion()],
+  }
 }
 
 function defaultModel(): BuilderModel {
-  return { exportMeta: { collectionName: '', author: '', description: '' }, variables: [], standaloneMacros: [], sequences: [defaultSequence()] }
+  return { exportMeta: { collectionName: '', author: '', description: '', wowPatch: '', talentString: '' }, variables: [], standaloneMacros: [], sequences: [defaultSequence()] }
 }
 
 // ─── Character count helpers ──────────────────────────────────────────────────
@@ -436,7 +459,7 @@ const S = {
   badge: (color: string): React.CSSProperties => ({ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--radius-sm)', background: color, color: 'white', letterSpacing: '0.04em', flexShrink: 0 }),
   blockContainer: (type: keyof typeof BLOCK_COLORS): React.CSSProperties => ({ border: `0.5px solid ${BLOCK_COLORS[type].border}`, borderRadius: 'var(--radius-md)', overflow: 'visible', marginBottom: 4 }),
   blockHeader: (type: keyof typeof BLOCK_COLORS): React.CSSProperties => ({ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 8px', background: BLOCK_COLORS[type].header, borderBottom: `0.5px solid ${BLOCK_COLORS[type].border}`, flexWrap: 'wrap' as const, borderRadius: 'var(--radius-md) var(--radius-md) 0 0' }),
-  iconBtn: (danger = false): React.CSSProperties => ({ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: danger ? '#c0392b' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', borderRadius: 'var(--radius-sm)' }),
+  iconBtn: (danger = false): React.CSSProperties => ({ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: danger ? '#c0392b' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-sm)', minWidth: 24, minHeight: 24 }),
   textarea: (): React.CSSProperties => ({ width: '100%', padding: '8px 10px', fontSize: 12, fontFamily: 'var(--font-mono)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', resize: 'vertical' as const, minHeight: 72 }),
   input: (): React.CSSProperties => ({ padding: '5px 8px', fontSize: 12, fontFamily: 'var(--font-sans)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)' }),
   select: (): React.CSSProperties => ({ padding: '5px 8px', fontSize: 12, fontFamily: 'var(--font-sans)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)' }),
@@ -452,14 +475,14 @@ function BlockControls({ onMoveUp, onMoveDown, onClone, onDelete, dragHandleProp
   return (
     <div style={{ display: 'flex', gap: 2, marginLeft: 'auto', alignItems: 'center' }}>
       {dragHandleProps && (
-        <div {...dragHandleProps} style={{ cursor: 'grab', padding: '2px 4px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }} title="Drag to reorder">
-          <GripVertical size={13} />
+        <div {...dragHandleProps} style={{ cursor: 'grab', padding: '5px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 24, minHeight: 24 }} title="Drag to reorder">
+          <GripVertical size={16} />
         </div>
       )}
-      <button onClick={onMoveUp} style={S.iconBtn()} title="Move up"><ChevronUp size={12} /></button>
-      <button onClick={onMoveDown} style={S.iconBtn()} title="Move down"><ChevronDown size={12} /></button>
-      <button onClick={onClone} style={S.iconBtn()} title="Clone"><CopyIcon size={11} /></button>
-      <button onClick={onDelete} style={S.iconBtn(true)} title="Delete"><Trash2 size={12} /></button>
+      <button onClick={onMoveUp} style={S.iconBtn()} title="Move up"><ChevronUp size={16} /></button>
+      <button onClick={onMoveDown} style={S.iconBtn()} title="Move down"><ChevronDown size={16} /></button>
+      <button onClick={onClone} style={S.iconBtn()} title="Clone"><CopyIcon size={15} /></button>
+      <button onClick={onDelete} style={S.iconBtn(true)} title="Delete"><Trash2 size={16} /></button>
     </div>
   )
 }
@@ -517,7 +540,7 @@ function ActionBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone
       </div>
       <div style={{ padding: '8px 10px' }}>
         <MacroTextarea value={action.macro || ''} onChange={v => onUpdate({ ...action, macro: v })} placeholder="/cast Spell Name" rows={3} classId={classId} style={{ ...S.textarea(), minHeight: 56, borderColor: overLimit ? '#c0392b' : undefined }} />
-        <div style={{ fontSize: 10, color: overLimit ? '#c0392b' : nearLimit ? '#c8960c' : 'var(--text-muted)', textAlign: 'right', marginTop: 2 }}>
+        <div style={{ fontSize: 11, color: overLimit ? '#c0392b' : nearLimit ? '#c8960c' : 'var(--text-muted)', textAlign: 'right', marginTop: 4, lineHeight: 1.4 }}>
           {total} / 255 characters {keyPressLen > 0 ? `(incl. key bind)` : ''} · {stepLen} from step{keyPressLen > 0 ? ` · ${keyPressLen} from key bind` : ''}
         </div>
       </div>
@@ -712,6 +735,47 @@ function AddBlockBar({ onAdd, useSpellIds, onToggleSpellIds }: {
   )
 }
 
+// ─── Reset Modifier Panel ──────────────────────────────────────────────────────
+
+function ResetModifierPanel({ resetModifiers, onChange }: { resetModifiers: GripResetModifiers | null; onChange: (m: GripResetModifiers | null) => void }) {
+  const [open, setOpen] = useState(false)
+  const active = resetModifiers || {}
+  const activeCount = Object.values(active).filter(Boolean).length
+
+  function toggle(key: string, checked: boolean) {
+    const base = resetModifiers ? { ...resetModifiers } : (createEmptyResetModifiers() as GripResetModifiers)
+    base[key] = checked
+    const anySet = Object.values(base).some(Boolean)
+    onChange(anySet ? base : null)
+  }
+
+  return (
+    <div>
+      <button onClick={() => setOpen(o => !o)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{open ? '▼' : '▶'} Modifier reset overrides</span>
+        {activeCount > 0 && <span style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 600 }}>{activeCount} set</span>}
+      </button>
+      {open && (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>Override which held modifier keys cause GRIP to reset this sequence. Leave all unchecked to use the game-exported defaults.</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {RESET_MODIFIER_GROUPS.map((group, gi) => (
+              <div key={gi} style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                {group.mods.map(key => (
+                  <label key={key} style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={Boolean(active[key])} onChange={e => toggle(key, e.target.checked)} style={{ margin: 0 }} />
+                    {RESET_MODIFIER_LABELS[key] || key}
+                  </label>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Variables Panel ──────────────────────────────────────────────────────────
 
 function VariablesPanel({ variables, onChange }: { variables: GripVariable[]; onChange: (v: GripVariable[]) => void }) {
@@ -739,7 +803,7 @@ function VariablesPanel({ variables, onChange }: { variables: GripVariable[]; on
               <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Name</label>
               <input value={v.name} onChange={e => updateVariable(v.id, { ...v, name: e.target.value })} style={{ ...S.input(), width: '100%', fontFamily: 'var(--font-mono)' }} />
             </div>
-            <button onClick={() => deleteVariable(v.id)} style={S.iconBtn(true)}><Trash2 size={13} /></button>
+            <button onClick={() => deleteVariable(v.id)} style={S.iconBtn(true)}><Trash2 size={15} /></button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
             <div>
@@ -796,7 +860,7 @@ function StandaloneMacrosPanel({ macros, onChange, classId }: { macros: Standalo
               <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Name</label>
               <input value={m.name} onChange={e => updateMacro(m.id, { ...m, name: e.target.value })} style={{ ...S.input(), width: '100%', fontFamily: 'var(--font-mono)' }} />
             </div>
-            <button onClick={() => deleteMacro(m.id)} style={S.iconBtn(true)}><Trash2 size={13} /></button>
+            <button onClick={() => deleteMacro(m.id)} style={S.iconBtn(true)}><Trash2 size={15} /></button>
           </div>
           <div>
             <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Macro Text</label>
@@ -873,6 +937,9 @@ function VersionPanel({ version, onUpdate, classId }: { version: BuilderVersion;
             <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
               Idle <input type="number" min={0} value={version.resetTimer} onChange={e => onUpdate({ ...version, resetTimer: Math.max(0, Number(e.target.value)) })} style={{ ...S.input(), width: 52 }} /> sec
             </label>
+            <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8 }}>
+              Repeat <input type="number" min={1} max={50} value={version.repeatCount} onChange={e => onUpdate({ ...version, repeatCount: Math.min(50, Math.max(1, Number(e.target.value) || 1)) })} style={{ ...S.input(), width: 48 }} /> ×
+            </label>
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -885,21 +952,24 @@ function VersionPanel({ version, onUpdate, classId }: { version: BuilderVersion;
             <MacroTextarea value={version.keyRelease} onChange={v => onUpdate({ ...version, keyRelease: v })} placeholder="Optional" rows={3} classId={classId} style={S.textarea()} />
           </div>
         </div>
+        <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: 10 }}>
+          <ResetModifierPanel resetModifiers={version.resetModifiers} onChange={rm => onUpdate({ ...version, resetModifiers: rm })} />
+        </div>
         <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <AddBlockBar onAdd={addAction} useSpellIds={Boolean((version as any).useSpellIds)} onToggleSpellIds={async (toIds) => {
+            <AddBlockBar onAdd={addAction} useSpellIds={Boolean(version.useSpellIds)} onToggleSpellIds={async (toIds) => {
               const texts = collectActionMacros(version.actions)
-              if (!texts.length) { onUpdate({ ...version, useSpellIds: toIds } as any); return }
+              if (!texts.length) { onUpdate({ ...version, useSpellIds: toIds }); return }
               try {
                 const res = await fetch('/api/workshop/convert-spell-texts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ direction: toIds ? 'toids' : 'tonames', texts }) })
                 const data = await res.json()
                 if (res.ok && data.texts) {
                   const updatedActions = applyConvertedMacros(version.actions, data.texts, { v: 0 })
-                  onUpdate({ ...version, actions: updatedActions, useSpellIds: toIds } as any)
+                  onUpdate({ ...version, actions: updatedActions, useSpellIds: toIds })
                 } else {
-                  onUpdate({ ...version, useSpellIds: toIds } as any)
+                  onUpdate({ ...version, useSpellIds: toIds })
                 }
-              } catch { onUpdate({ ...version, useSpellIds: toIds } as any) }
+              } catch { onUpdate({ ...version, useSpellIds: toIds }) }
             }} />
             <button onClick={() => onUpdate({ ...version, actions: [] })} style={{ ...S.btn(), fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }} title="Reset all blocks">
               <RotateCcw size={11} /> Reset all
@@ -1105,8 +1175,8 @@ export default function WorkshopBuildPage() {
         {model.sequences.map(seq => (
           <div key={seq.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', background: seq.id === activeSeqId ? 'var(--bg-secondary)' : 'var(--bg-primary)', border: `0.5px solid ${seq.id === activeSeqId ? 'var(--border-strong)' : 'var(--border)'}`, borderBottom: seq.id === activeSeqId ? '0.5px solid var(--bg-secondary)' : '0.5px solid var(--border)', borderRadius: 'var(--radius-md) var(--radius-md) 0 0', cursor: 'pointer' }} onClick={() => { setActiveSeqId(seq.id); setActiveVerId(seq.versions[0].id) }}>
             <span style={{ fontSize: 12, fontWeight: 500, color: seq.id === activeSeqId ? 'var(--text-primary)' : 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{seq.name || 'Untitled'}</span>
-            <button onClick={e => { e.stopPropagation(); cloneSequence(seq.id) }} style={S.iconBtn()} title="Clone sequence"><CopyIcon size={10} /></button>
-            {model.sequences.length > 1 && <button onClick={e => { e.stopPropagation(); deleteSequence(seq.id) }} style={S.iconBtn(true)} title="Delete sequence"><Trash2 size={10} /></button>}
+            <button onClick={e => { e.stopPropagation(); cloneSequence(seq.id) }} style={S.iconBtn()} title="Clone sequence"><CopyIcon size={14} /></button>
+            {model.sequences.length > 1 && <button onClick={e => { e.stopPropagation(); deleteSequence(seq.id) }} style={S.iconBtn(true)} title="Delete sequence"><Trash2 size={14} /></button>}
           </div>
         ))}
         <button onClick={addSequence} style={{ ...S.btn(), fontSize: 12, borderRadius: 'var(--radius-md) var(--radius-md) 0 0' }}><Plus size={11} style={{ marginRight: 3 }} /> New Sequence</button>
@@ -1147,6 +1217,43 @@ export default function WorkshopBuildPage() {
                 <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Description</label>
                 <input value={activeSeq.description} onChange={e => updateSeq({ ...activeSeq, description: e.target.value })} placeholder="Optional" style={{ ...S.input(), width: '100%' }} />
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Talent string</label>
+                  <input value={activeSeq.talentString} onChange={e => updateSeq({ ...activeSeq, talentString: e.target.value })} placeholder="Optional, per-sequence" style={{ ...S.input(), width: '100%', fontFamily: 'var(--font-mono)', fontSize: 11 }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>WarcraftLogs / author URL</label>
+                  <input value={activeSeq.url} onChange={e => updateSeq({ ...activeSeq, url: e.target.value })} placeholder="Optional" style={{ ...S.input(), width: '100%' }} />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Content types</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {CONTENT_TYPES.map(ct => {
+                    const checked = activeSeq.contentTypes.includes(ct.value)
+                    return (
+                      <label key={ct.value} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: checked ? 'var(--text-primary)' : 'var(--text-muted)', padding: '3px 8px', border: `0.5px solid ${checked ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 'var(--radius-md)', cursor: 'pointer', background: checked ? 'var(--bg-tertiary)' : 'transparent' }}>
+                        <input type="checkbox" checked={checked} onChange={e => {
+                          const next = e.target.checked
+                            ? [...activeSeq.contentTypes, ct.value]
+                            : activeSeq.contentTypes.filter(v => v !== ct.value)
+                          updateSeq({ ...activeSeq, contentTypes: next })
+                        }} style={{ margin: 0 }} />
+                        {ct.label}
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Help text</label>
+                <textarea value={activeSeq.comments} onChange={e => updateSeq({ ...activeSeq, comments: e.target.value })} placeholder="Optional guidance shown in-addon" rows={2} spellCheck={false} style={{ ...S.textarea(), minHeight: 44 }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Changelog</label>
+                <textarea value={activeSeq.changelog} onChange={e => updateSeq({ ...activeSeq, changelog: e.target.value })} placeholder="Optional" rows={2} spellCheck={false} style={{ ...S.textarea(), minHeight: 44 }} />
+              </div>
               <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: 12 }}>
                 <VariablesPanel variables={model.variables} onChange={vars => setModel(m => ({ ...m, variables: vars }))} />
               </div>
@@ -1174,8 +1281,8 @@ export default function WorkshopBuildPage() {
                 ? <input value={ver.name} onChange={e => { updateVer({ ...ver, name: e.target.value }) }} onClick={e => e.stopPropagation()} title="Rename" style={{ ...S.input(), fontSize: 11, padding: '2px 6px', width: Math.max(60, ver.name.length * 7 + 16), background: 'transparent' }} />
                 : <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>{ver.name || 'Version'}</span>
               }
-              <button onClick={e => { e.stopPropagation(); cloneVersion(ver.id) }} style={S.iconBtn()} title="Clone version"><CopyIcon size={10} /></button>
-              {activeSeq.versions.length > 1 && <button onClick={e => { e.stopPropagation(); deleteVersion(ver.id) }} style={S.iconBtn(true)} title="Delete version"><Trash2 size={10} /></button>}
+              <button onClick={e => { e.stopPropagation(); cloneVersion(ver.id) }} style={S.iconBtn()} title="Clone version"><CopyIcon size={14} /></button>
+              {activeSeq.versions.length > 1 && <button onClick={e => { e.stopPropagation(); deleteVersion(ver.id) }} style={S.iconBtn(true)} title="Delete version"><Trash2 size={14} /></button>}
             </div>
           ))}
         </div>
