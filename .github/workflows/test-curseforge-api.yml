@@ -1,0 +1,60 @@
+name: TEST - CurseForge API Check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get mod files list
+        run: |
+          echo "Fetching files list for mod 1489414..."
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+            -H "x-api-key: ${{ secrets.CURSEFORGE_API_KEY }}" \
+            -H "Accept: application/json" \
+            "https://api.curseforge.com/v1/mods/1489414/files?pageSize=1")
+
+          HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          echo "HTTP Status: $HTTP_STATUS"
+
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "FAILED - API key may be invalid or endpoint unreachable"
+            exit 1
+          fi
+
+          echo "SUCCESS - API key works"
+
+          # Extract just the file ID and display name, don't dump the whole response
+          FILE_ID=$(echo "$BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['data'][0]['id'])")
+          DISPLAY_NAME=$(echo "$BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['data'][0]['displayName'])")
+
+          echo "Latest file ID: $FILE_ID"
+          echo "Display name: $DISPLAY_NAME"
+
+          echo "file_id=$FILE_ID" >> $GITHUB_OUTPUT
+        id: get_file
+
+      - name: Get changelog for that file
+        run: |
+          echo "Fetching changelog for file ${{ steps.get_file.outputs.file_id }}..."
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+            -H "x-api-key: ${{ secrets.CURSEFORGE_API_KEY }}" \
+            -H "Accept: application/json" \
+            "https://api.curseforge.com/v1/mods/1489414/files/${{ steps.get_file.outputs.file_id }}/changelog")
+
+          HTTP_STATUS=$(echo "$RESPONSE" | grep "HTTP_STATUS:" | cut -d: -f2)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          echo "HTTP Status: $HTTP_STATUS"
+
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "FAILED - changelog endpoint did not return 200"
+            exit 1
+          fi
+
+          echo "SUCCESS - changelog endpoint works"
+          echo "First 300 chars of changelog HTML:"
+          echo "$BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['data'][:300])"
