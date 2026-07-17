@@ -1210,6 +1210,10 @@ export default function WorkshopBuildPage() {
                 </div>
               </div>
               <div>
+                <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Talent string (collection-wide)</label>
+                <input value={model.exportMeta.talentString || ''} onChange={e => setModel(m => ({ ...m, exportMeta: { ...m.exportMeta, talentString: e.target.value } }))} placeholder="Optional, applies to all sequences unless overridden below" style={{ ...S.input(), width: '100%', fontFamily: 'var(--font-mono)', fontSize: 11 }} />
+              </div>
+              <div>
                 <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Sequence name</label>
                 <input value={activeSeq.name} onChange={e => updateSeq({ ...activeSeq, name: e.target.value })} style={{ ...S.input(), width: '100%', fontFamily: 'var(--font-mono)' }} />
               </div>
@@ -1219,7 +1223,7 @@ export default function WorkshopBuildPage() {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Talent string</label>
+                  <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Talent string (this sequence only)</label>
                   <input value={activeSeq.talentString} onChange={e => updateSeq({ ...activeSeq, talentString: e.target.value })} placeholder="Optional, per-sequence" style={{ ...S.input(), width: '100%', fontFamily: 'var(--font-mono)', fontSize: 11 }} />
                 </div>
                 <div>
