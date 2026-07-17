@@ -68,6 +68,10 @@ export async function POST(req: NextRequest) {
         privacyMode: model.exportMeta?.privacyMode || 'public',
         wowPatch: model.exportMeta?.wowPatch || '',
         talentString: model.exportMeta?.talentString || '',
+        pseudonym: model.exportMeta?.pseudonym || '',
+        exporterName: model.exportMeta?.exporterName || '',
+        exporterRealm: model.exportMeta?.exporterRealm || '',
+        region: model.exportMeta?.region || '',
       },
       variables: Array.isArray(model.variables) ? model.variables.map((v: any) => ({
         id: v.id,

@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Copy, Check, Plus, Trash2, ChevronUp, ChevronDown, Copy as CopyIcon, RotateCcw, GripVertical } from 'lucide-react'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import AuthForm from '@/components/auth/AuthForm'
-import { CONTENT_TYPES } from '@/lib/wow-data'
+import { CONTENT_TYPES, getClassById } from '@/lib/wow-data'
 import { RESET_MODIFIER_LABELS, RESET_MODIFIER_GROUPS, createEmptyResetModifiers } from '@/lib/workshop_new/gripResetModifiers'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -97,6 +97,10 @@ interface BuilderModel {
     privacyMode?: string
     wowPatch?: string
     talentString?: string
+    pseudonym?: string
+    exporterName?: string
+    exporterRealm?: string
+    region?: string
   }
   variables: GripVariable[]
   standaloneMacros: StandaloneMacro[]
@@ -463,6 +467,7 @@ const S = {
   textarea: (): React.CSSProperties => ({ width: '100%', padding: '8px 10px', fontSize: 12, fontFamily: 'var(--font-mono)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', resize: 'vertical' as const, minHeight: 72 }),
   input: (): React.CSSProperties => ({ padding: '5px 8px', fontSize: 12, fontFamily: 'var(--font-sans)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)' }),
   select: (): React.CSSProperties => ({ padding: '5px 8px', fontSize: 12, fontFamily: 'var(--font-sans)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)' }),
+  label: (): React.CSSProperties => ({ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }),
   btn: (primary = false): React.CSSProperties => ({ padding: '6px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)', borderRadius: 'var(--radius-md)', border: primary ? 'none' : '0.5px solid var(--border)', background: primary ? 'var(--accent)' : 'var(--bg-tertiary)', color: primary ? 'white' : 'var(--text-secondary)' }),
 }
 
@@ -757,7 +762,7 @@ function ResetModifierPanel({ resetModifiers, onChange }: { resetModifiers: Grip
       </button>
       {open && (
         <div style={{ marginTop: 8 }}>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>Override which held modifier keys cause GRIP to reset this sequence. Leave all unchecked to use the game-exported defaults.</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>Override which held modifier keys cause GRIP to reset this sequence. Leave all unchecked to use the game-exported defaults.</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {RESET_MODIFIER_GROUPS.map((group, gi) => (
               <div key={gi} style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
@@ -788,7 +793,7 @@ function VariablesPanel({ variables, onChange }: { variables: GripVariable[]; on
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <div>
           <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>Variables</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Manage variables used in this sequence. Variables use <code style={{ fontFamily: 'var(--font-mono)', background: 'var(--bg-tertiary)', padding: '1px 4px', borderRadius: 'var(--radius-sm)' }}>~varname~</code> syntax and get substituted at runtime.</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Manage variables used in this sequence. Variables use <code style={{ fontFamily: 'var(--font-mono)', background: 'var(--bg-tertiary)', padding: '1px 4px', borderRadius: 'var(--radius-sm)' }}>~varname~</code> syntax and get substituted at runtime.</div>
         </div>
         <button onClick={addVariable} style={{ ...S.btn(true), fontSize: 11, flexShrink: 0 }}><Plus size={10} style={{ marginRight: 3 }} /> Variable</button>
       </div>
@@ -847,7 +852,7 @@ function StandaloneMacrosPanel({ macros, onChange, classId }: { macros: Standalo
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <div>
           <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>Standalone Macros</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Named macro bodies bundled with the export.</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Named macro bodies bundled with the export.</div>
         </div>
         <button onClick={addMacro} style={{ ...S.btn(true), fontSize: 11, flexShrink: 0 }}><Plus size={10} style={{ marginRight: 3 }} /> Macro</button>
       </div>
@@ -944,11 +949,11 @@ function VersionPanel({ version, onUpdate, classId }: { version: BuilderVersion;
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
-            <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Key Press</label>
+            <label style={S.label()}>Key Press</label>
             <MacroTextarea value={version.keyPress} onChange={v => onUpdate({ ...version, keyPress: v })} rows={3} classId={classId} style={S.textarea()} />
           </div>
           <div>
-            <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Key Release</label>
+            <label style={S.label()}>Key Release</label>
             <MacroTextarea value={version.keyRelease} onChange={v => onUpdate({ ...version, keyRelease: v })} placeholder="Optional" rows={3} classId={classId} style={S.textarea()} />
           </div>
         </div>
@@ -1194,45 +1199,83 @@ export default function WorkshopBuildPage() {
             <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'start' }}>
                 <div>
-                  <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Author</label>
+                  <label style={S.label()}>Author</label>
                   <input value={model.exportMeta.author || ''} onChange={e => setModel(m => ({ ...m, exportMeta: { ...m.exportMeta, author: e.target.value } }))} placeholder="Your name" style={{ ...S.input(), width: '100%' }} />
                   {model.exportMeta.authorLocked && model.exportMeta.originalAuthor && (
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span>Originally created by <strong style={{ color: 'var(--text-secondary)' }}>{model.exportMeta.originalAuthor}</strong>{model.exportMeta.originalAuthorRealm ? ` (${model.exportMeta.originalAuthorRealm})` : ''}</span>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span>Originally created by <strong style={{ color: 'var(--text-primary)' }}>{model.exportMeta.originalAuthor}</strong>{model.exportMeta.originalAuthorRealm ? ` (${model.exportMeta.originalAuthorRealm})` : ''}</span>
                     </div>
                   )}
                 </div>
                 <div>
-                  <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Class</label>
-                  <select value={activeSeq.classId} onChange={e => updateSeq({ ...activeSeq, classId: Number(e.target.value) })} style={S.select()}>
+                  <label style={S.label()}>Privacy</label>
+                  <select value={model.exportMeta.privacyMode || 'public'} onChange={e => setModel(m => ({ ...m, exportMeta: { ...m.exportMeta, privacyMode: e.target.value } }))} style={S.select()}>
+                    <option value="public">Public</option>
+                    <option value="pseudonymous">Pseudonymous</option>
+                    <option value="private">Private</option>
+                  </select>
+                </div>
+              </div>
+              {model.exportMeta.privacyMode === 'pseudonymous' ? (
+                <div>
+                  <label style={S.label()}>Pseudonym</label>
+                  <input value={model.exportMeta.pseudonym || ''} onChange={e => setModel(m => ({ ...m, exportMeta: { ...m.exportMeta, pseudonym: e.target.value } }))} placeholder="Shown instead of your real name" style={{ ...S.input(), width: '100%' }} />
+                </div>
+              ) : model.exportMeta.privacyMode === 'private' ? null : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={S.label()}>Realm</label>
+                    <input value={model.exportMeta.exporterRealm || ''} onChange={e => setModel(m => ({ ...m, exportMeta: { ...m.exportMeta, exporterRealm: e.target.value } }))} placeholder="Optional" style={{ ...S.input(), width: '100%' }} />
+                  </div>
+                  <div>
+                    <label style={S.label()}>Region</label>
+                    <input value={model.exportMeta.region || ''} onChange={e => setModel(m => ({ ...m, exportMeta: { ...m.exportMeta, region: e.target.value } }))} placeholder="Optional, e.g. US, EU" style={{ ...S.input(), width: '100%' }} />
+                  </div>
+                </div>
+              )}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={S.label()}>Class</label>
+                  <select value={activeSeq.classId} onChange={e => updateSeq({ ...activeSeq, classId: Number(e.target.value), specId: null })} style={{ ...S.select(), width: '100%' }}>
                     {CLASS_OPTIONS.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={S.label()}>Spec</label>
+                  <select value={activeSeq.specId ?? ''} onChange={e => updateSeq({ ...activeSeq, specId: e.target.value ? Number(e.target.value) : null })} style={{ ...S.select(), width: '100%' }} disabled={!activeSeq.classId}>
+                    <option value="">Any / unknown</option>
+                    {(getClassById(activeSeq.classId)?.specs || []).map(spec => <option key={spec.id} value={spec.id}>{spec.name}</option>)}
                   </select>
                 </div>
               </div>
               <div>
-                <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Talent string (collection-wide)</label>
+                <label style={S.label()}>WoW patch</label>
+                <input value={model.exportMeta.wowPatch || ''} onChange={e => setModel(m => ({ ...m, exportMeta: { ...m.exportMeta, wowPatch: e.target.value } }))} placeholder="Optional, e.g. 12.0.7" style={{ ...S.input(), width: 160 }} />
+              </div>
+              <div>
+                <label style={S.label()}>Talent string (collection-wide)</label>
                 <input value={model.exportMeta.talentString || ''} onChange={e => setModel(m => ({ ...m, exportMeta: { ...m.exportMeta, talentString: e.target.value } }))} placeholder="Optional, applies to all sequences unless overridden below" style={{ ...S.input(), width: '100%', fontFamily: 'var(--font-mono)', fontSize: 11 }} />
               </div>
               <div>
-                <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Sequence name</label>
+                <label style={S.label()}>Sequence name</label>
                 <input value={activeSeq.name} onChange={e => updateSeq({ ...activeSeq, name: e.target.value })} style={{ ...S.input(), width: '100%', fontFamily: 'var(--font-mono)' }} />
               </div>
               <div>
-                <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Description</label>
+                <label style={S.label()}>Description</label>
                 <input value={activeSeq.description} onChange={e => updateSeq({ ...activeSeq, description: e.target.value })} placeholder="Optional" style={{ ...S.input(), width: '100%' }} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Talent string (this sequence only)</label>
+                  <label style={S.label()}>Talent string (this sequence only)</label>
                   <input value={activeSeq.talentString} onChange={e => updateSeq({ ...activeSeq, talentString: e.target.value })} placeholder="Optional, per-sequence" style={{ ...S.input(), width: '100%', fontFamily: 'var(--font-mono)', fontSize: 11 }} />
                 </div>
                 <div>
-                  <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>WarcraftLogs / author URL</label>
+                  <label style={S.label()}>WarcraftLogs / author URL</label>
                   <input value={activeSeq.url} onChange={e => updateSeq({ ...activeSeq, url: e.target.value })} placeholder="Optional" style={{ ...S.input(), width: '100%' }} />
                 </div>
               </div>
               <div>
-                <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Content types</label>
+                <label style={S.label()}>Content types</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {CONTENT_TYPES.map(ct => {
                     const checked = activeSeq.contentTypes.includes(ct.value)
@@ -1251,11 +1294,11 @@ export default function WorkshopBuildPage() {
                 </div>
               </div>
               <div>
-                <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Help text</label>
+                <label style={S.label()}>Help text</label>
                 <textarea value={activeSeq.comments} onChange={e => updateSeq({ ...activeSeq, comments: e.target.value })} placeholder="Optional guidance shown in-addon" rows={2} spellCheck={false} style={{ ...S.textarea(), minHeight: 44 }} />
               </div>
               <div>
-                <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Changelog</label>
+                <label style={S.label()}>Changelog</label>
                 <textarea value={activeSeq.changelog} onChange={e => updateSeq({ ...activeSeq, changelog: e.target.value })} placeholder="Optional" rows={2} spellCheck={false} style={{ ...S.textarea(), minHeight: 44 }} />
               </div>
               <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: 12 }}>
