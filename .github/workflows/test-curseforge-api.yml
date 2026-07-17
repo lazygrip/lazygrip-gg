@@ -11,7 +11,7 @@ jobs:
         run: |
           echo "Fetching files list for mod 1489414..."
           RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
-            -H "x-api-key: ${{ secrets.CURSEFORGE_API_KEY }}" \
+            -H "Authorization: Key ${{ secrets.CURSEFORGE_API_KEY }}" \
             -H "Accept: application/json" \
             "https://api.curseforge.com/v1/mods/1489414/files?pageSize=1")
 
@@ -41,7 +41,7 @@ jobs:
         run: |
           echo "Fetching changelog for file ${{ steps.get_file.outputs.file_id }}..."
           RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
-            -H "x-api-key: ${{ secrets.CURSEFORGE_API_KEY }}" \
+            -H "Authorization: Key ${{ secrets.CURSEFORGE_API_KEY }}" \
             -H "Accept: application/json" \
             "https://api.curseforge.com/v1/mods/1489414/files/${{ steps.get_file.outputs.file_id }}/changelog")
 
