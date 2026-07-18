@@ -74,7 +74,7 @@ export default function InstallationPage() {
 
       <Section title="What you will not see and why">
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          GRIP-EMS does not work like GSE, which creates a draggable button you place on a bar and bind. GRIP-EMS binds a key directly to a sequence inside the addon. For sequences with multiple versions, a macro is created and can be placed on your action bar, but for single-version sequences there is nothing to drag. If you are looking for a button to appear and it is not appearing, that is expected behavior and not a bug.
+          GRIP-EMS does not work like the legacy program, which creates a draggable button you place on a bar and bind. GRIP-EMS binds a key directly to a sequence inside the addon. For sequences with multiple versions, a macro is created and can be placed on your action bar, but for single-version sequences there is nothing to drag. If you are looking for a button to appear and it is not appearing, that is expected behavior and not a bug.
         </p>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 12 }}>
           To bind a key to a sequence, open the sequence in the GRIP-EMS editor, go to the Keybinds tab, and assign a key there. The bind is stored per-spec, so switching specs gives you a clean slate for a different rotation on the same key.
@@ -113,7 +113,7 @@ export default function InstallationPage() {
         />
         <TroubleshootItem
           problem="Sequence key stops working randomly while grinding, mount and dismount fixes it"
-          solution="This was a bug where the game skipped its own bar-change signal after messy dismounts, leaving a stale keybind eating keypresses. GRIP-EMS now checks actual mount and vehicle state rather than trusting the bar-change signal. Update GRIP-EMS through your addon manager. You can run /gems debug to watch the watchdog catch a stale bind in real time."
+          solution="This was a bug where the addon waited on a match-privacy flag that never cleared outside of arena or Mythic+ specifically, which could leave a sequence marked dormant longer than it should have been in some overland situations. Update GRIP-EMS through your addon manager. Clicking the greyed-out sequence row in the editor re-activates it immediately without needing to relog."
         />
         <TroubleshootItem
           problem="Sequence key dies after skyriding or leaving a vehicle"
@@ -121,7 +121,7 @@ export default function InstallationPage() {
         />
         <TroubleshootItem
           problem="Sequence key fires mid-air or vehicle keys are dead on first flight of the session"
-          solution="This was a first-takeoff bug where ground binds stayed live while airborne or vehicle keys never activated at all. Fixed in v2.1.20. The watchdog now heals the bar swap at takeoff and restores it on landing. Update GRIP-EMS if you are hitting this on the first flight of every login."
+          solution="This has been reported as a first-takeoff issue where ground binds stay live while airborne or vehicle keys never activate. It has not been independently confirmed as fixed in a specific release the way the other keybind issues on this page have been. If you hit this, update GRIP-EMS to the latest version first, and if it persists, report it in the Discord with your GRIP-EMS version and whether it happens on every login or only occasionally."
         />
         <TroubleshootItem
           problem="Another addon keeps stealing my sequence keybinds"

@@ -33,7 +33,7 @@ export default function HowItWorksPage() {
         <p>GRIP-EMS is a Sequential step engine by default, which means it fires step 1, then step 2, then step 3, advancing one step per keypress and looping back to step 1 after the last step. The important detail is in what happens when a step fails to cast.</p>
 
         <ComparisonTable
-          headers={['', 'GRIP-EMS', 'GSE']}
+          headers={['', 'GRIP-EMS', 'Legacy program']}
           rows={[
             ['Failed cast', 'Holds on the current step. The sequence does not advance until the cast succeeds. Step 3 stays at step 3 until the spell actually fires.', 'Skips the failed step and advances to the next one. The sequence keeps moving regardless of whether the spell landed.'],
           ]}
@@ -44,7 +44,7 @@ export default function HowItWorksPage() {
 
       <Section title="Hold behavior and proc-gated abilities">
         <p>Hold-on-failure is not just a defensive measure against lag. It is the mechanism that lets you write cleaner sequences for proc-dependent abilities without any conditional logic at all.</p>
-        <p style={{ marginTop: 12 }}>The classic example is any ability that upgrades on proc. Warrior's Slam becomes Heroic Strike when the Sudden Death proc is active. In GSE, writing <code style={code}>/cast Heroic Strike</code> in a step means the sequence skips that step and fires Slam as the fallback when the proc is absent, because GSE advances past failed casts. In GRIP-EMS, the same line holds on that step when the proc is absent and does not fire Slam at all. The sequence waits there until Heroic Strike is actually available, then fires and advances. You get the proc version every time and never waste resources on the base version.</p>
+        <p style={{ marginTop: 12 }}>The classic example is any ability that upgrades on proc. Warrior's Slam becomes Heroic Strike when the Bloodsurge proc is active. In the legacy program, writing <code style={code}>/cast Heroic Strike</code> in a step means the sequence skips that step and fires Slam as the fallback when the proc is absent, because the legacy program advances past failed casts. In GRIP-EMS, the same line holds on that step when the proc is absent and does not fire Slam at all. The sequence waits there until Heroic Strike is actually available, then fires and advances. You get the proc version every time and never waste resources on the base version.</p>
         <p style={{ marginTop: 12 }}>The rule that follows from this: bare <code style={code}>/cast SpellName</code> with no conditionals is the correct pattern for proc-dependent abilities. Adding <code style={code}>[combat]</code> or other guards changes the behavior because WoW then resolves a fallback when the guard's condition fails, which bypasses the hold. If the spell should only fire when its proc is active, write it bare and let GRIP-EMS hold.</p>
         <Callout>
           This applies to any ability where the proc version and the base version are technically different spell IDs that WoW substitutes automatically. Heroic Strike and Slam, Execute procs, Sudden Death, class-specific upgrades. Write the proc version bare. Hold behavior does the rest.
@@ -91,6 +91,34 @@ export default function HowItWorksPage() {
             </div>
           ))}
         </div>
+      </Section>
+
+      <Section title="Understanding modifiers">
+        <p>Modifiers are the single most common source of confusion for new users, and the confusion is almost always the same one: assuming SHIFT, CTRL, and ALT need their own separate keybinds somewhere. They do not. GRIP-EMS binds exactly one key to a sequence, in the Keybinds tab, and that single key is what you press or hold repeatedly. Modifiers ride on top of that same key rather than needing a bind of their own.</p>
+        <p style={{ marginTop: 12 }}>Concretely: if your sequence is bound to the 1 key, you never bind SHIFT+1 or CTRL+1 anywhere. You hold SHIFT while pressing 1, and any step tagged with <code style={code}>[mod:shift]</code> fires instead of your normal rotation for that press. Release SHIFT and the next press goes back to firing the sequence normally. The same applies to CTRL and ALT.</p>
+
+        <Callout>
+          If you are looking for a place to bind SHIFT+1 or CTRL+1 specifically, stop looking. There is no such setting because that is not how modifiers work in GRIP-EMS. One keybind per sequence, modifiers layer on top of it.
+        </Callout>
+
+        <p style={{ marginTop: 16 }}>The guard pattern that makes this work correctly is <code style={code}>[nomod:shift, nomod:ctrl]</code> on your normal rotation steps. Without it, holding SHIFT for an emergency heal would also attempt to fire whatever spell is on that step, since the step has no way to know you only wanted the modifier action. Every regular rotation step should carry this guard if the sequence uses modifiers anywhere. The worked example on the <Link href="/guide/building-sequences" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Building sequences</Link> page shows this pattern applied consistently across a real 30-step sequence.</p>
+
+        <p style={{ marginTop: 16 }}>If your keybind fires normally but a modifier does not, work through these in order before assuming something is broken in the sequence itself:</p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+          {[
+            { label: '1. Check the step itself', desc: 'Open the sequence in the editor and confirm the step you expect actually has the [mod:shift] or [mod:ctrl] conditional written on it. A missing tag on the step is indistinguishable from a firing bug until you look.' },
+            { label: '2. Check CVar Health', desc: 'Run /gems settings, go to Cvar Health, and confirm it is green. The same key-down requirement that governs your base keybind governs modifier presses too.' },
+            { label: '3. Check your other WoW keybinds', desc: 'Open your normal WoW keybind menu, not GRIP-EMS, and search for anything already bound to SHIFT, CTRL, or ALT combined with your sequence key elsewhere in your bindings, action bars, or another addon. A conflicting bind claimed by something else silently eats the modifier press before GRIP-EMS ever sees it. This is a confirmed, recurring cause: several users have fixed dead modifiers entirely by clearing out unrelated modifier-key bindings that had nothing to do with GRIP-EMS on the surface.' },
+          ].map(r => (
+            <div key={r.label} style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '12px 14px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 13 }}>{r.label}</span>
+              <span style={{ color: 'var(--text-secondary)', lineHeight: 1.6, fontSize: 13 }}>{r.desc}</span>
+            </div>
+          ))}
+        </div>
+
+        <p style={{ marginTop: 16 }}>If all three check out and modifiers still are not firing, this is a genuine open issue rather than a configuration problem on your end. Post in the Discord with your CVar Health status, a screenshot of the step's conditional, and whether you have any other addon that binds modifier keys, so it can be looked at directly rather than retreading the same troubleshooting steps.</p>
       </Section>
 
       <Section title="The Pause step">

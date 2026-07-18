@@ -171,8 +171,8 @@ export default function BuildingSequencesPage() {
         <Link href="/guide/how-it-works" style={{ fontSize: 14, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
           ← Back: How it works
         </Link>
-        <Link href="/guide/from-gse" style={{ fontSize: 14, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
-          Next: Coming from GSE →
+        <Link href="/guide/from-legacy-program" style={{ fontSize: 14, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
+          Next: Coming from the legacy program →
         </Link>
       </div>
     </div>

@@ -38,11 +38,11 @@ const sections = [
     desc: 'The decision framework behind sequence design, applied to a real Guardian Druid Mythic+ sequence and a generic DPS build. Not what the buttons do but why the structure is what it is, what breaks if you change it, and how to apply the same thinking to your own spec.',
   },
   {
-    href: '/guide/from-gse',
+    href: '/guide/from-legacy-program',
     icon: GitBranch,
     time: '6 min',
-    title: 'Coming from GSE',
-    desc: 'Written specifically for players who use GnomeSequencer Enhanced and are evaluating whether to switch. The one mechanical difference that actually matters, what transfers automatically, and the practical steps to get your existing sequences running.',
+    title: 'Coming from the legacy program',
+    desc: 'Written specifically for players who use an older macro sequencing addon and are evaluating whether to switch. The one mechanical difference that actually matters, what transfers automatically, and the practical steps to get your existing sequences running.',
   },
   {
     href: '/guide/validating',
@@ -65,8 +65,8 @@ export default function GuidePage() {
         </p>
         <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.75, maxWidth: 620 }}>
           If your keybind is set but nothing is firing, go straight to{' '}
-          <Link href="/guide/installation" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Installation</Link>. The Cvar Health fix takes thirty seconds and solves that problem the majority of the time. If you are coming from GSE and want to know whether switching is worth it, start with{' '}
-          <Link href="/guide/from-gse" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Coming from GSE</Link>.
+          <Link href="/guide/installation" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Installation</Link>. The Cvar Health fix takes thirty seconds and solves that problem the majority of the time. If you are coming from an older macro sequencing addon and want to know whether switching is worth it, start with{' '}
+          <Link href="/guide/from-legacy-program" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Coming from the legacy program</Link>.
         </p>
       </div>
 
