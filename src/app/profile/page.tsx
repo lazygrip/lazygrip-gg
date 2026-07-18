@@ -99,7 +99,7 @@ function ProfilePageInner() {
         .from('sequences')
         .select('id, title, slug, class_name, class_id, spec_name, content_type, hero_talent, patch_version, avg_score, rating_count, view_count, created_at')
         .eq('author_id', user.id)
-        .eq('is_published', true)
+        .eq('status', 'published')
         .order('created_at', { ascending: false })
 
       setPostedSequences(posted ?? [])

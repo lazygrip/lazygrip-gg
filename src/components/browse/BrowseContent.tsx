@@ -110,7 +110,7 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
       let query = supabase
         .from('sequences')
         .select('*, author:profiles(username, display_name, avatar_url)', { count: 'exact' })
-        .eq('is_published', true)
+        .eq('status', 'published')
 
       if (filters.class_id) query = query.eq('class_id', filters.class_id)
       if (filters.spec_id) query = query.eq('spec_id', filters.spec_id)

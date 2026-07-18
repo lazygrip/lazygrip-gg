@@ -133,7 +133,7 @@ function PostForm() {
         .from('sequences')
         .select('id, title, class_name, content_type, updated_at, description, class_id, spec_name, hero_talent, patch_version, grip_version, step_function, grip_string, raw_steps, talent_string, warcraftlogs_url, performance_notes')
         .eq('author_id', user.id)
-        .eq('is_draft', true)
+        .eq('status', 'draft')
         .order('updated_at', { ascending: false })
 
       if (error || !data || data.length === 0) { setCheckingDrafts(false); return }
@@ -185,7 +185,7 @@ function PostForm() {
   async function discardDraft(id: string) {
     // Explicit discard only -- never automatic. Deletes a draft row the
     // person chose not to resume, from the multi-draft chooser.
-    await supabase.from('sequences').delete().eq('id', id).eq('is_draft', true)
+    await supabase.from('sequences').delete().eq('id', id).eq('status', 'draft')
     setPendingDrafts(prev => prev ? prev.filter(d => d.id !== id) : prev)
   }
 
@@ -685,7 +685,7 @@ async function runDecode(exportString: string) {
               performance_notes: form.performance_notes.trim() || null,
               collection_sequences: collectionData,
               original_author: originalAuthor,
-              is_published: true,
+              status: 'published',
             })
 
           if (insertError) throw insertError
@@ -990,6 +990,28 @@ async function runDecode(exportString: string) {
           ? 'Update your sequence details below. Changes will be live immediately.'
           : 'Share your GRIP-EMS sequence with the community. Include your GRIP export string so others can import it directly.'}
       </p>
+
+      {!isEditMode && draftId && (
+        <div style={{ marginBottom: 20 }}>
+          <button
+            type="button"
+            onClick={async () => {
+              const idToDiscard = draftIdRef.current
+              if (!idToDiscard) return
+              if (!window.confirm('Discard this draft? This cannot be undone.')) return
+              await discardDraft(idToDiscard)
+              window.location.href = '/post'
+            }}
+            style={{
+              background: 'none', border: '1px solid #c41e3a', borderRadius: 'var(--radius-md)',
+              padding: '8px 14px', color: '#c41e3a', fontSize: 13, fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            Discard this draft
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>

@@ -68,7 +68,7 @@ export type Sequence = {
   view_count: number
   save_count: number
   comment_count: number
-  is_published: boolean
+  status: 'draft' | 'published' | 'archived'
   is_featured: boolean
   set_id: string | null
   collection_sequences: CollectionSequenceEntry[] | null

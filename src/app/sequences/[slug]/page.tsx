@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .from('sequences')
     .select('title, description, class_name, spec_name, hero_talent, content_type, patch_version, author:profiles(username)')
     .eq('slug', params.slug)
-    .eq('is_published', true)
+    .eq('status', 'published')
     .single()
 
   if (!sequence) {

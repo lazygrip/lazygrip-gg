@@ -17,7 +17,7 @@ export async function getSequences(
       author:profiles(*),
       rating_data:sequence_ratings(avg_score, rating_count)
     `, { count: 'exact' })
-    .eq('is_published', true)
+    .eq('status', 'published')
 
   if (class_id) query = query.eq('class_id', class_id)
   if (spec_name) query = query.eq('spec_name', spec_name)
@@ -70,7 +70,7 @@ export async function getSequenceBySlug(slug: string): Promise<Sequence | null> 
       rating_data:sequence_ratings(avg_score, rating_count)
     `)
     .eq('slug', slug)
-    .eq('is_published', true)
+    .eq('status', 'published')
     .single()
 
   if (error || !data) return null
@@ -84,7 +84,7 @@ export async function getSequenceBySlug(slug: string): Promise<Sequence | null> 
       .from('sequences')
       .select('id, title, slug, content_type, class_name, spec_name, hero_talent')
       .eq('set_id', data.set_id)
-      .eq('is_published', true)
+      .eq('status', 'published')
       .neq('id', data.id)
       .limit(1)
       .single()
@@ -125,7 +125,7 @@ export async function getFeaturedSequences(): Promise<Sequence[]> {
       rating_data:sequence_ratings(avg_score, rating_count)
     `)
     .eq('is_featured', true)
-    .eq('is_published', true)
+    .eq('status', 'published')
     .limit(3)
 
   if (error) throw error
@@ -151,7 +151,7 @@ export async function linkSequences(
     .from('sequences')
     .select('id, set_id')
     .eq('slug', targetSlug)
-    .eq('is_published', true)
+    .eq('status', 'published')
     .single()
 
   if (lookupError || !target) {

@@ -23,7 +23,7 @@ export default async function UserProfilePage({ params }: Props) {
     .from('sequences')
     .select('id, title, slug, class_name, class_id, spec_name, content_type, hero_talent, avg_score, rating_count, view_count, created_at')
     .eq('author_id', profile.id)
-    .eq('is_published', true)
+    .eq('status', 'published')
     .order('created_at', { ascending: false })
 
   const seqs = sequences ?? []

@@ -86,7 +86,7 @@ export default function SequencePageClient() {
       .from('sequences')
       .select('*, author:profiles(*)')
       .eq('slug', slug)
-      .eq('is_published', true)
+      .eq('status', 'published')
       .single()
 
     if (seq) {
@@ -138,7 +138,7 @@ export default function SequencePageClient() {
           .from('sequences')
           .select('id, title, slug, content_type, class_name, spec_name, hero_talent')
           .eq('set_id', seq.set_id)
-          .eq('is_published', true)
+          .eq('status', 'published')
           .neq('id', seq.id)
           .limit(1)
           .single()
@@ -272,7 +272,7 @@ export default function SequencePageClient() {
       .from('sequences')
       .select('id, title, slug, content_type, class_name, spec_name, hero_talent, set_id')
       .eq('slug', targetSlug)
-      .eq('is_published', true)
+      .eq('status', 'published')
       .single()
 
     if (lookupError || !target) {

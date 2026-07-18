@@ -58,7 +58,7 @@ export default function UpdateSequencePage() {
       .from('sequences')
       .select('*, author:profiles(*)')
       .eq('slug', slug)
-      .eq('is_published', true)
+      .eq('status', 'published')
       .single()
 
     if (!seq) {
