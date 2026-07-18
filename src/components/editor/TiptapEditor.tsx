@@ -147,10 +147,20 @@ export default function TiptapEditor({ content, onChange, placeholder }: TiptapE
     immediatelyRender: false,
   })
 
-  // Sync external content changes
+  // Sync external content changes. Checks content !== editor.getHTML()
+  // rather than just truthiness, so resetting content back to '' (e.g.
+  // starting a fresh draft after a previous one was loaded) actually
+  // clears the editor instead of leaving stale text behind -- Tiptap's
+  // own getHTML() returns '<p></p>' for an empty doc, not '', so that's
+  // compared against directly rather than assuming '' will ever match.
   useEffect(() => {
-    if (editor && content && content !== editor.getHTML()) {
-      editor.commands.setContent(content, false)
+    if (!editor) return
+    const current = editor.getHTML()
+    const isEditorEmpty = current === '<p></p>' || current === ''
+    if (content) {
+      if (content !== current) editor.commands.setContent(content, false)
+    } else if (!isEditorEmpty) {
+      editor.commands.setContent('', false)
     }
   }, [content, editor])
 

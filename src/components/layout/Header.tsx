@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Search, PlusCircle, LogOut, LayoutList, Bookmark, Settings, Sun, Moon, Menu, X } from 'lucide-react'
+import { Search, PlusCircle, LogOut, LayoutList, Bookmark, Settings, Sun, Moon, Menu, X, FileEdit } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState, useRef } from 'react'
 import { useTheme } from '@/components/ThemeProvider'
@@ -200,7 +200,7 @@ export default function Header() {
 
             {user ? (
               <>
-                <Link href="/post" className="desktop-post-btn" style={{
+                <Link href="/post?new=1" className="desktop-post-btn" style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   background: 'var(--accent)', color: 'white',
                   textDecoration: 'none', padding: '6px 12px',
@@ -274,6 +274,7 @@ export default function Header() {
                       </div>
                       <div style={{ padding: '6px 0' }}>
                         <DropdownLink href="/profile?tab=posted" icon={<LayoutList size={14} />} label="My Sequences" onClick={() => setDropdownOpen(false)} />
+                        <DropdownLink href="/profile?tab=drafts" icon={<FileEdit size={14} />} label="Drafts" onClick={() => setDropdownOpen(false)} />
                         <DropdownLink href="/profile?tab=saved" icon={<Bookmark size={14} />} label="Saved" onClick={() => setDropdownOpen(false)} />
                         <DropdownLink href="/profile?tab=settings" icon={<Settings size={14} />} label="Settings" onClick={() => setDropdownOpen(false)} />
                       </div>
@@ -384,7 +385,7 @@ export default function Header() {
               {user ? (
                 <>
                   <Link
-                    href="/post"
+                    href="/post?new=1"
                     onClick={() => setMobileMenuOpen(false)}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -406,6 +407,17 @@ export default function Header() {
                     }}
                   >
                     <LayoutList size={15} /> My Sequences
+                  </Link>
+                  <Link
+                    href="/profile?tab=drafts"
+                    onClick={() => setMobileMenuOpen(false)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '10px 4px', fontSize: 14,
+                      color: 'var(--text-secondary)', textDecoration: 'none',
+                    }}
+                  >
+                    <FileEdit size={15} /> Drafts
                   </Link>
                   <Link
                     href="/profile?tab=saved"

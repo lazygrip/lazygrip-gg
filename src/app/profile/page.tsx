@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { formatDistanceToNow } from 'date-fns'
 import Link from 'next/link'
-import { Upload, Check, Save, BookmarkX, Link2, Unlink, AlertCircle } from 'lucide-react'
+import { Upload, Check, Save, BookmarkX, Link2, Unlink, AlertCircle, Trash2 } from 'lucide-react'
 
 const AVATAR_COLORS = [
   { bg: '#1D9E75', label: 'Emerald' },
@@ -41,8 +41,16 @@ function ProfilePageInner() {
   const [profile, setProfile] = useState<any>(null)
   const [postedSequences, setPostedSequences] = useState<any[]>([])
   const [savedSequences, setSavedSequences] = useState<any[]>([])
+  const [draftSequences, setDraftSequences] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'posted' | 'saved' | 'settings'>('posted')
+  const [activeTab, setActiveTab] = useState<'posted' | 'saved' | 'drafts' | 'settings'>('posted')
+
+  // Batch publish state -- selection lives on the profile page since that's
+  // where the multi-select UI is, but the actual publish call is a single
+  // RPC (publish_draft_sequences_batch) so there's no per-row network chatter.
+  const [selectedDraftIds, setSelectedDraftIds] = useState<Set<string>>(new Set())
+  const [batchPublishing, setBatchPublishing] = useState(false)
+  const [batchPublishError, setBatchPublishError] = useState<string | null>(null)
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [selectedColor, setSelectedColor] = useState<string | null>(null)
@@ -69,6 +77,7 @@ function ProfilePageInner() {
   useEffect(() => {
     const tab = searchParams.get('tab')
     if (tab === 'saved') setActiveTab('saved')
+    else if (tab === 'drafts') setActiveTab('drafts')
     else if (tab === 'settings') setActiveTab('settings')
     else setActiveTab('posted')
   }, [searchParams])
@@ -103,6 +112,15 @@ function ProfilePageInner() {
         .order('created_at', { ascending: false })
 
       setPostedSequences(posted ?? [])
+
+      const { data: drafts } = await supabase
+        .from('sequences')
+        .select('id, title, class_name, class_id, spec_name, content_type, hero_talent, grip_string, collection_sequences, updated_at')
+        .eq('author_id', user.id)
+        .eq('status', 'draft')
+        .order('updated_at', { ascending: false })
+
+      setDraftSequences(drafts ?? [])
 
       const { data: saves } = await supabase
         .from('saves')
@@ -166,6 +184,53 @@ function ProfilePageInner() {
     if (!user) return
     await supabase.from('saves').delete().eq('user_id', user.id).eq('sequence_id', seqId)
     setSavedSequences(prev => prev.filter((s: any) => s.id !== seqId))
+  }
+
+  function toggleDraftSelection(id: string) {
+    setSelectedDraftIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  async function handleBatchPublish() {
+    if (!user || selectedDraftIds.size === 0) return
+    setBatchPublishing(true)
+    setBatchPublishError(null)
+
+    const { data, error } = await supabase.rpc('publish_draft_sequences_batch', {
+      p_sequence_ids: Array.from(selectedDraftIds),
+      p_author_id: user.id,
+    })
+
+    if (error) {
+      // The RPC is all-or-nothing (single transaction) -- on failure, nothing
+      // in the batch published, so the drafts list doesn't need reloading.
+      setBatchPublishError(error.message || 'Batch publish failed. Please try again.')
+      setBatchPublishing(false)
+      return
+    }
+
+    const publishedIds = new Set<string>((data?.results ?? []).map((r: any) => r.sequence_id))
+    setDraftSequences(prev => prev.filter(d => !publishedIds.has(d.id)))
+    setSelectedDraftIds(new Set())
+    setBatchPublishing(false)
+  }
+
+  async function handleDeleteDraft(id: string) {
+    // Same delete pattern and status guard as discardDraft in post/page.tsx --
+    // the .eq('status', 'draft') means this can never delete a published row
+    // even if id somehow pointed to the wrong sequence.
+    await supabase.from('sequences').delete().eq('id', id).eq('status', 'draft')
+    setDraftSequences(prev => prev.filter(d => d.id !== id))
+    setSelectedDraftIds(prev => {
+      if (!prev.has(id)) return prev
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
   }
 
   async function saveAvatarColor(color: string) {
@@ -317,6 +382,7 @@ function ProfilePageInner() {
         {([
           { key: 'posted', label: `My Sequences (${postedSequences.length})` },
           { key: 'saved', label: `Saved (${savedSequences.length})` },
+          { key: 'drafts', label: `Drafts (${draftSequences.length})` },
           { key: 'settings', label: 'Settings' },
         ] as const).map(tab => (
           <button
@@ -373,6 +439,101 @@ function ProfilePageInner() {
           onLinkProvider={handleLinkProvider}
           onUnlinkProvider={handleUnlinkProvider}
         />
+      ) : activeTab === 'drafts' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {selectedDraftIds.size > 0 && (
+            <div style={{
+              position: 'sticky',
+              top: 12,
+              zIndex: 5,
+              background: 'var(--bg-primary)',
+              border: '0.5px solid var(--border-strong)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '10px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+            }}>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                {selectedDraftIds.size} draft{selectedDraftIds.size !== 1 ? 's' : ''} selected
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {batchPublishError && (
+                  <span style={{ fontSize: 12, color: '#c0392b' }}>{batchPublishError}</span>
+                )}
+                <button
+                  onClick={() => setSelectedDraftIds(new Set())}
+                  disabled={batchPublishing}
+                  style={{
+                    padding: '7px 14px',
+                    background: 'none',
+                    border: '0.5px solid var(--border-strong)',
+                    borderRadius: 'var(--radius-md)',
+                    color: 'var(--text-secondary)',
+                    fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  Clear
+                </button>
+                <button
+                  onClick={handleBatchPublish}
+                  disabled={batchPublishing}
+                  style={{
+                    padding: '7px 16px',
+                    background: 'var(--accent)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 13, fontWeight: 500,
+                    cursor: batchPublishing ? 'not-allowed' : 'pointer',
+                    opacity: batchPublishing ? 0.7 : 1,
+                    fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  {batchPublishing ? 'Publishing...' : `Publish ${selectedDraftIds.size} selected`}
+                </button>
+              </div>
+            </div>
+          )}
+          {draftSequences.length === 0 ? (
+            <div style={{
+              background: 'var(--bg-primary)',
+              border: '0.5px solid var(--border)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '40px 24px',
+              textAlign: 'center',
+            }}>
+              <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>
+                You don't have any drafts in progress.
+              </p>
+              <Link href="/post" style={{
+                display: 'inline-block',
+                marginTop: 12,
+                padding: '8px 16px',
+                background: 'var(--accent)',
+                color: 'white',
+                textDecoration: 'none',
+                borderRadius: 'var(--radius-md)',
+                fontSize: 13,
+                fontWeight: 500,
+              }}>
+                Start a new sequence
+              </Link>
+            </div>
+          ) : (
+            draftSequences.map((draft: any) => (
+              <DraftRow
+                key={draft.id}
+                draft={draft}
+                selected={selectedDraftIds.has(draft.id)}
+                onToggleSelect={toggleDraftSelection}
+                onDelete={handleDeleteDraft}
+              />
+            ))
+          )}
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {(activeTab === 'posted' ? postedSequences : savedSequences).length === 0 ? (
@@ -763,6 +924,119 @@ function SettingsTab({
         {error && <span style={{ fontSize: 13, color: '#c0392b' }}>{error}</span>}
       </div>
 
+    </div>
+  )
+}
+
+function DraftRow({
+  draft, selected, onToggleSelect, onDelete,
+}: {
+  draft: any
+  selected: boolean
+  onToggleSelect: (id: string) => void
+  onDelete: (id: string) => void
+}) {
+  const classColor = draft.class_id ? getClassColor(draft.class_id) : 'var(--text-muted)'
+  const contentLabel = CONTENT_TYPES.find(c => c.value === draft.content_type)?.label ?? draft.content_type
+  const isCollection = Array.isArray(draft.collection_sequences) && draft.collection_sequences.length > 0
+  const checkedCount = isCollection
+    ? draft.collection_sequences.filter((s: any) => s.checked).length
+    : 0
+
+  // Same checks publish_draft_sequence / publish_draft_sequences_batch
+  // enforce server-side, branched the same way: collections need at least
+  // one checked sequence instead of a grip_string. Kept in sync manually
+  // since there's no shared client/server validation module -- if those
+  // RPCs' required-field checks change, this needs updating too.
+  const missing: string[] = []
+  if (!draft.title || !draft.title.trim() || draft.title === 'Untitled draft') missing.push('title')
+  if (!draft.class_id) missing.push('class')
+  if (isCollection) {
+    if (checkedCount === 0) missing.push('a selected sequence')
+  } else {
+    if (!draft.grip_string || !draft.grip_string.trim()) missing.push('GRIP export')
+  }
+  const readyToPublish = missing.length === 0
+
+  return (
+    <div
+      style={{
+        background: 'var(--bg-primary)',
+        border: '0.5px solid var(--border)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '14px 18px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 14,
+        borderLeft: `3px solid ${classColor}`,
+      }}
+    >
+      <input
+        type="checkbox"
+        checked={selected}
+        disabled={!readyToPublish}
+        title={readyToPublish ? undefined : `Can't publish yet -- missing ${missing.join(', ')}`}
+        onClick={e => e.stopPropagation()}
+        onChange={() => onToggleSelect(draft.id)}
+        style={{ width: 16, height: 16, cursor: readyToPublish ? 'pointer' : 'not-allowed', flexShrink: 0 }}
+      />
+      <Link
+        href={`/post?draftId=${draft.id}`}
+        style={{ textDecoration: 'none', flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {draft.title && draft.title !== 'Untitled draft' ? draft.title : 'Untitled draft'}
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+            {draft.class_name && <span style={{ fontSize: 11, color: classColor }}>{draft.class_name}</span>}
+            {draft.spec_name && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {draft.spec_name}</span>}
+            {draft.content_type && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {contentLabel}</span>}
+            {draft.hero_talent && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {draft.hero_talent}</span>}
+            {isCollection && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· Collection ({checkedCount}/{draft.collection_sequences.length} selected)</span>}
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+          <span style={{
+            fontSize: 11,
+            fontWeight: 500,
+            padding: '3px 8px',
+            borderRadius: 'var(--radius-sm)',
+            color: readyToPublish ? 'var(--accent)' : '#c69b3a',
+            background: readyToPublish ? 'rgba(29,158,117,0.12)' : 'rgba(198,155,58,0.14)',
+          }}>
+            {readyToPublish ? 'Ready to publish' : `Missing ${missing.join(', ')}`}
+          </span>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+            edited {formatDistanceToNow(new Date(draft.updated_at), { addSuffix: true })}
+          </span>
+        </div>
+      </Link>
+      <button
+        onClick={e => {
+          e.preventDefault()
+          e.stopPropagation()
+          if (window.confirm('Delete this draft? This cannot be undone.')) {
+            onDelete(draft.id)
+          }
+        }}
+        title="Delete draft"
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: 6,
+          color: 'var(--text-muted)',
+          display: 'flex',
+          alignItems: 'center',
+          borderRadius: 'var(--radius-sm)',
+          flexShrink: 0,
+        }}
+        onMouseEnter={e => (e.currentTarget.style.color = '#c41e3a')}
+        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+      >
+        <Trash2 size={15} />
+      </button>
     </div>
   )
 }
