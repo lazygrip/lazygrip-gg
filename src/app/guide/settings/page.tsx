@@ -130,6 +130,13 @@ export default function SettingsPage() {
         </Callout>
       </Section>
 
+      <Section title="Spell Cache Viewer">
+        <p style={{ marginBottom: 4, fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>/gems spellcache</p>
+        <p>The cached spell data GRIP-EMS uses for icon resolution, autocomplete, and the Tempo Advisor's spell classification all lives in one place you can inspect directly. Run <code style={code}>/gems spellcache</code>, search by spell name or spell ID, and see exactly what the addon has stored: icon texture, cast time, cooldown, GCD category, and spell school.</p>
+        <p style={{ marginTop: 12 }}>This is the tool to reach for when a spell icon is not resolving on your tracker or action bar, or when the Tempo Advisor is classifying a spell as unknown instead of one of its real timing categories. A stale or missing cache entry, usually from a spell getting renamed or reworked in a patch, is the most common cause of both. Search for the spell here first before assuming something is broken in your sequence itself.</p>
+        <p style={{ marginTop: 12 }}>The cache populates on login and updates automatically when you change spec or talents. If a spell is genuinely missing rather than just stale, <code style={code}>/gems revalidate</code> forces a fresh re-tag of every sequence with current spell IDs, which usually resolves it.</p>
+      </Section>
+
       <Section title="Outside programs: AHK, iCue, Synapse, and others">
         <p>External programs that send repeated keypresses work fine with GRIP-EMS. A full keypress is a down event followed by an up event. Your program needs to send both. GRIP-EMS fires on the key-down signal specifically, so a program that sends only an up event or a custom hold signal will not trigger the sequence correctly.</p>
         <p style={{ marginTop: 12 }}>For interval settings: one full keypress every 50ms or slower is a sensible floor. Randomizing slightly, say between 50 and 75ms rather than a fixed number, produces cleaner behavior than a perfectly robotic fixed interval. The click rate guidance above applies here, too. Faster is not better past the point where your spells can actually land.</p>

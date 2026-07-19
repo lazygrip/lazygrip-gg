@@ -110,6 +110,7 @@ export default function HowItWorksPage() {
             { label: '1. Check the step itself', desc: 'Open the sequence in the editor and confirm the step you expect actually has the [mod:shift] or [mod:ctrl] conditional written on it. A missing tag on the step is indistinguishable from a firing bug until you look.' },
             { label: '2. Check CVar Health', desc: 'Run /gems settings, go to Cvar Health, and confirm it is green. The same key-down requirement that governs your base keybind governs modifier presses too.' },
             { label: '3. Check your other WoW keybinds', desc: 'Open your normal WoW keybind menu, not GRIP-EMS, and search for anything already bound to SHIFT, CTRL, or ALT combined with your sequence key elsewhere in your bindings, action bars, or another addon. A conflicting bind claimed by something else silently eats the modifier press before GRIP-EMS ever sees it. This is a confirmed, recurring cause: several users have fixed dead modifiers entirely by clearing out unrelated modifier-key bindings that had nothing to do with GRIP-EMS on the surface.' },
+            { label: '4. Reset all your WoW keybinds', desc: 'If steps 1 through 3 all check out clean and modifiers still are not firing, a full keybind reset in WoW itself (not just GRIP-EMS) has resolved this for other users even when no specific conflicting bind was ever found. It is a blunt fix and you will need to rebind everything afterward, but it works when nothing else does.' },
           ].map(r => (
             <div key={r.label} style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '12px 14px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
               <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 13 }}>{r.label}</span>
@@ -118,7 +119,7 @@ export default function HowItWorksPage() {
           ))}
         </div>
 
-        <p style={{ marginTop: 16 }}>If all three check out and modifiers still are not firing, this is a genuine open issue rather than a configuration problem on your end. Post in the Discord with your CVar Health status, a screenshot of the step's conditional, and whether you have any other addon that binds modifier keys, so it can be looked at directly rather than retreading the same troubleshooting steps.</p>
+        <p style={{ marginTop: 16 }}>If all four check out and modifiers still are not firing, post in the Discord with your CVar Health status, a screenshot of the step's conditional, and whether you have any other addon that binds modifier keys or touches CVars, so it can be looked at directly rather than retreading the same troubleshooting steps.</p>
       </Section>
 
       <Section title="The Pause step">
@@ -191,6 +192,15 @@ export default function HowItWorksPage() {
       <Section title="Per-step Disable and the sequence tracker">
         <p>Individual steps can be disabled inside the editor without deleting them. A disabled step is skipped entirely by the engine, which means you can comment out a step for testing purposes without losing the macro text. Re-enable it and the engine picks it up again on the next keypress.</p>
         <p style={{ marginTop: 12 }}>Disabled sequences are hidden from the tracker overlay and from your action bar. A sequence that is toggled off does not occupy a visible tracker slot, which keeps the display clean when you have multiple sequences loaded but only some of them active.</p>
+      </Section>
+
+      <Section title="Interleave / Weave">
+        <p>Interleave lets you set an interval on any action so it fires every N steps automatically, without you having to manually place it throughout your sequence. Set an action's interval to 5, for example, and the compiler weaves that action into your rotation every fifth step, on top of whatever else is already there.</p>
+        <p style={{ marginTop: 12 }}>This is the right tool for maintenance buffs, trinket procs, or cooldowns you want firing on a regular cadence without disrupting your main rotation flow. Rather than manually inserting the same spell at steps 5, 10, 15, and 20, you set one interleave interval and the compiler places it for you at every one of those points, correctly, even if you later add or remove steps elsewhere in the sequence.</p>
+        <p style={{ marginTop: 12 }}>The interval range is 2 to 50 steps. Interleave also works inside Loop blocks, and the editor marks any interleaved row with an <code style={code}>[IL:N]</code> indicator so you can see at a glance which steps are woven in versus part of your authored rotation.</p>
+        <Callout>
+          If your interval is larger than the block it lives in, the action never gets a chance to fire and compiles to nothing. GRIP-EMS now warns you when this happens, names the action, tells you the block's actual step count, and suggests an interval or Repeat count that would make it fit. If a trinket or buff you set up on interleave never seems to go off, check for this warning first before assuming the trinket itself is broken.
+        </Callout>
       </Section>
 
       <Section title="Plugin support">
