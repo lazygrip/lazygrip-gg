@@ -86,7 +86,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ]
 
   const sequencePages: MetadataRoute.Sitemap = (sequences ?? []).map(seq => ({
-    url: `https://lazygrip.net/sequence/${seq.slug}`,
+    url: `https://lazygrip.net/sequences/${seq.slug}`,
     lastModified: new Date(seq.updated_at),
     changeFrequency: 'weekly' as const,
     priority: 0.8,

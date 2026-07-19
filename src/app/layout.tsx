@@ -28,6 +28,7 @@ export const metadata: Metadata = {
     siteName: 'LazyGrip.net',
     type: 'website',
     locale: 'en_US',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'LazyGrip.net — GRIP-EMS sequences for World of Warcraft' }],
   },
   twitter: {
     card: 'summary',
@@ -41,9 +42,6 @@ export const metadata: Metadata = {
       index: true,
       follow: true,
     },
-  },
-  alternates: {
-canonical: 'https://lazygrip.net',
   },
   verification: {
     google: 'afA04s2vcXI-O42reKGbxNN557MNpLRyhmqSAfCdHh0',

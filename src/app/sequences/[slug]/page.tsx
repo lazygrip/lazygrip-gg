@@ -73,9 +73,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title,
       description: plainDescription,
-      url: `https://lazygrip.net/sequence/${params.slug}`,
+      url: `https://lazygrip.net/sequences/${params.slug}`,
       siteName: 'LazyGrip.net',
       type: 'article',
+      images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'LazyGrip.net — GRIP-EMS sequences for World of Warcraft' }],
     },
     twitter: {
       card: 'summary',
@@ -83,7 +84,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: plainDescription,
     },
     alternates: {
-      canonical: `https://lazygrip.net/sequence/${params.slug}`,
+      canonical: `https://lazygrip.net/sequences/${params.slug}`,
     },
   }
 }
