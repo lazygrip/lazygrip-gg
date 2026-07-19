@@ -2,7 +2,12 @@ import crypto from "node:crypto";
 
 type LooseRecord = Record<string, any>;
 
-const SECRET = process.env.LAZYGRIP_AUTHOR_LOCK_SECRET || "lazygrip-local-author-lock";
+const SECRET = process.env.LAZYGRIP_AUTHOR_LOCK_SECRET as string;
+if (!SECRET) {
+  throw new Error(
+    "LAZYGRIP_AUTHOR_LOCK_SECRET is not set. Refusing to sign or verify author-lock tokens with a hardcoded default secret."
+  );
+}
 
 function readLockPayload(exportMeta: LooseRecord = {}, sequenceName = "") {
   const lockedAuthor = String(exportMeta.lockedAuthor || "").trim();
