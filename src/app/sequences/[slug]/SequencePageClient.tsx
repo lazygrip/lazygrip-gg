@@ -38,6 +38,10 @@ export default function SequencePageClient() {
   const [activeCollectionTab, setActiveCollectionTab] = useState(0)
   const [userRating, setUserRating] = useState<number | null>(null)
   const [hoveredRating, setHoveredRating] = useState<number | null>(null)
+  const [pendingTags, setPendingTags] = useState<string[]>([])
+  const [showTagPrompt, setShowTagPrompt] = useState(false)
+  const [tagsSubmitted, setTagsSubmitted] = useState(false)
+  const [tagBreakdown, setTagBreakdown] = useState<{ tag: string; count: number }[]>([])
   const [commentText, setCommentText] = useState('')
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [replyText, setReplyText] = useState('')
@@ -67,6 +71,12 @@ export default function SequencePageClient() {
     fetchSequence()
     fetchCurrentPatch()
   }, [slug])
+
+  useEffect(() => {
+    if (sequence && user && user.id === sequence.author_id) {
+      fetchTagBreakdown(sequence.id)
+    }
+  }, [sequence, user])
 
   async function fetchCurrentPatch() {
     const { data, error } = await supabase
@@ -159,11 +169,42 @@ export default function SequencePageClient() {
   async function submitRating(score: number) {
     if (!user || !sequence) return
     setUserRating(score)
+    setPendingTags([])
+    setTagsSubmitted(false)
     await supabase.from('ratings').upsert({
       sequence_id: sequence.id,
       user_id: user.id,
       score,
     }, { onConflict: 'sequence_id,user_id' })
+    setShowTagPrompt(score <= 5 || score >= 8)
+  }
+
+  async function submitTags() {
+    if (!user || !sequence || pendingTags.length === 0) { setShowTagPrompt(false); return }
+    await supabase.from('ratings').update({ reason_tags: pendingTags })
+      .eq('sequence_id', sequence.id).eq('user_id', user.id)
+    setTagsSubmitted(true)
+    setShowTagPrompt(false)
+  }
+
+  async function fetchTagBreakdown(sequenceId: string) {
+    const { data, error } = await supabase
+      .from('ratings')
+      .select('reason_tags')
+      .eq('sequence_id', sequenceId)
+      .not('reason_tags', 'is', null)
+    if (error) { console.error('Tag breakdown fetch error:', error); return }
+    const tally = new Map<string, number>()
+    ;(data || []).forEach(row => {
+      (row.reason_tags || []).forEach((tag: string) => {
+        tally.set(tag, (tally.get(tag) ?? 0) + 1)
+      })
+    })
+    setTagBreakdown(
+      Array.from(tally.entries())
+        .map(([tag, count]) => ({ tag, count }))
+        .sort((a, b) => b.count - a.count)
+    )
   }
 
   async function submitComment() {
@@ -1092,6 +1133,61 @@ export default function SequencePageClient() {
                     You rated this {userRating}/10
                   </p>
                 )}
+                {showTagPrompt && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '0.5px solid var(--border)' }}>
+                    <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>
+                      {userRating! <= 5 ? 'What went wrong? (optional)' : 'What worked well? (optional)'}
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                      {(userRating! <= 5
+                        ? ["Doesn't work as described", 'Misses key abilities', 'Weak AoE', 'Confusing setup', 'Talent mismatch']
+                        : ['Rotation nailed it', 'Strong AoE', 'Easy to set up', 'Reliable in combat']
+                      ).map(tag => (
+                        <button
+                          key={tag}
+                          onClick={() => setPendingTags(t => t.includes(tag) ? t.filter(x => x !== tag) : [...t, tag])}
+                          style={{
+                            padding: '4px 8px', borderRadius: 'var(--radius-sm)',
+                            border: '0.5px solid var(--border)', cursor: 'pointer',
+                            fontSize: 11, fontFamily: 'var(--font-sans)',
+                            background: pendingTags.includes(tag) ? 'var(--accent)' : 'var(--bg-secondary)',
+                            color: pendingTags.includes(tag) ? 'white' : 'var(--text-secondary)',
+                          }}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        onClick={submitTags}
+                        disabled={pendingTags.length === 0}
+                        style={{
+                          padding: '5px 12px', background: 'var(--accent)', color: 'white',
+                          border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer',
+                          fontSize: 11, fontWeight: 500, fontFamily: 'var(--font-sans)',
+                          opacity: pendingTags.length === 0 ? 0.5 : 1,
+                        }}
+                      >
+                        Submit
+                      </button>
+                      <button
+                        onClick={() => setShowTagPrompt(false)}
+                        style={{
+                          padding: '5px 12px', background: 'none', color: 'var(--text-muted)',
+                          border: 'none', cursor: 'pointer', fontSize: 11, fontFamily: 'var(--font-sans)',
+                        }}
+                      >
+                        Skip
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {tagsSubmitted && (
+                  <p style={{ fontSize: 11, color: 'var(--accent)', marginTop: 8 }}>
+                    Thanks for the detail.
+                  </p>
+                )}
               </div>
             ) : (
               <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
@@ -1099,6 +1195,34 @@ export default function SequencePageClient() {
               </p>
             )}
           </div>
+
+          {/* Rating breakdown - author only */}
+          {isAuthor && tagBreakdown.length > 0 && (
+            <div style={{
+              background: 'var(--bg-primary)',
+              border: '0.5px solid var(--border)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '16px',
+            }}>
+              <h3 style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>
+                Why people are rating this
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {tagBreakdown.map(({ tag, count }) => (
+                  <div key={tag} style={{
+                    display: 'flex', justifyContent: 'space-between',
+                    fontSize: 12, color: 'var(--text-secondary)',
+                  }}>
+                    <span>{tag}</span>
+                    <span style={{ color: 'var(--text-muted)' }}>×{count}</span>
+                  </div>
+                ))}
+              </div>
+              <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 10 }}>
+                Only visible to you as the sequence author.
+              </p>
+            </div>
+          )}
 
           {/* Metadata */}
           <div style={{
