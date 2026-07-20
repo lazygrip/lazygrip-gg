@@ -79,6 +79,9 @@ export default function InstallationPage() {
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 12 }}>
           To bind a key to a sequence, open the sequence in the GRIP-EMS editor, go to the Keybinds tab, and assign a key there. The bind is stored per-spec, so switching specs gives you a clean slate for a different rotation on the same key.
         </p>
+        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 12 }}>
+          If you specifically want a button on your action bar that you can drag and drop the way you would with the legacy program, that workflow still exists as an optional add-on rather than a built-in GRIP-EMS feature. Daxomault's <a href="https://www.curseforge.com/wow/addons/grip-ems-actionbutton-override" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>GRIP-EMS Actionbutton Override</a> plugin adds action bar override and drag-and-drop keybinding on top of GRIP-EMS. It is not required and the keybind-only approach above is still the default and the one most players end up using, but it is there if you prefer to keep sequences on your bars.
+        </p>
       </Section>
 
       <Section title="Quick sanity check">
@@ -102,6 +105,10 @@ export default function InstallationPage() {
         <TroubleshootItem
           problem="Keybind is set but nothing fires"
           solution="Run /gems settings and go to the Cvar Health tab. If the Fix button is visible, click it. This solves the majority of new-user keybind problems. If everything shows green and the sequence still does not fire, check that you have a target selected and that the sequence has a keybind assigned in the Keybinds tab inside the editor, not just in WoW's default keybind menu."
+        />
+        <TroubleshootItem
+          problem="I put a sequence's macro on my action bar and pressing it does nothing"
+          solution="Multi-version sequences generate a macro you can place on a bar, but clicking that macro with your mouse or pressing it from an action bar slot is not the same as a Keybinds-tab bind, and it will not fire the sequence correctly on its own. GRIP-EMS is built around binding a key directly to the sequence inside the editor's Keybinds tab, not around action bar buttons. If you want the drag-and-drop, click-to-fire workflow you may be used to from the legacy program, install Daxomault's GRIP-EMS Actionbutton Override addon, which adds that behavior back as an option."
         />
         <TroubleshootItem
           problem="Sequence fires once then stops"
