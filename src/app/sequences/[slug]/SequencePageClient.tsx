@@ -1158,7 +1158,7 @@ export default function SequencePageClient() {
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
                       {(userRating! <= 5
                         ? ["Doesn't work as described", 'Misses key abilities', 'Weak AoE', 'Weak DPS', 'Confusing setup', 'Talent mismatch']
-                        : ['Rotation nailed it', 'Strong AoE', 'Easy to set up', 'Reliable in combat']
+                        : ['Rotation nailed it', 'Strong AoE', 'Strong DPS', 'Easy to set up', 'Reliable in combat', 'Great for learning the spec', 'Smooth in Mythic+']
                       ).map(tag => (
                         <button
                           key={tag}
