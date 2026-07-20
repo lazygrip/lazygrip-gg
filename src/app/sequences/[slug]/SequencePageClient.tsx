@@ -40,7 +40,8 @@ export default function SequencePageClient() {
   const [hoveredRating, setHoveredRating] = useState<number | null>(null)
   const [pendingTags, setPendingTags] = useState<string[]>([])
   const [tagNote, setTagNote] = useState('')
-  const [showTagPrompt, setShowTagPrompt] = useState(false)
+  const [selectedScore, setSelectedScore] = useState<number | null>(null)
+  const [confirming, setConfirming] = useState(false)
   const [tagsSubmitted, setTagsSubmitted] = useState(false)
   const [tagBreakdown, setTagBreakdown] = useState<{ tag: string; count: number }[]>([])
   const [commentText, setCommentText] = useState('')
@@ -167,26 +168,33 @@ export default function SequencePageClient() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  async function submitRating(score: number) {
-    if (!user || !sequence) return
-    setUserRating(score)
+  function selectScore(score: number) {
+    // Local only — nothing hits the database until confirmRating runs.
+    // A rating was previously saved the instant a star was clicked, which
+    // meant navigating away before the tag picker appeared still left a
+    // real rating on the sequence. That's fixed by not writing anything
+    // here at all.
+    setSelectedScore(score)
     setPendingTags([])
+    setTagNote('')
     setTagsSubmitted(false)
-    await supabase.from('ratings').upsert({
-      sequence_id: sequence.id,
-      user_id: user.id,
-      score,
-    }, { onConflict: 'sequence_id,user_id' })
-    setShowTagPrompt(score <= 5 || score >= 8)
   }
 
-  async function submitTags() {
-    if (!user || !sequence) { setShowTagPrompt(false); return }
-    if (pendingTags.length === 0 && !tagNote.trim()) { setShowTagPrompt(false); return }
+  async function confirmRating() {
+    if (!user || !sequence || selectedScore === null) return
+    setConfirming(true)
 
-    if (pendingTags.length > 0) {
-      await supabase.from('ratings').update({ reason_tags: pendingTags })
-        .eq('sequence_id', sequence.id).eq('user_id', user.id)
+    const { error: ratingError } = await supabase.from('ratings').upsert({
+      sequence_id: sequence.id,
+      user_id: user.id,
+      score: selectedScore,
+      reason_tags: pendingTags.length > 0 ? pendingTags : null,
+    }, { onConflict: 'sequence_id,user_id' })
+
+    if (ratingError) {
+      console.error('Rating insert error:', ratingError)
+      setConfirming(false)
+      return
     }
 
     if (tagNote.trim()) {
@@ -199,9 +207,10 @@ export default function SequencePageClient() {
       if (data) setComments(c => nestComments([...flattenComments(c), data]))
     }
 
-    setTagsSubmitted(true)
-    setShowTagPrompt(false)
-    setTagNote('')
+    setUserRating(selectedScore)
+    setTagsSubmitted(pendingTags.length > 0 || !!tagNote.trim())
+    setSelectedScore(null)
+    setConfirming(false)
   }
 
   async function fetchTagBreakdown(sequenceId: string) {
@@ -1128,15 +1137,15 @@ export default function SequencePageClient() {
                   {[1,2,3,4,5,6,7,8,9,10].map(n => (
                     <button
                       key={n}
-                      onClick={() => submitRating(n)}
+                      onClick={() => selectScore(n)}
                       onMouseEnter={() => setHoveredRating(n)}
                       onMouseLeave={() => setHoveredRating(null)}
                       style={{
                         width: 22, height: 22, borderRadius: 4,
                         border: 'none', cursor: 'pointer',
-                        background: n <= (hoveredRating ?? userRating ?? 0)
+                        background: n <= (hoveredRating ?? selectedScore ?? userRating ?? 0)
                           ? 'var(--accent)' : 'var(--bg-tertiary)',
-                        color: n <= (hoveredRating ?? userRating ?? 0) ? 'white' : 'var(--text-muted)',
+                        color: n <= (hoveredRating ?? selectedScore ?? userRating ?? 0) ? 'white' : 'var(--text-muted)',
                         fontSize: 10, fontWeight: 500,
                         fontFamily: 'var(--font-sans)',
                       }}
@@ -1145,18 +1154,21 @@ export default function SequencePageClient() {
                     </button>
                   ))}
                 </div>
-                {userRating && (
+                {userRating && selectedScore === null && (
                   <p style={{ fontSize: 11, color: 'var(--accent)' }}>
                     You rated this {userRating}/10
                   </p>
                 )}
-                {showTagPrompt && (
+                {selectedScore !== null && (
                   <div style={{ marginTop: 10, paddingTop: 10, borderTop: '0.5px solid var(--border)' }}>
+                    <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                      Nothing is saved yet — pick a score of {selectedScore}/10, add detail if you like, then confirm.
+                    </p>
                     <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>
-                      {userRating! <= 5 ? 'What went wrong? (optional)' : 'What worked well? (optional)'}
+                      {selectedScore <= 5 ? 'What went wrong? (optional)' : 'What worked well? (optional)'}
                     </p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-                      {(userRating! <= 5
+                      {(selectedScore <= 5
                         ? ["Doesn't work as described", 'Misses key abilities', 'Weak AoE', 'Weak DPS', 'Confusing setup', 'Talent mismatch']
                         : ['Rotation nailed it', 'Strong AoE', 'Strong DPS', 'Easy to set up', 'Reliable in combat', 'Great for learning the spec', 'Smooth in Mythic+']
                       ).map(tag => (
@@ -1190,25 +1202,26 @@ export default function SequencePageClient() {
                     />
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button
-                        onClick={submitTags}
-                        disabled={pendingTags.length === 0 && !tagNote.trim()}
+                        onClick={confirmRating}
+                        disabled={confirming}
                         style={{
                           padding: '5px 12px', background: 'var(--accent)', color: 'white',
-                          border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer',
+                          border: 'none', borderRadius: 'var(--radius-md)', cursor: confirming ? 'not-allowed' : 'pointer',
                           fontSize: 11, fontWeight: 500, fontFamily: 'var(--font-sans)',
-                          opacity: (pendingTags.length === 0 && !tagNote.trim()) ? 0.5 : 1,
+                          opacity: confirming ? 0.7 : 1,
                         }}
                       >
-                        Submit
+                        {confirming ? 'Saving...' : `Confirm ${selectedScore}/10 rating`}
                       </button>
                       <button
-                        onClick={() => { setShowTagPrompt(false); setTagNote('') }}
+                        onClick={() => { setSelectedScore(null); setPendingTags([]); setTagNote('') }}
+                        disabled={confirming}
                         style={{
                           padding: '5px 12px', background: 'none', color: 'var(--text-muted)',
                           border: 'none', cursor: 'pointer', fontSize: 11, fontFamily: 'var(--font-sans)',
                         }}
                       >
-                        Skip
+                        Cancel
                       </button>
                     </div>
                     <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 6 }}>
@@ -1216,7 +1229,7 @@ export default function SequencePageClient() {
                     </p>
                   </div>
                 )}
-                {tagsSubmitted && (
+                {tagsSubmitted && selectedScore === null && (
                   <p style={{ fontSize: 11, color: 'var(--accent)', marginTop: 8 }}>
                     Thanks for the detail.
                   </p>
