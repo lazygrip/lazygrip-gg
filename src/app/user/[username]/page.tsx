@@ -1,3 +1,4 @@
+import { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
@@ -6,6 +7,42 @@ import { formatDistanceToNow } from 'date-fns'
 
 interface Props {
   params: { username: string }
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const supabase = await createClient()
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('username, display_name, bio')
+    .eq('username', params.username)
+    .single()
+
+  if (!profile) {
+    return { title: 'Profile Not Found' }
+  }
+
+  const name = profile.display_name || profile.username
+  const title = `${name}'s GRIP-EMS Sequences`
+  const description = profile.bio
+    ? profile.bio.slice(0, 155)
+    : `WoW macro sequences shared by ${name} on LazyGrip.net. Free to import into GRIP-EMS.`
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: `https://lazygrip.net/user/${params.username}`,
+    },
+    openGraph: {
+      title,
+      description,
+      url: `https://lazygrip.net/user/${params.username}`,
+      siteName: 'LazyGrip.net',
+      type: 'profile',
+      images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'LazyGrip.net — GRIP-EMS sequences for World of Warcraft' }],
+    },
+  }
 }
 
 export default async function UserProfilePage({ params }: Props) {
