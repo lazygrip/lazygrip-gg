@@ -1,11 +1,11 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Shield, AlertCircle, Mail } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
-type Mode = 'login' | 'signup' | 'reset'
+type Mode = 'login' | 'signup' | 'reset' | 'confirm-reset'
 
 export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, onSuccess?: (user: any) => void }) {
   const router = useRouter()
@@ -14,13 +14,27 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
   const [view, setView] = useState<Mode>(mode)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [username, setUsername] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [showResend, setShowResend] = useState(false)
   const [resending, setResending] = useState(false)
+  const [sessionReady, setSessionReady] = useState(false)
+  const [sessionError, setSessionError] = useState(false)
   const isLogin = view === 'login'
+
+  useEffect(() => {
+    if (view !== 'confirm-reset') return
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        setSessionReady(true)
+      } else {
+        setSessionError(true)
+      }
+    })
+  }, [view])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -29,7 +43,17 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
     setLoading(true)
 
     try {
-      if (view === 'reset') {
+      if (view === 'confirm-reset') {
+        if (password.length < 8) throw new Error('Password must be at least 8 characters.')
+        if (password !== confirmPassword) throw new Error('Passwords do not match.')
+        const { error } = await supabase.auth.updateUser({ password })
+        if (error) throw error
+        setSuccess('Password updated. Taking you to browse...')
+        setTimeout(() => {
+          router.push('/browse')
+          router.refresh()
+        }, 2000)
+      } else if (view === 'reset') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/auth/reset-password`,
         })
@@ -143,16 +167,18 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
             <Shield size={22} color="white" />
           </div>
           <h1 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 4 }}>
-            {view === 'reset' ? 'Reset password' : isLogin ? 'Welcome back' : 'Create account'}
+            {view === 'confirm-reset' ? 'Set a new password' : view === 'reset' ? 'Reset password' : isLogin ? 'Welcome back' : 'Create account'}
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-            {view === 'reset'
+            {view === 'confirm-reset'
+              ? 'Choose a new password for your account.'
+              : view === 'reset'
               ? "Enter your email and we'll send you a reset link."
               : isLogin ? 'Sign in to post sequences and rate others.' : 'Join LazyGrip.net to share your GRIP sequences.'}
           </p>
         </div>
 
-        {view !== 'reset' && (
+        {view !== 'reset' && view !== 'confirm-reset' && (
           <>
             {/* Discord */}
             <button onClick={handleDiscord} style={{
@@ -202,7 +228,30 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
           </>
         )}
 
-        {success ? (
+        {view === 'confirm-reset' && sessionError ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              color: '#c41e3a', fontSize: 13, textAlign: 'center',
+            }}>
+              <AlertCircle size={14} />
+              This reset link is invalid or has expired.
+            </div>
+            <button
+              onClick={() => { setView('reset'); setError(''); setSuccess(''); setSessionError(false) }}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--accent)', fontSize: 13, fontFamily: 'var(--font-sans)',
+              }}
+            >
+              Request a new one
+            </button>
+          </div>
+        ) : view === 'confirm-reset' && !sessionReady ? (
+          <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>
+            Checking your reset link...
+          </p>
+        ) : success ? (
           <div style={{
             background: 'var(--accent-subtle)',
             border: '0.5px solid rgba(29,158,117,0.2)',
@@ -225,15 +274,39 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
                 style={inputStyle}
               />
             )}
-            <input
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="Email address"
-              type="email"
-              required
-              style={inputStyle}
-            />
-            {view !== 'reset' && (
+            {view !== 'confirm-reset' && (
+              <input
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="Email address"
+                type="email"
+                required
+                style={inputStyle}
+              />
+            )}
+            {view === 'confirm-reset' && (
+              <>
+                <input
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="New password"
+                  type="password"
+                  required
+                  minLength={8}
+                  style={inputStyle}
+                />
+                <input
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                  type="password"
+                  required
+                  minLength={8}
+                  style={inputStyle}
+                />
+              </>
+            )}
+            {view !== 'reset' && view !== 'confirm-reset' && (
               <input
                 value={password}
                 onChange={e => setPassword(e.target.value)}
@@ -300,37 +373,39 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
               fontSize: 14, fontWeight: 500,
               fontFamily: 'var(--font-sans)',
             }}>
-              {loading ? '...' : view === 'reset' ? 'Send reset link' : isLogin ? 'Sign in' : 'Create account'}
+              {loading ? '...' : view === 'confirm-reset' ? 'Update password' : view === 'reset' ? 'Send reset link' : isLogin ? 'Sign in' : 'Create account'}
             </button>
           </form>
         )}
 
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', marginTop: 20 }}>
-          {view === 'reset' ? (
-            <button
-              onClick={() => { setView('login'); setError(''); setSuccess(''); setShowResend(false) }}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                color: 'var(--accent)', fontSize: 12, fontFamily: 'var(--font-sans)',
-              }}
-            >
-              Back to sign in
-            </button>
-          ) : (
-            <>
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
+        {view !== 'confirm-reset' && (
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', marginTop: 20 }}>
+            {view === 'reset' ? (
               <button
-                onClick={() => { setView(isLogin ? 'signup' : 'login'); setError(''); setSuccess(''); setShowResend(false) }}
+                onClick={() => { setView('login'); setError(''); setSuccess(''); setShowResend(false) }}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
                   color: 'var(--accent)', fontSize: 12, fontFamily: 'var(--font-sans)',
                 }}
               >
-                {isLogin ? 'Sign up' : 'Sign in'}
+                Back to sign in
               </button>
-            </>
-          )}
-        </p>
+            ) : (
+              <>
+                {isLogin ? "Don't have an account? " : "Already have an account? "}
+                <button
+                  onClick={() => { setView(isLogin ? 'signup' : 'login'); setError(''); setSuccess(''); setShowResend(false) }}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--accent)', fontSize: 12, fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  {isLogin ? 'Sign up' : 'Sign in'}
+                </button>
+              </>
+            )}
+          </p>
+        )}
       </div>
     </div>
   )
