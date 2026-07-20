@@ -27,13 +27,32 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
 
   useEffect(() => {
     if (view !== 'confirm-reset') return
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
+
+    // A pre-existing session (e.g. left over from a previously-clicked but
+    // never-completed reset link) must never be enough on its own here —
+    // that would let someone land on this page already "logged in" without
+    // ever setting a password. Supabase fires a dedicated PASSWORD_RECOVERY
+    // event only when the session was just created by a fresh recovery
+    // link, so that's the only signal treated as valid. Anything else,
+    // sign out defensively and require a new link.
+    let resolved = false
+    const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        resolved = true
         setSessionReady(true)
-      } else {
-        setSessionError(true)
       }
     })
+
+    const timeout = setTimeout(async () => {
+      if (resolved) return
+      await supabase.auth.signOut()
+      setSessionError(true)
+    }, 2500)
+
+    return () => {
+      listener.subscription.unsubscribe()
+      clearTimeout(timeout)
+    }
   }, [view])
 
   async function handleSubmit(e: React.FormEvent) {
