@@ -39,6 +39,7 @@ export default function SequencePageClient() {
   const [userRating, setUserRating] = useState<number | null>(null)
   const [hoveredRating, setHoveredRating] = useState<number | null>(null)
   const [pendingTags, setPendingTags] = useState<string[]>([])
+  const [tagNote, setTagNote] = useState('')
   const [showTagPrompt, setShowTagPrompt] = useState(false)
   const [tagsSubmitted, setTagsSubmitted] = useState(false)
   const [tagBreakdown, setTagBreakdown] = useState<{ tag: string; count: number }[]>([])
@@ -180,11 +181,27 @@ export default function SequencePageClient() {
   }
 
   async function submitTags() {
-    if (!user || !sequence || pendingTags.length === 0) { setShowTagPrompt(false); return }
-    await supabase.from('ratings').update({ reason_tags: pendingTags })
-      .eq('sequence_id', sequence.id).eq('user_id', user.id)
+    if (!user || !sequence) { setShowTagPrompt(false); return }
+    if (pendingTags.length === 0 && !tagNote.trim()) { setShowTagPrompt(false); return }
+
+    if (pendingTags.length > 0) {
+      await supabase.from('ratings').update({ reason_tags: pendingTags })
+        .eq('sequence_id', sequence.id).eq('user_id', user.id)
+    }
+
+    if (tagNote.trim()) {
+      const { data, error } = await supabase
+        .from('comments')
+        .insert({ sequence_id: sequence.id, author_id: user.id, body: tagNote.trim() })
+        .select('*, author:profiles(*)')
+        .single()
+      if (error) console.error('Comment insert error:', error)
+      if (data) setComments(c => nestComments([...flattenComments(c), data]))
+    }
+
     setTagsSubmitted(true)
     setShowTagPrompt(false)
+    setTagNote('')
   }
 
   async function fetchTagBreakdown(sequenceId: string) {
@@ -1140,7 +1157,7 @@ export default function SequencePageClient() {
                     </p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
                       {(userRating! <= 5
-                        ? ["Doesn't work as described", 'Misses key abilities', 'Weak AoE', 'Confusing setup', 'Talent mismatch']
+                        ? ["Doesn't work as described", 'Misses key abilities', 'Weak AoE', 'Weak DPS', 'Confusing setup', 'Talent mismatch']
                         : ['Rotation nailed it', 'Strong AoE', 'Easy to set up', 'Reliable in combat']
                       ).map(tag => (
                         <button
@@ -1158,21 +1175,34 @@ export default function SequencePageClient() {
                         </button>
                       ))}
                     </div>
+                    <textarea
+                      value={tagNote}
+                      onChange={e => setTagNote(e.target.value)}
+                      placeholder="Add a comment (optional, posts publicly)"
+                      rows={2}
+                      style={{
+                        width: '100%', padding: '6px 8px', marginBottom: 8,
+                        border: '0.5px solid var(--border)',
+                        borderRadius: 'var(--radius-md)', fontSize: 11,
+                        background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                        resize: 'vertical', fontFamily: 'var(--font-sans)',
+                      }}
+                    />
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button
                         onClick={submitTags}
-                        disabled={pendingTags.length === 0}
+                        disabled={pendingTags.length === 0 && !tagNote.trim()}
                         style={{
                           padding: '5px 12px', background: 'var(--accent)', color: 'white',
                           border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer',
                           fontSize: 11, fontWeight: 500, fontFamily: 'var(--font-sans)',
-                          opacity: pendingTags.length === 0 ? 0.5 : 1,
+                          opacity: (pendingTags.length === 0 && !tagNote.trim()) ? 0.5 : 1,
                         }}
                       >
                         Submit
                       </button>
                       <button
-                        onClick={() => setShowTagPrompt(false)}
+                        onClick={() => { setShowTagPrompt(false); setTagNote('') }}
                         style={{
                           padding: '5px 12px', background: 'none', color: 'var(--text-muted)',
                           border: 'none', cursor: 'pointer', fontSize: 11, fontFamily: 'var(--font-sans)',
@@ -1181,6 +1211,9 @@ export default function SequencePageClient() {
                         Skip
                       </button>
                     </div>
+                    <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 6 }}>
+                      Tags are private to the sequence author. Comments are public.
+                    </p>
                   </div>
                 )}
                 {tagsSubmitted && (
