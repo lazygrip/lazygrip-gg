@@ -6,6 +6,7 @@ import { WOW_CLASSES, CONTENT_TYPES, STEP_FUNCTIONS, slugify } from '@/lib/wow-d
 import { AlertCircle, ChevronUp, ChevronDown, Wand2 } from 'lucide-react'
 import TiptapEditor from '@/components/editor/TiptapEditor'
 import type { SequenceStep } from '@/types'
+import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
 
 const PATCH_VERSIONS = ['12.0', '12.0.5', '12.0.7']
 const DEFAULT_GRIP_VERSION = '2.1.20'
@@ -857,7 +858,7 @@ async function runDecode(exportString: string) {
               grip_string: form.grip_string.trim() || null,
               raw_steps: null,
               talent_string: null,
-              warcraftlogs_url: form.warcraftlogs_url.trim() || null,
+              warcraftlogs_url: sanitizeWarcraftLogsUrl(form.warcraftlogs_url),
               performance_notes: form.performance_notes.trim() || null,
               collection_sequences: collectionData,
               original_author: originalAuthor,
@@ -916,7 +917,7 @@ async function runDecode(exportString: string) {
         grip_string: form.grip_string.trim() || null,
         raw_steps,
         talent_string: form.talent_string.trim() || null,
-        warcraftlogs_url: form.warcraftlogs_url.trim() || null,
+        warcraftlogs_url: sanitizeWarcraftLogsUrl(form.warcraftlogs_url),
         performance_notes: form.performance_notes.trim() || null,
       }
 

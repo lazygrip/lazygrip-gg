@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Sequence, SequenceVersion, SequenceStep } from '@/types'
 import { Wand2, X } from 'lucide-react'
+import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
 
 interface SequenceOption {
   name: string
@@ -227,7 +228,7 @@ export default function UpdateSequencePage() {
       p_step_function: stepFunction,
       p_grip_version: gripVersion || null,
       p_talent_string: talentString || null,
-      p_warcraftlogs_url: warcraftlogsUrl || null,
+      p_warcraftlogs_url: sanitizeWarcraftLogsUrl(warcraftlogsUrl),
       p_performance_notes: performanceNotes || null,
     })
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 
 const CONTENT_TYPE_LABELS: Record<string, string> = {
   mythic_plus: 'Mythic+',
@@ -24,18 +25,55 @@ const CLASS_COLORS: Record<string, number> = {
   'Warrior':      0xC69B3A,
 }
 
+const SLUG_RE = /^[a-z0-9-]{1,120}$/
+
+// Collapse all whitespace (newlines / tabs included) to single spaces and
+// clamp length, so free-text embed fields cannot inject extra lines.
+function cleanText(value: unknown, max: number): string {
+  if (typeof value !== 'string') return ''
+  return value.replace(/\s+/g, ' ').trim().slice(0, max)
+}
+
 export async function POST(req: NextRequest) {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL
   if (!webhookUrl) {
     return NextResponse.json({ ok: false, error: 'Webhook not configured' }, { status: 500 })
   }
 
-  try {
-    const { title, slug, className, specName, contentType, authorUsername, heroTalent, isUpdate, isEdit } = await req.json()
+  // SEC1: require a server-verified Supabase session. The only caller is the
+  // client-side notifyDiscord() on the post page, which runs in an
+  // authenticated browser context -- a shared secret would be exposed in client
+  // JS, so a verified session is the right gate.
+  const supabase = createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
+  }
 
-    if (!slug) {
-      return NextResponse.json({ ok: false, error: 'Missing slug' }, { status: 400 })
+  try {
+    const raw = (await req.json()) as Record<string, unknown>
+
+    const slug = raw.slug
+    if (typeof slug !== 'string' || !SLUG_RE.test(slug)) {
+      return NextResponse.json({ ok: false, error: 'Invalid slug' }, { status: 400 })
     }
+
+    // SEC1: allowlist / clamp everything that flows into the embed. className
+    // and contentType are constrained to the known sets; free-text fields are
+    // whitespace-collapsed and length-clamped.
+    const classNameRaw = raw.className
+    const contentTypeRaw = raw.contentType
+    const title = cleanText(raw.title, 200) || 'Untitled sequence'
+    const className = typeof classNameRaw === 'string' && classNameRaw in CLASS_COLORS ? classNameRaw : ''
+    const specName = cleanText(raw.specName, 60)
+    const heroTalent = cleanText(raw.heroTalent, 60)
+    const contentType = typeof contentTypeRaw === 'string' && contentTypeRaw in CONTENT_TYPE_LABELS ? contentTypeRaw : ''
+    const isUpdate = raw.isUpdate
+    const isEdit = raw.isEdit
+    // The "Posted by" name comes from the verified session, never the body.
+    const metaUsername = user.user_metadata?.username
+    const authorUsername: string =
+      (typeof metaUsername === 'string' ? metaUsername : user.email) ?? 'unknown'
 
     const admin = createAdminClient()
 

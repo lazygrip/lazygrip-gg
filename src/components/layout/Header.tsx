@@ -5,6 +5,7 @@ import { Search, PlusCircle, LogOut, LayoutList, Bookmark, Settings, Sun, Moon, 
 import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState, useRef } from 'react'
 import { useTheme } from '@/components/ThemeProvider'
+import { sanitizeAvatarUrl } from '@/lib/url-safety'
 
 export default function Header() {
   const [user, setUser] = useState<any>(null)
@@ -87,6 +88,7 @@ export default function Header() {
 
   const initial = username?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? '?'
   const displayColor = avatarColor ?? '#1D9E75'
+  const safeAvatarUrl = sanitizeAvatarUrl(avatarUrl)
 
   const navLinks = [
     { href: '/browse', label: 'Browse' },
@@ -239,15 +241,15 @@ export default function Header() {
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       width: 32, height: 32, borderRadius: '50%',
-                      background: avatarUrl ? 'transparent' : displayColor,
+                      background: safeAvatarUrl ? 'transparent' : displayColor,
                       color: 'white', fontSize: 13, fontWeight: 600,
                       overflow: 'hidden', flexShrink: 0, cursor: 'pointer',
                       border: dropdownOpen ? '2px solid var(--accent)' : '2px solid transparent',
                       transition: 'border-color 0.15s',
                     }}
                   >
-                    {avatarUrl
-                      ? <img src={avatarUrl} alt={username ?? 'avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    {safeAvatarUrl
+                      ? <img src={safeAvatarUrl} alt={username ?? 'avatar'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       : initial
                     }
                   </div>

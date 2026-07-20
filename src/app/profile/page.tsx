@@ -6,6 +6,7 @@ import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { formatDistanceToNow } from 'date-fns'
 import Link from 'next/link'
 import { Upload, Check, Save, BookmarkX, Link2, Unlink, AlertCircle, Trash2 } from 'lucide-react'
+import { sanitizeAvatarUrl } from '@/lib/url-safety'
 
 const AVATAR_COLORS = [
   { bg: '#1D9E75', label: 'Emerald' },
@@ -53,6 +54,7 @@ function ProfilePageInner() {
   const [batchPublishError, setBatchPublishError] = useState<string | null>(null)
 
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const safeAvatarUrl = sanitizeAvatarUrl(avatarUrl)
   const [selectedColor, setSelectedColor] = useState<string | null>(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarSaved, setAvatarSaved] = useState(false)
@@ -336,7 +338,7 @@ function ProfilePageInner() {
           width: 64,
           height: 64,
           borderRadius: '50%',
-          background: avatarUrl ? 'transparent' : displayColor,
+          background: safeAvatarUrl ? 'transparent' : displayColor,
           overflow: 'hidden',
           display: 'flex',
           alignItems: 'center',
@@ -347,8 +349,8 @@ function ProfilePageInner() {
           border: '2px solid var(--border)',
           flexShrink: 0,
         }}>
-          {avatarUrl
-            ? <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          {safeAvatarUrl
+            ? <img src={safeAvatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : initial
           }
         </div>
@@ -615,6 +617,8 @@ function SettingsTab({
   onLinkProvider: (providerId: string) => void
   onUnlinkProvider: (identity: any) => void
 }) {
+  const safeAvatarUrl = sanitizeAvatarUrl(avatarUrl)
+
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: '8px 12px',
@@ -836,13 +840,13 @@ function SettingsTab({
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 24 }}>
           <div style={{
             width: 72, height: 72, borderRadius: '50%',
-            background: avatarUrl ? 'transparent' : displayColor,
+            background: safeAvatarUrl ? 'transparent' : displayColor,
             overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 28, fontWeight: 700, color: 'white',
             border: '2px solid var(--border)', flexShrink: 0,
           }}>
-            {avatarUrl
-              ? <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            {safeAvatarUrl
+              ? <img src={safeAvatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : initial
             }
           </div>

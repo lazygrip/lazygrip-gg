@@ -7,6 +7,7 @@ import { Sequence, Comment, SequenceVersion, LinkedSequence, CollectionSequenceE
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { formatDistanceToNow } from 'date-fns'
 import RenderedContent from '@/components/editor/RenderedContent'
+import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
 
 const SITE_OWNER_ID = 'c2374192-e541-4636-9baf-84fc192cff52'
 
@@ -413,6 +414,7 @@ export default function SequencePageClient() {
   const canManageLinks = isAuthor || isOwner
   const totalComments = flattenComments(comments).length
   const isCurrentVersion = selectedVersion?.id === sequence?.current_version_id
+  const warcraftLogsHref = sanitizeWarcraftLogsUrl(selectedVersion?.warcraftlogs_url)
 
   if (loading) return (
     <div style={{ maxWidth: 900, margin: '40px auto', padding: '0 24px' }}>
@@ -743,8 +745,8 @@ export default function SequencePageClient() {
                 {saved ? 'Saved' : 'Save'}
               </button>
             )}
-            {selectedVersion?.warcraftlogs_url && (
-              <a href={selectedVersion.warcraftlogs_url} target="_blank" rel="noopener noreferrer" style={{
+            {warcraftLogsHref && (
+              <a href={warcraftLogsHref} target="_blank" rel="noopener noreferrer" style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 padding: '7px 12px', borderRadius: 'var(--radius-md)',
                 border: '0.5px solid var(--border-strong)',
@@ -1497,7 +1499,7 @@ export default function SequencePageClient() {
           )}
 
           {/* Warcraft Logs */}
-          {selectedVersion?.warcraftlogs_url && (
+          {warcraftLogsHref && (
             <div style={{
               background: 'var(--bg-primary)',
               border: '0.5px solid var(--border)',
@@ -1506,7 +1508,7 @@ export default function SequencePageClient() {
             }}>
               <h3 style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Warcraft Logs</h3>
               <a
-                href={selectedVersion.warcraftlogs_url}
+                href={warcraftLogsHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ fontSize: 12, color: 'var(--accent)', wordBreak: 'break-all' }}

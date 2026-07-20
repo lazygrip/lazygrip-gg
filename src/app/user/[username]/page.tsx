@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { formatDistanceToNow } from 'date-fns'
+import { sanitizeAvatarUrl } from '@/lib/url-safety'
 
 interface Props {
   params: { username: string }
@@ -66,6 +67,7 @@ export default async function UserProfilePage({ params }: Props) {
   const seqs = sequences ?? []
   const initial = profile.username?.[0]?.toUpperCase() ?? '?'
   const displayColor = profile.avatar_color ?? '#1D9E75'
+  const safeAvatarUrl = sanitizeAvatarUrl(profile.avatar_url)
   const joinDate = new Date(profile.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
 
   return (
@@ -84,13 +86,13 @@ export default async function UserProfilePage({ params }: Props) {
       }}>
         <div style={{
           width: 64, height: 64, borderRadius: '50%',
-          background: profile.avatar_url ? 'transparent' : displayColor,
+          background: safeAvatarUrl ? 'transparent' : displayColor,
           overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 26, fontWeight: 700, color: 'white',
           border: '2px solid var(--border)', flexShrink: 0,
         }}>
-          {profile.avatar_url
-            ? <img src={profile.avatar_url} alt={profile.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          {safeAvatarUrl
+            ? <img src={safeAvatarUrl} alt={profile.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : initial
           }
         </div>
