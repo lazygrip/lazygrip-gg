@@ -3,10 +3,11 @@ import { Suspense } from 'react'
 import BrowseContent from '@/components/browse/BrowseContent'
 
 interface Props {
-  searchParams: { sort?: string; class_id?: string; content_type?: string }
+  searchParams: Promise<{ sort?: string; class_id?: string; content_type?: string }>
 }
 
-export default function BrowsePage({ searchParams }: Props) {
+export default async function BrowsePage(props: Props) {
+  const searchParams = await props.searchParams;
   return (
     <Suspense fallback={
       <div style={{ maxWidth: 1200, margin: '80px auto', padding: '0 24px', textAlign: 'center' }}>

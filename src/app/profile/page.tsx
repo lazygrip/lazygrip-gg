@@ -594,7 +594,7 @@ function SettingsTab({
   initial: string
   uploadingAvatar: boolean
   avatarSaved: boolean
-  fileInputRef: React.RefObject<HTMLInputElement>
+  fileInputRef: React.RefObject<HTMLInputElement | null>
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onColorSelect: (color: string) => void
   username: string

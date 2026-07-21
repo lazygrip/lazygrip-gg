@@ -1,15 +1,16 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, use } from 'react';
 import { useRouter } from 'next/navigation'
 import { getClassBySlug, getContentTypeBySlug } from '@/lib/wow-data'
 import BrowseContent from '@/components/browse/BrowseContent'
 
 interface Props {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
-export default function BrowseSlugPage({ params }: Props) {
+export default function BrowseSlugPage(props: Props) {
+  const params = use(props.params);
   const router = useRouter()
   const { slug } = params
 

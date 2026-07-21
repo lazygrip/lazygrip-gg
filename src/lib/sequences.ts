@@ -4,7 +4,7 @@ import { Sequence, SequenceFilters, PaginatedResponse, LinkedSequence } from '@/
 export async function getSequences(
   filters: SequenceFilters = {}
 ): Promise<PaginatedResponse<Sequence>> {
-  const supabase = createClient()
+  const supabase = await createClient()
   const {
     class_id, spec_name, content_type,
     search, sort = 'recent', page = 1, limit = 20
@@ -60,7 +60,7 @@ export async function getSequences(
 }
 
 export async function getSequenceBySlug(slug: string): Promise<Sequence | null> {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const { data, error } = await supabase
     .from('sequences')
@@ -101,7 +101,7 @@ export async function getSequenceBySlug(slug: string): Promise<Sequence | null> 
 }
 
 export async function getComments(sequenceId: string) {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const { data, error } = await supabase
     .from('comments')
@@ -115,7 +115,7 @@ export async function getComments(sequenceId: string) {
 }
 
 export async function getFeaturedSequences(): Promise<Sequence[]> {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const { data, error } = await supabase
     .from('sequences')
@@ -145,7 +145,7 @@ export async function linkSequences(
   targetSlug: string,
   sourceSetId: string | null
 ): Promise<{ error: string | null }> {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   const { data: target, error: lookupError } = await supabase
     .from('sequences')
@@ -183,7 +183,7 @@ export async function unlinkSequence(
   sequenceId: string,
   setId: string
 ): Promise<{ error: string | null }> {
-  const supabase = createClient()
+  const supabase = await createClient()
 
   // Clear this sequence's set_id first.
   const { error: clearSelf } = await supabase

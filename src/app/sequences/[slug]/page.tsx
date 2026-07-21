@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import SequencePageClient from './SequencePageClient'
 
 type Props = {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
 function stripHtml(html: string): string {
@@ -14,11 +14,12 @@ function stripHtml(html: string): string {
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
-    .trim()
+    .trim();
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const supabase = createClient()
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const params = await props.params;
+  const supabase = await createClient()
 
   const { data: sequence } = await supabase
     .from('sequences')

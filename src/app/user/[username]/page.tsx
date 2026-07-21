@@ -7,10 +7,11 @@ import { formatDistanceToNow } from 'date-fns'
 import { sanitizeAvatarUrl } from '@/lib/url-safety'
 
 interface Props {
-  params: { username: string }
+  params: Promise<{ username: string }>
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const params = await props.params;
   const supabase = await createClient()
 
   const { data: profile } = await supabase
@@ -46,7 +47,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function UserProfilePage({ params }: Props) {
+export default async function UserProfilePage(props: Props) {
+  const params = await props.params;
   const supabase = await createClient()
 
   const { data: profile } = await supabase
