@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { buildGripFromModel, enforceAuthorLock, decodeEMSExport } from '@/lib/workshop_new/index'
+import { buildGripFromModel, enforceAuthorLock, decodeEMSExport } from '@/lib/workshop/index'
 
 function normalizeActionKind(node: any): any {
   const normalized = {

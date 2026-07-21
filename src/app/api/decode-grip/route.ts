@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { decodeEMSExport, decodeGSEExport } from '@/lib/workshop_new/index'
+import { decodeEMSExport, decodeGSEExport } from '@/lib/workshop/index'
 
 export async function POST(req: NextRequest) {
   let body: { code?: string }

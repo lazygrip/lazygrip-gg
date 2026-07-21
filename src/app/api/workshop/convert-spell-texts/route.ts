@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { translateSpellTokens, formatMacroToBareSpellIds } from '@/lib/workshop_new/index'
+import { translateSpellTokens, formatMacroToBareSpellIds } from '@/lib/workshop/index'
 
 export async function POST(req: NextRequest) {
   let body: { direction?: string; texts?: unknown[] }
