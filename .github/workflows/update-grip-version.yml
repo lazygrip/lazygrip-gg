@@ -64,9 +64,12 @@ jobs:
 
       - name: Check if update is needed
         id: check
+        env:
+          FETCHED_VERSION: ${{ steps.fetch_version.outputs.version }}
+          CURRENT_VERSION: ${{ steps.current_version.outputs.current }}
         run: |
-          NEW="GRIP-EMS ${{ steps.fetch_version.outputs.version }}"
-          CURRENT="${{ steps.current_version.outputs.current }}"
+          NEW="GRIP-EMS ${FETCHED_VERSION}"
+          CURRENT="${CURRENT_VERSION}"
           if [ "$NEW" = "$CURRENT" ]; then
             echo "needed=false" >> $GITHUB_OUTPUT
             echo "Already up to date: $CURRENT"
@@ -77,17 +80,21 @@ jobs:
 
       - name: Update version strings in files
         if: steps.check.outputs.needed == 'true'
+        env:
+          FETCHED_VERSION: ${{ steps.fetch_version.outputs.version }}
         run: |
-          NEW_VERSION="${{ steps.fetch_version.outputs.version }}"
+          NEW_VERSION="${FETCHED_VERSION}"
           sed -i "s/GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*/GRIP-EMS ${NEW_VERSION}/g" src/app/guide/layout.tsx
           sed -i "s/GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*/GRIP-EMS ${NEW_VERSION}/g" src/app/guide/page.tsx
           echo "Updated files to $NEW_VERSION"
 
       - name: Commit and push changes
         if: steps.check.outputs.needed == 'true'
+        env:
+          FETCHED_VERSION: ${{ steps.fetch_version.outputs.version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add src/app/guide/layout.tsx src/app/guide/page.tsx
-          git commit -m "Auto-update GRIP-EMS version to ${{ steps.fetch_version.outputs.version }}"
+          git commit -m "Auto-update GRIP-EMS version to ${FETCHED_VERSION}"
           git push
