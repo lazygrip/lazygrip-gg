@@ -2,10 +2,11 @@ import { Metadata } from 'next'
 import { getClassBySlug, getContentTypeBySlug } from '@/lib/wow-data'
 
 interface MetadataProps {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
-export function generateMetadata({ params }: MetadataProps): Metadata {
+export async function generateMetadata(props: MetadataProps): Promise<Metadata> {
+  const params = await props.params;
   const wowClass = getClassBySlug(params.slug)
   const contentType = getContentTypeBySlug(params.slug)
 

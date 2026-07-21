@@ -158,9 +158,9 @@ export default function TiptapEditor({ content, onChange, placeholder }: TiptapE
     const current = editor.getHTML()
     const isEditorEmpty = current === '<p></p>' || current === ''
     if (content) {
-      if (content !== current) editor.commands.setContent(content, false)
+      if (content !== current) editor.commands.setContent(content, { emitUpdate: false })
     } else if (!isEditorEmpty) {
-      editor.commands.setContent('', false)
+      editor.commands.setContent('', { emitUpdate: false })
     }
   }, [content, editor])
 

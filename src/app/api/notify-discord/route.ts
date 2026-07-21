@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   // client-side notifyDiscord() on the post page, which runs in an
   // authenticated browser context -- a shared secret would be exposed in client
   // JS, so a verified session is the right gate.
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
