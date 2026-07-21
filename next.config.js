@@ -10,6 +10,8 @@ const nextConfig = {
     return [
       // Old singular sequence URLs -> canonical plural route (recovers indexed 404 links)
       { source: '/sequence/:slug', destination: '/sequences/:slug', permanent: true },
+      // Old GSE-named guide URL -> renamed legacy-program page (recovers indexed 404)
+      { source: '/guide/from-gse', destination: '/guide/from-legacy-program', permanent: true },
       // Class redirects — query param to clean slug
       { source: '/browse', has: [{ type: 'query', key: 'class_id', value: '1' }], destination: '/browse/warrior?', permanent: true },
       { source: '/browse', has: [{ type: 'query', key: 'class_id', value: '2' }], destination: '/browse/paladin?', permanent: true },
