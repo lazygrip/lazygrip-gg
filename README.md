@@ -1,5 +1,7 @@
 # LazyGrip.gg
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/lazygrip/lazygrip-gg/blob/main/LICENSE)
+
 Community GRIP-EMS sequences for World of Warcraft.
 
 ## Tech stack
@@ -20,8 +22,8 @@ Community GRIP-EMS sequences for World of Warcraft.
 2. Create a new project — name it "lazygrip"
 3. Wait for it to provision (~2 minutes)
 4. Go to **Settings > API** and copy:
-   - `Project URL` → `NEXT_PUBLIC_SUPABASE_URL`
-   - `anon public` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `Project URL` → `NEXT_PUBLIC_SUPABASE_URL`
+- `anon public` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
 ### 2. Run the database schema
 
@@ -52,8 +54,8 @@ Open http://localhost:3000
 1. Push this repo to GitHub
 2. Go to https://vercel.com and import the repo
 3. Add environment variables:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 4. Deploy — Vercel auto-detects Next.js
 
 ### Add your domain
@@ -77,35 +79,35 @@ Open http://localhost:3000
 
 ```
 src/
-  app/
-    page.tsx              # Homepage
-    browse/page.tsx       # Browse with filters
-    sequence/[slug]/      # Sequence detail page
-    post/page.tsx         # Post a sequence form
-    auth/
-      login/page.tsx
-      signup/page.tsx
-      callback/route.ts   # OAuth handler
-  components/
-    layout/
-      Header.tsx
-      Footer.tsx
-    sequence/
-      SequenceCard.tsx    # Card used in browse listing
-    auth/
-      AuthForm.tsx
-  lib/
-    supabase/
-      client.ts           # Browser client
-      server.ts           # Server client
-    sequences.ts          # Data fetching functions
-    wow-data.ts           # WoW class/spec constants
-  types/
-    index.ts              # TypeScript types
+app/
+page.tsx # Homepage
+browse/page.tsx # Browse with filters
+sequence/[slug]/ # Sequence detail page
+post/page.tsx # Post a sequence form
+auth/
+login/page.tsx
+signup/page.tsx
+callback/route.ts # OAuth handler
+components/
+layout/
+Header.tsx
+Footer.tsx
+sequence/
+SequenceCard.tsx # Card used in browse listing
+auth/
+AuthForm.tsx
+lib/
+supabase/
+client.ts # Browser client
+server.ts # Server client
+sequences.ts # Data fetching functions
+wow-data.ts # WoW class/spec constants
+types/
+index.ts # TypeScript types
 
 supabase/
-  migrations/
-    001_initial_schema.sql  # Full database schema
+migrations/
+001_initial_schema.sql # Full database schema
 ```
 
 ---
@@ -129,3 +131,7 @@ Next features to build:
 - [ ] Wago.io-style P2P sharing integration
 - [ ] GRIP string validator/parser
 - [ ] Sequence version history display
+
+## License
+
+MIT — see [LICENSE](./LICENSE).
