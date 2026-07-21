@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { decodeExport } from '@/lib/workshop_new/exportDecode'
+import { decodeExport } from '@/lib/workshop/exportDecode'
 
 interface ToolboxActionNode {
   index: number

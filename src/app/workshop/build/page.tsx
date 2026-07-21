@@ -7,7 +7,7 @@ import { Copy, Check, Plus, Trash2, ChevronUp, ChevronDown, Copy as CopyIcon, Ro
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import AuthForm from '@/components/auth/AuthForm'
 import { CONTENT_TYPES, getClassById } from '@/lib/wow-data'
-import { RESET_MODIFIER_LABELS, RESET_MODIFIER_GROUPS, createEmptyResetModifiers } from '@/lib/workshop_new/gripResetModifiers'
+import { RESET_MODIFIER_LABELS, RESET_MODIFIER_GROUPS, createEmptyResetModifiers } from '@/lib/workshop/gripResetModifiers'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 

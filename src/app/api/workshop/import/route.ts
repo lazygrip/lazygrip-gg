@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { importToBuilderModel, attachAuthorLockToken } from '@/lib/workshop_new/index'
+import { importToBuilderModel, attachAuthorLockToken } from '@/lib/workshop/index'
 
 export async function POST(req: NextRequest) {
   let body: { code?: string }
