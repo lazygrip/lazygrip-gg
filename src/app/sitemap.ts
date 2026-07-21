@@ -48,7 +48,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     },
     {
-      url: 'https://lazygrip.net/guide/from-gse',
+      url: 'https://lazygrip.net/guide/from-legacy-program',
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 0.8,
