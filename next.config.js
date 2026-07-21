@@ -1,7 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['avatars.battlenet.com.cn', 'render.worldofwarcraft.com'],
+    remotePatterns: [
+      { protocol: 'https', hostname: 'avatars.battlenet.com.cn' },
+      { protocol: 'https', hostname: 'render.worldofwarcraft.com' },
+    ],
   },
   async redirects() {
     return [
