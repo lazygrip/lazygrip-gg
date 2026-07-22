@@ -5,7 +5,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const query = searchParams.get('q') || ''
   const classId = Number(searchParams.get('classId')) || 0
-  const limit = Number(searchParams.get('limit')) || 12
+  const limit = Math.min(50, Math.max(1, Number(searchParams.get('limit')) || 12))
 
   if (query.length < 2) return NextResponse.json({ results: [] })
 
