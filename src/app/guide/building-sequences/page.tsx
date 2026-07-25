@@ -148,6 +148,33 @@ export default function BuildingSequencesPage() {
         </Callout>
       </Section>
 
+      <Section title="Charged and empower spells: why they break automated sequencing">
+        <p>Charged spells and empower spells, Evoker's Fire Breath and Upheaval being the clearest examples, behave differently from a normal cast and that difference is what causes automated sequences to hitch, freeze, or feel wrong even when every step looks correct on paper.</p>
+        <p style={{ marginTop: 12 }}>A normal spell either casts or it does not. A charged or empower spell has stages: holding the button charges it up, and releasing early locks in whatever charge level you have reached so far. Mechanically each charge level is treated as a different spell, and moving between them stops the previous cast rather than smoothly continuing it. When that stop happens automatically instead of on your own release, it costs a hitch, roughly a full GCD of dead time, before anything can be cast again. This is not a bug in GRIP-EMS. It is the same behavior press and hold casting has always had with charged spells, and automating the press does not remove it.</p>
+        <Callout>
+          If you let press and hold run its full charge without ever cutting it off early, there is no hitch. The problem only shows up when a sequence cancels the charge partway through, which is exactly what happens if you try to time charge level via pause steps or spam intervals instead of holding to completion.
+        </Callout>
+        <p style={{ marginTop: 16 }}>Two approaches have actually worked for players sequencing these spells, and one approach that sounds reasonable does not.</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
+          <div style={{ padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Works: a dedicated first-priority guard step</p>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 10 }}>Add a step near the top of the loop, before your main rotation logic, that only fires while the spell is actively channeling:</p>
+            <CodeBlock>{`/cast [channeling:Upheaval] Upheaval
+/cast [channeling:Fire Breath] Fire Breath`}</CodeBlock>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginTop: 10 }}>This keeps re-issuing the cast on every keypress for as long as the spell is already channeling, which is what lets it run to completion instead of getting cut off by whatever the next step in the loop would otherwise fire. It is not a perfect fix. Whether WoW correctly recognises the empower as channeling versus treating it as its own separate cast state is inconsistent, so expect to still feel it as slightly wonky rather than seamless.</p>
+          </div>
+          <div style={{ padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Works: fully separate sequences per charge spell, on separate keys</p>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>Rather than folding a charged spell into your main rotation sequence, give it its own standalone sequence bound to its own key, for example Upheaval on Alt+0, Fire Breath on Shift+0, with your main rotation on 0. You manually decide when to reach for the charged spell and hold through its full charge, while the base rotation sequence keeps running independently on its own key. This is more deliberate play than a single fire-and-forget button, but it is the only approach that avoids the automated-cancel hitch entirely, since nothing is ever cutting the charge off early.</p>
+          </div>
+          <div style={{ padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Does not work well: timing partial charge levels via pause steps</p>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>It is possible to count how many presses at a given click rate correspond to a specific charge level and build pause steps to try to land there deliberately, so the sequence releases the spell at, say, charge 2 instead of running it to completion. In practice this needs an impractical number of precisely-timed presses, does not survive a mid-combat reset since the sequence has no way to know which pause block it left off on if a fight interrupts it, and the next attempt ends up re-entering the pause sequence at the wrong position, causing a delay before the tap actually registers followed by having to work back through the pause blocks again. Treat this as a known dead end rather than something to debug further.</p>
+          </div>
+        </div>
+        <p style={{ marginTop: 16 }}>None of this is Evoker specific in principle, it applies to any spell WoW treats as charged or empowered, but Evoker is currently the class where it comes up. If you are building a sequence around Aug Evoker's Ebon Might upkeep or a Devastation opener that leans on Fire Breath or Upheaval, plan for one of the two working approaches above rather than assuming a normal cast-step pattern will behave the same way it does for every other ability in your kit.</p>
+      </Section>
+
       <Section title="The decisions that matter">
         <DecisionBlock
           question="Why Sequential and not Priority"

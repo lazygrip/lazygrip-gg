@@ -49,21 +49,19 @@ export default function InstallationPage() {
         </Step>
       </Section>
 
-      <Section title="Step 2: The three settings you must configure">
+      <Section title="Step 2: The settings you should still check">
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 20 }}>
-          This is what most installation guides do not tell you. GRIP-EMS needs three specific WoW client settings to be correct before sequences will fire. None of them are set to the right value by default. If you skip this section and wonder why pressing your keybind does nothing, this is why.
+          As of GRIP-EMS v2.3.14, the addon forces Key Down Casting on automatically every time you log in, so that part of setup is no longer something you need to touch. Two things still matter for sequences to feel right, and neither is set to an ideal value by default.
         </p>
 
-        <Step number={1} label="Fix your Cvar Health, the most important step">
-          <p>GRIP-EMS fires through WoW's <strong>key-down</strong> event system. By default WoW uses key-up, which means your sequence registers the press only when you release the key rather than when you press it. At 150ms intervals this is the difference between a functioning rotation and nothing happening at all.</p>
-          <p style={{ marginTop: 8 }}>Open the GRIP-EMS settings and navigate to the Cvar Health tab:</p>
-          <Code>/gems settings</Code>
-          <p style={{ marginTop: 8 }}>Go to the <strong>Cvar Health</strong> tab. If the status indicator is not green, click <strong>Fix</strong>. That sets <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>ActionButtonUseKeyDown</code> to enabled.</p>
-          <Callout>This is the single most common reason new users post about keybinds doing nothing. Check this before anything else. It takes thirty seconds and solves the problem roughly half the time.</Callout>
+        <Step number={1} label="Key Down Casting is handled for you now">
+          <p>GRIP-EMS fires through WoW's <strong>key-down</strong> event system. By default WoW uses key-up, which means a sequence would register the press only when you release the key rather than when you press it. At 150ms intervals that is the difference between a functioning rotation and nothing happening at all.</p>
+          <p style={{ marginTop: 8 }}>Starting in v2.3.14, GRIP-EMS sets <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>ActionButtonUseKeyDown</code> to enabled itself on every login, whether or not you have ever opened the settings. It is no longer a row in the CVar Health tab and there is nothing to fix here manually.</p>
+          <Callout>Running an older version than 2.3.14? Update through your addon manager first. On anything older, open <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>/gems settings</code>, go to the CVar Health tab, and click Fix if the row is not green. That is the single most common reason a pre-2.3.14 install does nothing on keypress.</Callout>
         </Step>
 
         <Step number={2} label="Verify your SpellQueueWindow">
-          <p>The SpellQueueWindow controls how many milliseconds before a GCD ends WoW will accept your next cast input. The Cvar Health tab shows your current value and flags it if it looks off. The default of 400ms is fine to leave alone for now. The full explanation of what SQW does, why it matters, and how to tune it for your connection is on the <Link href="/guide/settings" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Settings</Link> page.</p>
+          <p>The SpellQueueWindow controls how many milliseconds before a GCD ends WoW will accept your next cast input. The CVar Health tab shows your current value and flags it if it looks off. The default of 400ms is fine to leave alone for now. The full explanation of what SQW does, why it matters, and how to tune it for your connection is on the <Link href="/guide/settings" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Settings</Link> page.</p>
         </Step>
 
         <Step number={3} label="Set your click rate">
@@ -88,7 +86,7 @@ export default function InstallationPage() {
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 16 }}>Before moving on, confirm these four things are true:</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
-            'Cvar Health tab shows green with no Fix button visible',
+            'On v2.3.14 or later, nothing needed; on older versions, Cvar Health tab shows green with no Fix button visible',
             'You have at least one sequence imported or created',
             'That sequence has a keybind assigned in the Keybinds tab',
             'You are in Bear Form or your spec\'s required form when testing',
@@ -104,7 +102,7 @@ export default function InstallationPage() {
       <Section title="Troubleshooting common problems">
         <TroubleshootItem
           problem="Keybind is set but nothing fires"
-          solution="Run /gems settings and go to the Cvar Health tab. If the Fix button is visible, click it. This solves the majority of new-user keybind problems. If everything shows green and the sequence still does not fire, check that you have a target selected and that the sequence has a keybind assigned in the Keybinds tab inside the editor, not just in WoW's default keybind menu."
+          solution="First, update GRIP-EMS through your addon manager. As of v2.3.14, Key Down Casting is forced on automatically and this is no longer something you can misconfigure. If you are still on an older version, run /gems settings, go to the Cvar Health tab, and click Fix if the row is not green; this solves the majority of pre-2.3.14 keybind problems. On 2.3.14 or later, if the sequence still does not fire, check that you have a target selected and that the sequence has a keybind assigned in the Keybinds tab inside the editor, not just in WoW's default keybind menu."
         />
         <TroubleshootItem
           problem="I put a sequence's macro on my action bar and pressing it does nothing"
@@ -135,8 +133,8 @@ export default function InstallationPage() {
           solution="Some addons override-bind the same keys GRIP-EMS uses for vehicles and skyriding, and whoever loads last wins. The Keybinds tab inside the editor names the contending keys directly in the vehicle and pet battle sections so you can see exactly which addon is causing the conflict. GRIP-EMS does not fight for the bind, it just tells you who took it."
         />
         <TroubleshootItem
-          problem="Lua error spam about tainted table iteration in arena or BG"
-          solution="This is typically caused by another addon tainting the environment before GRIP-EMS runs, not a GRIP-EMS bug itself. A common culprit is PvPCallouts. Try disabling other addons one at a time with BugSack and BugGrabber installed to identify the source. If the error text says execution tainted by GRIP-EMS specifically, file a bug report in the Discord with the full error and your addon list."
+          problem="Sequence says a spell cannot be found, but it works fine once I am in the right form or proc"
+          solution="This is expected behavior, not a bug. GRIP-EMS checks whether a spell is castable right now before it will queue it in a step. Some spells only exist, or only become the correct version, in a specific state, such as Void Volley replacing Void Bolt only while a Shadow Priest is in Voidform, or a spec-specific proc swapping what a button actually casts. Outside that state the addon correctly reports it cannot find the spell, then the step behaves normally the moment you are actually in the state where the spell exists. If the step is working in practice once the condition is met, there is nothing to fix. If you want the warning to stop appearing while testing outside the triggering state, an addon like ErrorMonster can redirect the message so it does not clutter your chat window."
         />
       </Section>
 

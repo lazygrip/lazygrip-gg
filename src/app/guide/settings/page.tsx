@@ -26,12 +26,11 @@ export default function SettingsPage() {
       </p>
 
       <Section title="Key Down Casting">
-        <p style={{ marginBottom: 4, fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Settings {'>'} CVar Health {'>'} Macro Sequencing</p>
+        <p style={{ marginBottom: 4, fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Automatic as of v2.3.14</p>
         <p>This is the WoW setting <code style={code}>ActionButtonUseKeyDown</code>. It controls whether your abilities fire when you <strong style={{ color: 'var(--text-primary)' }}>press</strong> a key or when you <strong style={{ color: 'var(--text-primary)' }}>release</strong> it. GRIP-EMS fires on the press, and it needs this set to on to work correctly. Leave it off, and your sequence either does not advance at all or advances on the wrong event, with an extra 50 to 100ms of dead time on every single press, eating into your rotation.</p>
-        <p style={{ marginTop: 12 }}>This is the one setting on this entire page that is not a preference. Everything else is tuning. This one is mandatory.</p>
-        <p style={{ marginTop: 12 }}>The Installation page covers how to fix it through the CVar Health tab. If you have not done that yet, start there.</p>
+        <p style={{ marginTop: 12 }}>As of GRIP-EMS v2.3.14, this is no longer a preference or a manual step. The addon forces it on itself every time you log in, whether or not you have ever opened the settings. It has been removed from the CVar Health tab entirely since it is required for the engine to run, not something you weigh up. Run <code style={code}>/gems status</code> any time to confirm the live value.</p>
         <Callout>
-          Set your CVar Health settings outside of combat. WoW locks some of these while you are in a fight, which is why the Fix buttons grey out mid-pull. Sort it at a target dummy before you queue.
+          On a version older than 2.3.14, you will still need to fix this yourself. Run /gems settings, go to the CVar Health tab, and click Fix if the row is not green. Do it outside of combat; WoW locks some CVars while you are in a fight, which is why the Fix buttons grey out mid-pull. The Installation page covers this in more detail for older versions.
         </Callout>
       </Section>
 
@@ -71,6 +70,25 @@ export default function SettingsPage() {
         <p style={{ marginTop: 16 }}>While the Optimiser is running, it has exclusive control over the SQW value. You will see "Managed by SQW Optimiser" in the manual control and the slider locks. If you want to set SQW by hand, turn the Optimiser off first.</p>
         <Callout>
           The SQW Optimiser tunes one thing: the SpellQueueWindow CVar, based on your latency. It does not look at your sequence, your spells, or your click rate. For a recommendation on how fast you should actually be pressing your keybind, that is the Tempo Advisor below, a separate system entirely.
+        </Callout>
+      </Section>
+
+      <Section title="Finding your way around CVar Health">
+        <p style={{ marginBottom: 4, fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Settings {'>'} CVar Health</p>
+        <p>As of v2.3.13, the CVar Health dashboard covers 255 game variables across 14 sections, up from 212 in earlier versions. New sections cover Combat Audio, nameplate content toggles, accessibility motion and vision settings, raid graphics mirrors, and dragonriding comfort options, alongside the SQW and Key Down Casting settings this page already covers in detail.</p>
+        <p style={{ marginTop: 12 }}>With that many CVars, finding a specific one by scrolling is no longer realistic, so the tab got a few navigation aids. A search box lets you type part of a CVar's name and jump straight to it. A show-only-issues filter hides every row that is already correctly set, so you see just what needs attention. Section headers are colour-coded, meaning a section containing a misconfigured row shows red before you even expand it, so you know where to look without opening every section in turn.</p>
+        <p style={{ marginTop: 12 }}>Numeric CVars, fifty of them, are sliders rather than typed fields, and on/off CVars are tickboxes. The graphics dropdowns pull their tier names directly from the game client, so options like shadow quality, SSAO, and liquid detail match the wording in WoW's own System menu instead of using GRIP-EMS's own labels. maxFPS now goes up to 144.</p>
+        <Callout>
+          None of this changes what any individual CVar does or how you should set it, including SQW and Key Down Casting above. It only changes how you find and adjust them. If you learned the old dashboard layout before v2.3.13, the values and recommendations on this page still apply; only the search, filtering, and slider presentation are new.
+        </Callout>
+      </Section>
+
+      <Section title="The Delve CVar profile">
+        <p style={{ marginBottom: 4, fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Automatic as of v2.3.12</p>
+        <p>GRIP-EMS ships with built-in CVar profiles that swap automatically based on the content you are in, and as of v2.3.12 Delves get their own dedicated profile rather than running on the same baseline as general open-world content. Before this, a Delve run used your General graphics profile even though the addon already knew you were inside a Delve, which meant nameplate range and soft-targeting were tuned for the wrong context.</p>
+        <p style={{ marginTop: 12 }}>The built-in Delve profile turns on enemy minion nameplates, extends nameplate range to 41 yards, and widens the soft-target arc, all automatically the moment you enter a Delve, at any tier, with no setup required on your part.</p>
+        <Callout>
+          If you had already mapped your own custom profile onto Delves before v2.3.12, your mapping still takes priority. The rule is that a manual mapping on a tier key always beats the built-in default. If you want the new built-in behavior instead of your old custom mapping, go to the Profile Map Editor and remap the DelvesLow and DelvesHigh tier keys back to the built-in profile.
         </Callout>
       </Section>
 
@@ -145,7 +163,7 @@ export default function SettingsPage() {
 
       <Section title="How these settings connect">
         <p>The outside program sends keypresses at the rate you set. GRIP-EMS turns each keypress into one sequence step. The GCD is the actual ceiling on how fast spells can land, regardless of how fast you press. SQW controls the window in which your next press is queued into that GCD, and the SQW Optimiser ties that window to your real latency so it is always sized correctly for your connection. The Tempo Advisor is the layer above all of that: it watches your specific sequence and your actual play to tell you the click rate that fits both.</p>
-        <p style={{ marginTop: 12 }}>Get Key Down Casting right, let the Optimiser handle SQW, and let the Tempo Advisor tell you where to set your click rate once it has enough data on you. Everything else on this page is fine-tuning from there.</p>
+        <p style={{ marginTop: 12 }}>Key Down Casting takes care of itself as of v2.3.14, so let the Optimiser handle SQW, and let the Tempo Advisor tell you where to set your click rate once it has enough data on you. Everything else on this page is fine-tuning from there.</p>
       </Section>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 48, paddingTop: 24, borderTop: '0.5px solid var(--border)' }}>

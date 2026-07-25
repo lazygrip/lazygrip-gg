@@ -14,7 +14,7 @@ const sections = [
     icon: Wrench,
     time: '5 min',
     title: 'Installation',
-    desc: 'Download, enable, and run the three mandatory post-install steps that most guides skip. The Cvar Health fix alone solves half of all new user problems. If your keybind is set but nothing fires, start here.',
+    desc: 'Download, enable, and check the two settings that most guides skip. As of v2.3.14, Key Down Casting is handled automatically. If your keybind is set but nothing fires, start here.',
   },
   {
     href: '/guide/settings',
@@ -65,7 +65,7 @@ export default function GuidePage() {
         </p>
         <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.75, maxWidth: 620 }}>
           If your keybind is set but nothing is firing, go straight to{' '}
-          <Link href="/guide/installation" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Installation</Link>. The Cvar Health fix takes thirty seconds and solves that problem the majority of the time. If you are coming from an older macro sequencing addon and want to know whether switching is worth it, start with{' '}
+          <Link href="/guide/installation" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Installation</Link>. On GRIP-EMS v2.3.14 and later this is rarely the cause since Key Down Casting is now forced on automatically, but on older versions the Cvar Health fix takes thirty seconds and solves that problem the majority of the time. If you are coming from an older macro sequencing addon and want to know whether switching is worth it, start with{' '}
           <Link href="/guide/from-legacy-program" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Coming from the legacy program</Link>.
         </p>
       </div>

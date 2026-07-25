@@ -136,7 +136,7 @@ export default function FromLegacyProgramPage() {
             },
             {
               title: 'Keybind set but nothing fires',
-              desc: "This is almost always the Cvar Health setting. The legacy program works fine with WoW's default key-up event behavior. GRIP-EMS requires key-down. Run /gems settings, go to the Cvar Health tab, and click Fix if anything is not green. This is the most common reason a switcher imports a sequence, presses the keybind, and gets nothing.",
+              desc: "The legacy program works fine with WoW's default key-up event behavior. GRIP-EMS requires key-down. As of GRIP-EMS v2.3.14 this is forced on automatically, so update through your addon manager first. If you are still on an older version, run /gems settings, go to the Cvar Health tab, and click Fix if anything is not green. This used to be the most common reason a switcher imported a sequence, pressed the keybind, and got nothing; on 2.3.14 and later it should not come up at all.",
             },
             {
               title: 'Multi-block opener logic behaving unexpectedly',
