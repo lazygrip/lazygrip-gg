@@ -1,11 +1,14 @@
-# LazyGrip.net Security Audit — 2026-07-22
+# LazyGrip.net Security Audit — 2026-07-22 (updated 2026-07-25)
 
-Full hostile-caller pass over both layers: every SECURITY DEFINER function in the
-live Supabase database, and every API route in the deployed Next.js app. This is
-the same style of audit Sataana runs (AI reading the actual code asking "who can
-call this, what does it check, what happens if a hostile user passes someone
-else's ID"), done deliberately on our side instead of waiting for the next
-private disclosure.
+Full hostile-caller pass across three layers: every SECURITY DEFINER function in
+the live Supabase database, every API route in the deployed Next.js app, and
+every Row Level Security policy on every table. This is the same style of audit
+Sataana runs (AI reading the actual code asking "who can call this, what does it
+check, what happens if a hostile user passes someone else's ID"), done
+deliberately on our side instead of waiting for the next private disclosure.
+
+2026-07-22 covered SECURITY DEFINER functions and API routes. 2026-07-25 added
+the RLS policy pass, which was an explicitly named gap in the original doc.
 
 Method: function bodies pulled live from pg_proc (not from migration files, not
 from descriptions of what's supposed to be there). Route code read from
@@ -115,6 +118,75 @@ authorize.**
 
 ---
 
+## Layer 3: Row Level Security policies (24 policies, 8 tables, all checked)
+
+Pulled live via pg_policies (not from migration files) on 2026-07-25:
+
+```sql
+select schemaname, tablename, policyname, cmd as command, permissive, roles,
+       qual as using_expression, with_check
+from pg_policies
+where schemaname = 'public'
+order by tablename, cmd, policyname;
+```
+
+### Clean
+| Table | Notes |
+|---|---|
+| comments | Insert/update both tied to auth.uid() = author_id. Select correctly shows non-deleted OR own (the 7/21 fix, confirmed still live). No DELETE policy exists — appears intentional (soft-delete only via UPDATE), worth a one-time confirmation that no hard-delete path is expected anywhere on this table |
+| notifications | Select/update both scoped to auth.uid() = user_id. No INSERT policy — correct, real inserts go through SECURITY DEFINER trigger functions that bypass RLS |
+| profiles | Public read (intentional), update locked to own row |
+| ratings | Select allows: sequence author, rating's own author, or the site-owner UUID. Real three-way check, not a blanket allow. Insert/update tied to auth.uid() = user_id |
+| saves | All three ops (select/insert/delete) scoped to auth.uid() = user_id, no leakage of what a user has saved |
+| sequences | Correctly status-aware: authors see their own regardless of status, everyone else only sees status = 'published' |
+| site_config | Public read, no write policy (writes go through set_current_patch, which has its own owner-UUID check) |
+
+### Found and fixed: sequence_versions
+Had two redundant SELECT policies, both `using (true)` — fully public, no
+status check, unlike the parent sequences table.
+
+**Exploitability check performed before fixing, not assumed:** read the actual
+bodies of create_draft_sequence, update_draft_sequence, and
+publish_draft_sequence (already pulled during the Layer 1 pass). Neither
+create_draft_sequence nor update_draft_sequence ever writes to
+sequence_versions — only to sequences. The first sequence_versions row is
+created by publish_draft_sequence in the same transaction that flips status to
+'published'. Conclusion: no row can currently exist in sequence_versions for a
+sequence still in draft status, so the open policy was not actively leaking
+anything at the time it was found.
+
+**Fixed anyway.** The policy had no safety net — it was leak-proof only by
+convention (every write path happening to respect the invariant), not by
+enforcement. Any future function, script, or admin tool that ever wrote a
+sequence_versions row ahead of publish (e.g. a draft-preview feature) would
+leak draft content immediately with zero additional code change on the leak
+side. Collapsed the two redundant policies into one that mirrors the parent
+table's rule:
+
+```sql
+drop policy if exists "Anyone can read sequence versions" on public.sequence_versions;
+drop policy if exists "Versions are viewable by everyone" on public.sequence_versions;
+
+create policy "Versions viewable if sequence is published or own"
+on public.sequence_versions for select
+using (
+  exists (
+    select 1 from public.sequences s
+    where s.id = sequence_versions.sequence_id
+      and (s.status = 'published' or s.author_id = auth.uid())
+  )
+);
+```
+
+Applied live 2026-07-25, verified via pg_policies same day (exactly one SELECT
+policy remains, correct using expression confirmed). Captured in migration 006.
+
+**RLS verdict: 24/24 policies read. One real gap found, assessed for actual
+exploitability rather than assumed, and fixed regardless since it lacked a
+structural safety net.**
+
+---
+
 ## Open items (none are authorization holes)
 
 1. **/api/workshop/spells — unclamped limit param.** limit comes straight from
@@ -135,8 +207,6 @@ authorize.**
 ## What this audit does NOT cover
 
 Being honest about scope so "we ran full checks" stays a true statement:
-- RLS policies on tables (the comments SELECT policy work was separate; a full
-  policy-by-policy pass has not been done in one sitting)
 - The toolbox droplet's Node service (authorLock.js was tested directly during
   the forgery fix, but the droplet isn't covered by this pass)
 - The Discourse forum droplet
@@ -144,17 +214,27 @@ Being honest about scope so "we ran full checks" stays a true statement:
   the SEC6/SEC7 work, but this pass didn't re-verify every render site)
 - Dependency vulnerabilities (that's npm audit's job, already in check-site.ps1)
 
+RLS policies (all 24, all 8 tables) were covered on 2026-07-25 and are no
+longer an open gap.
+
 ---
 
 ## Repeatability
 
-This audit = two artifacts, both kept:
-1. The SQL query below, run in the Supabase SQL Editor, output read function by
-   function
+This audit = three artifacts, all kept:
+1. The SECURITY DEFINER query below, run in the Supabase SQL Editor, output
+   read function by function
 2. Reading each file under src/app/api/ off raw.githubusercontent.com (or the
    local clone) asking the hostile-caller question
+3. The RLS policy query below, output read policy by policy, checking each
+   using/with_check expression against what the table's data model actually
+   requires — and for anything with `using (true)`, checking whether the
+   write-path functions could ever populate a row that shouldn't be public,
+   the same way the sequence_versions gap was actually confirmed rather than
+   assumed
 
 ```sql
+-- SECURITY DEFINER functions
 select
   p.proname as function_name,
   pg_get_function_identity_arguments(p.oid) as arguments,
@@ -164,8 +244,19 @@ join pg_namespace n on p.pronamespace = n.oid
 where n.nspname = 'public'
   and p.prosecdef = true
 order by p.proname;
+
+-- RLS policies
+select
+  schemaname, tablename, policyname, cmd as command, permissive, roles,
+  qual as using_expression, with_check
+from pg_policies
+where schemaname = 'public'
+order by tablename, cmd, policyname;
 ```
 
-Re-run trigger: after any new RPC, any schema change, any new API route, or any
-merged PR that touches supabase/ or src/app/api/. The check-site.ps1 addition
-(shipped alongside this doc) automates the reminder half of this.
+Re-run trigger: after any new RPC, any schema change, any new API route, any
+new table, or any merged PR that touches supabase/ or src/app/api/. The
+check-site.ps1 addition (shipped alongside this doc) automates the reminder
+half of the SECURITY DEFINER/route side; RLS policy review is still a manual
+step since a table can have a permissive-but-currently-harmless policy that
+only static reasoning about the write paths can catch.
