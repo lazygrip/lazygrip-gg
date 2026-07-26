@@ -14,7 +14,7 @@ export const WOW_CLASSES: WowClass[] = [
     specs: [
       { id: 577, name: 'Havoc', role: 'dps', heroTalents: ['Fel-Scarred', 'Aldrachi Reaver'] },
       { id: 581, name: 'Vengeance', role: 'tank', heroTalents: ['Aldrachi Reaver', 'Annihilator'] },
-      { id: 1473, name: 'Devourer', role: 'dps', heroTalents: ['Annihilator', 'Void-Scarred'] },
+      { id: 1480, name: 'Devourer', role: 'dps', heroTalents: ['Annihilator', 'Void-Scarred'] },
     ]
   },
   {
@@ -78,7 +78,7 @@ export const WOW_CLASSES: WowClass[] = [
     id: 4, name: 'Rogue', slug: 'rogue', color: '#FFF468',
     specs: [
       { id: 259, name: 'Assassination', role: 'dps', heroTalents: ['Deathstalker', 'Fatebound'] },
-{ id: 260, name: 'Outlaw', role: 'dps', heroTalents: ['Trickster', 'Fatebound'] },
+      { id: 260, name: 'Outlaw', role: 'dps', heroTalents: ['Trickster', 'Fatebound'] },
       { id: 261, name: 'Subtlety', role: 'dps', heroTalents: ['Deathstalker', 'Trickster'] },
     ]
   },

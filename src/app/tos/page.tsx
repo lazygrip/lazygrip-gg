@@ -1,3 +1,21 @@
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Terms of Service',
+  description: 'The terms that apply to using LazyGrip.net, posting sequences, and the content standards expected of accounts.',
+  alternates: {
+    canonical: 'https://lazygrip.net/tos',
+  },
+  openGraph: {
+    title: 'Terms of Service',
+    description: 'The terms that apply to using LazyGrip.net, posting sequences, and the content standards expected of accounts.',
+    url: 'https://lazygrip.net/tos',
+    siteName: 'LazyGrip.net',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'LazyGrip.net — GRIP-EMS sequences for World of Warcraft' }],
+  },
+}
+
 export default function TermsPage() {
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>

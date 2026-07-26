@@ -2,8 +2,19 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Settings | GRIP-EMS Guide | LazyGrip.net',
+  title: 'Settings | GRIP-EMS Guide',
   description: 'The GRIP-EMS settings that actually determine whether your sequences run smoothly. SQW, Key Down Casting, click rate, the Dynamic SQW Optimiser, the Tempo Advisor, and how they all connect.',
+  alternates: {
+    canonical: 'https://lazygrip.net/guide/settings',
+  },
+  openGraph: {
+    title: 'Settings | GRIP-EMS Guide',
+    description: 'The GRIP-EMS settings that actually determine whether your sequences run smoothly. SQW, Key Down Casting, click rate, the Dynamic SQW Optimiser, the Tempo Advisor, and how they all connect.',
+    url: 'https://lazygrip.net/guide/settings',
+    siteName: 'LazyGrip.net',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'LazyGrip.net — GRIP-EMS sequences for World of Warcraft' }],
+  },
 }
 
 export default function SettingsPage() {
