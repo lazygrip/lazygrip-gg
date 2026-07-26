@@ -2,8 +2,19 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'How GRIP-EMS Works | GRIP-EMS Guide | LazyGrip.net',
+  title: 'How GRIP-EMS Works | GRIP-EMS Guide',
   description: 'The mental model behind GRIP-EMS: the secure execution environment, what you can and cannot do inside a sequence, and how the step engine actually behaves.',
+  alternates: {
+    canonical: 'https://lazygrip.net/guide/how-it-works',
+  },
+  openGraph: {
+    title: 'How GRIP-EMS Works | GRIP-EMS Guide',
+    description: 'The mental model behind GRIP-EMS: the secure execution environment, what you can and cannot do inside a sequence, and how the step engine actually behaves.',
+    url: 'https://lazygrip.net/guide/how-it-works',
+    siteName: 'LazyGrip.net',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'LazyGrip.net — GRIP-EMS sequences for World of Warcraft' }],
+  },
 }
 
 export default function HowItWorksPage() {

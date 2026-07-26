@@ -1,3 +1,21 @@
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'GRIP-EMS FAQ',
+  description: 'Common questions about GRIP-EMS and LazyGrip.net: importing sequences, whether one-button macros are allowed, accounts, and privacy.',
+  alternates: {
+    canonical: 'https://lazygrip.net/faq',
+  },
+  openGraph: {
+    title: 'GRIP-EMS FAQ',
+    description: 'Common questions about GRIP-EMS and LazyGrip.net: importing sequences, whether one-button macros are allowed, accounts, and privacy.',
+    url: 'https://lazygrip.net/faq',
+    siteName: 'LazyGrip.net',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'LazyGrip.net — GRIP-EMS sequences for World of Warcraft' }],
+  },
+}
+
 export default function FAQPage() {
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>

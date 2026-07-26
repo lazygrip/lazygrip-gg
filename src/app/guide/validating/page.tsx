@@ -3,8 +3,19 @@ import Link from 'next/link'
 import { ArrowLeft, ExternalLink } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Validating Your Work | GRIP-EMS Guide | LazyGrip.net',
+  title: 'Validating Your Work | GRIP-EMS Guide',
   description: 'How to know your GRIP-EMS sequence is actually working. The Repair module as a first-pass diagnostic, and Warcraft Logs CSV exports as the proof standard for any spec.',
+  alternates: {
+    canonical: 'https://lazygrip.net/guide/validating',
+  },
+  openGraph: {
+    title: 'Validating Your Work | GRIP-EMS Guide',
+    description: 'How to know your GRIP-EMS sequence is actually working. The Repair module as a first-pass diagnostic, and Warcraft Logs CSV exports as the proof standard for any spec.',
+    url: 'https://lazygrip.net/guide/validating',
+    siteName: 'LazyGrip.net',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'LazyGrip.net — GRIP-EMS sequences for World of Warcraft' }],
+  },
 }
 
 function Code({ children }: { children: React.ReactNode }) {

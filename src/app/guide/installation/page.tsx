@@ -2,8 +2,19 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Installation | GRIP-EMS Guide | LazyGrip.net',
+  title: 'Installation | GRIP-EMS Guide',
   description: 'How to install GRIP-EMS correctly, including the three post-install steps that most guides skip and that cause most new user problems.',
+  alternates: {
+    canonical: 'https://lazygrip.net/guide/installation',
+  },
+  openGraph: {
+    title: 'Installation | GRIP-EMS Guide',
+    description: 'How to install GRIP-EMS correctly, including the three post-install steps that most guides skip and that cause most new user problems.',
+    url: 'https://lazygrip.net/guide/installation',
+    siteName: 'LazyGrip.net',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'LazyGrip.net — GRIP-EMS sequences for World of Warcraft' }],
+  },
 }
 
 export default function InstallationPage() {

@@ -1,5 +1,22 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Shield } from 'lucide-react'
+
+export const metadata: Metadata = {
+  title: 'About',
+  description: 'What LazyGrip.net is, who runs it, and how the sequence library and Workshop fit together with the GRIP-EMS addon.',
+  alternates: {
+    canonical: 'https://lazygrip.net/about',
+  },
+  openGraph: {
+    title: 'About',
+    description: 'What LazyGrip.net is, who runs it, and how the sequence library and Workshop fit together with the GRIP-EMS addon.',
+    url: 'https://lazygrip.net/about',
+    siteName: 'LazyGrip.net',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'LazyGrip.net — GRIP-EMS sequences for World of Warcraft' }],
+  },
+}
 
 export default function AboutPage() {
   return (

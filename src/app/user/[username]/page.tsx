@@ -10,6 +10,37 @@ interface Props {
   params: Promise<{ username: string }>
 }
 
+const BIO_DESCRIPTION_MIN = 50
+const BIO_DESCRIPTION_MAX = 155
+
+/**
+ * Turn a free-text profile bio into something safe to emit as a meta
+ * description: no line breaks, no outbound URLs, and cut on a word boundary.
+ * Returns null when the result is too thin to be worth using, so the caller
+ * can fall back to the generated description.
+ */
+function bioToDescription(bio: string | null | undefined): string | null {
+  if (!bio) return null
+
+  const cleaned = bio
+    .replace(/https?:\/\/\S+/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (cleaned.length < BIO_DESCRIPTION_MIN) return null
+  if (cleaned.length <= BIO_DESCRIPTION_MAX) return cleaned
+
+  const head = cleaned.slice(0, BIO_DESCRIPTION_MAX + 1)
+  const lastSpace = head.lastIndexOf(' ')
+  const truncated = lastSpace > 0 ? head.slice(0, lastSpace) : cleaned.slice(0, BIO_DESCRIPTION_MAX)
+  const trimmed = truncated.replace(/[\s,.;:!?-]+$/, '')
+
+  // A bio like '-- ' followed by one very long token truncates to punctuation
+  // only, which the trailing-punctuation strip then empties. Re-check the
+  // floor so we always return either a usable string or null, never ''.
+  return trimmed.length >= BIO_DESCRIPTION_MIN ? trimmed : null
+}
+
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const params = await props.params;
   const supabase = await createClient()
@@ -26,9 +57,8 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
   const name = profile.display_name || profile.username
   const title = `${name}'s GRIP-EMS Sequences`
-  const description = profile.bio
-    ? profile.bio.slice(0, 155)
-    : `WoW macro sequences shared by ${name} on LazyGrip.net. Free to import into GRIP-EMS.`
+  const description = bioToDescription(profile.bio)
+    ?? `WoW macro sequences shared by ${name} on LazyGrip.net. Free to import into GRIP-EMS.`
 
   return {
     title,

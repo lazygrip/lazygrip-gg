@@ -3,8 +3,19 @@ import Link from 'next/link'
 import { ArrowRight, ArrowLeft } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Coming from the Legacy Program | GRIP-EMS Guide | LazyGrip.net',
+  title: 'Coming from the Legacy Program | GRIP-EMS Guide',
   description: 'If you use another older macro sequencing addon and are evaluating GRIP-EMS, this section covers the one mechanical difference that matters, what transfers automatically, and what to watch for.',
+  alternates: {
+    canonical: 'https://lazygrip.net/guide/from-legacy-program',
+  },
+  openGraph: {
+    title: 'Coming from the Legacy Program | GRIP-EMS Guide',
+    description: 'If you use another older macro sequencing addon and are evaluating GRIP-EMS, this section covers the one mechanical difference that matters, what transfers automatically, and what to watch for.',
+    url: 'https://lazygrip.net/guide/from-legacy-program',
+    siteName: 'LazyGrip.net',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'LazyGrip.net — GRIP-EMS sequences for World of Warcraft' }],
+  },
 }
 
 function Code({ children }: { children: React.ReactNode }) {
