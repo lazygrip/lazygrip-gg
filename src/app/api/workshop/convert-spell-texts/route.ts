@@ -15,6 +15,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'texts must be an array.' }, { status: 400 })
   }
 
+  if (texts.length > 200) {
+    return NextResponse.json({ error: 'texts array is too large (max 200 entries).' }, { status: 400 })
+  }
+
   try {
     const converted = texts.map(text => {
       const str = String(text ?? '')
