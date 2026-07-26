@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Search, SlidersHorizontal, X } from 'lucide-react'
 import SequenceCard from '@/components/sequence/SequenceCard'
 import { WOW_CLASSES, CONTENT_TYPES } from '@/lib/wow-data'
 import { Sequence, SequenceFilters } from '@/types'
 import { createClient } from '@/lib/supabase/client'
+import { BROWSE_PAGE_SIZE, browseFilterKey, buildBrowseQuery } from '@/lib/browse-query'
 
 const SORT_OPTIONS = [
   { value: 'recent', label: 'Recent' },
@@ -17,28 +18,42 @@ const SORT_OPTIONS = [
 
 interface Props {
   initialFilters?: Partial<SequenceFilters>
+  heading?: string
+  initialSequences?: Sequence[]
+  initialCount?: number
+  initialCurrentPatch?: string | null
+  initialFilterKey?: string
 }
 
-export default function BrowseContent({ initialFilters = {} }: Props) {
+export default function BrowseContent({
+  initialFilters = {},
+  heading,
+  initialSequences,
+  initialCount,
+  initialCurrentPatch,
+  initialFilterKey,
+}: Props) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
 
-  const [sequences, setSequences] = useState<Sequence[]>([])
-  const [loading, setLoading] = useState(true)
-  const [count, setCount] = useState(0)
+  const [sequences, setSequences] = useState<Sequence[]>(initialSequences ?? [])
+  const [loading, setLoading] = useState(initialSequences == null)
+  const [count, setCount] = useState(initialCount ?? 0)
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [showMobileFilters, setShowMobileFilters] = useState(false)
-  const [currentPatch, setCurrentPatch] = useState<string | null>(null)
+  const [currentPatch, setCurrentPatch] = useState<string | null>(initialCurrentPatch ?? null)
 
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
+  const hasFetchedRef = useRef(false)
 
   // Merge URL params with initialFilters — initialFilters are the baseline from the slug route,
   // URL params take precedence when they exist (e.g. after user interaction or back button)
   const filters: SequenceFilters = {
     sort: (searchParams.get('sort') || 'recent') as SequenceFilters['sort'],
     page: searchParams.get('page') ? Number(searchParams.get('page')) : 1,
-    limit: 20,
+    limit: BROWSE_PAGE_SIZE,
     content_type: (searchParams.get('content_type') || initialFilters.content_type || undefined) as SequenceFilters['content_type'],
     class_id: searchParams.get('class_id') ? Number(searchParams.get('class_id')) : initialFilters.class_id,
     spec_id: searchParams.get('spec_id') ? Number(searchParams.get('spec_id')) : undefined,
@@ -79,12 +94,18 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
   }, [pathname])
 
   useEffect(() => {
+    const key = browseFilterKey(filters)
+    if (!hasFetchedRef.current && initialSequences != null && key === initialFilterKey) {
+      return
+    }
+    hasFetchedRef.current = true
     fetchSequences()
   }, [searchParams.toString()])
 
   // Fetch the site-wide current patch once on mount. Not re-fetched per filter change —
   // this value changes rarely (only when admin updates it) so one fetch per page load is enough.
   useEffect(() => {
+    if (initialCurrentPatch !== undefined) return
     fetchCurrentPatch()
   }, [])
 
@@ -107,32 +128,7 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
   async function fetchSequences() {
     setLoading(true)
     try {
-      let query = supabase
-        .from('sequences')
-        .select('*, author:profiles(username, display_name, avatar_url)', { count: 'exact' })
-        .eq('status', 'published')
-
-      if (filters.class_id) query = query.eq('class_id', filters.class_id)
-      if (filters.spec_id) query = query.eq('spec_id', filters.spec_id)
-      if (filters.content_type) query = query.eq('content_type', filters.content_type)
-      if (filters.search) query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
-
-      switch (filters.sort) {
-        case 'top_rated':
-          query = query.gt('rating_count', 0).order('avg_score', { ascending: false }).order('rating_count', { ascending: false })
-          break
-        case 'most_viewed':
-          query = query.order('view_count', { ascending: false })
-          break
-        case 'most_saved':
-          query = query.order('save_count', { ascending: false })
-          break
-        default:
-          query = query.order('updated_at', { ascending: false })
-      }
-
-      const from = ((filters.page || 1) - 1) * (filters.limit || 20)
-      query = query.range(from, from + (filters.limit || 20) - 1)
+      const query = buildBrowseQuery(supabase, filters)
 
       const { data, count: total } = await query
       setSequences(data || [])
@@ -261,6 +257,11 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
       <div className="browse-layout">
         <aside className="browse-sidebar">{filterPanel}</aside>
         <div className="browse-main">
+          {heading && (
+            <h1 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', margin: '0 0 12px', color: 'var(--text-primary)' }}>
+              {heading}
+            </h1>
+          )}
           <form onSubmit={handleSearch} style={{ marginBottom: 12 }}>
             <div style={{ position: 'relative' }}>
               <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
