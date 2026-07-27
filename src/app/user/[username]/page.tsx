@@ -64,12 +64,12 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     title,
     description,
     alternates: {
-      canonical: `https://lazygrip.net/user/${params.username}`,
+      canonical: `https://lazygrip.net/user/${encodeURIComponent(params.username)}`,
     },
     openGraph: {
       title,
       description,
-      url: `https://lazygrip.net/user/${params.username}`,
+      url: `https://lazygrip.net/user/${encodeURIComponent(params.username)}`,
       siteName: 'LazyGrip.net',
       type: 'profile',
       images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'LazyGrip.net — GRIP-EMS sequences for World of Warcraft' }],
