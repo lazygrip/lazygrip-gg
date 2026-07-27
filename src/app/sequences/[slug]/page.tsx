@@ -1,20 +1,11 @@
 import { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import SequencePageClient from './SequencePageClient'
+import { fetchSequencePage } from '@/lib/sequence-server'
+import { stripHtml } from '@/lib/html-text'
 
 type Props = {
   params: Promise<{ slug: string }>
-}
-
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .trim();
 }
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
@@ -90,6 +81,8 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   }
 }
 
-export default function SequencePage() {
-  return <SequencePageClient />
+export default async function SequencePage(props: Props) {
+  const params = await props.params
+  const initial = await fetchSequencePage(params.slug)
+  return <SequencePageClient key={params.slug} initial={initial} />
 }

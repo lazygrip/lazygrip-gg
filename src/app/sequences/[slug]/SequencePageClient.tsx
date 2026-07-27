@@ -8,6 +8,7 @@ import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { formatDistanceToNow } from 'date-fns'
 import RenderedContent from '@/components/editor/RenderedContent'
 import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
+import type { SequencePageResult } from '@/lib/sequence-server'
 
 const SITE_OWNER_ID = 'c2374192-e541-4636-9baf-84fc192cff52'
 
@@ -25,15 +26,41 @@ function nestComments(flat: Comment[]): Comment[] {
   return roots
 }
 
-export default function SequencePageClient() {
+function deriveSelectedVersion(seq: Sequence, versionData: SequenceVersion[]): SequenceVersion {
+  if (versionData.length > 0) {
+    return versionData.find(v => v.id === seq.current_version_id) ?? versionData[0]
+  }
+  return {
+    id: seq.id,
+    sequence_id: seq.id,
+    version_number: 1,
+    version_label: 'v1.0',
+    grip_string: seq.grip_string ?? '',
+    raw_steps: seq.raw_steps ?? null,
+    changelog: null,
+    author_id: seq.author_id,
+    hero_talent: seq.hero_talent ?? null,
+    content_type: seq.content_type ?? null,
+    step_function: seq.step_function ?? null,
+    grip_version: seq.grip_version ?? null,
+    talent_string: seq.talent_string ?? null,
+    warcraftlogs_url: seq.warcraftlogs_url ?? null,
+    performance_notes: seq.performance_notes ?? null,
+    created_at: seq.created_at,
+  }
+}
+
+export default function SequencePageClient({ initial }: { initial?: SequencePageResult }) {
+  const seeded = initial && initial.status === 'ok' ? initial.data : null
   const params = useParams()
   const router = useRouter()
   const slug = params.slug as string
-  const [sequence, setSequence] = useState<Sequence | null>(null)
-  const [versions, setVersions] = useState<SequenceVersion[]>([])
-  const [selectedVersion, setSelectedVersion] = useState<SequenceVersion | null>(null)
-  const [comments, setComments] = useState<Comment[]>([])
-  const [loading, setLoading] = useState(true)
+  const [sequence, setSequence] = useState<Sequence | null>(seeded?.sequence ?? null)
+  const [versions, setVersions] = useState<SequenceVersion[]>(seeded?.versions ?? [])
+  const [selectedVersion, setSelectedVersion] = useState<SequenceVersion | null>(
+    seeded ? deriveSelectedVersion(seeded.sequence, seeded.versions) : null)
+  const [comments, setComments] = useState<Comment[]>(seeded ? nestComments(seeded.comments) : [])
+  const [loading, setLoading] = useState(!initial || initial.status === 'unavailable')
   const [copied, setCopied] = useState(false)
   const [showAllSteps, setShowAllSteps] = useState(false)
   const [activeCollectionTab, setActiveCollectionTab] = useState(0)
@@ -56,7 +83,7 @@ export default function SequencePageClient() {
   const [deletingVersion, setDeletingVersion] = useState(false)
 
   // ST/MT linking state
-  const [linkedSequence, setLinkedSequence] = useState<LinkedSequence | null>(null)
+  const [linkedSequence, setLinkedSequence] = useState<LinkedSequence | null>(seeded?.linkedSequence ?? null)
   const [showLinkInput, setShowLinkInput] = useState(false)
   const [linkSlug, setLinkSlug] = useState('')
   const [linkLoading, setLinkLoading] = useState(false)
@@ -64,13 +91,19 @@ export default function SequencePageClient() {
   const [unlinkLoading, setUnlinkLoading] = useState(false)
 
   // Site-wide current patch, for the staleness indicator (MFDOOM feature request)
-  const [currentPatch, setCurrentPatch] = useState<string | null>(null)
+  const [currentPatch, setCurrentPatch] = useState<string | null>(seeded?.currentPatch ?? null)
 
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
 
+  const hydratedRef = useRef(initial != null && initial.status !== 'unavailable')
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    if (hydratedRef.current) {
+      if (seeded) supabase.rpc('increment_view_count', { seq_id: seeded.sequence.id })
+      return
+    }
     fetchSequence()
     fetchCurrentPatch()
   }, [slug])
@@ -121,30 +154,8 @@ export default function SequencePageClient() {
         .eq('sequence_id', seq.id)
         .order('version_number', { ascending: false })
 
-      if (versionData && versionData.length > 0) {
-        setVersions(versionData)
-        const current = versionData.find(v => v.id === seq.current_version_id) ?? versionData[0]
-        setSelectedVersion(current)
-      } else {
-        setSelectedVersion({
-          id: seq.id,
-          sequence_id: seq.id,
-          version_number: 1,
-          version_label: 'v1.0',
-          grip_string: seq.grip_string ?? '',
-          raw_steps: seq.raw_steps ?? null,
-          changelog: null,
-          author_id: seq.author_id,
-          hero_talent: seq.hero_talent ?? null,
-          content_type: seq.content_type ?? null,
-          step_function: seq.step_function ?? null,
-          grip_version: seq.grip_version ?? null,
-          talent_string: seq.talent_string ?? null,
-          warcraftlogs_url: seq.warcraftlogs_url ?? null,
-          performance_notes: seq.performance_notes ?? null,
-          created_at: seq.created_at,
-        })
-      }
+      setVersions(versionData ?? [])
+      setSelectedVersion(deriveSelectedVersion(seq, versionData ?? []))
 
       if (seq.set_id) {
         const { data: linked } = await supabase
@@ -665,7 +676,7 @@ export default function SequencePageClient() {
             ) : (
               <strong style={{ color: 'var(--text-primary)' }}>{sequence.author?.username}</strong>
             )}
-            {' · '}{formatDistanceToNow(new Date(sequence.created_at), { addSuffix: true })}
+            {' · '}<span suppressHydrationWarning>{formatDistanceToNow(new Date(sequence.created_at), { addSuffix: true })}</span>
             {sequence.patch_version && ` · Patch ${sequence.patch_version}`}
             {isStale && (
               <>
@@ -1575,7 +1586,7 @@ function CommentThread({
                 </a>
               ) : comment.author?.username}
             </span>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)' }} suppressHydrationWarning>
               {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
             </span>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
