@@ -96,15 +96,16 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
 
-  const hydratedRef = useRef(initial != null && initial.status !== 'unavailable')
-
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
-    if (hydratedRef.current) {
-      if (seeded) supabase.rpc('increment_view_count', { seq_id: seeded.sequence.id })
-      return
+    if (seeded) {
+      supabase.rpc('increment_view_count', { seq_id: seeded.sequence.id })
+      // The page may have been served from cache. Reconcile in the background: no
+      // skeleton, no second view count, just fresh comments, versions and rating.
+      fetchSequence({ silent: true, countView: false })
+    } else {
+      fetchSequence()
     }
-    fetchSequence()
     fetchCurrentPatch()
   }, [slug])
 
@@ -126,8 +127,8 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
     setCurrentPatch(data?.current_patch ?? null)
   }
 
-  async function fetchSequence() {
-    setLoading(true)
+  async function fetchSequence(opts: { silent?: boolean; countView?: boolean } = {}) {
+    if (!opts.silent) setLoading(true)
     const { data: seq } = await supabase
       .from('sequences')
       .select('*, author:profiles(*)')
@@ -137,7 +138,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
 
     if (seq) {
       setSequence(seq)
-      await supabase.rpc('increment_view_count', { seq_id: seq.id })
+      if (opts.countView !== false) await supabase.rpc('increment_view_count', { seq_id: seq.id })
 
       const { data: cmts } = await supabase
         .from('comments')

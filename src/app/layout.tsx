@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { cookies } from 'next/headers'
 import './globals.css'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
@@ -51,12 +50,13 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  const cookieStore = await cookies()
-  const themeCookie = cookieStore.get('theme')
-  const initialTheme = themeCookie?.value === 'dark' ? 'dark' : 'light'
-
   return (
-    <html lang="en" data-theme={initialTheme}>
+    <html lang="en" suppressHydrationWarning>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: "try{var m=document.cookie.match(/(?:^|;\\s*)theme=(dark|light)/);document.documentElement.setAttribute('data-theme',m?m[1]:'light')}catch(e){document.documentElement.setAttribute('data-theme','light')}",
+        }}
+      />
       <body>
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-CJTX030THX"
@@ -70,7 +70,7 @@ export default async function RootLayout({
             gtag('config', 'G-CJTX030THX');
           `}
         </Script>
-        <ThemeProvider initialTheme={initialTheme}>
+        <ThemeProvider>
           <Header />
           <AnnouncementBar />
           <main style={{ minHeight: 'calc(100vh - 56px - 60px)' }}>

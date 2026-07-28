@@ -1,5 +1,7 @@
+export const revalidate = 3600
+
 import { Metadata } from 'next'
-import { createClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public'
 import SequencePageClient from './SequencePageClient'
 import { fetchSequencePage } from '@/lib/sequence-server'
 import { stripHtml } from '@/lib/html-text'
@@ -8,9 +10,25 @@ type Props = {
   params: Promise<{ slug: string }>
 }
 
+export async function generateStaticParams() {
+  // Prerender every published sequence at build so the cache starts warm. Wrapped
+  // because CI builds with placeholder credentials: on failure this returns nothing
+  // and every slug simply renders on demand, which is the pre-existing behaviour.
+  try {
+    const supabase = createPublicClient()
+    const { data } = await supabase
+      .from('sequences')
+      .select('slug')
+      .eq('status', 'published')
+    return (data ?? []).map((row: { slug: string }) => ({ slug: row.slug }))
+  } catch {
+    return []
+  }
+}
+
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const params = await props.params;
-  const supabase = await createClient()
+  const supabase = createPublicClient()
 
   const { data: sequence } = await supabase
     .from('sequences')

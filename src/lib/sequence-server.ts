@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public'
 import type { Comment, LinkedSequence, Sequence, SequenceVersion } from '@/types'
 
 export type SequencePageData = {
@@ -22,7 +22,7 @@ export type SequencePageResult =
 // client fetches exactly as it does today. Only 'not-found' asserts the slug is really absent.
 export async function fetchSequencePage(slug: string): Promise<SequencePageResult> {
   try {
-    const supabase = await createClient()
+    const supabase = createPublicClient()
 
     const { data: seq, error } = await supabase
       .from('sequences')

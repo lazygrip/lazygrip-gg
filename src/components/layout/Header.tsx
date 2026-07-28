@@ -197,7 +197,8 @@ export default function Header() {
                 color: 'var(--text-muted)',
               }}
             >
-              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+              <Sun size={16} className="theme-icon-dark" />
+              <Moon size={16} className="theme-icon-light" />
             </button>
 
             {user ? (
