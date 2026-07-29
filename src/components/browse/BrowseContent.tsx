@@ -218,6 +218,9 @@ export default function BrowseContent({
   }
 
   function clearFilters() {
+    // Close the sheet like every other control in the panel. On /browse the push below is
+    // same-route, so no remount closes it as a side effect; this has to be explicit.
+    setShowMobileFilters(false)
     setSearch('')
     const params = new URLSearchParams()
     if (filters.sort && filters.sort !== 'recent') params.set('sort', filters.sort)
