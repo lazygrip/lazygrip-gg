@@ -100,7 +100,8 @@ lib/
 supabase/
 client.ts # Browser client
 server.ts # Server client
-sequences.ts # Data fetching functions
+browse-server.ts # Browse listing data fetching
+sequence-server.ts # Sequence page data fetching
 wow-data.ts # WoW class/spec constants
 types/
 index.ts # TypeScript types
