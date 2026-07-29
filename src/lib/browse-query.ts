@@ -3,6 +3,18 @@ import type { SequenceFilters } from '@/types'
 
 export const BROWSE_PAGE_SIZE = 20
 
+// PostgREST reads `or=` as a comma-separated condition list, so an unquoted user term containing a
+// comma splits the filter into malformed conditions and the whole request 400s. Wrapping the LIKE
+// pattern in double quotes makes commas, parentheses and periods literal; backslash and double
+// quote then have to be escaped inside the quotes. Measured against live PostgREST 2026-07-29:
+// unquoted `guardian,` returns 400, quoted returns 200 with the same rows a plain term gives.
+// Deliberately does NOT escape the LIKE wildcards % and _. That would change what every existing
+// search matches, and it is not needed to stop the 400.
+export function searchPattern(search: string): string {
+  const escaped = search.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
+  return `"%${escaped}%"`
+}
+
 // Single source of truth for the browse listing query. The server page and the client
 // component must produce identical result sets, otherwise the server-rendered first page
 // is replaced by a different one the moment the client hydrates.
@@ -15,7 +27,10 @@ export function buildBrowseQuery(supabase: SupabaseClient, filters: SequenceFilt
   if (filters.class_id) query = query.eq('class_id', filters.class_id)
   if (filters.spec_id) query = query.eq('spec_id', filters.spec_id)
   if (filters.content_type) query = query.eq('content_type', filters.content_type)
-  if (filters.search) query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
+  if (filters.search) {
+    const pattern = searchPattern(filters.search)
+    query = query.or(`title.ilike.${pattern},description.ilike.${pattern}`)
+  }
 
   switch (filters.sort) {
     case 'top_rated':
