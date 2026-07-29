@@ -138,3 +138,12 @@ body {
   position: relative;
   z-index: 1;
 }
+
+/* Theme toggle icon. Driven by the data-theme attribute rather than React state, because that
+   attribute is set by a blocking script before first paint while React state starts at 'light'
+   on both server and client. Keying the icon off state would flash the wrong glyph for every
+   dark-mode visitor on every load. */
+.theme-icon-dark { display: none; }
+.theme-icon-light { display: inline-block; }
+html[data-theme='dark'] .theme-icon-dark { display: inline-block; }
+html[data-theme='dark'] .theme-icon-light { display: none; }

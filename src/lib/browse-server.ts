@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createPublicClient } from '@/lib/supabase/public'
 import { buildBrowseQuery } from '@/lib/browse-query'
 import type { Sequence, SequenceFilters } from '@/types'
 
@@ -13,7 +13,7 @@ export type BrowsePageData = {
 // would instead render the permanent "No sequences found" empty state.
 export async function fetchBrowsePage(filters: SequenceFilters): Promise<BrowsePageData> {
   try {
-    const supabase = await createClient()
+    const supabase = createPublicClient()
     const [listing, config] = await Promise.all([
       buildBrowseQuery(supabase, filters),
       supabase.from('site_config').select('current_patch').single(),
