@@ -34,8 +34,9 @@ export default async function BrowseSlugPage(props: Props) {
     ? { class_id: matchedClass.id }
     : { content_type: matchedContent!.value as SequenceFilters['content_type'] }
 
-  // Must match what BrowseContent derives after its URL-sync effect runs, or the filter key
-  // will not line up and the client will refetch the page the server already delivered.
+  // Must match what BrowseContent derives, or the filter key will not line up and the client will
+  // refetch the page the server already delivered. Both sides fall back to the same baseline, so
+  // they agree without the class_id/content_type query parameter being present in the URL.
   const filters: SequenceFilters = {
     sort: (searchParams.sort as SequenceFilters['sort']) || 'recent',
     page: searchParams.page ? Number(searchParams.page) : 1,

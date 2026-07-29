@@ -44,9 +44,46 @@ export default function BrowseContent({
   const [showMobileFilters, setShowMobileFilters] = useState(false)
   const [currentPatch, setCurrentPatch] = useState<string | null>(initialCurrentPatch ?? null)
 
+  // The filter key the sequences currently on screen were fetched with. Seeded with the server's
+  // key when the server delivered data, undefined when it did not (then the client must fetch).
+  const [displayedKey, setDisplayedKey] = useState<string | undefined>(
+    initialSequences != null ? initialFilterKey : undefined
+  )
+  // The last server key adopted, so each distinct server payload is adopted exactly once.
+  const [adoptedServerKey, setAdoptedServerKey] = useState<string | undefined>(
+    initialSequences != null ? initialFilterKey : undefined
+  )
+  // Mirrors the URL's search value so back/forward can update the input without clobbering typing.
+  const [lastUrlSearch, setLastUrlSearch] = useState(searchParams.get('search') || '')
+
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
-  const hasFetchedRef = useRef(false)
+  // Monotonic id so a slow fetch that has been superseded cannot overwrite newer results.
+  const fetchSeqRef = useRef(0)
+
+  // Adopt the server's data whenever the server's filter key changes. Both browse routes are
+  // force-dynamic, so a same-route filter change re-renders the server component and delivers a
+  // fresh initialSequences plus a fresh initialFilterKey. useState initialisers never re-run and
+  // the instance is reused, so without this the fresh server data is silently discarded and the
+  // list keeps rendering the previous filter's cards. This is React's documented
+  // adjust-state-during-render pattern: the guard turns false the moment the keys match, so it
+  // settles in one extra render pass and cannot loop.
+  if (initialSequences != null && initialFilterKey !== adoptedServerKey) {
+    setAdoptedServerKey(initialFilterKey)
+    setDisplayedKey(initialFilterKey)
+    setSequences(initialSequences)
+    setCount(initialCount ?? 0)
+    setLoading(false)
+  }
+
+  // Same class of defect on the search input: its useState initialiser never re-runs either, so a
+  // back/forward that changes ?search would leave stale text in the box. Keyed on the URL value
+  // rather than on every render, so typing (which does not touch the URL) is never clobbered.
+  const urlSearch = searchParams.get('search') || ''
+  if (urlSearch !== lastUrlSearch) {
+    setLastUrlSearch(urlSearch)
+    setSearch(urlSearch)
+  }
 
   // Merge URL params with initialFilters — initialFilters are the baseline from the slug route,
   // URL params take precedence when they exist (e.g. after user interaction or back button)
@@ -76,31 +113,21 @@ export default function BrowseContent({
     router.push(`${pathname}${query ? `?${query}` : ''}`, { scroll: false })
   }
 
-  // Sync initialFilters into URL so back button can restore them
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString())
-    let changed = false
-    if (initialFilters.class_id && !searchParams.get('class_id')) {
-      params.set('class_id', String(initialFilters.class_id))
-      changed = true
-    }
-    if (initialFilters.content_type && !searchParams.get('content_type')) {
-      params.set('content_type', initialFilters.content_type)
-      changed = true
-    }
-    if (changed) {
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-    }
-  }, [pathname])
+  const filterKey = browseFilterKey(filters)
 
+  // Fetch only when the live filters differ from the filters the DISPLAYED data came from. The
+  // previous one-shot fetch-latch ref could not tell "the server already has this" from "the
+  // server has something else" after the first render, so it returned early forever.
   useEffect(() => {
-    const key = browseFilterKey(filters)
-    if (!hasFetchedRef.current && initialSequences != null && key === initialFilterKey) {
+    if (filterKey === displayedKey) {
+      // What is on screen already matches the live filters, so any client fetch still in flight
+      // is stale by definition. This is the path a server adoption lands on, and bumping here is
+      // what stops a slow pre-adoption fetch from overwriting the server's newer data.
+      fetchSeqRef.current++
       return
     }
-    hasFetchedRef.current = true
-    fetchSequences()
-  }, [searchParams.toString()])
+    fetchSequences(filterKey, filters)
+  }, [filterKey, displayedKey])
 
   // Fetch the site-wide current patch once on mount. Not re-fetched per filter change —
   // this value changes rarely (only when admin updates it) so one fetch per page load is enough.
@@ -125,18 +152,22 @@ export default function BrowseContent({
     }
   }
 
-  async function fetchSequences() {
+  async function fetchSequences(keyForThisFetch: string, filtersForThisFetch: SequenceFilters) {
+    const fetchId = ++fetchSeqRef.current
     setLoading(true)
     try {
-      const query = buildBrowseQuery(supabase, filters)
-
+      const query = buildBrowseQuery(supabase, filtersForThisFetch)
       const { data, count: total } = await query
+      // A newer fetch started while this one was in flight; its result wins.
+      if (fetchId !== fetchSeqRef.current) return
       setSequences(data || [])
       setCount(total || 0)
+      setDisplayedKey(keyForThisFetch)
     } catch (e) {
+      if (fetchId !== fetchSeqRef.current) return
       console.error(e)
     } finally {
-      setLoading(false)
+      if (fetchId === fetchSeqRef.current) setLoading(false)
     }
   }
 
@@ -165,11 +196,36 @@ export default function BrowseContent({
     setShowMobileFilters(false)
   }
 
+  function selectContentType(value: string | undefined) {
+    setShowMobileFilters(false)
+    // On a content-type hub the slug carries the filter, so changing or clearing it has to move
+    // routes, exactly as selectClass does for classes. Staying on the same path made "All" a dead
+    // control: it deleted a query parameter that was not filtering anything, and initialFilters
+    // immediately restored the hub's own type. Measured on production 2026-07-29: /browse/raid,
+    // click All, card set unchanged at 1. Sort and search are carried across; they are not part
+    // of the content filter.
+    if (initialFilters.content_type) {
+      const params = new URLSearchParams()
+      if (filters.sort && filters.sort !== 'recent') params.set('sort', filters.sort)
+      if (filters.search) params.set('search', filters.search)
+      const query = params.toString()
+      const target = value ? CONTENT_TYPES.find(ct => ct.value === value) : undefined
+      const path = target ? `/browse/${target.slug}` : '/browse'
+      router.push(`${path}${query ? `?${query}` : ''}`, { scroll: false })
+      return
+    }
+    updateUrl({ content_type: value })
+  }
+
   function clearFilters() {
     setSearch('')
     const params = new URLSearchParams()
     if (filters.sort && filters.sort !== 'recent') params.set('sort', filters.sort)
-    router.push(`${pathname}${params.toString() ? `?${params.toString()}` : ''}`, { scroll: false })
+    const query = params.toString()
+    // Clear has to escape the slug route as well. On /browse/druid the slug itself carries the
+    // class filter, so pushing pathname left the class applied while the control said "Clear".
+    // Measured 2026-07-29: spec_id dropped from the URL, card set unchanged at 1.
+    router.push(`/browse${query ? `?${query}` : ''}`, { scroll: false })
   }
 
   const hasActiveFilters = filters.class_id || filters.content_type || filters.search || filters.spec_id
@@ -187,9 +243,9 @@ export default function BrowseContent({
         )}
       </div>
       <FilterSection title="Content">
-        <FilterItem label="All" active={!filters.content_type} onClick={() => { updateUrl({ content_type: undefined }); setShowMobileFilters(false) }} />
+        <FilterItem label="All" active={!filters.content_type} onClick={() => selectContentType(undefined)} />
         {CONTENT_TYPES.map(ct => (
-          <FilterItem key={ct.value} label={ct.label} active={filters.content_type === ct.value} onClick={() => { updateUrl({ content_type: ct.value }); setShowMobileFilters(false) }} />
+          <FilterItem key={ct.value} label={ct.label} active={filters.content_type === ct.value} onClick={() => selectContentType(ct.value)} />
         ))}
       </FilterSection>
       <FilterSection title="Class">
