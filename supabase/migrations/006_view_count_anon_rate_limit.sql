@@ -2,9 +2,10 @@
 --
 -- increment_view_count had no auth requirement and no rate limit -- any anon
 -- caller could inflate a sequence's view_count arbitrarily by calling the RPC
--- repeatedly (it's invoked client-side directly from src/lib/sequences.ts on
--- every sequence page load, supabase.rpc('increment_view_count', ...), no
--- API route in front of it). Flagged as optional/low-priority in both our
+-- repeatedly (it's invoked client-side directly from
+-- src/app/sequences/[slug]/SequencePageClient.tsx on every sequence page load,
+-- supabase.rpc('increment_view_count', ...), with no API route in front of it).
+-- Flagged as optional/low-priority in both our
 -- tracker (Q3) and Slowdog's own SECURITY_AUDIT_2026-07-22.md ("only matters
 -- if view counts ever feed a trending/sort mechanic"). Shipping now per
 -- Jesper's go-ahead.

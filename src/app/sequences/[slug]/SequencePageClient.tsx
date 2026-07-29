@@ -99,7 +99,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
     if (seeded) {
-      supabase.rpc('increment_view_count', { seq_id: seeded.sequence.id })
+      countSeededView(seeded.sequence.id)
       // The page may have been served from cache. Reconcile in the background: no
       // skeleton, no second view count, just fresh comments, versions and rating.
       fetchSequence({ silent: true, countView: false })
@@ -114,6 +114,18 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
       fetchTagBreakdown(sequence.id)
     }
   }, [sequence, user])
+
+  // supabase-js query builders are lazy thenables: the request is only issued when the builder
+  // is awaited or .then()-ed. A bare `supabase.rpc(...)` statement builds the request and drops
+  // it on the floor, which is why view counting silently stopped. Measured 2026-07-29 on
+  // production and on a local production build: zero /rest/v1/rpc/increment_view_count requests
+  // on a seeded page load, and view_count did not move across a full load. Calling the RPC
+  // directly returned 204 and incremented, so only the client call site was at fault. Keep the
+  // await, or this stops counting again with no visible symptom.
+  async function countSeededView(sequenceId: string) {
+    const { error } = await supabase.rpc('increment_view_count', { seq_id: sequenceId })
+    if (error) console.error('Failed to increment view count:', error)
+  }
 
   async function fetchCurrentPatch() {
     const { data, error } = await supabase
