@@ -72,7 +72,7 @@ export default function AboutPage() {
         <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '24px' }}>
           <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Disclaimer</h2>
           <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8 }}>
-            LazyGrip.net is an independent site with no affiliation with Blizzard Entertainment or the GRIP-EMS addon developer. World of Warcraft is a trademark of Blizzard Entertainment, Inc.
+            LazyGrip.net is a community site, independently owned and operated, with no affiliation with or endorsement from Blizzard Entertainment. It is not an official GRIP-EMS site. World of Warcraft is a trademark of Blizzard Entertainment, Inc.
           </p>
         </div>
 

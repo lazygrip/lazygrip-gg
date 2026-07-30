@@ -59,9 +59,10 @@ export default function HomePage() {
             maxWidth: 520,
             margin: '0 auto 28px',
           }}>
-            GRIP-EMS is a World of Warcraft rotation addon that holds its place when a cast fails
-            instead of skipping ahead. For Mythic+ players running tight keys, that difference
-            shows up in your logs. LazyGrip is the community library for sequences built around it.
+            GRIP-EMS is a World of Warcraft macro sequencer. One keybind steps through a
+            rotation you build: loop blocks, priority weighting, per-step intervals,
+            conditionals on the line. LazyGrip is the community library for sequences built
+            around it.
           </p>
 
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -207,12 +208,13 @@ export default function HomePage() {
             marginBottom: 32,
             maxWidth: 620,
           }}>
-            Because consistent execution shows up in your logs. When a rotation holds its place
-            on a failed cast instead of advancing, your cooldowns land when your sequence says
-            they should. Your high-priority spells don't get buried behind abilities that fired
-            out of order. Your uptime numbers stop fluctuating run to run for reasons you can't
-            explain. That's not a promise. It's what the logs show when you build sequences the
-            right way around an engine that doesn't skip.
+            Because a sequence is only as good as the structure behind it. You get loop
+            blocks, priority and reverse-priority weighting, per-step intervals so a cooldown
+            gets tried every fourth press instead of every press, conditionals evaluated on
+            the line, and variables you can reuse across sequences. The engine advances one
+            step per press and never checks whether anything cast, so what makes a press
+            count is the macro line on the step and where that step sits in the loop. All of
+            it is free. There is no supporter tier and nothing behind a payment.
           </p>
 
           <div style={{
@@ -222,8 +224,8 @@ export default function HomePage() {
           }}>
             {[
               {
-                label: 'Holds on failed casts',
-                desc: 'The sequence stays where it is until the cast lands, not where the engine decided to move.',
+                label: 'Per-step intervals',
+                desc: 'Set how often each step fires. Every press, or every third, or every eighth.',
                 color: '#1D9E75',
               },
               {
