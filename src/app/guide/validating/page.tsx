@@ -90,7 +90,7 @@ export default function ValidatingPage() {
           The specific problem with tank and buffer validation is that the consequences of a bad sequence are sometimes invisible in the moment. A sequence with poor defensive uptime does not feel dramatically different on a plus 10 where you are significantly overgearing the content. It shows up on a plus 13 when the healer goes dry covering gaps. Logs let you find those gaps before the key tells you about them the hard way.
         </p>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75 }}>
-          Target dummies have none of the variables that real content introduces: movement, interrupts, crowd control, latency spikes, or the reaction time that interrupts your keypress rhythm. A sequence that looks perfect on a dummy degrades in live content in ways that are only visible in logs. This is exactly the scenario where hold-on-failure behavior matters most and where the gap between a well-structured sequence and a poorly-structured one becomes measurable.
+          Target dummies have none of the variables that real content introduces: movement, interrupts, crowd control, latency spikes, or the reaction time that interrupts your keypress rhythm. A sequence that looks perfect on a dummy degrades in live content in ways that are only visible in logs. That is where the gap between a well-structured sequence and a poorly-structured one becomes measurable, because a step you press while moving or stunned still advances and the spell it named simply does not go out.
         </p>
       </section>
 
@@ -132,7 +132,7 @@ export default function ValidatingPage() {
             {
               step: '6',
               title: 'Adjust and rerun',
-              desc: "When you find a number that is out of range, trace it back to the sequence structure. A maintenance buff with low uptime usually means the step spacing is wrong or the spell is being blocked by a failed step ahead of it. A major cooldown firing late usually means resetOnCombat is disabled or something is advancing the sequence pre-pull. Make one structural change at a time and rerun before making another, because changing multiple things at once makes it impossible to know which change fixed the problem.",
+              desc: "When you find a number that is out of range, trace it back to the sequence structure. A maintenance buff with low uptime usually means the loop is too long for the buff duration, so the step that refreshes it does not come around often enough. It can also mean the refresh sits under a /cast that is often on cooldown, because a failed cast stops the lines below it on that press. A major cooldown firing late usually means resetOnCombat is disabled or something is advancing the sequence pre-pull. Make one structural change at a time and rerun before making another, because changing multiple things at once makes it impossible to know which change fixed the problem.",
             },
           ].map(item => (
             <div key={item.step} style={{ display: 'flex', gap: 16, padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
@@ -193,7 +193,7 @@ export default function ValidatingPage() {
           {[
             {
               signal: 'A high-priority spell has significantly lower CPM than expected',
-              cause: 'Step spacing is wrong, or the spell is getting held too long by failed steps ahead of it. Count how many times that spell appears in your step loop and compare to total steps. If it appears at the right frequency in the sequence but not in logs, something earlier in the loop is stalling.',
+              cause: 'Step spacing is wrong, or the spell sits below a /cast that is frequently on cooldown, which stops the rest of that press before it reaches your spell. Count how many times that spell appears in your step loop and compare to total steps. If it appears at the right frequency in the sequence but not in the logs, look at the lines above it on that step.',
             },
             {
               signal: 'A maintenance buff shows below 80% uptime',
@@ -205,7 +205,7 @@ export default function ValidatingPage() {
             },
             {
               signal: 'Numbers look fine on a dummy but fall apart in keys',
-              cause: 'Dummies have no movement, interrupts, or latency spikes. A sequence that cannot handle brief holds on failed steps looks clean on a dummy and degrades in live content. This is exactly the scenario where the hold-on-failure behavior matters most and where the dummy gives you a false positive.',
+              cause: 'Dummies have no movement, interrupts, or latency spikes. On a dummy every press produces a cast, so the loop looks perfect. In a key the presses you spend moving or stunned still advance the sequence and produce nothing, which is where a fragile sequence falls apart and the dummy gives you a false positive.',
             },
             {
               signal: 'A spell drops to zero casts entirely',

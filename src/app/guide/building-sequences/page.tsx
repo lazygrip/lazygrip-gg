@@ -107,7 +107,7 @@ export default function BuildingSequencesPage() {
             label: 'Ironfur (in-sequence)',
             code: `/cast [noform:1, nochanneling] Bear Form; [mod:shift] Frenzied Regeneration; [mod:ctrl] Ironfur
 /cast [nomod:shift, nomod:ctrl, combat] Ironfur`,
-            notes: `The first in-sequence Ironfur cast. Ironfur appears at steps 7, 14, 21, and 28, every 7 steps, intentionally aligned with its duration so the buff refreshes before it falls off. This is what produces the 91 to 97% uptime in logs. The math only works if the sequence actually reaches these steps at the right pace, which is why hold-on-failure behavior matters so much for tank rotations specifically.`,
+            notes: `The first in-sequence Ironfur cast. Ironfur appears at steps 7, 14, 21, and 28, every 7 steps, intentionally aligned with its duration so the buff refreshes before it falls off. This is what produces the 91 to 97% uptime in logs. The math only works if the sequence actually reaches these steps at the right pace, which is why loop length and a steady click rate matter so much for tank rotations specifically.`,
           },
           {
             num: 8,

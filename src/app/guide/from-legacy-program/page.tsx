@@ -4,13 +4,13 @@ import { ArrowRight, ArrowLeft } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'Coming from the Legacy Program | GRIP-EMS Guide',
-  description: 'If you use another older macro sequencing addon and are evaluating GRIP-EMS, this section covers the one mechanical difference that matters, what transfers automatically, and what to watch for.',
+  description: 'If you use another older macro sequencing addon and are evaluating GRIP-EMS, this section covers how step advancement actually works, what transfers automatically, and what to watch for.',
   alternates: {
     canonical: 'https://lazygrip.net/guide/from-legacy-program',
   },
   openGraph: {
     title: 'Coming from the Legacy Program | GRIP-EMS Guide',
-    description: 'If you use another older macro sequencing addon and are evaluating GRIP-EMS, this section covers the one mechanical difference that matters, what transfers automatically, and what to watch for.',
+    description: 'If you use another older macro sequencing addon and are evaluating GRIP-EMS, this section covers how step advancement actually works, what transfers automatically, and what to watch for.',
     url: 'https://lazygrip.net/guide/from-legacy-program',
     siteName: 'LazyGrip.net',
     type: 'website',
@@ -52,7 +52,7 @@ export default function FromLegacyProgramPage() {
           Coming from the legacy program
         </h1>
         <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.75, maxWidth: 620 }}>
-          If you use an older macro sequencing addon and are evaluating whether to switch, this section is written specifically for you. The legacy program works and a lot of good sequences exist for it. The reason to use GRIP-EMS is a specific mechanical difference that matters for certain content at certain difficulty levels, and a set of diagnostic tools that do not exist in the legacy program. This is not a pitch, it is an honest breakdown of what is different.
+          If you use an older macro sequencing addon and are evaluating whether to switch, this section is written specifically for you. The legacy program works and a lot of good sequences exist for it. The reason to use GRIP-EMS is the structure you can build into a sequence and the diagnostic tooling around it, plus the fact that every feature is free. This is not a pitch, it is an honest breakdown of what is different.
         </p>
       </div>
 
@@ -95,16 +95,16 @@ export default function FromLegacyProgramPage() {
 
       <section style={{ marginBottom: 40 }}>
         <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
-          The one difference that actually matters
+          How advancement actually works
         </h2>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 14 }}>
-          The legacy program skips failed cast steps and advances to the next one. GRIP-EMS holds on failed steps until the cast succeeds. That is the entire mechanical distinction and everything else follows from it.
+          Both engines advance one step per keypress and neither one waits for a cast to land. What can make a press do nothing is the macro line on the step. If a /cast names a spell that is still on cooldown, WoW stops running that macro there and the lines under it never fire, so the press comes up empty and the step advances anyway. A /castsequence parked on an entry that is on cooldown behaves the same. That is the WoW macro engine reading your text, so you get it under either addon. Conditional lines are different: a conditional that does not apply is skipped and the next line still runs.
         </p>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 14 }}>
-          For DPS sequences at normal or heroic difficulty, this difference is minor. A skipped Fireball because you were moving costs you one cast and the rotation recovers quickly. For tank sequences in Mythic+ it compounds in a way that matters. When Ironfur fails because the GCD has not cleared and the sequence skips ahead, that Ironfur step does not appear again until the next full loop rotation. At 30 steps and 150ms intervals that is roughly 4.5 seconds. If three Ironfur steps skip on the same pull, your uptime collapses for that window and your healer feels it before your logs do.
+          The practical consequence is that loop length is a real cost. In a flat sequential loop every step gets one visit per pass, so a 30 step loop clicked every 150ms is roughly 4.5 seconds between visits to any single step. A press that came up empty is not retried, and that step is spent until the loop comes back around. If a defensive needs to come around faster than that, shorten the loop, move the step earlier, or give it a per-step interval.
         </p>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75 }}>
-          Hold behavior means the sequence waits for the cast to land before moving on. Step positions stay meaningful and uptime numbers stay consistent pull to pull. This is also what makes log-based validation reliable, because if the sequence advanced unpredictably you could not compare two runs meaningfully.
+          Advancement being deterministic is what makes a sequence readable. One press is one step, so a step position means something and you can reason about the rotation by reading it top to bottom. It is also what makes log comparison useful. Two runs of the same sequence at the same click rate walk the same steps in the same order, so a difference in the numbers points at the sequence or the pull rather than at the engine.
         </p>
       </section>
 
@@ -120,7 +120,6 @@ export default function FromLegacyProgramPage() {
             <div style={{ padding: '10px 14px', background: 'var(--bg-secondary)', fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Legacy program</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'var(--border)' }}>
-            <CompareRow label="Failed cast" grip="Holds until cast succeeds" gse="Skips the step, advances" />
             <CompareRow label="Action bar button" grip="Single-version sequences have no bar button. Multi-version sequences create a macro you can place on your bar." gse="Creates a draggable button you place on a bar" />
             <CompareRow label="Keybinds" grip="Assigned inside GRIP-EMS per spec, auto-switch on spec change" gse="Via the action bar button you place and bind" />
             <CompareRow label="Import format" grip="!EMS1! format, import legacy program strings with /gems import" gse="Base64 string with version prefix" />
@@ -155,7 +154,7 @@ export default function FromLegacyProgramPage() {
             },
             {
               title: 'Reverse Priority for finisher steps',
-              desc: "Reverse Priority in the legacy program is a common pattern for DPS rotations that want finisher spells to fire when available. The problem is that Reverse Priority starts from the last step and works backwards, so the easiest-to-satisfy step fires most of the time and finishers rarely get a turn. If you are porting a sequence that used Reverse Priority for finishers, rebuild it in GRIP-EMS as Sequential with the finisher steps placed correctly in the loop, or use Priority with the finisher at a step position where it gets tried after higher-priority abilities have been checked.",
+              desc: "Reverse Priority is a common pattern for DPS rotations that want finisher spells to fire when available. In GRIP-EMS it weights the loop toward the tail, so the last step gets most of the presses and the front of the loop gets very few. That is rarely what a finisher rotation wants. If you are porting a sequence that used Reverse Priority for finishers, rebuild it as Sequential with the finisher placed where you want it in the loop, or use Priority and put the spells that should get the most presses at the front.",
             },
             {
               title: 'Spell names after a patch',
@@ -175,10 +174,10 @@ export default function FromLegacyProgramPage() {
           You do not have to choose permanently
         </h2>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
-          Both addons can be installed at the same time and the sequence formats do not cross-contaminate. A reasonable approach is to run GRIP-EMS for your main spec in content where consistent uptime actually matters, Mythic+ tanking being the obvious case, and keep your existing legacy program sequences for everything else until you have validated that GRIP-EMS produces better numbers for those specs too.
+          Both addons can be installed at the same time and the sequence formats do not cross-contaminate. A reasonable approach is to move one spec across first, the one whose sequence you edit and tune the most, and keep your existing legacy program sequences for everything else until you have decided the tooling is worth the move for those specs too.
         </p>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75 }}>
-          Translating sequences between the formats is not automatic, but the underlying macro logic is the same since both addons use WoW&apos;s standard macro conditional syntax. A sequence from the legacy program can be rebuilt in GRIP-EMS step by step without starting from scratch. The step spacing and timing will differ because the execution models are different, so plan on a validation pass after porting rather than assuming the numbers will be identical.
+          Translating sequences between the formats is not automatic, but the underlying macro logic is the same since both addons use WoW&apos;s standard macro conditional syntax. A sequence from the legacy program can be rebuilt in GRIP-EMS step by step without starting from scratch. Step spacing and timing can still shift once the step count or the click rate changes, so plan on a validation pass after porting rather than assuming the numbers will be identical.
         </p>
       </section>
 
