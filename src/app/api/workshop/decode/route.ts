@@ -64,6 +64,10 @@ export async function POST(req: NextRequest) {
     authorLocked: Boolean(seq.originalAuthor),
     lockedAuthor: seq.originalAuthor || '',
     privacyMode: seq.privacyMode || 'public',
+    helpUrl: seq.metaData?.HelpURL || seq.metaData?.helpUrl || '',
+    platformId: seq.metaData?.PlatformID || seq.metaData?.platformId || '',
+    checksum: seq.metaData?.Checksum || seq.metaData?.checksum || '',
+    gseVersion: seq.metaData?.GSEVersion || seq.metaData?.gseVersion || null,
     versions: Array.isArray(seq.versions) ? seq.versions.map((v: any) => {
       const rawActions = isGSE ? v.blocks : v.actions
       const actions = Array.isArray(rawActions)

@@ -147,7 +147,12 @@ function normalizeDecodedGSE(decodedInput: unknown): DecodeResult {
         author: metaData.Author || metaData.author || "",
         description: metaData.Help || metaData.help || "",
         collectionName: "",
-        url: ""
+        url: "",
+        helplink: metaData.Helplink || metaData.helplink || "",
+        helpUrl: metaData.HelpURL || metaData.helpUrl || "",
+        platformId: metaData.PlatformID || metaData.platformId || "",
+        checksum: metaData.Checksum || metaData.checksum || "",
+        gseVersion: metaData.GSEVersion || metaData.gseVersion || null
       }
     },
     sequences
