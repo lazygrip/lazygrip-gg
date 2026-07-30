@@ -1,3 +1,21 @@
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'GRIP-EMS FAQ',
+  description: 'Common questions about GRIP-EMS and LazyGrip.net: importing sequences, whether one-button macros are allowed, accounts, and privacy.',
+  alternates: {
+    canonical: 'https://lazygrip.net/faq',
+  },
+  openGraph: {
+    title: 'GRIP-EMS FAQ',
+    description: 'Common questions about GRIP-EMS and LazyGrip.net: importing sequences, whether one-button macros are allowed, accounts, and privacy.',
+    url: 'https://lazygrip.net/faq',
+    siteName: 'LazyGrip.net',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'LazyGrip.net — GRIP-EMS sequences for World of Warcraft' }],
+  },
+}
+
 export default function FAQPage() {
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>
@@ -119,9 +137,9 @@ export default function FAQPage() {
             </div>
 
             <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
-              <h3 style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Is LazyGrip.net affiliated with Blizzard or the GRIP-EMS developer?</h3>
+              <h3 style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Who runs LazyGrip.net?</h3>
               <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-                No. This is an independent site with no connection to either.
+                LazyGrip.net is a community site, independently owned and operated. It is not an official GRIP-EMS site, and it is not affiliated with or endorsed by Blizzard Entertainment. The GRIP-EMS developer contributes code to the site as a collaborator, by arrangement, and holds neither ownership nor administrative control over the site or its repository.
               </p>
             </div>
 

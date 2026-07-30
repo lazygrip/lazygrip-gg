@@ -1,4 +1,21 @@
+import type { Metadata } from 'next'
 import { GitCommit } from 'lucide-react'
+
+export const metadata: Metadata = {
+  title: 'Changelog',
+  description: 'Recent changes to LazyGrip.net, pulled from the site repository commit history.',
+  alternates: {
+    canonical: 'https://lazygrip.net/changelog',
+  },
+  openGraph: {
+    title: 'Changelog',
+    description: 'Recent changes to LazyGrip.net, pulled from the site repository commit history.',
+    url: 'https://lazygrip.net/changelog',
+    siteName: 'LazyGrip.net',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'LazyGrip.net — GRIP-EMS sequences for World of Warcraft' }],
+  },
+}
 
 const SKIP_PATTERNS = [
   /^initial commit/i,

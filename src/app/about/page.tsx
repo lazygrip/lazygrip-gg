@@ -1,5 +1,22 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Shield } from 'lucide-react'
+
+export const metadata: Metadata = {
+  title: 'About',
+  description: 'What LazyGrip.net is, who runs it, and how the sequence library and Workshop fit together with the GRIP-EMS addon.',
+  alternates: {
+    canonical: 'https://lazygrip.net/about',
+  },
+  openGraph: {
+    title: 'About',
+    description: 'What LazyGrip.net is, who runs it, and how the sequence library and Workshop fit together with the GRIP-EMS addon.',
+    url: 'https://lazygrip.net/about',
+    siteName: 'LazyGrip.net',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'LazyGrip.net — GRIP-EMS sequences for World of Warcraft' }],
+  },
+}
 
 export default function AboutPage() {
   return (
@@ -55,7 +72,7 @@ export default function AboutPage() {
         <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '24px' }}>
           <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Disclaimer</h2>
           <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8 }}>
-            LazyGrip.net is an independent site with no affiliation with Blizzard Entertainment or the GRIP-EMS addon developer. World of Warcraft is a trademark of Blizzard Entertainment, Inc.
+            LazyGrip.net is a community site, independently owned and operated, with no affiliation with or endorsement from Blizzard Entertainment. It is not an official GRIP-EMS site. World of Warcraft is a trademark of Blizzard Entertainment, Inc.
           </p>
         </div>
 

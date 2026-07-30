@@ -1,3 +1,21 @@
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy',
+  description: 'What LazyGrip.net collects, how it is used, which third-party services are involved, and how to exercise your rights.',
+  alternates: {
+    canonical: 'https://lazygrip.net/privacy',
+  },
+  openGraph: {
+    title: 'Privacy Policy',
+    description: 'What LazyGrip.net collects, how it is used, which third-party services are involved, and how to exercise your rights.',
+    url: 'https://lazygrip.net/privacy',
+    siteName: 'LazyGrip.net',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'LazyGrip.net — GRIP-EMS sequences for World of Warcraft' }],
+  },
+}
+
 export default function PrivacyPage() {
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>

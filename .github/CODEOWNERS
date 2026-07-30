@@ -1,0 +1,17 @@
+# CODEOWNERS
+# Paths listed here require approval from @slowdog-dev before merging to main.
+# Everything else can be merged by any collaborator with write access.
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Database migrations and raw SQL — schema changes, RLS policies, triggers, functions
+/supabase/                    @slowdog-dev
+**/*.sql                      @slowdog-dev
+
+# Auth and security-sensitive config
+/src/lib/supabase/            @slowdog-dev
+/.env.example                 @slowdog-dev
+/vercel.json                  @slowdog-dev
+/next.config.js               @slowdog-dev
+
+# Repo/CI configuration itself, so this protection can't be quietly edited
+/.github/                     @slowdog-dev

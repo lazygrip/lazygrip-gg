@@ -86,6 +86,7 @@ function buildCollectionPayload(sequences: LooseRecord[], meta: LooseRecord, war
 function buildSequencePayload(sequence: LooseRecord, meta: LooseRecord, warnings: string[], sequenceName: string = sequence.name): LooseRecord {
   const exportMeta = meta.exportMeta || {};
   const sequenceMeta = (sequence.metaData || {}) as LooseRecord;
+  const sequenceMeta = (sequence.metaData || {}) as LooseRecord;
   const versions = (sequence.versions || []).map((version: LooseRecord, index: number) =>
     buildVersionPayload(version, warnings, `${sequenceName} · ${version.name || `Version ${index + 1}`}`)
   ).filter(Boolean);

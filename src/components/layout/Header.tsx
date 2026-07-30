@@ -93,8 +93,8 @@ export default function Header() {
   const navLinks = [
     { href: '/browse', label: 'Browse' },
     { href: '/browse?sort=top_rated', label: 'Top Rated' },
-    { href: '/browse?content_type=mythic_plus', label: 'Mythic+' },
-    { href: '/browse?content_type=raid', label: 'Raid' },
+    { href: '/browse/mythic-plus', label: 'Mythic+' },
+    { href: '/browse/raid', label: 'Raid' },
     { href: '/guide', label: 'Guide' },
     { href: '/workshop', label: 'Workshop' },
   ]
@@ -197,7 +197,8 @@ export default function Header() {
                 color: 'var(--text-muted)',
               }}
             >
-              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+              <Sun size={16} className="theme-icon-dark" />
+              <Moon size={16} className="theme-icon-light" />
             </button>
 
             {user ? (

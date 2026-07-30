@@ -24,7 +24,7 @@ export default function Footer() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 13 }}>
             <Shield size={14} color="var(--accent)" />
-            <span>LazyGrip.net — Not affiliated with Blizzard Entertainment or the GRIP-EMS addon.</span>
+            <span>LazyGrip.net is a community site, independently owned and operated. Not affiliated with or endorsed by Blizzard Entertainment, and not an official GRIP-EMS site.</span>
           </div>
           <div style={{ display: 'flex', gap: 20, fontSize: 13 }}>
             {[
@@ -46,16 +46,14 @@ export default function Footer() {
           </div>
         </div>
         <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' }}>
-          Community content on LazyGrip.net is licensed under{' '}
+          Sequences stay the property of the people who wrote them. By posting you confirm you wrote the sequence or have the author&apos;s permission. If your work is here without permission, email{' '}
           <a
-            href="https://creativecommons.org/licenses/by-nc-sa/4.0/"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="mailto:admin@lazygrip.net"
             style={{ color: 'var(--text-muted)', textDecoration: 'underline' }}
           >
-            CC BY-NC-SA 4.0
+            admin@lazygrip.net
           </a>
-          . Free to share and adapt with attribution, for non-commercial use only.
+          {' '}and it comes down.
         </div>
       </div>
     </footer>

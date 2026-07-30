@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Search, SlidersHorizontal, X } from 'lucide-react'
 import SequenceCard from '@/components/sequence/SequenceCard'
 import { WOW_CLASSES, CONTENT_TYPES } from '@/lib/wow-data'
 import { Sequence, SequenceFilters } from '@/types'
 import { createClient } from '@/lib/supabase/client'
+import { BROWSE_PAGE_SIZE, browseFilterKey, buildBrowseQuery } from '@/lib/browse-query'
 
 const SORT_OPTIONS = [
   { value: 'recent', label: 'Recent' },
@@ -17,28 +18,79 @@ const SORT_OPTIONS = [
 
 interface Props {
   initialFilters?: Partial<SequenceFilters>
+  heading?: string
+  initialSequences?: Sequence[]
+  initialCount?: number
+  initialCurrentPatch?: string | null
+  initialFilterKey?: string
 }
 
-export default function BrowseContent({ initialFilters = {} }: Props) {
+export default function BrowseContent({
+  initialFilters = {},
+  heading,
+  initialSequences,
+  initialCount,
+  initialCurrentPatch,
+  initialFilterKey,
+}: Props) {
   const searchParams = useSearchParams()
   const router = useRouter()
   const pathname = usePathname()
 
-  const [sequences, setSequences] = useState<Sequence[]>([])
-  const [loading, setLoading] = useState(true)
-  const [count, setCount] = useState(0)
+  const [sequences, setSequences] = useState<Sequence[]>(initialSequences ?? [])
+  const [loading, setLoading] = useState(initialSequences == null)
+  const [count, setCount] = useState(initialCount ?? 0)
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [showMobileFilters, setShowMobileFilters] = useState(false)
-  const [currentPatch, setCurrentPatch] = useState<string | null>(null)
+  const [currentPatch, setCurrentPatch] = useState<string | null>(initialCurrentPatch ?? null)
 
-  const supabase = createClient()
+  // The filter key the sequences currently on screen were fetched with. Seeded with the server's
+  // key when the server delivered data, undefined when it did not (then the client must fetch).
+  const [displayedKey, setDisplayedKey] = useState<string | undefined>(
+    initialSequences != null ? initialFilterKey : undefined
+  )
+  // The last server key adopted, so each distinct server payload is adopted exactly once.
+  const [adoptedServerKey, setAdoptedServerKey] = useState<string | undefined>(
+    initialSequences != null ? initialFilterKey : undefined
+  )
+  // Mirrors the URL's search value so back/forward can update the input without clobbering typing.
+  const [lastUrlSearch, setLastUrlSearch] = useState(searchParams.get('search') || '')
+
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
+  // Monotonic id so a slow fetch that has been superseded cannot overwrite newer results.
+  const fetchSeqRef = useRef(0)
+
+  // Adopt the server's data whenever the server's filter key changes. Both browse routes are
+  // force-dynamic, so a same-route filter change re-renders the server component and delivers a
+  // fresh initialSequences plus a fresh initialFilterKey. useState initialisers never re-run and
+  // the instance is reused, so without this the fresh server data is silently discarded and the
+  // list keeps rendering the previous filter's cards. This is React's documented
+  // adjust-state-during-render pattern: the guard turns false the moment the keys match, so it
+  // settles in one extra render pass and cannot loop.
+  if (initialSequences != null && initialFilterKey !== adoptedServerKey) {
+    setAdoptedServerKey(initialFilterKey)
+    setDisplayedKey(initialFilterKey)
+    setSequences(initialSequences)
+    setCount(initialCount ?? 0)
+    setLoading(false)
+  }
+
+  // Same class of defect on the search input: its useState initialiser never re-runs either, so a
+  // back/forward that changes ?search would leave stale text in the box. Keyed on the URL value
+  // rather than on every render, so typing (which does not touch the URL) is never clobbered.
+  const urlSearch = searchParams.get('search') || ''
+  if (urlSearch !== lastUrlSearch) {
+    setLastUrlSearch(urlSearch)
+    setSearch(urlSearch)
+  }
 
   // Merge URL params with initialFilters — initialFilters are the baseline from the slug route,
   // URL params take precedence when they exist (e.g. after user interaction or back button)
   const filters: SequenceFilters = {
     sort: (searchParams.get('sort') || 'recent') as SequenceFilters['sort'],
     page: searchParams.get('page') ? Number(searchParams.get('page')) : 1,
-    limit: 20,
+    limit: BROWSE_PAGE_SIZE,
     content_type: (searchParams.get('content_type') || initialFilters.content_type || undefined) as SequenceFilters['content_type'],
     class_id: searchParams.get('class_id') ? Number(searchParams.get('class_id')) : initialFilters.class_id,
     spec_id: searchParams.get('spec_id') ? Number(searchParams.get('spec_id')) : undefined,
@@ -61,30 +113,26 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
     router.push(`${pathname}${query ? `?${query}` : ''}`, { scroll: false })
   }
 
-  // Sync initialFilters into URL so back button can restore them
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString())
-    let changed = false
-    if (initialFilters.class_id && !searchParams.get('class_id')) {
-      params.set('class_id', String(initialFilters.class_id))
-      changed = true
-    }
-    if (initialFilters.content_type && !searchParams.get('content_type')) {
-      params.set('content_type', initialFilters.content_type)
-      changed = true
-    }
-    if (changed) {
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
-    }
-  }, [pathname])
+  const filterKey = browseFilterKey(filters)
 
+  // Fetch only when the live filters differ from the filters the DISPLAYED data came from. The
+  // previous one-shot fetch-latch ref could not tell "the server already has this" from "the
+  // server has something else" after the first render, so it returned early forever.
   useEffect(() => {
-    fetchSequences()
-  }, [searchParams.toString()])
+    if (filterKey === displayedKey) {
+      // What is on screen already matches the live filters, so any client fetch still in flight
+      // is stale by definition. This is the path a server adoption lands on, and bumping here is
+      // what stops a slow pre-adoption fetch from overwriting the server's newer data.
+      fetchSeqRef.current++
+      return
+    }
+    fetchSequences(filterKey, filters)
+  }, [filterKey, displayedKey])
 
   // Fetch the site-wide current patch once on mount. Not re-fetched per filter change —
   // this value changes rarely (only when admin updates it) so one fetch per page load is enough.
   useEffect(() => {
+    if (initialCurrentPatch !== undefined) return
     fetchCurrentPatch()
   }, [])
 
@@ -104,43 +152,22 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
     }
   }
 
-  async function fetchSequences() {
+  async function fetchSequences(keyForThisFetch: string, filtersForThisFetch: SequenceFilters) {
+    const fetchId = ++fetchSeqRef.current
     setLoading(true)
     try {
-      let query = supabase
-        .from('sequences')
-        .select('*, author:profiles(username, display_name, avatar_url)', { count: 'exact' })
-        .eq('status', 'published')
-
-      if (filters.class_id) query = query.eq('class_id', filters.class_id)
-      if (filters.spec_id) query = query.eq('spec_id', filters.spec_id)
-      if (filters.content_type) query = query.eq('content_type', filters.content_type)
-      if (filters.search) query = query.or(`title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
-
-      switch (filters.sort) {
-        case 'top_rated':
-          query = query.gt('rating_count', 0).order('avg_score', { ascending: false }).order('rating_count', { ascending: false })
-          break
-        case 'most_viewed':
-          query = query.order('view_count', { ascending: false })
-          break
-        case 'most_saved':
-          query = query.order('save_count', { ascending: false })
-          break
-        default:
-          query = query.order('updated_at', { ascending: false })
-      }
-
-      const from = ((filters.page || 1) - 1) * (filters.limit || 20)
-      query = query.range(from, from + (filters.limit || 20) - 1)
-
+      const query = buildBrowseQuery(supabase, filtersForThisFetch)
       const { data, count: total } = await query
+      // A newer fetch started while this one was in flight; its result wins.
+      if (fetchId !== fetchSeqRef.current) return
       setSequences(data || [])
       setCount(total || 0)
+      setDisplayedKey(keyForThisFetch)
     } catch (e) {
+      if (fetchId !== fetchSeqRef.current) return
       console.error(e)
     } finally {
-      setLoading(false)
+      if (fetchId === fetchSeqRef.current) setLoading(false)
     }
   }
 
@@ -169,11 +196,39 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
     setShowMobileFilters(false)
   }
 
+  function selectContentType(value: string | undefined) {
+    setShowMobileFilters(false)
+    // On a content-type hub the slug carries the filter, so changing or clearing it has to move
+    // routes, exactly as selectClass does for classes. Staying on the same path made "All" a dead
+    // control: it deleted a query parameter that was not filtering anything, and initialFilters
+    // immediately restored the hub's own type. Measured on production 2026-07-29: /browse/raid,
+    // click All, card set unchanged at 1. Sort and search are carried across; they are not part
+    // of the content filter.
+    if (initialFilters.content_type) {
+      const params = new URLSearchParams()
+      if (filters.sort && filters.sort !== 'recent') params.set('sort', filters.sort)
+      if (filters.search) params.set('search', filters.search)
+      const query = params.toString()
+      const target = value ? CONTENT_TYPES.find(ct => ct.value === value) : undefined
+      const path = target ? `/browse/${target.slug}` : '/browse'
+      router.push(`${path}${query ? `?${query}` : ''}`, { scroll: false })
+      return
+    }
+    updateUrl({ content_type: value })
+  }
+
   function clearFilters() {
+    // Close the sheet like every other control in the panel. On /browse the push below is
+    // same-route, so no remount closes it as a side effect; this has to be explicit.
+    setShowMobileFilters(false)
     setSearch('')
     const params = new URLSearchParams()
     if (filters.sort && filters.sort !== 'recent') params.set('sort', filters.sort)
-    router.push(`${pathname}${params.toString() ? `?${params.toString()}` : ''}`, { scroll: false })
+    const query = params.toString()
+    // Clear has to escape the slug route as well. On /browse/druid the slug itself carries the
+    // class filter, so pushing pathname left the class applied while the control said "Clear".
+    // Measured 2026-07-29: spec_id dropped from the URL, card set unchanged at 1.
+    router.push(`/browse${query ? `?${query}` : ''}`, { scroll: false })
   }
 
   const hasActiveFilters = filters.class_id || filters.content_type || filters.search || filters.spec_id
@@ -191,9 +246,9 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
         )}
       </div>
       <FilterSection title="Content">
-        <FilterItem label="All" active={!filters.content_type} onClick={() => { updateUrl({ content_type: undefined }); setShowMobileFilters(false) }} />
+        <FilterItem label="All" active={!filters.content_type} onClick={() => selectContentType(undefined)} />
         {CONTENT_TYPES.map(ct => (
-          <FilterItem key={ct.value} label={ct.label} active={filters.content_type === ct.value} onClick={() => { updateUrl({ content_type: ct.value }); setShowMobileFilters(false) }} />
+          <FilterItem key={ct.value} label={ct.label} active={filters.content_type === ct.value} onClick={() => selectContentType(ct.value)} />
         ))}
       </FilterSection>
       <FilterSection title="Class">
@@ -261,6 +316,11 @@ export default function BrowseContent({ initialFilters = {} }: Props) {
       <div className="browse-layout">
         <aside className="browse-sidebar">{filterPanel}</aside>
         <div className="browse-main">
+          {heading && (
+            <h1 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', margin: '0 0 12px', color: 'var(--text-primary)' }}>
+              {heading}
+            </h1>
+          )}
           <form onSubmit={handleSearch} style={{ marginBottom: 12 }}>
             <div style={{ position: 'relative' }}>
               <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />

@@ -2,8 +2,19 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'How GRIP-EMS Works | GRIP-EMS Guide | LazyGrip.net',
+  title: 'How GRIP-EMS Works | GRIP-EMS Guide',
   description: 'The mental model behind GRIP-EMS: the secure execution environment, what you can and cannot do inside a sequence, and how the step engine actually behaves.',
+  alternates: {
+    canonical: 'https://lazygrip.net/guide/how-it-works',
+  },
+  openGraph: {
+    title: 'How GRIP-EMS Works | GRIP-EMS Guide',
+    description: 'The mental model behind GRIP-EMS: the secure execution environment, what you can and cannot do inside a sequence, and how the step engine actually behaves.',
+    url: 'https://lazygrip.net/guide/how-it-works',
+    siteName: 'LazyGrip.net',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'LazyGrip.net — GRIP-EMS sequences for World of Warcraft' }],
+  },
 }
 
 export default function HowItWorksPage() {
@@ -19,7 +30,7 @@ export default function HowItWorksPage() {
         How GRIP-EMS works
       </h1>
       <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 40 }}>
-        Before you build a sequence, you need the right mental model. Three things in particular will save you hours of confusion: understanding what WoW's secure execution environment actually restricts, understanding exactly how GRIP-EMS advances through steps compared to other rotation addons, and understanding how hold-on-failure behavior changes the way you write individual steps.
+        Before you build a sequence, you need the right mental model. Three things in particular will save you hours of confusion: what WoW&apos;s secure execution environment actually restricts, how GRIP-EMS advances through steps, and what WoW does with the macro line on a step once the addon hands it over.
       </p>
 
       <Section title="The secure execution environment">
@@ -30,26 +41,20 @@ export default function HowItWorksPage() {
       </Section>
 
       <Section title="How the step engine actually advances">
-        <p>GRIP-EMS is a Sequential step engine by default, which means it fires step 1, then step 2, then step 3, advancing one step per keypress and looping back to step 1 after the last step. The important detail is in what happens when a step fails to cast.</p>
+        <p>GRIP-EMS is a Sequential step engine by default, which means it fires step 1, then step 2, then step 3, advancing one step per keypress and looping back to step 1 after the last step. The advance is unconditional. The engine sets up the step, hands the macro line to WoW, and moves the counter on. Whether the spell went out is not something it checks.</p>
 
-        <ComparisonTable
-          headers={['', 'GRIP-EMS', 'Legacy program']}
-          rows={[
-            ['Failed cast', 'Holds on the current step. The sequence does not advance until the cast succeeds. Step 3 stays at step 3 until the spell actually fires.', 'Skips the failed step and advances to the next one. The sequence keeps moving regardless of whether the spell landed.'],
-          ]}
-        />
+        <p style={{ marginTop: 16 }}>What happens on the press is WoW&apos;s business. If a <code style={code}>/cast</code> names a spell that is on cooldown, the macro engine stops there and the cast lines below it in that same press never run, so the press produces nothing further. A <code style={code}>/castsequence</code> sitting on an entry that is on cooldown does the same thing. This is WoW reading your macro text rather than the sequencer making a decision, and it works identically under any addon that drives a macro. Conditional lines are the exception. A conditional that does not apply is skipped and the line after it still gets its turn.</p>
 
-        <p style={{ marginTop: 16 }}>For tank rotations this difference is significant. Ironfur uptime, Thrash frequency, and cooldown timing all depend on spells landing in the right order. When the engine skips, high-value spells get pushed back by failed steps accumulating ahead of them. When the engine holds, your uptime numbers are consistent pull to pull.</p>
+        <p style={{ marginTop: 16 }}>Both halves matter when you place a defensive. A press that cast nothing is not retried, and the step is spent until the loop comes back around. On a 30 step loop clicked every 150ms that is about 4.5 seconds, long enough for Ironfur to drop while the sequence walks the rest of the loop. Shorten the loop, move the step earlier, or give it a per-step interval.</p>
       </Section>
 
-      <Section title="Hold behavior and proc-gated abilities">
-        <p>Hold-on-failure is not just a defensive measure against lag. It is the mechanism that lets you write cleaner sequences for proc-dependent abilities without any conditional logic at all.</p>
-        <p style={{ marginTop: 12 }}>The classic example is any ability that upgrades on proc. Warrior's Slam becomes Heroic Strike when the Bloodsurge proc is active. In the legacy program, writing <code style={code}>/cast Heroic Strike</code> in a step means the sequence skips that step and fires Slam as the fallback when the proc is absent, because the legacy program advances past failed casts. In GRIP-EMS, the same line holds on that step when the proc is absent and does not fire Slam at all. The sequence waits there until Heroic Strike is actually available, then fires and advances. You get the proc version every time and never waste resources on the base version.</p>
-        <p style={{ marginTop: 12 }}>The rule that follows from this: bare <code style={code}>/cast SpellName</code> with no conditionals is the correct pattern for proc-dependent abilities. Adding <code style={code}>[combat]</code> or other guards changes the behavior because WoW then resolves a fallback when the guard's condition fails, which bypasses the hold. If the spell should only fire when its proc is active, write it bare and let GRIP-EMS hold.</p>
+      <Section title="Proc-gated abilities">
+        <p>A step whose line names a spell you cannot cast right now produces nothing on that press, and the step advances anyway. There is no macro conditional that tests a proc. The documented set covers combat, modifiers, form, channeling, whether a spell is in your book and so on, but nothing that reads a buff, so you cannot write a step that fires only while a proc is up.</p>
+        <p style={{ marginTop: 12 }}>Where WoW itself swaps the button to the proc version, name the base spell and the swap happens for you. Warrior&apos;s Slam becoming Heroic Strike under Bloodsurge is the old textbook case: <code style={code}>/cast Slam</code> gets you Heroic Strike while the proc is up, because WoW substitutes the override on the action and you never spend a press on a spell you do not have. The trap is writing <code style={code}>/cast Heroic Strike</code> instead, which casts nothing on every press where the proc is down. Adding a second spell after a semicolon does not rescue it either. A clause with no conditional in front of it is always true, so <code style={code}>/cast Heroic Strike; Slam</code> picks Heroic Strike every time and Slam never fires.</p>
         <Callout>
-          This applies to any ability where the proc version and the base version are technically different spell IDs that WoW substitutes automatically. Heroic Strike and Slam, Execute procs, Sudden Death, class-specific upgrades. Write the proc version bare. Hold behavior does the rest.
+          If the proc version is a genuine override of the base spell, write the base spell. If it is a separate spell with its own availability, accept that some presses on that step do nothing, and keep anything else you need on that same step above the proc line, because a <code style={code}>/cast</code> that fails on cooldown stops the lines under it.
         </Callout>
-        <p style={{ marginTop: 12 }}>The one exception is <code style={code}>[nochanneling]</code>, which is the correct guard for finisher steps like Rip or Final Verdict. That conditional is needed to prevent the finisher from clipping a channel. Do not add <code style={code}>[combat]</code> on top of it, that causes silent failures.</p>
+        <p style={{ marginTop: 12 }}>One guard worth calling out on its own is <code style={code}>[nochanneling]</code>, which belongs on finisher steps like Rip or Final Verdict. That conditional is what stops the finisher from clipping a channel. Do not add <code style={code}>[combat]</code> on top of it, that causes silent failures.</p>
       </Section>
 
       <Section title="Step functions">
@@ -65,12 +70,12 @@ export default function HowItWorksPage() {
             {
               name: 'Priority',
               tag: null,
-              desc: 'On every keypress, starts from step 1 and fires the first step that succeeds. Never advances past a step that can cast. Good for DPS rotations where you always want your highest priority spell to fire when it is available, regardless of where you are in the loop.',
+              desc: 'Weights the loop toward the front. The steps are expanded into a longer cycle in which step 1 appears most often, step 2 slightly less often, and the last step once. Advancement is still one entry per keypress. Good for rotations where the early steps should get most of the presses.',
             },
             {
               name: 'Reverse Priority',
               tag: null,
-              desc: 'Starts from the last step and works backwards. In practice this means your lowest priority step fires almost every press because it is the last one checked and usually the easiest to satisfy. Avoid for finisher steps in any resource-based rotation.',
+              desc: 'The same weighting inverted, so the last step gets most of the presses and step 1 the fewest. In practice this means the tail of your loop fires far more often than the front of it. Avoid it unless that is genuinely what you want.',
             },
             {
               name: 'Random',
@@ -261,48 +266,6 @@ function Callout({ children }: { children: React.ReactNode }) {
       fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6,
     }}>
       {children}
-    </div>
-  )
-}
-
-function ComparisonTable({ headers, rows }: { headers: string[]; rows: string[][] }) {
-  return (
-    <div style={{ overflowX: 'auto', marginTop: 16 }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-        <thead>
-          <tr>
-            {headers.map((h, i) => (
-              <th key={i} style={{
-                textAlign: 'left', padding: '8px 12px',
-                background: 'var(--bg-tertiary)',
-                borderBottom: '0.5px solid var(--border)',
-                fontWeight: 600, color: 'var(--text-primary)',
-                fontSize: 12,
-              }}>
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr key={i}>
-              {row.map((cell, j) => (
-                <td key={j} style={{
-                  padding: '10px 12px',
-                  borderBottom: '0.5px solid var(--border)',
-                  color: j === 0 ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  fontWeight: j === 0 ? 600 : 400,
-                  verticalAlign: 'top',
-                  lineHeight: 1.6,
-                }}>
-                  {cell}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
     </div>
   )
 }

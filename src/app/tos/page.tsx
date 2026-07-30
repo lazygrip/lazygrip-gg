@@ -1,10 +1,28 @@
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Terms of Service',
+  description: 'The terms that apply to using LazyGrip.net, posting sequences, and the content standards expected of accounts.',
+  alternates: {
+    canonical: 'https://lazygrip.net/tos',
+  },
+  openGraph: {
+    title: 'Terms of Service',
+    description: 'The terms that apply to using LazyGrip.net, posting sequences, and the content standards expected of accounts.',
+    url: 'https://lazygrip.net/tos',
+    siteName: 'LazyGrip.net',
+    type: 'website',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'LazyGrip.net — GRIP-EMS sequences for World of Warcraft' }],
+  },
+}
+
 export default function TermsPage() {
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>
       <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 8, color: 'var(--text-primary)' }}>
         Terms of Service
       </h1>
-      <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 40 }}>Last updated: May 3, 2026</p>
+      <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 40 }}>Last updated: July 30, 2026</p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8 }}>
 
@@ -35,7 +53,12 @@ export default function TermsPage() {
 
         <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
           <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Your Content</h2>
-          <p>You own what you post. By posting it here you are giving us a license to store, display, and distribute it to other users. That license ends when you delete the content or close your account, after any backup retention period clears.</p>
+          <p>You own what you post and you keep owning it. By posting you confirm that you wrote the sequence, or that its author has given you permission to share it. Posting someone else&apos;s sequence without permission is not allowed and we will remove it. By posting you give us a licence to store, display, and distribute your content to other users. That licence ends when you delete the content or close your account, after any backup retention period clears.</p>
+        </div>
+
+        <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
+          <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Reporting Your Own Work</h2>
+          <p>If a sequence on this site is yours and you did not agree to it being here, email <a href="mailto:admin@lazygrip.net" style={{ color: 'var(--accent)', textDecoration: 'none' }}>admin@lazygrip.net</a> with the sequence name, the page URL, and how we can tell it is your work. We take it down while we look at it. You do not need to send a legal notice and you do not need a lawyer.</p>
         </div>
 
         <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
@@ -45,7 +68,7 @@ export default function TermsPage() {
 
         <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
           <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Disclaimers</h2>
-          <p>LazyGrip.net is provided as-is. We do not guarantee the site is always available, that sequences will perform as described, or that any content is error-free. You use sequences from this site at your own risk. LazyGrip.net has no affiliation with Blizzard Entertainment or the GRIP-EMS addon developer.</p>
+          <p>LazyGrip.net is provided as-is. We do not guarantee the site is always available, that sequences will perform as described, or that any content is error-free. You use sequences from this site at your own risk. LazyGrip.net is a community site, independently owned and operated, with no affiliation with or endorsement from Blizzard Entertainment. It is not an official GRIP-EMS site.</p>
         </div>
 
         <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>

@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import { cookies } from 'next/headers'
 import './globals.css'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
@@ -13,7 +12,6 @@ export const metadata: Metadata = {
     template: '%s | LazyGrip.net',
   },
   description: 'Browse, share, and rate GRIP-EMS macro sequences for World of Warcraft. Every class, every spec, every content type. Free to browse and post.',
-  keywords: 'GRIP-EMS, GRIP EMS guide, GRIP-EMS tutorial, how to use GRIP EMS, WoW macros, Guardian Druid, Blood Death Knight, GSE alternative, GnomeSequencer alternative, World of Warcraft sequences, Mythic+ macro guide, WoW rotation addon, GRIP Enhanced Macro Sequencer, WoW sequence builder, Midnight Season 1, GRIP EMS sequences, WoW rotation macro',
   authors: [{ name: 'LazyGrip.net' }],
   creator: 'LazyGrip.net',
   metadataBase: new URL('https://lazygrip.net'),
@@ -24,14 +22,13 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'LazyGrip.net — GRIP-EMS Sequences for WoW',
     description: 'Browse, share, and rate GRIP-EMS macro sequences for World of Warcraft. Every class, every spec, every content type.',
-    url: 'https://lazygrip.net',
     siteName: 'LazyGrip.net',
     type: 'website',
     locale: 'en_US',
     images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'LazyGrip.net — GRIP-EMS sequences for World of Warcraft' }],
   },
   twitter: {
-    card: 'summary',
+    card: 'summary_large_image',
     title: 'LazyGrip.net — GRIP-EMS Sequences for WoW',
     description: 'Browse, share, and rate GRIP-EMS macro sequences for World of Warcraft.',
   },
@@ -53,12 +50,13 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  const cookieStore = await cookies()
-  const themeCookie = cookieStore.get('theme')
-  const initialTheme = themeCookie?.value === 'dark' ? 'dark' : 'light'
-
   return (
-    <html lang="en" data-theme={initialTheme}>
+    <html lang="en" suppressHydrationWarning>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: "try{var m=document.cookie.match(/(?:^|;\\s*)theme=(dark|light)/);document.documentElement.setAttribute('data-theme',m?m[1]:'light')}catch(e){document.documentElement.setAttribute('data-theme','light')}",
+        }}
+      />
       <body>
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-CJTX030THX"
@@ -72,7 +70,7 @@ export default async function RootLayout({
             gtag('config', 'G-CJTX030THX');
           `}
         </Script>
-        <ThemeProvider initialTheme={initialTheme}>
+        <ThemeProvider>
           <Header />
           <AnnouncementBar />
           <main style={{ minHeight: 'calc(100vh - 56px - 60px)' }}>

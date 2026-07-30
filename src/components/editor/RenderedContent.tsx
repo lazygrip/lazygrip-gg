@@ -1,34 +1,57 @@
 'use client'
+import { useEffect, useState } from 'react'
 import DOMPurify from 'dompurify'
+import { stripHtml } from '@/lib/html-text'
 
 interface RenderedContentProps {
   html: string
 }
 
 export default function RenderedContent({ html }: RenderedContentProps) {
+  // dompurify here is the browser build. Outside a DOM it sets isSupported = false and never
+  // assigns sanitize at all, so calling it on the server throws TypeError and 500s the route
+  // now that sequence pages render server-side. Verified against the installed 3.4.12.
+  //
+  // Rather than leave the description out of the server HTML, the server renders its
+  // plain-text projection, which needs no sanitizer because React escapes a text node, and
+  // the client swaps in the sanitized rich HTML after mount. The description is therefore in
+  // the crawlable markup, no DOM shim is added, and no sanitizer is hand-rolled.
+  //
+  // clean stays null until mounted, so the first client render matches the server byte for
+  // byte and hydration is clean.
+  const [clean, setClean] = useState<string | null>(null)
+
+  useEffect(() => {
+    setClean(DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: [
+        'p', 'br', 'strong', 'em', 's', 'u',
+        'h2', 'h3', 'h4',
+        'ul', 'ol', 'li',
+        'blockquote', 'code', 'pre',
+        'a', 'hr', 'span',
+      ],
+      ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
+      ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
+    }))
+  }, [html])
+
   if (!html || html.trim() === '' || html === '<p></p>') {
     return <p style={{ color: 'var(--text-muted, #9ca3af)', fontStyle: 'italic' }}>No description provided.</p>
   }
 
-  // Sanitize HTML - whitelist approach prevents XSS
-  const clean = DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: [
-      'p', 'br', 'strong', 'em', 's', 'u',
-      'h2', 'h3', 'h4',
-      'ul', 'ol', 'li',
-      'blockquote', 'code', 'pre',
-      'a', 'hr', 'span',
-    ],
-    ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
-    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
-  })
-
   return (
     <>
-      <div
-        className="rendered-content"
-        dangerouslySetInnerHTML={{ __html: clean }}
-      />
+      {clean === null ? (
+        <div key="text" className="rendered-content">
+          <p>{stripHtml(html)}</p>
+        </div>
+      ) : (
+        <div
+          key="html"
+          className="rendered-content"
+          dangerouslySetInnerHTML={{ __html: clean }}
+        />
+      )}
       <style>{`
         .rendered-content {
           font-size: 16px;

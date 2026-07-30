@@ -1,10 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { Eye, MessageSquare, Bookmark, Star, AlertTriangle } from 'lucide-react'
 import { Sequence } from '@/types'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
+import { stripHtml } from '@/lib/html-text'
 import { formatDistanceToNow, differenceInDays } from 'date-fns'
 
 type Props = {
@@ -21,12 +21,7 @@ const CONTENT_LABELS: Record<string, string> = {
 
 const STALE_DAYS_THRESHOLD = 60
 
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim()
-}
-
 export default function SequenceCard({ sequence, currentPatch }: Props) {
-  const router = useRouter()
   const classColor = getClassColor(sequence.class_id)
   const contentLabel = CONTENT_LABELS[sequence.content_type] ?? sequence.content_type
   const timeAgo = formatDistanceToNow(new Date(sequence.created_at), { addSuffix: true })
@@ -53,9 +48,9 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
 
   return (
     <article
-      onClick={() => router.push(`/sequences/${sequence.slug}`)}
       title={staleTooltip}
       style={{
+        position: 'relative',
         background: isStale ? 'rgba(224,160,32,0.08)' : 'var(--bg-primary)',
         border: '0.5px solid var(--border)',
         borderRadius: 'var(--radius-lg)',
@@ -93,7 +88,9 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
           whiteSpace: 'nowrap',
           margin: 0,
         }}>
-          {sequence.title}
+          <Link href={`/sequences/${sequence.slug}`} className="seq-card-link">
+            {sequence.title}
+          </Link>
         </h3>
 
         {hasRating && avgScore !== null && (
@@ -180,7 +177,7 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
             <span>by{' '}
               <Link
                 href={`/user/${sequence.author.username}`}
-                onClick={e => e.stopPropagation()}
+                className="seq-card-author"
                 style={{ color: 'var(--text-secondary)', fontWeight: 500, textDecoration: 'none' }}
                 onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
                 onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-secondary)')}
@@ -189,7 +186,7 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
               </Link>
             </span>
           )}
-          <span>{timeAgo}</span>
+          <span suppressHydrationWarning>{timeAgo}</span>
         </div>
       </div>
     </article>
