@@ -147,7 +147,8 @@ function normalizeDecodedGSE(decodedInput: unknown): DecodeResult {
         author: metaData.Author || metaData.author || "",
         description: metaData.Help || metaData.help || "",
         collectionName: "",
-        url: ""
+        url: "",
+        helplink: metaData.Helplink || metaData.helplink || ""
       }
     },
     sequences

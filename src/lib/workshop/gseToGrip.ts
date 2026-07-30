@@ -63,11 +63,12 @@ function buildCollectionPayload(sequences: LooseRecord[], meta: LooseRecord, war
     sequences: {}
   };
 
-  if (exportMeta.collectionName || exportMeta.author || exportMeta.description) {
+  if (exportMeta.collectionName || exportMeta.author || exportMeta.description || exportMeta.helplink) {
     payload.exportMeta = {
       collectionName: exportMeta.collectionName || "",
       author: exportMeta.author || "",
-      description: exportMeta.description || ""
+      description: exportMeta.description || "",
+      helplink: exportMeta.helplink || ""
     };
   }
 
@@ -80,6 +81,7 @@ function buildCollectionPayload(sequences: LooseRecord[], meta: LooseRecord, war
 
 function buildSequencePayload(sequence: LooseRecord, meta: LooseRecord, warnings: string[], sequenceName: string = sequence.name): LooseRecord {
   const exportMeta = meta.exportMeta || {};
+  const sequenceMeta = (sequence.metaData || {}) as LooseRecord;
   const versions = (sequence.versions || []).map((version: LooseRecord, index: number) =>
     buildVersionPayload(version, warnings, `${sequenceName} · ${version.name || `Version ${index + 1}`}`)
   ).filter(Boolean);
@@ -90,9 +92,10 @@ function buildSequencePayload(sequence: LooseRecord, meta: LooseRecord, warnings
 
   return {
     icon: DEFAULT_ICON,
-    author: exportMeta.author || "",
+    author: sequenceMeta.Author || sequenceMeta.author || exportMeta.author || "",
     description: sequence.description || exportMeta.description || "",
     help: String(sequence.help || "").trim(),
+    helplink: String(sequenceMeta.Helplink || sequenceMeta.helplink || exportMeta.helplink || "").trim(),
     classID: sequence.classId || meta.classId || 0,
     specID: sequence.specId || meta.specId || null,
     defaultVersion: sequence.defaultVersion || 1,
