@@ -22,7 +22,7 @@ export default function TermsPage() {
       <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 8, color: 'var(--text-primary)' }}>
         Terms of Service
       </h1>
-      <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 40 }}>Last updated: July 30, 2026</p>
+      <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 40 }}>Last updated: July 31, 2026</p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.8 }}>
 
@@ -57,8 +57,43 @@ export default function TermsPage() {
         </div>
 
         <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
-          <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Reporting Your Own Work</h2>
-          <p>If a sequence on this site is yours and you did not agree to it being here, email <a href="mailto:admin@lazygrip.net" style={{ color: 'var(--accent)', textDecoration: 'none' }}>admin@lazygrip.net</a> with the sequence name, the page URL, and how we can tell it is your work. We take it down while we look at it. You do not need to send a legal notice and you do not need a lawyer.</p>
+          <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Copyright and DMCA</h2>
+          <p style={{ marginBottom: 12 }}>If a sequence or other content on this site is yours and you did not agree to it being here, email <a href="mailto:admin@lazygrip.net" style={{ color: 'var(--accent)', textDecoration: 'none' }}>admin@lazygrip.net</a> with the sequence name, the page URL, and how we can tell it is your work. We take it down while we look into it. You do not need to send a legal notice and you do not need a lawyer for this informal route.</p>
+
+          <p style={{ marginBottom: 12 }}>If you want to send a formal DMCA takedown notice instead, our designated agent for copyright notices is:</p>
+
+          <p style={{ marginBottom: 12 }}>
+            <strong style={{ color: 'var(--text-primary)', fontWeight: 500 }}>LazyGrip.net DMCA Agent</strong><br />
+            Email: <a href="mailto:admin@lazygrip.net" style={{ color: 'var(--accent)', textDecoration: 'none' }}>admin@lazygrip.net</a>
+          </p>
+
+          <p style={{ marginBottom: 12 }}>This designation covers both LazyGrip.net and the GRIP-EMS Community forum. We&apos;re in the process of registering this agent with the U.S. Copyright Office.</p>
+
+          <p style={{ marginBottom: 6 }}>A formal notice needs to include:</p>
+          <ul style={{ marginBottom: 12, paddingLeft: 20 }}>
+            <li>A signature (physical or electronic) from the copyright owner or someone authorized to act for them</li>
+            <li>What the copyrighted work is</li>
+            <li>What material is infringing and a link to where it is on our site</li>
+            <li>Your name, address, phone number, and email</li>
+            <li>A statement that you believe in good faith the use isn&apos;t authorized by the copyright owner, their agent, or the law</li>
+            <li>A statement, under penalty of perjury, that the notice is accurate and you&apos;re authorized to act for the copyright owner</li>
+          </ul>
+
+          <p style={{ marginBottom: 12 }}>We&apos;ll remove or disable the material and let the person who posted it know.</p>
+
+          <p style={{ marginBottom: 6 }}><strong style={{ color: 'var(--text-primary)', fontWeight: 500 }}>If your content gets taken down and you think that was a mistake</strong>, you can send a counter-notice to the same email with:</p>
+          <ul style={{ marginBottom: 12, paddingLeft: 20 }}>
+            <li>Your signature</li>
+            <li>What was removed and where it was before removal</li>
+            <li>A statement, under penalty of perjury, that you believe it was removed by mistake or misidentification</li>
+            <li>Your name, address, phone number, and a statement that you&apos;ll accept service of process from the person who filed the original notice</li>
+          </ul>
+
+          <p style={{ marginBottom: 12 }}>If we get a valid counter-notice, we may restore the content in 10-14 business days unless the original complaining party tells us they&apos;ve filed a lawsuit to keep it down.</p>
+
+          <p style={{ marginBottom: 12 }}><strong style={{ color: 'var(--text-primary)', fontWeight: 500 }}>Repeat infringers.</strong> Accounts with multiple substantiated infringement notices against them will have posting privileges suspended or terminated.</p>
+
+          <p>Knowingly filing a false takedown or counter-notice can carry its own legal liability under 17 U.S.C. § 512(f) — don&apos;t do that.</p>
         </div>
 
         <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
