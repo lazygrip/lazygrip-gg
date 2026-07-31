@@ -2,13 +2,13 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Terms of Service',
-  description: 'The terms that apply to using LazyGrip.net, posting sequences, and the content standards expected of accounts.',
+  description: 'The terms that apply to using LazyGrip.net, posting requirements and verification, and the content standards expected of accounts.',
   alternates: {
     canonical: 'https://lazygrip.net/tos',
   },
   openGraph: {
     title: 'Terms of Service',
-    description: 'The terms that apply to using LazyGrip.net, posting sequences, and the content standards expected of accounts.',
+    description: 'The terms that apply to using LazyGrip.net, posting requirements and verification, and the content standards expected of accounts.',
     url: 'https://lazygrip.net/tos',
     siteName: 'LazyGrip.net',
     type: 'website',
@@ -44,6 +44,13 @@ export default function TermsPage() {
         <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
           <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Acceptable Use</h2>
           <p>Do not use LazyGrip.net to break laws, harass or threaten other users, post spam or unsolicited ads, try to get into someone else's account, run automated tools against the site, impersonate anyone, or post content that infringes on someone else's intellectual property.</p>
+        </div>
+
+        <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
+          <h2 style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Posting Requirements</h2>
+          <p style={{ marginBottom: 12 }}>Anyone can browse and download sequences without an account. Posting a sequence is different: your account needs to be verified and have a display name set before you can publish.</p>
+          <p style={{ marginBottom: 12 }}>Verified means your sign-in is fully completed, either a confirmed email address or a finished Discord/Battle.net login. If your account is still showing as pending or unverified, finish that process first. New accounts also need to be a little established before posting: give it about an hour after signing up.</p>
+          <p>New accounts are limited in how often they can post while we get to know them. This is to keep low-effort or bad-faith posts off the site. It is not a judgment on you personally, and it eases up as your account ages.</p>
         </div>
 
         <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '20px 24px' }}>
