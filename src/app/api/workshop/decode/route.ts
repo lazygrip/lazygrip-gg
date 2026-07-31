@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { decodeExport } from '@/lib/workshop/exportDecode'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 interface ToolboxActionNode {
   index: number
@@ -26,6 +27,11 @@ function normalizeEmsActionKind(node: ToolboxActionNode): ToolboxActionNode {
 }
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req)
+  if (!checkRateLimit(`workshop-decode:${ip}`, { limit: 30, windowMs: 60_000 })) {
+    return NextResponse.json({ error: 'Too many requests. Please slow down and try again shortly.' }, { status: 429 })
+  }
+
   let body: { code?: string }
   try { body = await req.json() } catch { return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 }) }
 
