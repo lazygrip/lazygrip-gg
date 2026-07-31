@@ -64,16 +64,28 @@ function buildCollectionPayload(sequences: LooseRecord[], meta: LooseRecord, war
   };
 
   if (exportMeta.collectionName || exportMeta.author || exportMeta.description || exportMeta.helplink || exportMeta.helpUrl) {
-    payload.exportMeta = {
+    const collectionMeta: LooseRecord = {
       collectionName: exportMeta.collectionName || "",
       author: exportMeta.author || "",
       description: exportMeta.description || "",
-      helplink: exportMeta.helplink || "",
-      helpUrl: exportMeta.helpUrl || "",
-      platformId: exportMeta.platformId || "",
-      checksum: exportMeta.checksum || "",
-      gseVersion: exportMeta.gseVersion || null
+      helplink: exportMeta.helplink || ""
     };
+
+    // Source metadata is carried through only when the source actually had a value.
+    if (exportMeta.helpUrl) {
+      collectionMeta.helpUrl = exportMeta.helpUrl;
+    }
+    if (exportMeta.platformId) {
+      collectionMeta.platformId = exportMeta.platformId;
+    }
+    if (exportMeta.checksum) {
+      collectionMeta.checksum = exportMeta.checksum;
+    }
+    if (exportMeta.gseVersion) {
+      collectionMeta.gseVersion = exportMeta.gseVersion;
+    }
+
+    payload.exportMeta = collectionMeta;
   }
 
   for (const sequence of sequences) {
@@ -94,21 +106,40 @@ function buildSequencePayload(sequence: LooseRecord, meta: LooseRecord, warnings
     throw new Error(`Sequence "${sequenceName}" has no convertible macro blocks.`);
   }
 
-  return {
+  const helpUrl = String(sequenceMeta.HelpURL || sequenceMeta.helpUrl || exportMeta.helpUrl || "").trim();
+  const platformId = String(sequenceMeta.PlatformID || sequenceMeta.platformId || exportMeta.platformId || "").trim();
+  const checksum = String(sequenceMeta.Checksum || sequenceMeta.checksum || exportMeta.checksum || "").trim();
+  const gseVersion = sequenceMeta.GSEVersion || sequenceMeta.gseVersion || exportMeta.gseVersion || null;
+
+  const payload: LooseRecord = {
     icon: DEFAULT_ICON,
     author: sequenceMeta.Author || sequenceMeta.author || exportMeta.author || "",
     description: sequence.description || exportMeta.description || "",
     help: String(sequence.help || "").trim(),
     helplink: String(sequenceMeta.Helplink || sequenceMeta.helplink || exportMeta.helplink || "").trim(),
-    helpUrl: String(sequenceMeta.HelpURL || sequenceMeta.helpUrl || exportMeta.helpUrl || "").trim(),
-    platformId: String(sequenceMeta.PlatformID || sequenceMeta.platformId || exportMeta.platformId || "").trim(),
-    checksum: String(sequenceMeta.Checksum || sequenceMeta.checksum || exportMeta.checksum || "").trim(),
-    gseVersion: sequenceMeta.GSEVersion || sequenceMeta.gseVersion || exportMeta.gseVersion || null,
+    // This converter only ever runs on a GSE source, so the origin is always accurate here.
+    provenanceSource: "gse-legacy",
     classID: sequence.classId || meta.classId || 0,
     specID: sequence.specId || meta.specId || null,
     defaultVersion: sequence.defaultVersion || 1,
     versions
   };
+
+  // Source metadata is carried through only when the source actually had a value.
+  if (helpUrl) {
+    payload.helpUrl = helpUrl;
+  }
+  if (platformId) {
+    payload.platformId = platformId;
+  }
+  if (checksum) {
+    payload.checksum = checksum;
+  }
+  if (gseVersion) {
+    payload.gseVersion = gseVersion;
+  }
+
+  return payload;
 }
 
 function buildVersionPayload(version: LooseRecord, warnings: string[], label: string): LooseRecord | null {

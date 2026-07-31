@@ -209,6 +209,8 @@ function normalizeSequences(decoded: unknown): LooseRecord[] {
       defaultVersion,
       versions,
       steps,
+      // Carried through so a converted export still reports where it came from.
+      gseVersion: sequence.gseVersion || sequence.GSEVersion || null,
       talentString: enrichment.talentString || null,
       talentBuild: enrichment.talentBuild || null
     };

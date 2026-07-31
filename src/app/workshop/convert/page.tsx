@@ -34,6 +34,7 @@ interface DecodeResult {
     name: string
     class: string
     spec: string
+    author?: string
     defaultVersion: number
     versions: Array<{
       index: number
@@ -273,6 +274,11 @@ export default function WorkshopConvertPage() {
 
   if (loading) return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading...</span></div>
 
+  // The decode round trip is non-fatal, so `decoded` can be null while a result exists.
+  const decodedAuthors = Array.from(new Set((decoded?.sequences || []).map(seq => String(seq.author || '').trim()).filter(Boolean)))
+  const decodedExportAuthor = String((decoded?.meta?.exportMeta as Record<string, unknown> | undefined)?.author || '').trim()
+  const originAuthor = decodedAuthors.length === 1 ? decodedAuthors[0] : decodedExportAuthor
+
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
       <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -350,6 +356,9 @@ export default function WorkshopConvertPage() {
               <div style={{ padding: '14px 16px', background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>
                   Converted to GRIP: <strong style={{ color: 'var(--text-primary)' }}>{result.sequenceCount}</strong> sequence{result.sequenceCount !== 1 ? 's' : ''} — ready to import into GRIP.
+                </p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
+                  Origin: GSE{originAuthor ? `, author ${originAuthor}` : ''}
                 </p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {result.sequenceNames.map(name => (

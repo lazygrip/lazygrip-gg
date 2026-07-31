@@ -24,6 +24,8 @@ interface DecodeResult {
     name: string
     class: string
     spec: string
+    author?: string
+    gseVersion?: string | number | null
     defaultVersion: number
     versions: Array<{
       index: number
@@ -250,6 +252,13 @@ export default function WorkshopDecodePage() {
   if (loading) return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading...</span></div>
 
   const isGSE = result?.meta?.format === 'GSE3'
+  // A converted !GRIP1! keeps the source version, so origin survives the round trip.
+  const isGSEOrigin = isGSE || (result?.sequences || []).some(seq => Boolean(seq.gseVersion))
+  const sequenceAuthors = Array.from(new Set((result?.sequences || []).map(seq => String(seq.author || '').trim()).filter(Boolean)))
+  const exportMetaAuthor = String((result?.meta?.exportMeta as Record<string, unknown> | undefined)?.author || '').trim()
+  // Prefer the per-sequence author; a collection with several distinct authors falls back
+  // to the collection-level one here and shows each sequence's own author on its card.
+  const originAuthor = sequenceAuthors.length === 1 ? sequenceAuthors[0] : exportMetaAuthor
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
@@ -346,6 +355,8 @@ export default function WorkshopDecodePage() {
                     ['Version', result.meta.version as string],
                     result.sequences[0]?.class && ['Class', result.sequences[0].class],
                     result.sequences[0]?.spec && ['Spec', result.sequences[0].spec],
+                    isGSEOrigin ? ['Origin', 'GSE'] : '',
+                    isGSEOrigin && originAuthor ? ['Author', originAuthor] : '',
                   ].filter(Boolean).map(([label, value]) => value && (
                     <span key={label as string} style={{ fontSize: 12, padding: '3px 8px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}>
                       <span style={{ color: 'var(--text-muted)' }}>{label}: </span>{value}
@@ -373,6 +384,11 @@ export default function WorkshopDecodePage() {
                 <div key={si} style={{ background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
                   <div style={{ padding: '14px 16px', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{seq.name}</h2>
+                    {isGSEOrigin && seq.author && (
+                      <span style={{ fontSize: 12, padding: '3px 8px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Author: </span>{seq.author}
+                      </span>
+                    )}
                   </div>
                   {seq.versions.map((version, vi) => (
                     <div key={vi} style={{ borderBottom: vi < seq.versions.length - 1 ? '0.5px solid var(--border)' : undefined }}>
