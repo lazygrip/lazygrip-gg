@@ -43,11 +43,21 @@ $knownExempt = @(
     "notify_on_comment",
     "notify_on_rating",
     "update_comment_count",
-    "update_sequence_rating"
+    "update_sequence_rating",
+    # Added 2026-07-31: these check ELIGIBILITY of a target account
+    # (is this author_id allowed to post at all), not OWNERSHIP of a row
+    # being written. They're called from inside create_draft_sequence /
+    # create_sequence_with_version / publish_draft_sequence /
+    # publish_draft_sequences_batch, which already do the auth.uid() =
+    # p_author_id check themselves before calling these. Different
+    # pattern, correctly exempt -- not a caller-supplied author_id being
+    # trusted without verification.
+    "is_verified_poster",
+    "check_post_rate_limit"
 )
 
 $flagged = @()
-$checkedCount = 0
+$latestDefs = @{}
 
 Get-ChildItem $migrationsPath -Filter "*.sql" | Sort-Object Name | ForEach-Object {
     $content = Get-Content $_.FullName -Raw
@@ -61,20 +71,33 @@ Get-ChildItem $migrationsPath -Filter "*.sql" | Sort-Object Name | ForEach-Objec
     foreach ($m in $matches2) {
         $fnName = $m.Groups[1].Value
         $body   = $m.Groups[3].Value
-        $checkedCount++
 
-        if ($knownExempt -contains $fnName) {
-            Write-Host "  SKIP  $fnName (known exempt: trigger/counter, no caller-supplied author_id)" -ForegroundColor DarkGray
-            continue
-        }
+        # CREATE OR REPLACE means a later file's definition supersedes an
+        # earlier one -- e.g. 002_schema_sync.sql has the original (buggy)
+        # bodies of several functions that were fixed via CREATE OR REPLACE
+        # in a later-numbered migration (005). Overwrite rather than append,
+        # so by the time we're done, $latestDefs holds only the final body
+        # each function actually resolves to -- matching how Postgres itself
+        # would apply these migrations in order.
+        $latestDefs[$fnName] = [pscustomobject]@{ Function = $fnName; File = $_.Name; Body = $body }
+    }
+}
 
-        if ($body -notmatch 'auth\.uid\s*\(\s*\)') {
-            $flagged += [pscustomobject]@{ Function = $fnName; File = $_.Name }
-            Write-Host "  FAIL  $fnName in $($_.Name) -- SECURITY DEFINER with NO auth.uid() reference" -ForegroundColor Red
-        }
-        else {
-            Write-Host "  OK    $fnName" -ForegroundColor Green
-        }
+$checkedCount = $latestDefs.Count
+foreach ($fnName in ($latestDefs.Keys | Sort-Object)) {
+    $def = $latestDefs[$fnName]
+
+    if ($knownExempt -contains $fnName) {
+        Write-Host "  SKIP  $fnName (known exempt: trigger/counter, no caller-supplied author_id)" -ForegroundColor DarkGray
+        continue
+    }
+
+    if ($def.Body -notmatch 'auth\.uid\s*\(\s*\)') {
+        $flagged += [pscustomobject]@{ Function = $fnName; File = $def.File }
+        Write-Host "  FAIL  $fnName in $($def.File) (latest definition) -- SECURITY DEFINER with NO auth.uid() reference" -ForegroundColor Red
+    }
+    else {
+        Write-Host "  OK    $fnName (latest definition: $($def.File))" -ForegroundColor Green
     }
 }
 
@@ -98,6 +121,12 @@ Write-Host "[2/3] Checking for API routes added since the last full audit..." -F
 # Every route file read line-by-line in the 2026-07-22 audit
 # (see SECURITY_AUDIT_2026-07-22.md). Update this list whenever a new route
 # gets its own hostile-caller read.
+# 2026-07-31: added workshop/decode (existing route, missed by the original
+# audit's list -- confirmed stateless/no-auth-needed same as its siblings).
+# All six decode/convert/import/build routes below also got IP rate limiting
+# added 2026-07-31 (src/lib/rate-limit.ts) -- this script only tracks route
+# existence, not content changes, so that's noted here rather than something
+# this script would catch on its own.
 $auditedRoutes = @(
     "src\app\api\cron\patch-reminder\route.ts",
     "src\app\api\decode-grip\route.ts",
@@ -105,6 +134,7 @@ $auditedRoutes = @(
     "src\app\api\workshop\build\route.ts",
     "src\app\api\workshop\convert\route.ts",
     "src\app\api\workshop\convert-spell-texts\route.ts",
+    "src\app\api\workshop\decode\route.ts",
     "src\app\api\workshop\import\route.ts",
     "src\app\api\workshop\spells\route.ts"
 )
