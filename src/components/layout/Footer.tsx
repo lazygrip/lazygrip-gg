@@ -17,16 +17,15 @@ export default function Footer() {
       }}>
         <div style={{
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
           gap: 12,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 13 }}>
-            <Shield size={14} color="var(--accent)" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' }}>
+            <Shield size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
             <span>LazyGrip.net is a community site, independently owned and operated. Not affiliated with or endorsed by Blizzard Entertainment, and not an official GRIP-EMS site.</span>
           </div>
-          <div style={{ display: 'flex', gap: 20, fontSize: 13 }}>
+          <div style={{ display: 'flex', gap: 20, fontSize: 13, flexWrap: 'wrap', justifyContent: 'center' }}>
             {[
               { href: '/guide', label: 'Guide' },
               { href: '/changelog', label: 'Changelog' },
