@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   update-version:
@@ -88,13 +89,31 @@ jobs:
           sed -i "s/GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*/GRIP-EMS ${NEW_VERSION}/g" src/app/guide/page.tsx
           echo "Updated files to $NEW_VERSION"
 
-      - name: Commit and push changes
+      - name: Create pull request
         if: steps.check.outputs.needed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        id: cpr
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Auto-update GRIP-EMS version to ${{ steps.fetch_version.outputs.version }}"
+          title: "Auto-update GRIP-EMS version to ${{ steps.fetch_version.outputs.version }}"
+          body: |
+            Automated update triggered by the daily version-check workflow.
+
+            - Detected version: `${{ steps.fetch_version.outputs.version }}`
+            - Previous version: `${{ steps.current_version.outputs.current }}`
+
+            This PR was opened because `main` is a protected branch and no longer accepts direct pushes.
+          branch: "auto/grip-ems-version-update"
+          delete-branch: true
+          add-paths: |
+            src/app/guide/layout.tsx
+            src/app/guide/page.tsx
+
+      - name: Enable auto-merge
+        if: steps.check.outputs.needed == 'true' && steps.cpr.outputs.pull-request-number
         env:
-          FETCHED_VERSION: ${{ steps.fetch_version.outputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add src/app/guide/layout.tsx src/app/guide/page.tsx
-          git commit -m "Auto-update GRIP-EMS version to ${FETCHED_VERSION}"
-          git push
+          gh pr merge --auto --squash "${{ steps.cpr.outputs.pull-request-number }}" || \
+            echo "Auto-merge could not be enabled automatically — the PR is still open and waiting at ${{ steps.cpr.outputs.pull-request-url }} for a manual merge."
