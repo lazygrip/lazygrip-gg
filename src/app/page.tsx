@@ -29,7 +29,7 @@ export default function HomePage() {
             gap: 6,
             background: 'var(--accent-subtle)',
             color: 'var(--accent-text)',
-            fontSize: 12,
+            fontSize: 'var(--text-sm)',
             fontWeight: 500,
             padding: '4px 12px',
             borderRadius: 99,
@@ -53,7 +53,7 @@ export default function HomePage() {
           </h1>
 
           <p style={{
-            fontSize: 16,
+            fontSize: 'var(--text-base)',
             color: 'var(--text-secondary)',
             lineHeight: 1.6,
             maxWidth: 520,
@@ -75,7 +75,7 @@ export default function HomePage() {
               textDecoration: 'none',
               padding: '10px 20px',
               borderRadius: 'var(--radius-md)',
-              fontSize: 14,
+              fontSize: 'var(--text-base)',
               fontWeight: 500,
             }}>
               Browse sequences
@@ -90,7 +90,7 @@ export default function HomePage() {
               textDecoration: 'none',
               padding: '10px 20px',
               borderRadius: 'var(--radius-md)',
-              fontSize: 14,
+              fontSize: 'var(--text-base)',
               fontWeight: 500,
               border: '0.5px solid var(--border-strong)',
             }}>
@@ -116,7 +116,7 @@ export default function HomePage() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
-                fontSize: 13,
+                fontSize: 'var(--text-sm)',
                 color: 'var(--text-secondary)',
               }}>
                 <span style={{ color: 'var(--accent)' }}>{item.icon}</span>
@@ -144,13 +144,13 @@ export default function HomePage() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <span style={{ color: 'var(--accent)' }}><Wrench size={16} /></span>
-                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'var(--accent)' }}>New in Workshop</span>
+                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'var(--accent)' }}>Workshop</span>
               </div>
               <h2 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: 8 }}>
                 Build GRIP sequences in the browser
               </h2>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 600, marginBottom: 16 }}>
-                The Workshop now includes a full sequence builder. Create collections with multiple sequences and versions, add loops, if branches, and pause blocks, set keypress macros, and export a ready-to-import GRIP string without ever opening the addon. Import any existing GRIP or GSE export to inspect and edit it directly.
+              <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 600, marginBottom: 16 }}>
+                The Workshop includes a full sequence builder. Create collections with multiple sequences and versions, add loops, if branches, and pause blocks, set keypress macros, and export a ready-to-import GRIP string without ever opening the addon. Import any existing GRIP or GSE export to inspect and edit it directly.
               </p>
               <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' as const }}>
                 {[
@@ -160,7 +160,7 @@ export default function HomePage() {
                   'Spell ID conversion',
                   'Clone sequences and versions',
                 ].map(feature => (
-                  <span key={feature} style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span key={feature} style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5 }}>
                     <span style={{ color: 'var(--accent)', fontSize: 10 }}>&#10003;</span> {feature}
                   </span>
                 ))}
@@ -175,7 +175,7 @@ export default function HomePage() {
               textDecoration: 'none',
               padding: '10px 20px',
               borderRadius: 'var(--radius-md)',
-              fontSize: 13,
+              fontSize: 'var(--text-base)',
               fontWeight: 500,
               flexShrink: 0,
               whiteSpace: 'nowrap' as const,
@@ -202,7 +202,7 @@ export default function HomePage() {
             Why GRIP-EMS?
           </h2>
           <p style={{
-            fontSize: 15,
+            fontSize: 'var(--text-base)',
             color: 'var(--text-secondary)',
             lineHeight: 1.75,
             marginBottom: 32,
@@ -253,7 +253,7 @@ export default function HomePage() {
                   marginBottom: 10,
                 }} />
                 <div style={{
-                  fontSize: 13,
+                  fontSize: 'var(--text-base)',
                   fontWeight: 600,
                   color: 'var(--text-primary)',
                   marginBottom: 6,
@@ -261,7 +261,7 @@ export default function HomePage() {
                   {card.label}
                 </div>
                 <div style={{
-                  fontSize: 12,
+                  fontSize: 'var(--text-sm)',
                   color: 'var(--text-secondary)',
                   lineHeight: 1.6,
                 }}>
@@ -273,7 +273,7 @@ export default function HomePage() {
 
           <div style={{ marginTop: 24 }}>
             <Link href="/guide" style={{
-              fontSize: 13,
+              fontSize: 'var(--text-sm)',
               color: 'var(--accent)',
               textDecoration: 'none',
               display: 'inline-flex',
@@ -296,7 +296,7 @@ export default function HomePage() {
         }}>
           <h2 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em' }}>Browse by class</h2>
           <Link href="/browse" style={{
-            fontSize: 13,
+            fontSize: 'var(--text-sm)',
             color: 'var(--accent)',
             textDecoration: 'none',
             display: 'flex',
@@ -338,7 +338,7 @@ export default function HomePage() {
                 flexShrink: 0,
               }} />
               <span style={{
-                fontSize: 13,
+                fontSize: 'var(--text-base)',
                 fontWeight: 500,
                 color: 'var(--text-primary)',
               }}>
@@ -384,10 +384,10 @@ export default function HomePage() {
                 borderRadius: 2,
                 marginBottom: 10,
               }} />
-              <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>
+              <div style={{ fontSize: 'var(--text-base)', fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>
                 {ct.label}
               </div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                 {ct.desc}
               </div>
             </Link>
