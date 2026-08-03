@@ -3,7 +3,7 @@ import { Megaphone } from 'lucide-react'
 
 // Update these two lines when you have a new announcement.
 // Set ANNOUNCEMENT to null to hide the bar entirely.
-const ANNOUNCEMENT = null
+const ANNOUNCEMENT: { text: string; href: string } | null = null
 
 export default function AnnouncementBar() {
   if (!ANNOUNCEMENT) return null
