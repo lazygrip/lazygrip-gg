@@ -23,7 +23,7 @@ export default function AnnouncementBar() {
       }}>
         <Megaphone size={15} style={{ color: 'white', flexShrink: 0 }} />
         <Link href={ANNOUNCEMENT.href} style={{
-          fontSize: 14,
+          fontSize: 'var(--text-sm)',
           fontWeight: 700,
           color: 'white',
           textDecoration: 'underline',
