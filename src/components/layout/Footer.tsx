@@ -21,11 +21,11 @@ export default function Footer() {
           alignItems: 'center',
           gap: 12,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', textAlign: 'center' }}>
-            <Shield size={14} color="var(--accent)" style={{ flexShrink: 0 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)', fontSize: 'var(--text-base)', textAlign: 'center' }}>
+            <Shield size={16} color="var(--accent)" style={{ flexShrink: 0 }} />
             <span>LazyGrip.net is a community site, independently owned and operated. Not affiliated with or endorsed by Blizzard Entertainment, and not an official GRIP-EMS site.</span>
           </div>
-          <div style={{ display: 'flex', gap: 20, fontSize: 'var(--text-sm)', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: 20, fontSize: 'var(--text-base)', flexWrap: 'wrap', justifyContent: 'center' }}>
             {[
               { href: '/guide', label: 'Guide' },
               { href: '/changelog', label: 'Changelog' },
@@ -43,7 +43,7 @@ export default function Footer() {
             ))}
           </div>
         </div>
-        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', textAlign: 'center' }}>
+        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', textAlign: 'center' }}>
           Sequences stay the property of the people who wrote them. By posting you confirm you wrote the sequence or have the author&apos;s permission. If your work is here without permission, email{' '}
           <a
             href="mailto:admin@lazygrip.net"
