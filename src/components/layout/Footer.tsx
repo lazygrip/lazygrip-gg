@@ -33,8 +33,7 @@ export default function Footer() {
               { href: '/faq', label: 'FAQ' },
               { href: '/tos', label: 'Terms' },
               { href: '/privacy', label: 'Privacy' },
-              { href: 'https://forum.lazygrip.net', label: 'Forum' },
-            ].map(link => (
+             ].map(link => (
               <Link key={link.href} href={link.href} style={{
                 color: 'var(--text-muted)',
                 textDecoration: 'none',

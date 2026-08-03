@@ -3,10 +3,7 @@ import { Megaphone } from 'lucide-react'
 
 // Update these two lines when you have a new announcement.
 // Set ANNOUNCEMENT to null to hide the bar entirely.
-const ANNOUNCEMENT = {
-  text: 'NEW: The GRIP-EMS Community Forum is live. Join the conversation at forum.lazygrip.net.',
-  href: 'https://forum.lazygrip.net',
-}
+const ANNOUNCEMENT = null
 
 export default function AnnouncementBar() {
   if (!ANNOUNCEMENT) return null
