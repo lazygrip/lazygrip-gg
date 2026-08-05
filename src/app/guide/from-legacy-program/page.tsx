@@ -60,7 +60,7 @@ export default function FromLegacyProgramPage() {
         <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
           Getting your sequences into GRIP-EMS
         </h2>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 14 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 14 }}>
           This is probably what you came here for first. GRIP-EMS imports sequences from the legacy program automatically and the process takes about two minutes. Import reliability has improved significantly in recent releases, so if you tried this previously and had issues, it is worth trying again.
         </p>
 
@@ -82,7 +82,7 @@ export default function FromLegacyProgramPage() {
           ))}
         </div>
 
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
           After importing, run <Code>/gems repairall</Code> to scan every transferred sequence across 13 diagnostic categories. Most issues from format differences get flagged and fixed automatically. This takes about thirty seconds and saves you from discovering problems mid-pull.
         </p>
         <InfoBox>
@@ -97,13 +97,13 @@ export default function FromLegacyProgramPage() {
         <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
           How advancement actually works
         </h2>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 14 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 14 }}>
           Both engines advance one step per keypress and neither one waits for a cast to land. What can make a press do nothing is the macro line on the step. If a /cast names a spell that is still on cooldown, WoW stops running that macro there and the lines under it never fire, so the press comes up empty and the step advances anyway. A /castsequence parked on an entry that is on cooldown behaves the same. That is the WoW macro engine reading your text, so you get it under either addon. Conditional lines are different: a conditional that does not apply is skipped and the next line still runs.
         </p>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 14 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 14 }}>
           The practical consequence is that loop length is a real cost. In a flat sequential loop every step gets one visit per pass, so a 30 step loop clicked every 150ms is roughly 4.5 seconds between visits to any single step. A press that came up empty is not retried, and that step is spent until the loop comes back around. If a defensive needs to come around faster than that, shorten the loop, move the step earlier, or give it a per-step interval.
         </p>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
           Advancement being deterministic is what makes a sequence readable. One press is one step, so a step position means something and you can reason about the rotation by reading it top to bottom. It is also what makes log comparison useful. Two runs of the same sequence at the same click rate walk the same steps in the same order, so a difference in the numbers points at the sequence or the pull rather than at the engine.
         </p>
       </section>
@@ -173,10 +173,10 @@ export default function FromLegacyProgramPage() {
         <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
           You do not have to choose permanently
         </h2>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
           Both addons can be installed at the same time and the sequence formats do not cross-contaminate. A reasonable approach is to move one spec across first, the one whose sequence you edit and tune the most, and keep your existing legacy program sequences for everything else until you have decided the tooling is worth the move for those specs too.
         </p>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
           Translating sequences between the formats is not automatic, but the underlying macro logic is the same since both addons use WoW&apos;s standard macro conditional syntax. A sequence from the legacy program can be rebuilt in GRIP-EMS step by step without starting from scratch. Step spacing and timing can still shift once the step count or the click rate changes, so plan on a validation pass after porting rather than assuming the numbers will be identical.
         </p>
       </section>

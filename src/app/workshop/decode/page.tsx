@@ -273,7 +273,7 @@ export default function WorkshopDecodePage() {
           <div>
             <p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 4 }}>Inspect</p>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: 6 }}>Decode Export</h1>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>View loops, actions, and steps from !EMS1!, !GRIP1!, or !GSE3! strings.</p>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>View loops, actions, and steps from !EMS1!, !GRIP1!, or !GSE3! strings.</p>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -341,7 +341,7 @@ export default function WorkshopDecodePage() {
               background: 'var(--bg-secondary)', border: '0.5px solid var(--border)',
               borderRadius: 'var(--radius-lg)',
             }}>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>Decoded macro structure will appear here.</p>
+              <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)' }}>Decoded macro structure will appear here.</p>
             </div>
           )}
 

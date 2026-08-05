@@ -188,7 +188,7 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
           <h1 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 4 }}>
             {view === 'confirm-reset' ? 'Set a new password' : view === 'reset' ? 'Reset password' : isLogin ? 'Welcome back' : 'Create account'}
           </h1>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>
             {view === 'confirm-reset'
               ? 'Choose a new password for your account.'
               : view === 'reset'
@@ -267,7 +267,7 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
             </button>
           </div>
         ) : view === 'confirm-reset' && !sessionReady ? (
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', textAlign: 'center' }}>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)', textAlign: 'center' }}>
             Checking your reset link...
           </p>
         ) : success ? (

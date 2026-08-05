@@ -317,7 +317,7 @@ export default function UpdateSequencePage() {
                 <X size={16} />
               </button>
             </div>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
               This export contains {sequenceOptions.length} sequences. The full bundle will be saved. Pick one to preview its steps below.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -356,7 +356,7 @@ export default function UpdateSequencePage() {
         }}>
           Publish a new version
         </h1>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', lineHeight: 1.6 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', lineHeight: 1.6 }}>
           You are publishing a new version of <strong style={{ color: 'var(--text-primary)' }}>{sequence.title}</strong>.
           The current version is <strong style={{ color: 'var(--accent)' }}>{currentVersion.version_label}</strong>.
           Your new version will become the default import string. The previous version stays in the history and remains importable.
@@ -666,7 +666,7 @@ export default function UpdateSequencePage() {
           <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
             Version extras
           </h2>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
             These are specific to this version and will update when visitors switch between versions.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

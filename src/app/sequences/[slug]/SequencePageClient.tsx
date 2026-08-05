@@ -520,7 +520,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
             <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, marginBottom: 10, color: 'var(--text-primary)' }}>
               Delete this version?
             </h2>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
               This will permanently remove this version from the history. This cannot be undone.
             </p>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -580,7 +580,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
             <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, marginBottom: 10, color: 'var(--text-primary)' }}>
               Delete this sequence?
             </h2>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
               This will permanently delete <strong style={{ color: 'var(--text-primary)' }}>{sequence.title}</strong> and all its ratings and comments. This cannot be undone.
             </p>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -1156,13 +1156,13 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                 </button>
               </div>
             ) : (
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 16 }}>
+              <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', marginBottom: 16 }}>
                 <a href="/auth/login" style={{ color: 'var(--accent)' }}>Sign in</a> to leave a comment.
               </p>
             )}
 
             {comments.length === 0 ? (
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>No comments yet. Be the first!</p>
+              <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)' }}>No comments yet. Be the first!</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {comments.map(comment => (
@@ -1678,7 +1678,7 @@ function CommentThread({
               )}
             </div>
           </div>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
 		  {comment.body}
 		  </p>
 

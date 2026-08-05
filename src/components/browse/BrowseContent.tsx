@@ -359,7 +359,7 @@ export default function BrowseContent({
             </div>
           ) : sequences.length === 0 ? (
             <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '48px 24px', textAlign: 'center' }}>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>No sequences found. Try adjusting your filters or be the first to post one!</p>
+              <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>No sequences found. Try adjusting your filters or be the first to post one!</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

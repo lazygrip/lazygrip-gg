@@ -1139,14 +1139,14 @@ async function runDecode(exportString: string) {
 
   if (loadingEdit || checkingDrafts) return (
     <div style={{ maxWidth: 760, margin: '80px auto', padding: '0 24px', textAlign: 'center' }}>
-      <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>Loading...</p>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-base)' }}>Loading...</p>
     </div>
   )
 
   if (pendingDrafts && pendingDrafts.length > 0) return (
     <div style={{ maxWidth: 760, margin: '80px auto', padding: '0 24px' }}>
       <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>You have unfinished drafts</h1>
-      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 20 }}>
+      <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', marginBottom: 20 }}>
         Pick up where you left off, or discard the ones you don't need.
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1157,7 +1157,7 @@ async function runDecode(exportString: string) {
             padding: '14px 16px',
           }}>
             <div>
-              <p style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>{d.title || 'Untitled draft'}</p>
+              <p style={{ fontSize: 'var(--text-base)', fontWeight: 500 }}>{d.title || 'Untitled draft'}</p>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
                 {d.class_name || 'No class set'} — last edited {new Date(d.updated_at).toLocaleString()}
               </p>
@@ -1213,7 +1213,7 @@ async function runDecode(exportString: string) {
       <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 6 }}>
         {isEditMode ? 'Edit sequence' : 'Post a sequence'}
       </h1>
-      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 28 }}>
+      <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', marginBottom: 28 }}>
         {isEditMode
           ? 'Update your sequence details below. Changes will be live immediately.'
           : 'Share your GRIP-EMS sequence with the community. Include your GRIP export string so others can import it directly.'}
@@ -1254,7 +1254,7 @@ async function runDecode(exportString: string) {
               }}>
                 <span style={{ fontSize: 'var(--text-base)', flexShrink: 0, lineHeight: 1.4 }}>👆</span>
                 <div>
-                  <p style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-sans)', marginBottom: 3 }}>
+                  <p style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-sans)', marginBottom: 3 }}>
                     Start here: paste your GRIP export string
                   </p>
                   <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', lineHeight: 1.5 }}>
@@ -1740,7 +1740,7 @@ export default function PostPage() {
   return (
     <Suspense fallback={
       <div style={{ maxWidth: 760, margin: '80px auto', padding: '0 24px', textAlign: 'center' }}>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>Loading...</p>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-base)' }}>Loading...</p>
       </div>
     }>
       <PostForm />

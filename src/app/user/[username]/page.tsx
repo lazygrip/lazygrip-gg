@@ -134,7 +134,7 @@ export default async function UserProfilePage(props: Props) {
             {profile.display_name || profile.username}
           </h1>
           {profile.display_name && (
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', margin: '2px 0 0' }}>@{profile.username}</p>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)', margin: '2px 0 0' }}>@{profile.username}</p>
           )}
           <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Joined {joinDate}</span>
@@ -144,7 +144,7 @@ export default async function UserProfilePage(props: Props) {
             )}
           </div>
           {profile.bio && (
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginTop: 10, lineHeight: 1.6 }}>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', marginTop: 10, lineHeight: 1.6 }}>
               {profile.bio}
             </p>
           )}
@@ -165,7 +165,7 @@ export default async function UserProfilePage(props: Props) {
           background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
           borderRadius: 'var(--radius-lg)', padding: '40px 24px', textAlign: 'center',
         }}>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>No sequences posted yet.</p>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>No sequences posted yet.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

@@ -48,7 +48,7 @@ export default function NotificationsPage() {
 
   if (loading) return (
     <div style={{ maxWidth: 700, margin: '80px auto', padding: '0 24px', textAlign: 'center' }}>
-      <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>Loading...</p>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-base)' }}>Loading...</p>
     </div>
   )
 
@@ -92,8 +92,8 @@ export default function NotificationsPage() {
           textAlign: 'center',
         }}>
           <Bell size={32} color="var(--text-muted)" style={{ marginBottom: 12 }} />
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>No notifications yet.</p>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginTop: 4 }}>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)' }}>No notifications yet.</p>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)', marginTop: 4 }}>
             You'll be notified when someone comments on or rates your sequences.
           </p>
         </div>
@@ -136,7 +136,7 @@ function NotificationRow({ notification: n }: { notification: any }) {
         {icon}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', marginBottom: 2 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-primary)', marginBottom: 2 }}>
           {n.message}
         </p>
         <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>

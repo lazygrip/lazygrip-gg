@@ -87,7 +87,7 @@ export default async function ChangelogPage() {
           <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0 }}>
             Changelog
           </h1>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', margin: 0, marginTop: 2 }}>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)', margin: 0, marginTop: 2 }}>
             Every change shipped to LazyGrip.net, pulled live from GitHub.
           </p>
         </div>
@@ -98,7 +98,7 @@ export default async function ChangelogPage() {
           background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
           borderRadius: 'var(--radius-lg)', padding: '32px 24px', textAlign: 'center',
         }}>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Could not load changelog. Try again later.</p>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>Could not load changelog. Try again later.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

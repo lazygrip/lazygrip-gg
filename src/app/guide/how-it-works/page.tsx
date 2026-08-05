@@ -92,7 +92,7 @@ export default function HowItWorksPage() {
                   </span>
                 )}
               </div>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{sf.desc}</p>
+              <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{sf.desc}</p>
             </div>
           ))}
         </div>

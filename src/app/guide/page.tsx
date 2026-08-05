@@ -97,7 +97,7 @@ export default function GuidePage() {
                   <span style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)' }}>{s.title}</span>
                   <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)', border: '0.5px solid var(--border)', borderRadius: 99, padding: '1px 8px' }}>{s.time}</span>
                 </div>
-                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0 }}>{s.desc}</p>
+                <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0 }}>{s.desc}</p>
               </div>
               <ArrowRight size={14} style={{ color: 'var(--text-tertiary)', flexShrink: 0, marginTop: 10 }} />
             </Link>
@@ -109,13 +109,13 @@ export default function GuidePage() {
         <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
           Before you open the editor
         </h2>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
           The single biggest mistake new users make is opening GRIP-EMS and typing spell names before they know what their sequence is supposed to do. The addon executes a rotation you have already designed, it does not design it for you. Sitting down with no plan produces a sequence that technically runs but delivers mediocre results because the step ordering and spacing came from guessing rather than understanding your spec.
         </p>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
           Before you build anything, spend twenty minutes with the Icy Veins guide or your spec Discord and answer four questions. What is your highest priority spell and how often does it need to fire? What is the cooldown you cannot afford to miss on pull? Which spells can be skipped when unavailable without breaking the rotation, and which ones cannot be skipped? And do you need the sequence to behave differently in different content, such as a different opener for Mythic+ versus raid?
         </p>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
           The answers to those questions determine your step count, your step function choice, your reset conditions, and whether you need context versions. The{' '}
           <Link href="/guide/building-sequences" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Building sequences</Link>{' '}
           section walks through exactly how those answers translate into a working sequence for any spec.
@@ -126,10 +126,10 @@ export default function GuidePage() {
         <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
           About the sequences on this site
         </h2>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
           Every sequence published on LazyGrip includes the content type it was validated at, the key level or difficulty tier, and the talent string it was built for. If a sequence does not list validation data, treat it as a starting point to adapt rather than a finished product to import and run blind. A sequence validated at plus 10 on one hero talent path will produce different numbers on a different path because the spells and their interactions differ.
         </p>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
           The talent string ships with every sequence for exactly this reason. If your talents do not match, the sequence is still worth importing as a structural reference, but plan on a validation pass before you rely on it in serious content.
         </p>
       </section>

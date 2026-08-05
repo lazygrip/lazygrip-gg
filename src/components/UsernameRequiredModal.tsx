@@ -83,7 +83,7 @@ export default function UsernameRequiredModal({ userId, onSuccess, onClose }: Us
         <h2 id="username-modal-title" style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8, fontFamily: 'var(--font-sans)' }}>
           Set a username to continue
         </h2>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.5, fontFamily: 'var(--font-sans)' }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.5, fontFamily: 'var(--font-sans)' }}>
           To comment, rate, or post sequences on LazyGrip, you need a username on your profile
           and to agree to keep things respectful and on-topic. This only takes a second.
         </p>

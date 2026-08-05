@@ -36,13 +36,13 @@ export default function AboutPage() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
         <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '24px' }}>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
             This site exists because GRIP-EMS needed a place where sequences could actually be found. Right now if you want a Guardian Druid sequence for Mythic+ you are digging through Discord threads, Reddit posts, or forum replies that are three patches out of date. That is not good enough for an addon that deserves better than that.
           </p>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.8, marginTop: 12 }}>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.8, marginTop: 12 }}>
             LazyGrip.net is a sequence library. You browse by class, find something for your spec and content type, copy the GRIP import string, and you are done. If you built something worth sharing you post it here, someone else runs it, and they tell you how it held up. That is the whole thing.
           </p>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.8, marginTop: 12 }}>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.8, marginTop: 12 }}>
             It is open to anyone running GRIP-EMS. Browsing does not require an account. Posting and saving sequences does, and it is free.
           </p>
         </div>
@@ -71,7 +71,7 @@ export default function AboutPage() {
 
         <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '24px' }}>
           <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Disclaimer</h2>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
             LazyGrip.net is a community site, independently owned and operated, with no affiliation with or endorsement from Blizzard Entertainment. It is not an official GRIP-EMS site. World of Warcraft is a trademark of Blizzard Entertainment, Inc.
           </p>
         </div>

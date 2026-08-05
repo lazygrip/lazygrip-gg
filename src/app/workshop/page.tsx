@@ -27,7 +27,7 @@ Workshop
 <h1 style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 10, letterSpacing: '-0.02em' }}>
 Workshop Tools
 </h1>
-<p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 540 }}>
+<p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 540 }}>
 Browser-based export tools and in-game addons built for the GRIP-EMS community, integrated on LazyGrip by Slowdog.
 </p>
 </div>
@@ -126,7 +126,7 @@ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
 <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6, letterSpacing: '-0.01em' }}>
 {title}
 </h2>
-<p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+<p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
 {description}
 </p>
 </div>
@@ -180,7 +180,7 @@ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
 <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6, letterSpacing: '-0.01em' }}>
 {title}
 </h2>
-<p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+<p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
 {description}
 </p>
 </div>

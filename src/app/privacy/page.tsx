@@ -22,7 +22,7 @@ export default function PrivacyPage() {
       <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 8, color: 'var(--text-primary)' }}>
         Privacy Policy
       </h1>
-      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginBottom: 40 }}>Last updated: May 3, 2026</p>
+      <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)', marginBottom: 40 }}>Last updated: May 3, 2026</p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
 

@@ -121,8 +121,8 @@ export default function BuildingSequencesPage() {
         ))}
 
         <div style={{ padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
-          <p style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Steps 9 through 30: the loop continues</p>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>Steps 9 through 30 repeat the same pattern established in steps 2 through 8: Thrash and Mangle alternating, Ironfur at steps 14, 21, and 28, Lunar Beam weaved at steps 12, 19, and 26, MOONSPAM at step 22, and a bare Ironfur at steps 15 and 30 without the nomod guards so it fires regardless of modifier state. Step 30 ends the loop and resets to step 2 on the next press.</p>
+          <p style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Steps 9 through 30: the loop continues</p>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>Steps 9 through 30 repeat the same pattern established in steps 2 through 8: Thrash and Mangle alternating, Ironfur at steps 14, 21, and 28, Lunar Beam weaved at steps 12, 19, and 26, MOONSPAM at step 22, and a bare Ironfur at steps 15 and 30 without the nomod guards so it fires regardless of modifier state. Step 30 ends the loop and resets to step 2 on the next press.</p>
         </div>
       </Section>
 
@@ -168,19 +168,19 @@ export default function BuildingSequencesPage() {
         <p style={{ marginTop: 16 }}>Two approaches have actually worked for players sequencing these spells, and one approach that sounds reasonable does not.</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
           <div style={{ padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
-            <p style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Works: a dedicated first-priority guard step</p>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 10 }}>Add a step near the top of the loop, before your main rotation logic, that only fires while the spell is actively channeling:</p>
+            <p style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Works: a dedicated first-priority guard step</p>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 10 }}>Add a step near the top of the loop, before your main rotation logic, that only fires while the spell is actively channeling:</p>
             <CodeBlock>{`/cast [channeling:Upheaval] Upheaval
 /cast [channeling:Fire Breath] Fire Breath`}</CodeBlock>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6, marginTop: 10 }}>This keeps re-issuing the cast on every keypress for as long as the spell is already channeling, which is what lets it run to completion instead of getting cut off by whatever the next step in the loop would otherwise fire. It is not a perfect fix. Whether WoW correctly recognises the empower as channeling versus treating it as its own separate cast state is inconsistent, so expect to still feel it as slightly wonky rather than seamless.</p>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6, marginTop: 10 }}>This keeps re-issuing the cast on every keypress for as long as the spell is already channeling, which is what lets it run to completion instead of getting cut off by whatever the next step in the loop would otherwise fire. It is not a perfect fix. Whether WoW correctly recognises the empower as channeling versus treating it as its own separate cast state is inconsistent, so expect to still feel it as slightly wonky rather than seamless.</p>
           </div>
           <div style={{ padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
-            <p style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Works: fully separate sequences per charge spell, on separate keys</p>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>Rather than folding a charged spell into your main rotation sequence, give it its own standalone sequence bound to its own key, for example Upheaval on Alt+0, Fire Breath on Shift+0, with your main rotation on 0. You manually decide when to reach for the charged spell and hold through its full charge, while the base rotation sequence keeps running independently on its own key. This is more deliberate play than a single fire-and-forget button, but it is the only approach that avoids the automated-cancel hitch entirely, since nothing is ever cutting the charge off early.</p>
+            <p style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Works: fully separate sequences per charge spell, on separate keys</p>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>Rather than folding a charged spell into your main rotation sequence, give it its own standalone sequence bound to its own key, for example Upheaval on Alt+0, Fire Breath on Shift+0, with your main rotation on 0. You manually decide when to reach for the charged spell and hold through its full charge, while the base rotation sequence keeps running independently on its own key. This is more deliberate play than a single fire-and-forget button, but it is the only approach that avoids the automated-cancel hitch entirely, since nothing is ever cutting the charge off early.</p>
           </div>
           <div style={{ padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
-            <p style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Does not work well: timing partial charge levels via pause steps</p>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>It is possible to count how many presses at a given click rate correspond to a specific charge level and build pause steps to try to land there deliberately, so the sequence releases the spell at, say, charge 2 instead of running it to completion. In practice this needs an impractical number of precisely-timed presses, does not survive a mid-combat reset since the sequence has no way to know which pause block it left off on if a fight interrupts it, and the next attempt ends up re-entering the pause sequence at the wrong position, causing a delay before the tap actually registers followed by having to work back through the pause blocks again. Treat this as a known dead end rather than something to debug further.</p>
+            <p style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Does not work well: timing partial charge levels via pause steps</p>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>It is possible to count how many presses at a given click rate correspond to a specific charge level and build pause steps to try to land there deliberately, so the sequence releases the spell at, say, charge 2 instead of running it to completion. In practice this needs an impractical number of precisely-timed presses, does not survive a mid-combat reset since the sequence has no way to know which pause block it left off on if a fight interrupts it, and the next attempt ends up re-entering the pause sequence at the wrong position, causing a delay before the tap actually registers followed by having to work back through the pause blocks again. Treat this as a known dead end rather than something to debug further.</p>
           </div>
         </div>
         <p style={{ marginTop: 16 }}>None of this is Evoker specific in principle, it applies to any spell WoW treats as charged or empowered, but Evoker is currently the class where it comes up. If you are building a sequence around Aug Evoker's Ebon Might upkeep or a Devastation opener that leans on Fire Breath or Upheaval, plan for one of the two working approaches above rather than assuming a normal cast-step pattern will behave the same way it does for every other ability in your kit.</p>
@@ -264,7 +264,7 @@ function StepBlock({ number, label, code, notes }: { number: string; label: stri
         }}>
           {number}
         </div>
-        <p style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{label}</p>
+        <p style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{label}</p>
       </div>
       <div style={{
         fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)',
@@ -315,8 +315,8 @@ function Callout({ children }: { children: React.ReactNode }) {
 function DecisionBlock({ question, answer }: { question: string; answer: string }) {
   return (
     <div style={{ marginBottom: 20 }}>
-      <p style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{question}</p>
-      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>{answer}</p>
+      <p style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{question}</p>
+      <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>{answer}</p>
     </div>
   )
 }
