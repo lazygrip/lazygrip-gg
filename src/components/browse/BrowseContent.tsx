@@ -391,7 +391,7 @@ function FilterSection({ title, children }: { title: string; children: React.Rea
 
 function FilterItem({ label, active, onClick, color, indent }: { label: string; active: boolean; onClick: () => void; color?: string; indent?: boolean }) {
   return (
-    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%', textAlign: 'left', padding: indent ? '4px 8px' : '5px 8px', borderRadius: 'var(--radius-sm)', border: 'none', background: active ? 'var(--accent-subtle)' : 'transparent', color: active ? 'var(--accent-text)' : indent ? 'var(--text-muted)' : 'var(--text-secondary)', cursor: 'pointer', fontSize: indent ? 12 : 13, fontWeight: active ? 500 : 400, fontFamily: 'var(--font-sans)' }}>
+    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 7, width: '100%', textAlign: 'left', padding: indent ? '4px 8px' : '5px 8px', borderRadius: 'var(--radius-sm)', border: 'none', background: active ? 'var(--accent-subtle)' : 'transparent', color: active ? 'var(--accent-text)' : indent ? 'var(--text-muted)' : 'var(--text-secondary)', cursor: 'pointer', fontSize: indent ? 'var(--text-xs)' : 'var(--text-sm)', fontWeight: active ? 500 : 400, fontFamily: 'var(--font-sans)' }}>
       {color && <span style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0, border: color === '#FFFFFF' ? '1px solid var(--border)' : 'none' }} />}
       {label}
     </button>
