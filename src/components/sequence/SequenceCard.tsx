@@ -147,7 +147,7 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
       {/* Description */}
       {plainDescription && (
         <p style={{
-          fontSize: 'var(--text-xs)',
+          fontSize: 'var(--text-base)',
           color: 'var(--text-secondary)',
           lineHeight: 1.5,
           display: '-webkit-box',

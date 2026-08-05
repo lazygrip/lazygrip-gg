@@ -106,7 +106,7 @@ function WelcomeForm() {
   if (checking) {
     return (
       <div style={{ maxWidth: 480, margin: '120px auto', padding: '0 24px', textAlign: 'center' }}>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)' }}>Loading...</p>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-base)', fontFamily: 'var(--font-sans)' }}>Loading...</p>
       </div>
     )
   }
@@ -122,11 +122,11 @@ function WelcomeForm() {
         </h1>
 
         {needsUsername ? (
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.5, fontFamily: 'var(--font-sans)' }}>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.5, fontFamily: 'var(--font-sans)' }}>
             Before you comment, rate, or post, pick a name people will know you by.
           </p>
         ) : (
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.5, fontFamily: 'var(--font-sans)' }}>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.5, fontFamily: 'var(--font-sans)' }}>
             One quick thing before you continue.
           </p>
         )}
@@ -189,7 +189,7 @@ export default function WelcomePage() {
   return (
     <Suspense fallback={
       <div style={{ maxWidth: 480, margin: '120px auto', padding: '0 24px', textAlign: 'center' }}>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)' }}>Loading...</p>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-base)', fontFamily: 'var(--font-sans)' }}>Loading...</p>
       </div>
     }>
       <WelcomeForm />

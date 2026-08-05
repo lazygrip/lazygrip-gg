@@ -292,7 +292,7 @@ export default function WorkshopConvertPage() {
           <div>
             <p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 4 }}>Transform</p>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: 6 }}>Convert to GRIP</h1>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
               Paste a GSE3 export and get a native !GRIP1! string with proper loop architecture and keypress handling.
             </p>
           </div>
@@ -347,14 +347,14 @@ export default function WorkshopConvertPage() {
               minHeight: 400, display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)',
             }}>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>!GRIP1! export and preview will appear here.</p>
+              <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)' }}>!GRIP1! export and preview will appear here.</p>
             </div>
           )}
 
           {result && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div style={{ padding: '14px 16px', background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
-                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 8 }}>
+                <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', marginBottom: 8 }}>
                   Converted to GRIP: <strong style={{ color: 'var(--text-primary)' }}>{result.sequenceCount}</strong> sequence{result.sequenceCount !== 1 ? 's' : ''} — ready to import into GRIP.
                 </p>
                 <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 8 }}>

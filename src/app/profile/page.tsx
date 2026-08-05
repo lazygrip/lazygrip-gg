@@ -316,7 +316,7 @@ function ProfilePageInner() {
 
   if (loading) return (
     <div style={{ maxWidth: 900, margin: '80px auto', padding: '0 24px', textAlign: 'center' }}>
-      <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>Loading profile...</p>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-base)' }}>Loading profile...</p>
     </div>
   )
 
@@ -359,7 +359,7 @@ function ProfilePageInner() {
             {profile?.username ?? user?.email}
           </h1>
           {profile?.bio && (
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {profile.bio}
             </p>
           )}
@@ -507,7 +507,7 @@ function ProfilePageInner() {
               padding: '40px 24px',
               textAlign: 'center',
             }}>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
+              <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)' }}>
                 You don't have any drafts in progress.
               </p>
               <Link href="/post" style={{
@@ -546,7 +546,7 @@ function ProfilePageInner() {
               padding: '40px 24px',
               textAlign: 'center',
             }}>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
+              <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)' }}>
                 {activeTab === 'posted'
                   ? "You haven't posted any sequences yet."
                   : "You haven't saved any sequences yet."}
@@ -752,7 +752,7 @@ function SettingsTab({
         )}
 
         {identitiesLoading ? (
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>Loading...</p>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)' }}>Loading...</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {CONNECTABLE_PROVIDERS.map(p => {

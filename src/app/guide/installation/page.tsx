@@ -61,7 +61,7 @@ export default function InstallationPage() {
       </Section>
 
       <Section title="Step 2: The settings you should still check">
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 20 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 20 }}>
           As of GRIP-EMS v2.3.14, the addon forces Key Down Casting on automatically every time you log in, so that part of setup is no longer something you need to touch. Two things still matter for sequences to feel right, and neither is set to an ideal value by default.
         </p>
 
@@ -82,19 +82,19 @@ export default function InstallationPage() {
       </Section>
 
       <Section title="What you will not see and why">
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
           GRIP-EMS does not work like the legacy program, which creates a draggable button you place on a bar and bind. GRIP-EMS binds a key directly to a sequence inside the addon. For sequences with multiple versions, a macro is created and can be placed on your action bar, but for single-version sequences there is nothing to drag. If you are looking for a button to appear and it is not appearing, that is expected behavior and not a bug.
         </p>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 12 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 12 }}>
           To bind a key to a sequence, open the sequence in the GRIP-EMS editor, go to the Keybinds tab, and assign a key there. The bind is stored per-spec, so switching specs gives you a clean slate for a different rotation on the same key.
         </p>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 12 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 12 }}>
           If you specifically want a button on your action bar that you can drag and drop the way you would with the legacy program, that workflow still exists as an optional add-on rather than a built-in GRIP-EMS feature. Daxomault's <a href="https://www.curseforge.com/wow/addons/grip-ems-actionbutton-override" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>GRIP-EMS Actionbutton Override</a> plugin adds action bar override and drag-and-drop keybinding on top of GRIP-EMS. It is not required and the keybind-only approach above is still the default and the one most players end up using, but it is there if you prefer to keep sequences on your bars.
         </p>
       </Section>
 
       <Section title="Quick sanity check">
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 16 }}>Before moving on, confirm these four things are true:</p>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 16 }}>Before moving on, confirm these four things are true:</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
             'On v2.3.14 or later, nothing needed; on older versions, Cvar Health tab shows green with no Fix button visible',
@@ -257,8 +257,8 @@ function TroubleshootItem({ problem, solution }: { problem: string; solution: st
       border: '0.5px solid var(--border)',
       borderRadius: 'var(--radius-md)',
     }}>
-      <p style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{problem}</p>
-      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>{solution}</p>
+      <p style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{problem}</p>
+      <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>{solution}</p>
     </div>
   )
 }
