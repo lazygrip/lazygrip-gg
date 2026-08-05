@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 export default function InstallationPage() {
   return (
     <div style={{ maxWidth: 720 }}>
-      <nav style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 24, display: 'flex', gap: 6, alignItems: 'center' }}>
+      <nav style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 24, display: 'flex', gap: 6, alignItems: 'center' }}>
         <Link href="/guide" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Guide</Link>
         <span>/</span>
         <span style={{ color: 'var(--text-primary)' }}>Installation</span>
@@ -29,7 +29,7 @@ export default function InstallationPage() {
       <h1 style={{ fontSize: 32, fontWeight: 700, letterSpacing: '-0.03em', marginBottom: 12 }}>
         Installation
       </h1>
-      <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 40 }}>
+      <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 40 }}>
         Installing GRIP-EMS takes about two minutes. The part most guides skip is what comes after. There are in-game settings that have to be configured before anything will work, and none of them are set correctly by default. This page covers the install steps and the most critical setting. The full settings breakdown is on the <Link href="/guide/settings" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Settings</Link> page.
       </p>
 
@@ -43,7 +43,7 @@ export default function InstallationPage() {
               { label: 'WoWInterface', href: 'https://www.wowinterface.com/downloads/info27081' },
             ].map(link => (
               <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer" style={{
-                fontSize: 13, fontWeight: 500, color: 'var(--accent)',
+                fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--accent)',
                 border: '0.5px solid var(--accent)', borderRadius: 'var(--radius-md)',
                 padding: '6px 14px', textDecoration: 'none',
                 background: 'var(--accent-subtle)',
@@ -56,19 +56,19 @@ export default function InstallationPage() {
 
         <Step number={2} label="Enable the addon in-game">
           <p>At the character select screen, click <strong>AddOns</strong> in the bottom left corner and make sure GRIP-EMS is checked. Log into your character.</p>
-          <p style={{ marginTop: 8 }}>If you do not see GRIP-EMS in the list, your addon manager did not install it correctly. Try a manual download and drop the folder into your <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>World of Warcraft\_retail_\Interface\AddOns</code> directory.</p>
+          <p style={{ marginTop: 8 }}>If you do not see GRIP-EMS in the list, your addon manager did not install it correctly. Try a manual download and drop the folder into your <code style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>World of Warcraft\_retail_\Interface\AddOns</code> directory.</p>
         </Step>
       </Section>
 
       <Section title="Step 2: The settings you should still check">
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 20 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 20 }}>
           As of GRIP-EMS v2.3.14, the addon forces Key Down Casting on automatically every time you log in, so that part of setup is no longer something you need to touch. Two things still matter for sequences to feel right, and neither is set to an ideal value by default.
         </p>
 
         <Step number={1} label="Key Down Casting is handled for you now">
           <p>GRIP-EMS fires through WoW's <strong>key-down</strong> event system. By default WoW uses key-up, which means a sequence would register the press only when you release the key rather than when you press it. At 150ms intervals that is the difference between a functioning rotation and nothing happening at all.</p>
-          <p style={{ marginTop: 8 }}>Starting in v2.3.14, GRIP-EMS sets <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>ActionButtonUseKeyDown</code> to enabled itself on every login, whether or not you have ever opened the settings. It is no longer a row in the CVar Health tab and there is nothing to fix here manually.</p>
-          <Callout>Running an older version than 2.3.14? Update through your addon manager first. On anything older, open <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>/gems settings</code>, go to the CVar Health tab, and click Fix if the row is not green. That is the single most common reason a pre-2.3.14 install does nothing on keypress.</Callout>
+          <p style={{ marginTop: 8 }}>Starting in v2.3.14, GRIP-EMS sets <code style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>ActionButtonUseKeyDown</code> to enabled itself on every login, whether or not you have ever opened the settings. It is no longer a row in the CVar Health tab and there is nothing to fix here manually.</p>
+          <Callout>Running an older version than 2.3.14? Update through your addon manager first. On anything older, open <code style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>/gems settings</code>, go to the CVar Health tab, and click Fix if the row is not green. That is the single most common reason a pre-2.3.14 install does nothing on keypress.</Callout>
         </Step>
 
         <Step number={2} label="Verify your SpellQueueWindow">
@@ -82,19 +82,19 @@ export default function InstallationPage() {
       </Section>
 
       <Section title="What you will not see and why">
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
           GRIP-EMS does not work like the legacy program, which creates a draggable button you place on a bar and bind. GRIP-EMS binds a key directly to a sequence inside the addon. For sequences with multiple versions, a macro is created and can be placed on your action bar, but for single-version sequences there is nothing to drag. If you are looking for a button to appear and it is not appearing, that is expected behavior and not a bug.
         </p>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 12 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 12 }}>
           To bind a key to a sequence, open the sequence in the GRIP-EMS editor, go to the Keybinds tab, and assign a key there. The bind is stored per-spec, so switching specs gives you a clean slate for a different rotation on the same key.
         </p>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 12 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 12 }}>
           If you specifically want a button on your action bar that you can drag and drop the way you would with the legacy program, that workflow still exists as an optional add-on rather than a built-in GRIP-EMS feature. Daxomault's <a href="https://www.curseforge.com/wow/addons/grip-ems-actionbutton-override" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>GRIP-EMS Actionbutton Override</a> plugin adds action bar override and drag-and-drop keybinding on top of GRIP-EMS. It is not required and the keybind-only approach above is still the default and the one most players end up using, but it is there if you prefer to keep sequences on your bars.
         </p>
       </Section>
 
       <Section title="Quick sanity check">
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 16 }}>Before moving on, confirm these four things are true:</p>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 16 }}>Before moving on, confirm these four things are true:</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
             'On v2.3.14 or later, nothing needed; on older versions, Cvar Health tab shows green with no Fix button visible',
@@ -102,7 +102,7 @@ export default function InstallationPage() {
             'That sequence has a keybind assigned in the Keybinds tab',
             'You are in Bear Form or your spec\'s required form when testing',
           ].map((item, i) => (
-            <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, color: 'var(--text-secondary)' }}>
+            <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
               <span style={{ color: 'var(--accent)', fontWeight: 700, flexShrink: 0 }}>✓</span>
               <span>{item}</span>
             </div>
@@ -160,9 +160,9 @@ export default function InstallationPage() {
             { cmd: '/gems validate', desc: 'Runs spell validation across all your sequences and reports stale spells' },
             { cmd: '/gems revalidate', desc: 'Forces a full revalidation, useful after a patch or respec' },
           ].map(item => (
-            <div key={item.cmd} style={{ display: 'flex', gap: 16, alignItems: 'baseline', fontSize: 14 }}>
+            <div key={item.cmd} style={{ display: 'flex', gap: 16, alignItems: 'baseline', fontSize: 'var(--text-sm)' }}>
               <code style={{
-                fontFamily: 'var(--font-mono)', fontSize: 12,
+                fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)',
                 color: 'var(--accent)', background: 'var(--accent-subtle)',
                 padding: '2px 8px', borderRadius: 'var(--radius-sm)',
                 flexShrink: 0, whiteSpace: 'nowrap',
@@ -177,7 +177,7 @@ export default function InstallationPage() {
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 48, paddingTop: 24, borderTop: '0.5px solid var(--border)' }}>
         <Link href="/guide/settings" style={{
-          fontSize: 14, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500,
+          fontSize: 'var(--text-sm)', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500,
           display: 'flex', alignItems: 'center', gap: 6,
         }}>
           Next: Settings →
@@ -207,13 +207,13 @@ function Step({ number, label, children }: { number: number; label: string; chil
         width: 28, height: 28, borderRadius: '50%',
         background: 'var(--accent)', color: 'white',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 13, fontWeight: 700, flexShrink: 0, marginTop: 2,
+        fontSize: 'var(--text-sm)', fontWeight: 700, flexShrink: 0, marginTop: 2,
       }}>
         {number}
       </div>
       <div style={{ flex: 1 }}>
-        <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 8, color: 'var(--text-primary)' }}>{label}</p>
-        <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+        <p style={{ fontSize: 'var(--text-base)', fontWeight: 600, marginBottom: 8, color: 'var(--text-primary)' }}>{label}</p>
+        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
           {children}
         </div>
       </div>
@@ -224,7 +224,7 @@ function Step({ number, label, children }: { number: number; label: string; chil
 function Code({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      fontFamily: 'var(--font-mono)', fontSize: 13,
+      fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)',
       background: 'var(--bg-tertiary)', border: '0.5px solid var(--border)',
       borderRadius: 'var(--radius-md)', padding: '10px 14px',
       color: 'var(--accent)', marginTop: 8,
@@ -242,7 +242,7 @@ function Callout({ children }: { children: React.ReactNode }) {
       border: '0.5px solid rgba(29,158,117,0.25)',
       borderLeft: '3px solid var(--accent)',
       borderRadius: 'var(--radius-md)',
-      fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6,
+      fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6,
     }}>
       {children}
     </div>
@@ -257,8 +257,8 @@ function TroubleshootItem({ problem, solution }: { problem: string; solution: st
       border: '0.5px solid var(--border)',
       borderRadius: 'var(--radius-md)',
     }}>
-      <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{problem}</p>
-      <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7 }}>{solution}</p>
+      <p style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{problem}</p>
+      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>{solution}</p>
     </div>
   )
 }

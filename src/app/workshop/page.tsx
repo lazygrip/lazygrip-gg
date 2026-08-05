@@ -12,7 +12,7 @@ setLoading(false)
 
 if (loading) return (
 <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-<span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading...</span>
+<span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Loading...</span>
 </div>
 )
 
@@ -21,20 +21,20 @@ return (
 
 {/* Page header */}
 <div style={{ marginBottom: 48 }}>
-<p style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 8 }}>
+<p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 8 }}>
 Workshop
 </p>
 <h1 style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 10, letterSpacing: '-0.02em' }}>
 Workshop Tools
 </h1>
-<p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 540 }}>
+<p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 540 }}>
 Browser-based export tools and in-game addons built for the GRIP-EMS community, integrated on LazyGrip by Slowdog.
 </p>
 </div>
 
 {/* Browser tools section */}
 <div style={{ marginBottom: 48 }}>
-<p style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 16 }}>
+<p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 16 }}>
 Macro Export Tools
 </p>
 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
@@ -67,7 +67,7 @@ cta="Open builder"
 
 {/* In-game addons section */}
 <div>
-<p style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 16 }}>
+<p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 16 }}>
 In-Game Addons
 </p>
 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
@@ -120,18 +120,18 @@ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
 {icon}
 </div>
 <div>
-<p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>
+<p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>
 {eyebrow}
 </p>
-<h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6, letterSpacing: '-0.01em' }}>
+<h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6, letterSpacing: '-0.01em' }}>
 {title}
 </h2>
-<p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+<p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
 {description}
 </p>
 </div>
 <div style={{ marginTop: 'auto', paddingTop: 8 }}>
-<span style={{ fontSize: 13, fontWeight: 500, color: 'var(--accent)' }}>{cta} →</span>
+<span style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--accent)' }}>{cta} →</span>
 </div>
 </Link>
 )
@@ -174,21 +174,21 @@ display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
 {icon}
 </div>
 <div>
-<p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>
+<p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>
 {eyebrow}
 </p>
-<h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6, letterSpacing: '-0.01em' }}>
+<h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6, letterSpacing: '-0.01em' }}>
 {title}
 </h2>
-<p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+<p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
 {description}
 </p>
 </div>
-<p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+<p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 4 }}>
 {requires}
 </p>
 <div style={{ marginTop: 'auto', paddingTop: 4 }}>
-<span style={{ fontSize: 13, fontWeight: 500, color: 'var(--accent)' }}>{cta} →</span>
+<span style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--accent)' }}>{cta} →</span>
 </div>
 </a>
 )

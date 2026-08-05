@@ -22,7 +22,7 @@ export default function AuthConfirmPage() {
       alignItems: 'center',
       justifyContent: 'center',
     }}>
-      <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Signing you in...</p>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>Signing you in...</p>
     </div>
   )
 }

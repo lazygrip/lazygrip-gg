@@ -25,7 +25,7 @@ function GuideSidebar() {
       flexDirection: 'column',
       gap: 2,
     }}>
-      <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>
+      <p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>
         Guide
       </p>
       {NAV.map(item => {
@@ -35,7 +35,7 @@ function GuideSidebar() {
             key={item.href}
             href={item.href}
             style={{
-              fontSize: 13,
+              fontSize: 'var(--text-sm)',
               color: active ? 'var(--accent)' : 'var(--text-secondary)',
               fontWeight: active ? 600 : 400,
               textDecoration: 'none',
@@ -50,8 +50,8 @@ function GuideSidebar() {
         )
       })}
       <div style={{ marginTop: 20, padding: '10px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Current version</p>
-        <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>GRIP-EMS v2.3.14</p>
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 4 }}>Current version</p>
+        <p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>GRIP-EMS v2.3.14</p>
       </div>
     </aside>
   )

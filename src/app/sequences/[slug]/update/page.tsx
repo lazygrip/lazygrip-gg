@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/client'
 import { Sequence, SequenceVersion, SequenceStep } from '@/types'
 import { Wand2, X } from 'lucide-react'
 import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
+import { useUsernameGate } from '@/lib/useUsernameGate'
+import UsernameRequiredModal from '@/components/UsernameRequiredModal'
 
 interface SequenceOption {
   name: string
@@ -22,6 +24,8 @@ export default function UpdateSequencePage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showUsernameModal, setShowUsernameModal] = useState(false)
+  const { checkGate } = useUsernameGate()
   const [user, setUser] = useState<any>(null)
 
   const [versionLabel, setVersionLabel] = useState('')
@@ -200,6 +204,12 @@ export default function UpdateSequencePage() {
       return
     }
 
+    const gate = await checkGate(user.id)
+    if (!gate.ok) {
+      setShowUsernameModal(true)
+      return
+    }
+
     setSubmitting(true)
     setError(null)
 
@@ -233,7 +243,11 @@ export default function UpdateSequencePage() {
     })
 
     if (rpcError) {
-      setError('Failed to publish version. Please try again.')
+      if (rpcError.message?.startsWith('username_required')) {
+        setShowUsernameModal(true)
+      } else {
+        setError('Failed to publish version. Please try again.')
+      }
       console.error(rpcError)
       setSubmitting(false)
       return
@@ -262,6 +276,16 @@ export default function UpdateSequencePage() {
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '28px 24px' }}>
 
+      {/* Username required modal: shown when publishing a version is attempted
+          without a custom username set. Form fields stay filled in if dismissed. */}
+      {showUsernameModal && user && (
+        <UsernameRequiredModal
+          userId={user.id}
+          onClose={() => setShowUsernameModal(false)}
+          onSuccess={() => setShowUsernameModal(false)}
+        />
+      )}
+
       {/* Sequence picker modal */}
       {sequenceOptions && (
         <div style={{
@@ -283,7 +307,7 @@ export default function UpdateSequencePage() {
             margin: '0 16px',
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)' }}>
+              <h3 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)' }}>
                 Multiple sequences found
               </h3>
               <button
@@ -293,7 +317,7 @@ export default function UpdateSequencePage() {
                 <X size={16} />
               </button>
             </div>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
               This export contains {sequenceOptions.length} sequences. The full bundle will be saved. Pick one to preview its steps below.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -306,7 +330,7 @@ export default function UpdateSequencePage() {
                     background: 'var(--bg-secondary)',
                     border: '0.5px solid var(--border)',
                     borderRadius: 'var(--radius-md)',
-                    fontSize: 13,
+                    fontSize: 'var(--text-sm)',
                     color: 'var(--text-primary)',
                     fontFamily: 'var(--font-sans)',
                     cursor: 'pointer',
@@ -332,7 +356,7 @@ export default function UpdateSequencePage() {
         }}>
           Publish a new version
         </h1>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', lineHeight: 1.6 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', lineHeight: 1.6 }}>
           You are publishing a new version of <strong style={{ color: 'var(--text-primary)' }}>{sequence.title}</strong>.
           The current version is <strong style={{ color: 'var(--accent)' }}>{currentVersion.version_label}</strong>.
           Your new version will become the default import string. The previous version stays in the history and remains importable.
@@ -343,7 +367,7 @@ export default function UpdateSequencePage() {
           background: 'var(--bg-secondary)',
           border: '0.5px solid var(--border)',
           borderRadius: 'var(--radius-md)',
-          fontSize: 13,
+          fontSize: 'var(--text-sm)',
           color: 'var(--text-muted)',
           fontFamily: 'var(--font-sans)',
         }}>
@@ -360,11 +384,11 @@ export default function UpdateSequencePage() {
           borderRadius: 'var(--radius-lg)',
           padding: '20px 24px',
         }}>
-          <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
+          <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
             Version
           </h2>
           <div>
-            <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
+            <label style={{ display: 'block', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
               Version label
             </label>
             <input
@@ -377,14 +401,14 @@ export default function UpdateSequencePage() {
                 padding: '8px 12px',
                 border: '0.5px solid var(--border-strong)',
                 borderRadius: 'var(--radius-md)',
-                fontSize: 14,
+                fontSize: 'var(--text-sm)',
                 background: 'var(--bg-secondary)',
                 color: 'var(--text-primary)',
                 fontFamily: 'var(--font-sans)',
                 boxSizing: 'border-box',
               }}
             />
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginTop: 6 }}>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginTop: 6 }}>
               Defaults to the next whole number. Edit freely, v1.1 for a minor tweak, v2.0 for a significant rebuild.
             </p>
           </div>
@@ -397,10 +421,10 @@ export default function UpdateSequencePage() {
           borderRadius: 'var(--radius-lg)',
           padding: '20px 24px',
         }}>
-          <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
+          <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
             Changelog
           </h2>
-          <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
+          <label style={{ display: 'block', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
             What changed in this version
           </label>
           <textarea
@@ -413,7 +437,7 @@ export default function UpdateSequencePage() {
               padding: '10px 12px',
               border: '0.5px solid var(--border-strong)',
               borderRadius: 'var(--radius-md)',
-              fontSize: 13,
+              fontSize: 'var(--text-sm)',
               background: 'var(--bg-secondary)',
               color: 'var(--text-primary)',
               resize: 'vertical',
@@ -421,7 +445,7 @@ export default function UpdateSequencePage() {
               boxSizing: 'border-box',
             }}
           />
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginTop: 6 }}>
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginTop: 6 }}>
             Required. Users will see this when viewing older versions or switching between them.
           </p>
         </div>
@@ -433,12 +457,12 @@ export default function UpdateSequencePage() {
           borderRadius: 'var(--radius-lg)',
           padding: '20px 24px',
         }}>
-          <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
+          <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
             Sequence data
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
                 GRIP export string <span style={{ color: '#c0392b' }}>*</span>
               </label>
               <textarea
@@ -451,7 +475,7 @@ export default function UpdateSequencePage() {
                   padding: '10px 12px',
                   border: '0.5px solid var(--border-strong)',
                   borderRadius: 'var(--radius-md)',
-                  fontSize: 12,
+                  fontSize: 'var(--text-xs)',
                   background: 'var(--bg-secondary)',
                   color: 'var(--text-primary)',
                   resize: 'vertical',
@@ -460,7 +484,7 @@ export default function UpdateSequencePage() {
                 }}
               />
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', flex: 1 }}>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', flex: 1 }}>
                   Export from GRIP-EMS using the Export button, then paste here. Steps will decode automatically.
                 </p>
                 <button
@@ -475,7 +499,7 @@ export default function UpdateSequencePage() {
                     background: decoding ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
                     border: '0.5px solid var(--border-strong)',
                     borderRadius: 'var(--radius-md)',
-                    fontSize: 12,
+                    fontSize: 'var(--text-xs)',
                     color: decoding ? 'var(--text-muted)' : 'var(--text-secondary)',
                     cursor: decoding || !gripString.trim() ? 'not-allowed' : 'pointer',
                     fontFamily: 'var(--font-sans)',
@@ -487,7 +511,7 @@ export default function UpdateSequencePage() {
                 </button>
               </div>
               {decodeError && (
-                <p style={{ fontSize: 12, color: '#c0392b', marginTop: 6, fontFamily: 'var(--font-sans)' }}>
+                <p style={{ fontSize: 'var(--text-xs)', color: '#c0392b', marginTop: 6, fontFamily: 'var(--font-sans)' }}>
                   {decodeError}
                 </p>
               )}
@@ -495,12 +519,12 @@ export default function UpdateSequencePage() {
 
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <label style={{ fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)' }}>
+                <label style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)' }}>
                   Steps (plain text)
                 </label>
                 {stepsAutoPopulated && (
                   <span style={{
-                    fontSize: 11,
+                    fontSize: 'var(--text-xs)',
                     color: 'var(--accent)',
                     fontFamily: 'var(--font-sans)',
                     padding: '2px 7px',
@@ -522,7 +546,7 @@ export default function UpdateSequencePage() {
                   padding: '10px 12px',
                   border: '0.5px solid var(--border-strong)',
                   borderRadius: 'var(--radius-md)',
-                  fontSize: 12,
+                  fontSize: 'var(--text-xs)',
                   background: 'var(--bg-secondary)',
                   color: 'var(--text-primary)',
                   resize: 'vertical',
@@ -530,7 +554,7 @@ export default function UpdateSequencePage() {
                   boxSizing: 'border-box',
                 }}
               />
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginTop: 6 }}>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginTop: 6 }}>
                 Paste steps one per line, or decode from your export string above. Users can read these without importing.
               </p>
             </div>
@@ -544,12 +568,12 @@ export default function UpdateSequencePage() {
           borderRadius: 'var(--radius-lg)',
           padding: '20px 24px',
         }}>
-          <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
+          <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
             Metadata
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
                 Content type
               </label>
               <select
@@ -558,7 +582,7 @@ export default function UpdateSequencePage() {
                 style={{
                   width: '100%', padding: '8px 12px',
                   border: '0.5px solid var(--border-strong)',
-                  borderRadius: 'var(--radius-md)', fontSize: 13,
+                  borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)',
                   background: 'var(--bg-secondary)', color: 'var(--text-primary)',
                   fontFamily: 'var(--font-sans)',
                 }}
@@ -571,7 +595,7 @@ export default function UpdateSequencePage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
                 Step function
               </label>
               <select
@@ -580,7 +604,7 @@ export default function UpdateSequencePage() {
                 style={{
                   width: '100%', padding: '8px 12px',
                   border: '0.5px solid var(--border-strong)',
-                  borderRadius: 'var(--radius-md)', fontSize: 13,
+                  borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)',
                   background: 'var(--bg-secondary)', color: 'var(--text-primary)',
                   fontFamily: 'var(--font-sans)',
                 }}
@@ -593,7 +617,7 @@ export default function UpdateSequencePage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
                 Hero talent
               </label>
               <input
@@ -604,7 +628,7 @@ export default function UpdateSequencePage() {
                 style={{
                   width: '100%', padding: '8px 12px',
                   border: '0.5px solid var(--border-strong)',
-                  borderRadius: 'var(--radius-md)', fontSize: 13,
+                  borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)',
                   background: 'var(--bg-secondary)', color: 'var(--text-primary)',
                   fontFamily: 'var(--font-sans)', boxSizing: 'border-box',
                 }}
@@ -612,7 +636,7 @@ export default function UpdateSequencePage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
                 GRIP version
               </label>
               <input
@@ -623,7 +647,7 @@ export default function UpdateSequencePage() {
                 style={{
                   width: '100%', padding: '8px 12px',
                   border: '0.5px solid var(--border-strong)',
-                  borderRadius: 'var(--radius-md)', fontSize: 13,
+                  borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)',
                   background: 'var(--bg-secondary)', color: 'var(--text-primary)',
                   fontFamily: 'var(--font-sans)', boxSizing: 'border-box',
                 }}
@@ -639,15 +663,15 @@ export default function UpdateSequencePage() {
           borderRadius: 'var(--radius-lg)',
           padding: '20px 24px',
         }}>
-          <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
+          <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
             Version extras
           </h2>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
             These are specific to this version and will update when visitors switch between versions.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
                 Talent string
               </label>
               <input
@@ -658,7 +682,7 @@ export default function UpdateSequencePage() {
                 style={{
                   width: '100%', padding: '8px 12px',
                   border: '0.5px solid var(--border-strong)',
-                  borderRadius: 'var(--radius-md)', fontSize: 12,
+                  borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)',
                   background: 'var(--bg-secondary)', color: 'var(--text-primary)',
                   fontFamily: 'var(--font-mono)', boxSizing: 'border-box',
                 }}
@@ -666,7 +690,7 @@ export default function UpdateSequencePage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
                 Warcraft Logs URL
               </label>
               <input
@@ -677,7 +701,7 @@ export default function UpdateSequencePage() {
                 style={{
                   width: '100%', padding: '8px 12px',
                   border: '0.5px solid var(--border-strong)',
-                  borderRadius: 'var(--radius-md)', fontSize: 13,
+                  borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)',
                   background: 'var(--bg-secondary)', color: 'var(--text-primary)',
                   fontFamily: 'var(--font-sans)', boxSizing: 'border-box',
                 }}
@@ -685,7 +709,7 @@ export default function UpdateSequencePage() {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
                 Performance notes
               </label>
               <textarea
@@ -696,7 +720,7 @@ export default function UpdateSequencePage() {
                 style={{
                   width: '100%', padding: '10px 12px',
                   border: '0.5px solid var(--border-strong)',
-                  borderRadius: 'var(--radius-md)', fontSize: 13,
+                  borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)',
                   background: 'var(--bg-secondary)', color: 'var(--text-primary)',
                   resize: 'vertical', fontFamily: 'var(--font-sans)',
                   boxSizing: 'border-box',
@@ -713,7 +737,7 @@ export default function UpdateSequencePage() {
             background: 'rgba(192,57,43,0.08)',
             border: '0.5px solid rgba(192,57,43,0.4)',
             borderRadius: 'var(--radius-md)',
-            fontSize: 13,
+            fontSize: 'var(--text-sm)',
             color: '#c0392b',
             fontFamily: 'var(--font-sans)',
           }}>
@@ -732,7 +756,7 @@ export default function UpdateSequencePage() {
               color: submitting ? 'var(--text-muted)' : 'white',
               border: 'none',
               borderRadius: 'var(--radius-md)',
-              fontSize: 14, fontWeight: 600,
+              fontSize: 'var(--text-sm)', fontWeight: 600,
               cursor: submitting ? 'not-allowed' : 'pointer',
               fontFamily: 'var(--font-sans)',
             }}
@@ -747,7 +771,7 @@ export default function UpdateSequencePage() {
               color: 'var(--text-secondary)',
               border: '0.5px solid var(--border-strong)',
               borderRadius: 'var(--radius-md)',
-              fontSize: 14, cursor: 'pointer',
+              fontSize: 'var(--text-sm)', cursor: 'pointer',
               fontFamily: 'var(--font-sans)',
             }}
           >

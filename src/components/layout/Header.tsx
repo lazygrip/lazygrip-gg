@@ -138,7 +138,7 @@ export default function Header() {
             textDecoration: 'none',
             color: 'var(--text-primary)',
             fontWeight: 600,
-            fontSize: 16,
+            fontSize: 'var(--text-base)',
             letterSpacing: '-0.02em',
             flexShrink: 0,
           }}>
@@ -150,7 +150,7 @@ export default function Header() {
           <nav className="desktop-nav" style={{ gap: 4, flex: 1 }}>
             {navLinks.map(link => (
               <Link key={link.href} href={link.href} style={{
-                fontSize: 13,
+                fontSize: 'var(--text-sm)',
                 color: 'var(--text-secondary)',
                 textDecoration: 'none',
                 padding: '4px 10px',
@@ -207,7 +207,7 @@ export default function Header() {
                   display: 'flex', alignItems: 'center', gap: 6,
                   background: 'var(--accent)', color: 'white',
                   textDecoration: 'none', padding: '6px 12px',
-                  borderRadius: 'var(--radius-md)', fontSize: 13, fontWeight: 500,
+                  borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', fontWeight: 500,
                   whiteSpace: 'nowrap',
                 }}>
                   <PlusCircle size={14} />
@@ -243,7 +243,7 @@ export default function Header() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       width: 32, height: 32, borderRadius: '50%',
                       background: safeAvatarUrl ? 'transparent' : displayColor,
-                      color: 'white', fontSize: 13, fontWeight: 600,
+                      color: 'white', fontSize: 'var(--text-sm)', fontWeight: 600,
                       overflow: 'hidden', flexShrink: 0, cursor: 'pointer',
                       border: dropdownOpen ? '2px solid var(--accent)' : '2px solid transparent',
                       transition: 'border-color 0.15s',
@@ -266,11 +266,11 @@ export default function Header() {
                       overflow: 'hidden', zIndex: 200,
                     }}>
                       <div style={{ padding: '14px 16px 12px', borderBottom: '0.5px solid var(--border)' }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>
+                        <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>
                           {username ?? user?.email}
                         </div>
                         {username && (
-                          <div style={{ fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {user?.email}
                           </div>
                         )}
@@ -287,7 +287,7 @@ export default function Header() {
                           style={{
                             width: '100%', display: 'flex', alignItems: 'center', gap: 10,
                             padding: '8px 16px', background: 'none', border: 'none',
-                            cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)',
+                            cursor: 'pointer', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)',
                             fontFamily: 'var(--font-sans)', textAlign: 'left',
                           }}
                           onMouseEnter={e => {
@@ -310,14 +310,14 @@ export default function Header() {
             ) : (
               <>
                 <Link href="/auth/login" style={{
-                  fontSize: 13, color: 'var(--text-secondary)',
+                  fontSize: 'var(--text-sm)', color: 'var(--text-secondary)',
                   textDecoration: 'none', padding: '6px 12px',
                   whiteSpace: 'nowrap',
                 }}>
                   Sign in
                 </Link>
                 <Link href="/auth/signup" style={{
-                  fontSize: 13, fontWeight: 500,
+                  fontSize: 'var(--text-sm)', fontWeight: 500,
                   background: 'var(--accent)', color: 'white',
                   textDecoration: 'none', padding: '6px 14px',
                   borderRadius: 'var(--radius-md)',
@@ -372,7 +372,7 @@ export default function Header() {
                 style={{
                   display: 'block',
                   padding: '12px 20px',
-                  fontSize: 15,
+                  fontSize: 'var(--text-base)',
                   fontWeight: 500,
                   color: 'var(--text-primary)',
                   textDecoration: 'none',
@@ -394,7 +394,7 @@ export default function Header() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                       background: 'var(--accent)', color: 'white',
                       textDecoration: 'none', padding: '12px',
-                      borderRadius: 'var(--radius-md)', fontSize: 14, fontWeight: 500,
+                      borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', fontWeight: 500,
                     }}
                   >
                     <PlusCircle size={16} />
@@ -405,7 +405,7 @@ export default function Header() {
                     onClick={() => setMobileMenuOpen(false)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '10px 4px', fontSize: 14,
+                      padding: '10px 4px', fontSize: 'var(--text-sm)',
                       color: 'var(--text-secondary)', textDecoration: 'none',
                     }}
                   >
@@ -416,7 +416,7 @@ export default function Header() {
                     onClick={() => setMobileMenuOpen(false)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '10px 4px', fontSize: 14,
+                      padding: '10px 4px', fontSize: 'var(--text-sm)',
                       color: 'var(--text-secondary)', textDecoration: 'none',
                     }}
                   >
@@ -427,7 +427,7 @@ export default function Header() {
                     onClick={() => setMobileMenuOpen(false)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '10px 4px', fontSize: 14,
+                      padding: '10px 4px', fontSize: 'var(--text-sm)',
                       color: 'var(--text-secondary)', textDecoration: 'none',
                     }}
                   >
@@ -438,7 +438,7 @@ export default function Header() {
                     onClick={() => setMobileMenuOpen(false)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '10px 4px', fontSize: 14,
+                      padding: '10px 4px', fontSize: 'var(--text-sm)',
                       color: 'var(--text-secondary)', textDecoration: 'none',
                     }}
                   >
@@ -448,7 +448,7 @@ export default function Header() {
                     onClick={signOut}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '10px 4px', fontSize: 14,
+                      padding: '10px 4px', fontSize: 'var(--text-sm)',
                       color: '#c0392b', background: 'none', border: 'none',
                       cursor: 'pointer', fontFamily: 'var(--font-sans)', textAlign: 'left',
                     }}
@@ -465,7 +465,7 @@ export default function Header() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       background: 'var(--accent)', color: 'white',
                       textDecoration: 'none', padding: '12px',
-                      borderRadius: 'var(--radius-md)', fontSize: 14, fontWeight: 500,
+                      borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', fontWeight: 500,
                     }}
                   >
                     Sign up
@@ -477,7 +477,7 @@ export default function Header() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       color: 'var(--text-secondary)',
                       textDecoration: 'none', padding: '12px',
-                      borderRadius: 'var(--radius-md)', fontSize: 14,
+                      borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)',
                       border: '0.5px solid var(--border-strong)',
                     }}
                   >
@@ -505,7 +505,7 @@ function DropdownLink({ href, icon, label, onClick }: {
       onClick={onClick}
       style={{
         display: 'flex', alignItems: 'center', gap: 10,
-        padding: '8px 16px', fontSize: 13,
+        padding: '8px 16px', fontSize: 'var(--text-sm)',
         color: 'var(--text-secondary)', textDecoration: 'none',
         transition: 'background 0.1s, color 0.1s',
       }}

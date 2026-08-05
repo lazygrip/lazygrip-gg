@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 
 function Code({ children }: { children: React.ReactNode }) {
   return (
-    <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12, background: 'var(--bg-tertiary)', border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', padding: '1px 6px', color: 'var(--accent-text)' }}>
+    <code style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', background: 'var(--bg-tertiary)', border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', padding: '1px 6px', color: 'var(--accent-text)' }}>
       {children}
     </code>
   )
@@ -29,7 +29,7 @@ function Code({ children }: { children: React.ReactNode }) {
 function InfoBox({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '14px 16px', marginTop: 14, marginBottom: 4 }}>
-      <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7 }}>{children}</div>
+      <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>{children}</div>
     </div>
   )
 }
@@ -41,19 +41,19 @@ export default function ValidatingPage() {
         <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.2, marginBottom: 12, color: 'var(--text-primary)' }}>
           Validating your work
         </h1>
-        <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.75, maxWidth: 620 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75, maxWidth: 620 }}>
           Gut feel is not validation. Dummy parsing is not validation. A sequence that feels smooth in the training area can still have structural problems that only appear under real pressure. This section covers how to actually verify your sequence is working, starting with the tools built into GRIP-EMS and ending with Warcraft Logs, which is the only standard that tells you the full picture.
         </p>
       </div>
 
       <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
+        <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
           Start with the Repair module
         </h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
           Before you run any content, run the Repair module. It is the fastest way to catch structural problems that would otherwise waste a key or a raid attempt finding out.
         </p>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
           GRIP-EMS scans your sequence across 13 diagnostic categories: empty steps, oversized steps that exceed WoW&apos;s 255-character limit, stale or renamed spells, duplicate steps, missing variables, broken reset conditions, keybind conflicts, missing metadata, and more. Each issue gets flagged in the editor with a colored health score badge and most can be fixed in a single click.
         </p>
 
@@ -65,13 +65,13 @@ export default function ValidatingPage() {
             { cmd: '/gems revalidate', desc: 'Force a full spell revalidation, run this after a patch' },
           ].map(item => (
             <div key={item.cmd} style={{ display: 'flex', gap: 12, alignItems: 'baseline', padding: '9px 14px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
-              <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--accent-text)', flexShrink: 0, minWidth: 200 }}>{item.cmd}</code>
-              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{item.desc}</span>
+              <code style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--accent-text)', flexShrink: 0, minWidth: 200 }}>{item.cmd}</code>
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{item.desc}</span>
             </div>
           ))}
         </div>
 
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
           A clean repair pass with a green health score badge means the sequence is structurally sound. It does not mean the step ordering and timing are optimal for your spec, and that is what logs are for. Run repair first, then run content, then check logs.
         </p>
         <InfoBox>
@@ -80,25 +80,25 @@ export default function ValidatingPage() {
       </section>
 
       <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
+        <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
           Why logs are the proof standard
         </h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
           When you are iterating on a sequence, you are making decisions about step order, step frequency, and timing. Your gut tells you the sequence felt good, but your gut does not know whether your primary maintenance buff was up for 94% of the fight or 71%. Logs do.
         </p>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
           The specific problem with tank and buffer validation is that the consequences of a bad sequence are sometimes invisible in the moment. A sequence with poor defensive uptime does not feel dramatically different on a plus 10 where you are significantly overgearing the content. It shows up on a plus 13 when the healer goes dry covering gaps. Logs let you find those gaps before the key tells you about them the hard way.
         </p>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
           Target dummies have none of the variables that real content introduces: movement, interrupts, crowd control, latency spikes, or the reaction time that interrupts your keypress rhythm. A sequence that looks perfect on a dummy degrades in live content in ways that are only visible in logs. That is where the gap between a well-structured sequence and a poorly-structured one becomes measurable, because a step you press while moving or stunned still advances and the spell it named simply does not go out.
         </p>
       </section>
 
       <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
+        <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
           The validation framework for any spec
         </h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 16 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 16 }}>
           The process is the same regardless of what class you play. The targets you are looking for differ, but the method does not.
         </p>
 
@@ -136,12 +136,12 @@ export default function ValidatingPage() {
             },
           ].map(item => (
             <div key={item.step} style={{ display: 'flex', gap: 16, padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
-              <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--accent)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
+              <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--accent)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--text-xs)', fontWeight: 600, flexShrink: 0 }}>
                 {item.step}
               </div>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{item.title}</div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65 }}>{item.desc}</div>
+                <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{item.title}</div>
+                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.65 }}>{item.desc}</div>
               </div>
             </div>
           ))}
@@ -149,17 +149,17 @@ export default function ValidatingPage() {
       </section>
 
       <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
+        <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
           Worked example: applying the framework to a real build
         </h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 16 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 16 }}>
           The numbers below come from five validated keys at plus 13 and plus 14 with the Elune&apos;s Chosen Guardian Druid sequence published on this site, and they are here because a concrete example of what the framework actually produces is more useful than a generic description of what it could produce. Your spec will have different spells, different uptime targets, and different CPM expectations and none of these numbers are benchmarks you are trying to match, and if you are playing anything other than Guardian Druid they are not relevant to you directly. What is relevant is the shape of the table: two or three key metrics, a specific target range for each, and a clear diagnostic if the number falls outside it. That structure is the same for every spec.
         </p>
 
         <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: 16 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: 1, background: 'var(--border)' }}>
             {['Metric', 'Target', 'What it tells you'].map(h => (
-              <div key={h} style={{ padding: '10px 14px', background: 'var(--bg-secondary)', fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</div>
+              <div key={h} style={{ padding: '10px 14px', background: 'var(--bg-secondary)', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</div>
             ))}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'var(--border)' }}>
@@ -171,21 +171,21 @@ export default function ValidatingPage() {
               ['Mangle presence', 'Regular throughout', 'If Mangle disappears from the log entirely, a misconfigured conditional is blocking it.'],
             ].map(([metric, target, note], i) => (
               <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: 1, background: 'var(--border)' }}>
-                <div style={{ padding: '10px 14px', background: 'var(--bg-primary)', fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>{metric}</div>
-                <div style={{ padding: '10px 14px', background: 'var(--accent-subtle)', fontSize: 13, color: 'var(--accent)' }}>{target}</div>
-                <div style={{ padding: '10px 14px', background: 'var(--bg-primary)', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{note}</div>
+                <div style={{ padding: '10px 14px', background: 'var(--bg-primary)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontWeight: 500 }}>{metric}</div>
+                <div style={{ padding: '10px 14px', background: 'var(--accent-subtle)', fontSize: 'var(--text-sm)', color: 'var(--accent)' }}>{target}</div>
+                <div style={{ padding: '10px 14px', background: 'var(--bg-primary)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{note}</div>
               </div>
             ))}
           </div>
         </div>
 
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
           To build the equivalent table for your spec, take your two or three highest value spells from the Icy Veins priority list, find their expected CPM or uptime percentage from SimCraft or your spec Discord, and use those as your targets. The diagnostic logic is the same: if a spell is significantly below target, trace it back to the step structure.
         </p>
       </section>
 
       <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
+        <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
           What bad numbers tell you
         </h2>
 
@@ -217,21 +217,21 @@ export default function ValidatingPage() {
             },
           ].map(item => (
             <div key={item.signal} style={{ padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{item.signal}</div>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65 }}>{item.cause}</div>
+              <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>{item.signal}</div>
+              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.65 }}>{item.cause}</div>
             </div>
           ))}
         </div>
       </section>
 
       <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
+        <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
           Validating a sequence you did not write
         </h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
           When you import someone else&apos;s sequence, run the same validation process before relying on it in serious content. Published sequences are validated against specific talent builds and specific content levels, and those conditions may not match yours exactly. A sequence validated on one hero talent path with one set of tier bonuses will produce different numbers on a different configuration because the spells and their interactions are different.
         </p>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
           Every sequence on LazyGrip includes the talent string it was validated with. If your talents do not match, the sequence is worth importing as a structural reference but treat it as a starting point rather than a finished product. Two runs at your target difficulty with log analysis takes about thirty minutes and tells you everything you need to know about whether it needs tuning for your setup.
         </p>
         <InfoBox>
@@ -240,14 +240,14 @@ export default function ValidatingPage() {
       </section>
 
       <div style={{ padding: '14px 18px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Ready to find a validated sequence to start from?</span>
-        <Link href="/browse" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
+        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Ready to find a validated sequence to start from?</span>
+        <Link href="/browse" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-sm)', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
           Browse sequences <ExternalLink size={12} />
         </Link>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-start', paddingTop: 16, borderTop: '0.5px solid var(--border)' }}>
-        <Link href="/guide/from-legacy-program" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, color: 'var(--text-tertiary)', textDecoration: 'none' }}>
+        <Link href="/guide/from-legacy-program" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', textDecoration: 'none' }}>
           <ArrowLeft size={14} /> Coming from the legacy program
         </Link>
       </div>

@@ -48,7 +48,7 @@ export default function NotificationsPage() {
 
   if (loading) return (
     <div style={{ maxWidth: 700, margin: '80px auto', padding: '0 24px', textAlign: 'center' }}>
-      <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Loading...</p>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>Loading...</p>
     </div>
   )
 
@@ -60,7 +60,7 @@ export default function NotificationsPage() {
           {unreadCount > 0 && (
             <span style={{
               marginLeft: 10,
-              fontSize: 12,
+              fontSize: 'var(--text-xs)',
               fontWeight: 500,
               background: '#c0392b',
               color: 'white',
@@ -74,7 +74,7 @@ export default function NotificationsPage() {
         </h1>
         {unreadCount > 0 && (
           <button onClick={markAllRead} style={{
-            fontSize: 13, color: 'var(--accent)',
+            fontSize: 'var(--text-sm)', color: 'var(--accent)',
             background: 'none', border: 'none',
             cursor: 'pointer', fontFamily: 'var(--font-sans)',
           }}>
@@ -92,8 +92,8 @@ export default function NotificationsPage() {
           textAlign: 'center',
         }}>
           <Bell size={32} color="var(--text-muted)" style={{ marginBottom: 12 }} />
-          <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>No notifications yet.</p>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>No notifications yet.</p>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginTop: 4 }}>
             You'll be notified when someone comments on or rates your sequences.
           </p>
         </div>
@@ -136,10 +136,10 @@ function NotificationRow({ notification: n }: { notification: any }) {
         {icon}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 13, color: 'var(--text-primary)', marginBottom: 2 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', marginBottom: 2 }}>
           {n.message}
         </p>
-        <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
           {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
         </p>
       </div>

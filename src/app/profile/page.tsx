@@ -316,7 +316,7 @@ function ProfilePageInner() {
 
   if (loading) return (
     <div style={{ maxWidth: 900, margin: '80px auto', padding: '0 24px', textAlign: 'center' }}>
-      <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Loading profile...</p>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>Loading profile...</p>
     </div>
   )
 
@@ -355,19 +355,19 @@ function ProfilePageInner() {
           }
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 4 }}>
+          <h1 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 4 }}>
             {profile?.username ?? user?.email}
           </h1>
           {profile?.bio && (
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {profile.bio}
             </p>
           )}
           <div style={{ display: 'flex', gap: 16 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
               <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{postedSequences.length}</span> sequence{postedSequences.length !== 1 ? 's' : ''} posted
             </span>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
               <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{savedSequences.length}</span> saved
             </span>
           </div>
@@ -396,7 +396,7 @@ function ProfilePageInner() {
               border: 'none',
               borderBottom: activeTab === tab.key ? '2px solid var(--accent)' : '2px solid transparent',
               color: activeTab === tab.key ? 'var(--text-primary)' : 'var(--text-secondary)',
-              fontSize: 13,
+              fontSize: 'var(--text-sm)',
               fontWeight: activeTab === tab.key ? 500 : 400,
               cursor: 'pointer',
               fontFamily: 'var(--font-sans)',
@@ -458,12 +458,12 @@ function ProfilePageInner() {
               gap: 12,
               boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
             }}>
-              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
                 {selectedDraftIds.size} draft{selectedDraftIds.size !== 1 ? 's' : ''} selected
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 {batchPublishError && (
-                  <span style={{ fontSize: 12, color: '#c0392b' }}>{batchPublishError}</span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: '#c0392b' }}>{batchPublishError}</span>
                 )}
                 <button
                   onClick={() => setSelectedDraftIds(new Set())}
@@ -474,7 +474,7 @@ function ProfilePageInner() {
                     border: '0.5px solid var(--border-strong)',
                     borderRadius: 'var(--radius-md)',
                     color: 'var(--text-secondary)',
-                    fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-sans)',
+                    fontSize: 'var(--text-sm)', cursor: 'pointer', fontFamily: 'var(--font-sans)',
                   }}
                 >
                   Clear
@@ -488,7 +488,7 @@ function ProfilePageInner() {
                     color: 'white',
                     border: 'none',
                     borderRadius: 'var(--radius-md)',
-                    fontSize: 13, fontWeight: 500,
+                    fontSize: 'var(--text-sm)', fontWeight: 500,
                     cursor: batchPublishing ? 'not-allowed' : 'pointer',
                     opacity: batchPublishing ? 0.7 : 1,
                     fontFamily: 'var(--font-sans)',
@@ -507,7 +507,7 @@ function ProfilePageInner() {
               padding: '40px 24px',
               textAlign: 'center',
             }}>
-              <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
                 You don't have any drafts in progress.
               </p>
               <Link href="/post" style={{
@@ -518,7 +518,7 @@ function ProfilePageInner() {
                 color: 'white',
                 textDecoration: 'none',
                 borderRadius: 'var(--radius-md)',
-                fontSize: 13,
+                fontSize: 'var(--text-sm)',
                 fontWeight: 500,
               }}>
                 Start a new sequence
@@ -546,7 +546,7 @@ function ProfilePageInner() {
               padding: '40px 24px',
               textAlign: 'center',
             }}>
-              <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
                 {activeTab === 'posted'
                   ? "You haven't posted any sequences yet."
                   : "You haven't saved any sequences yet."}
@@ -560,7 +560,7 @@ function ProfilePageInner() {
                   color: 'white',
                   textDecoration: 'none',
                   borderRadius: 'var(--radius-md)',
-                  fontSize: 13,
+                  fontSize: 'var(--text-sm)',
                   fontWeight: 500,
                 }}>
                   Post your first sequence
@@ -626,14 +626,14 @@ function SettingsTab({
     border: '0.5px solid var(--border-strong)',
     borderRadius: 'var(--radius-md)',
     color: 'var(--text-primary)',
-    fontSize: 13,
+    fontSize: 'var(--text-sm)',
     fontFamily: 'var(--font-sans)',
     outline: 'none',
     boxSizing: 'border-box',
   }
 
   const labelStyle: React.CSSProperties = {
-    fontSize: 12,
+    fontSize: 'var(--text-xs)',
     fontWeight: 500,
     color: 'var(--text-secondary)',
     marginBottom: 6,
@@ -641,7 +641,7 @@ function SettingsTab({
   }
 
   const hintStyle: React.CSSProperties = {
-    fontSize: 11,
+    fontSize: 'var(--text-xs)',
     color: 'var(--text-muted)',
     marginTop: 4,
   }
@@ -656,7 +656,7 @@ function SettingsTab({
         borderRadius: 'var(--radius-lg)',
         padding: '24px',
       }}>
-        <h2 style={{ fontSize: 14, fontWeight: 600, marginBottom: 20 }}>Profile</h2>
+        <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 20 }}>Profile</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
           <div>
@@ -717,7 +717,7 @@ function SettingsTab({
         borderRadius: 'var(--radius-lg)',
         padding: '24px',
       }}>
-        <h2 style={{ fontSize: 14, fontWeight: 600, marginBottom: 20 }}>Account</h2>
+        <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 20 }}>Account</h2>
         <div>
           <label style={labelStyle}>Email</label>
           <input
@@ -736,15 +736,15 @@ function SettingsTab({
         borderRadius: 'var(--radius-lg)',
         padding: '24px',
       }}>
-        <h2 style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>Connected accounts</h2>
-        <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 20 }}>
+        <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 6 }}>Connected accounts</h2>
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 20 }}>
           Connect Discord or Battle.net so you can sign in with either one and keep a single account.
         </p>
 
         {identityError && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 6,
-            color: '#c41e3a', fontSize: 12, marginBottom: 14,
+            color: '#c41e3a', fontSize: 'var(--text-xs)', marginBottom: 14,
           }}>
             <AlertCircle size={13} />
             {identityError}
@@ -752,7 +752,7 @@ function SettingsTab({
         )}
 
         {identitiesLoading ? (
-          <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Loading...</p>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>Loading...</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {CONNECTABLE_PROVIDERS.map(p => {
@@ -776,8 +776,8 @@ function SettingsTab({
                       <Link2 size={14} color="white" />
                     </div>
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>{p.label}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)' }}>{p.label}</div>
+                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
                         {linked ? 'Connected' : 'Not connected'}
                       </div>
                     </div>
@@ -794,7 +794,7 @@ function SettingsTab({
                         borderRadius: 'var(--radius-md)',
                         background: 'none',
                         color: 'var(--text-secondary)',
-                        fontSize: 12, cursor: isUnlinking ? 'not-allowed' : 'pointer',
+                        fontSize: 'var(--text-xs)', cursor: isUnlinking ? 'not-allowed' : 'pointer',
                         opacity: isUnlinking ? 0.6 : 1,
                         fontFamily: 'var(--font-sans)',
                       }}
@@ -813,7 +813,7 @@ function SettingsTab({
                         borderRadius: 'var(--radius-md)',
                         background: p.color,
                         color: 'white',
-                        fontSize: 12, cursor: isLinking ? 'not-allowed' : 'pointer',
+                        fontSize: 'var(--text-xs)', cursor: isLinking ? 'not-allowed' : 'pointer',
                         opacity: isLinking ? 0.7 : 1,
                         fontFamily: 'var(--font-sans)',
                       }}
@@ -836,7 +836,7 @@ function SettingsTab({
         borderRadius: 'var(--radius-lg)',
         padding: '24px',
       }}>
-        <h2 style={{ fontSize: 14, fontWeight: 600, marginBottom: 20 }}>Avatar</h2>
+        <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 20 }}>Avatar</h2>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 24 }}>
           <div style={{
             width: 72, height: 72, borderRadius: '50%',
@@ -863,7 +863,7 @@ function SettingsTab({
                   borderRadius: 'var(--radius-md)',
                   background: 'var(--bg-secondary)',
                   color: 'var(--text-secondary)',
-                  fontSize: 12, cursor: 'pointer',
+                  fontSize: 'var(--text-xs)', cursor: 'pointer',
                   fontFamily: 'var(--font-sans)',
                 }}
               >
@@ -893,7 +893,7 @@ function SettingsTab({
               </div>
             </div>
             {avatarSaved && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--accent)', marginTop: 10 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-xs)', color: 'var(--accent)', marginTop: 10 }}>
                 <Check size={12} /> Saved
               </span>
             )}
@@ -911,7 +911,7 @@ function SettingsTab({
             padding: '8px 18px',
             background: 'var(--accent)', color: 'white',
             border: 'none', borderRadius: 'var(--radius-md)',
-            fontSize: 13, fontWeight: 500,
+            fontSize: 'var(--text-sm)', fontWeight: 500,
             cursor: saving ? 'not-allowed' : 'pointer',
             opacity: saving ? 0.7 : 1,
             fontFamily: 'var(--font-sans)',
@@ -921,11 +921,11 @@ function SettingsTab({
           {saving ? 'Saving...' : 'Save changes'}
         </button>
         {saved && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--accent)' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-sm)', color: 'var(--accent)' }}>
             <Check size={13} /> Saved
           </span>
         )}
-        {error && <span style={{ fontSize: 13, color: '#c0392b' }}>{error}</span>}
+        {error && <span style={{ fontSize: 'var(--text-sm)', color: '#c0392b' }}>{error}</span>}
       </div>
 
     </div>
@@ -989,20 +989,20 @@ function DraftRow({
         style={{ textDecoration: 'none', flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {draft.title && draft.title !== 'Untitled draft' ? draft.title : 'Untitled draft'}
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-            {draft.class_name && <span style={{ fontSize: 11, color: classColor }}>{draft.class_name}</span>}
-            {draft.spec_name && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {draft.spec_name}</span>}
-            {draft.content_type && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {contentLabel}</span>}
-            {draft.hero_talent && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {draft.hero_talent}</span>}
-            {isCollection && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· Collection ({checkedCount}/{draft.collection_sequences.length} selected)</span>}
+            {draft.class_name && <span style={{ fontSize: 'var(--text-xs)', color: classColor }}>{draft.class_name}</span>}
+            {draft.spec_name && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {draft.spec_name}</span>}
+            {draft.content_type && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {contentLabel}</span>}
+            {draft.hero_talent && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {draft.hero_talent}</span>}
+            {isCollection && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· Collection ({checkedCount}/{draft.collection_sequences.length} selected)</span>}
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
           <span style={{
-            fontSize: 11,
+            fontSize: 'var(--text-xs)',
             fontWeight: 500,
             padding: '3px 8px',
             borderRadius: 'var(--radius-sm)',
@@ -1011,7 +1011,7 @@ function DraftRow({
           }}>
             {readyToPublish ? 'Ready to publish' : `Missing ${missing.join(', ')}`}
           </span>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
             edited {formatDistanceToNow(new Date(draft.updated_at), { addSuffix: true })}
           </span>
         </div>
@@ -1067,29 +1067,29 @@ function SequenceRow({ seq, showAuthor, onUnsave }: { seq: any; showAuthor: bool
         onMouseLeave={e => (e.currentTarget.style.borderLeftColor = classColor)}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {seq.title}
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: classColor }}>{seq.class_name}</span>
-            {seq.spec_name && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {seq.spec_name}</span>}
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {contentLabel}</span>
-            {seq.hero_talent && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {seq.hero_talent}</span>}
+            <span style={{ fontSize: 'var(--text-xs)', color: classColor }}>{seq.class_name}</span>
+            {seq.spec_name && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {seq.spec_name}</span>}
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {contentLabel}</span>
+            {seq.hero_talent && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {seq.hero_talent}</span>}
             {showAuthor && seq.author?.username && (
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· by {seq.author.username}</span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· by {seq.author.username}</span>
             )}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 16, flexShrink: 0, alignItems: 'center' }}>
           {seq.avg_score && (
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--accent)', lineHeight: 1 }}>{seq.avg_score}</div>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{seq.rating_count ?? 0} ratings</div>
+              <div style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--accent)', lineHeight: 1 }}>{seq.avg_score}</div>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{seq.rating_count ?? 0} ratings</div>
             </div>
           )}
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{seq.view_count?.toLocaleString() ?? 0} views</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{formatDistanceToNow(new Date(seq.created_at), { addSuffix: true })}</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{seq.view_count?.toLocaleString() ?? 0} views</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{formatDistanceToNow(new Date(seq.created_at), { addSuffix: true })}</div>
           </div>
           {onUnsave && (
             <button

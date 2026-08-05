@@ -134,17 +134,17 @@ export default async function UserProfilePage(props: Props) {
             {profile.display_name || profile.username}
           </h1>
           {profile.display_name && (
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: '2px 0 0' }}>@{profile.username}</p>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', margin: '2px 0 0' }}>@{profile.username}</p>
           )}
           <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Joined {joinDate}</span>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{seqs.length} sequence{seqs.length !== 1 ? 's' : ''}</span>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Joined {joinDate}</span>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{seqs.length} sequence{seqs.length !== 1 ? 's' : ''}</span>
             {profile.battletag && (
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{profile.battletag}</span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{profile.battletag}</span>
             )}
           </div>
           {profile.bio && (
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 10, lineHeight: 1.6 }}>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginTop: 10, lineHeight: 1.6 }}>
               {profile.bio}
             </p>
           )}
@@ -153,7 +153,7 @@ export default async function UserProfilePage(props: Props) {
 
       {/* Sequences */}
       <div style={{
-        fontSize: 11, fontWeight: 500, color: 'var(--text-muted)',
+        fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-muted)',
         textTransform: 'uppercase', letterSpacing: '.06em',
         marginBottom: 10,
       }}>
@@ -165,7 +165,7 @@ export default async function UserProfilePage(props: Props) {
           background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
           borderRadius: 'var(--radius-lg)', padding: '40px 24px', textAlign: 'center',
         }}>
-          <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>No sequences posted yet.</p>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>No sequences posted yet.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -200,26 +200,26 @@ function SequenceRow({ seq }: { seq: any }) {
 
       >
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {seq.title}
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: classColor }}>{seq.class_name}</span>
-            {seq.spec_name && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {seq.spec_name}</span>}
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {contentLabel}</span>
-            {seq.hero_talent && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>· {seq.hero_talent}</span>}
+            <span style={{ fontSize: 'var(--text-xs)', color: classColor }}>{seq.class_name}</span>
+            {seq.spec_name && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {seq.spec_name}</span>}
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {contentLabel}</span>
+            {seq.hero_talent && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {seq.hero_talent}</span>}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 16, flexShrink: 0, alignItems: 'center' }}>
           {seq.avg_score && seq.rating_count > 0 && (
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--accent)', lineHeight: 1 }}>{seq.avg_score}</div>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{seq.rating_count} ratings</div>
+              <div style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--accent)', lineHeight: 1 }}>{seq.avg_score}</div>
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{seq.rating_count} ratings</div>
             </div>
           )}
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{seq.view_count?.toLocaleString() ?? 0} views</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{formatDistanceToNow(new Date(seq.created_at), { addSuffix: true })}</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{seq.view_count?.toLocaleString() ?? 0} views</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{formatDistanceToNow(new Date(seq.created_at), { addSuffix: true })}</div>
           </div>
         </div>
       </div>

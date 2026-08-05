@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 export default function HowItWorksPage() {
   return (
     <div style={{ maxWidth: 720 }}>
-      <nav style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 24, display: 'flex', gap: 6, alignItems: 'center' }}>
+      <nav style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 24, display: 'flex', gap: 6, alignItems: 'center' }}>
         <Link href="/guide" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Guide</Link>
         <span>/</span>
         <span style={{ color: 'var(--text-primary)' }}>How it works</span>
@@ -29,7 +29,7 @@ export default function HowItWorksPage() {
       <h1 style={{ fontSize: 32, fontWeight: 700, letterSpacing: '-0.03em', marginBottom: 12 }}>
         How GRIP-EMS works
       </h1>
-      <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 40 }}>
+      <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 40 }}>
         Before you build a sequence, you need the right mental model. Three things in particular will save you hours of confusion: what WoW&apos;s secure execution environment actually restricts, how GRIP-EMS advances through steps, and what WoW does with the macro line on a step once the addon hands it over.
       </p>
 
@@ -85,14 +85,14 @@ export default function HowItWorksPage() {
           ].map(sf => (
             <div key={sf.name} style={{ padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{sf.name}</span>
+                <span style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>{sf.name}</span>
                 {sf.tag && (
-                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-subtle)', padding: '2px 6px', borderRadius: 'var(--radius-sm)' }}>
+                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-subtle)', padding: '2px 6px', borderRadius: 'var(--radius-sm)' }}>
                     {sf.tag}
                   </span>
                 )}
               </div>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{sf.desc}</p>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{sf.desc}</p>
             </div>
           ))}
         </div>
@@ -118,8 +118,8 @@ export default function HowItWorksPage() {
             { label: '4. Reset all your WoW keybinds', desc: 'If steps 1 through 3 all check out clean and modifiers still are not firing, a full keybind reset in WoW itself (not just GRIP-EMS) has resolved this for other users even when no specific conflicting bind was ever found. It is a blunt fix and you will need to rebind everything afterward, but it works when nothing else does.' },
           ].map(r => (
             <div key={r.label} style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '12px 14px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
-              <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 13 }}>{r.label}</span>
-              <span style={{ color: 'var(--text-secondary)', lineHeight: 1.6, fontSize: 13 }}>{r.desc}</span>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: 'var(--text-sm)' }}>{r.label}</span>
+              <span style={{ color: 'var(--text-secondary)', lineHeight: 1.6, fontSize: 'var(--text-sm)' }}>{r.desc}</span>
             </div>
           ))}
         </div>
@@ -135,7 +135,7 @@ export default function HowItWorksPage() {
             { label: 'Milliseconds', desc: 'Holds for a set duration regardless of keypresses. Useful when you need a hard time gate between steps rather than an action count.' },
             { label: 'GCD', desc: 'Holds for one or more global cooldown cycles. The safest option for finisher spacing since it adapts to your actual GCD rather than a hardcoded time value.' },
           ].map(r => (
-            <div key={r.label} style={{ display: 'flex', gap: 14, fontSize: 14, alignItems: 'flex-start' }}>
+            <div key={r.label} style={{ display: 'flex', gap: 14, fontSize: 'var(--text-sm)', alignItems: 'flex-start' }}>
               <span style={{ fontWeight: 600, color: 'var(--text-primary)', flexShrink: 0, minWidth: 120 }}>{r.label}</span>
               <span style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{r.desc}</span>
             </div>
@@ -154,7 +154,7 @@ export default function HowItWorksPage() {
             { label: 'Reset on gear', desc: 'Resets on gear swap. Relevant if you use gear sets that change your stat priorities mid-session.' },
             { label: 'Timer reset', desc: 'Resets after a set number of seconds without a keypress. Useful as a fallback to catch sequences that got stuck mid-rotation during an interruption.' },
           ].map(r => (
-            <div key={r.label} style={{ display: 'flex', gap: 14, fontSize: 14, alignItems: 'flex-start' }}>
+            <div key={r.label} style={{ display: 'flex', gap: 14, fontSize: 'var(--text-sm)', alignItems: 'flex-start' }}>
               <span style={{ fontWeight: 600, color: 'var(--text-primary)', flexShrink: 0, minWidth: 140 }}>{r.label}</span>
               <span style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{r.desc}</span>
             </div>
@@ -169,7 +169,7 @@ export default function HowItWorksPage() {
             { label: 'Valid target below you', desc: 'One press dismounts and fires step 1 in the same action. No separate dismount required.' },
             { label: 'No valid target', desc: 'The press falls through to your skyriding action bar as if GRIP-EMS is not active. Your normal skyriding controls are unaffected.' },
           ].map(r => (
-            <div key={r.label} style={{ display: 'flex', gap: 14, fontSize: 14, alignItems: 'flex-start' }}>
+            <div key={r.label} style={{ display: 'flex', gap: 14, fontSize: 'var(--text-sm)', alignItems: 'flex-start' }}>
               <span style={{ fontWeight: 600, color: 'var(--text-primary)', flexShrink: 0, minWidth: 180 }}>{r.label}</span>
               <span style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>{r.desc}</span>
             </div>
@@ -222,10 +222,10 @@ export default function HowItWorksPage() {
       </Section>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 48, paddingTop: 24, borderTop: '0.5px solid var(--border)' }}>
-        <Link href="/guide/settings" style={{ fontSize: 14, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
+        <Link href="/guide/settings" style={{ fontSize: 'var(--text-sm)', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
           Back: Settings
         </Link>
-        <Link href="/guide/building-sequences" style={{ fontSize: 14, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
+        <Link href="/guide/building-sequences" style={{ fontSize: 'var(--text-sm)', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
           Next: Building sequences
         </Link>
       </div>
@@ -235,7 +235,7 @@ export default function HowItWorksPage() {
 
 const code: React.CSSProperties = {
   fontFamily: 'var(--font-mono)',
-  fontSize: 12,
+  fontSize: 'var(--text-xs)',
   background: 'var(--bg-tertiary)',
   padding: '1px 5px',
   borderRadius: 3,
@@ -248,7 +248,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 16, color: 'var(--text-primary)' }}>
         {title}
       </h2>
-      <div style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+      <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
         {children}
       </div>
     </div>
@@ -263,7 +263,7 @@ function Callout({ children }: { children: React.ReactNode }) {
       border: '0.5px solid rgba(29,158,117,0.25)',
       borderLeft: '3px solid var(--accent)',
       borderRadius: 'var(--radius-md)',
-      fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6,
+      fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6,
     }}>
       {children}
     </div>

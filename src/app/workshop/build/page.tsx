@@ -422,9 +422,9 @@ function AutocompleteDropdown({ suggestions, activeIndex, onSelect, onSetActive 
     <div style={{ position: 'absolute', zIndex: 1000, minWidth: 280, maxWidth: 380, background: 'var(--bg-secondary)', border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)', boxShadow: '0 4px 16px rgba(0,0,0,0.3)', overflow: 'hidden', top: '100%', left: 0, marginTop: 2 }}>
       {suggestions.map((s, i) => (
         <div key={i} onMouseDown={e => { e.preventDefault(); onSelect(s) }} onMouseEnter={() => onSetActive(i)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', background: i === activeIndex ? 'var(--bg-tertiary)' : 'transparent', cursor: 'pointer', borderBottom: i < suggestions.length - 1 ? '0.5px solid var(--border)' : undefined }}>
-          <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 'var(--radius-sm)', background: colors[s.kind] || 'var(--text-muted)', color: 'white', flexShrink: 0, textTransform: 'uppercase' }}>{s.kind}</span>
-          <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', flex: 1 }}>{s.label}</span>
-          {s.detail && <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>{s.detail}</span>}
+          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, padding: '1px 5px', borderRadius: 'var(--radius-sm)', background: colors[s.kind] || 'var(--text-muted)', color: 'white', flexShrink: 0, textTransform: 'uppercase' }}>{s.kind}</span>
+          <span style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', flex: 1 }}>{s.label}</span>
+          {s.detail && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', flexShrink: 0 }}>{s.detail}</span>}
         </div>
       ))}
     </div>
@@ -460,15 +460,15 @@ function MacroTextarea({ value, onChange, placeholder, rows, classId, style }: {
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
 const S = {
-  badge: (color: string): React.CSSProperties => ({ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--radius-sm)', background: color, color: 'white', letterSpacing: '0.04em', flexShrink: 0 }),
+  badge: (color: string): React.CSSProperties => ({ fontSize: 'var(--text-xs)', fontWeight: 700, padding: '2px 6px', borderRadius: 'var(--radius-sm)', background: color, color: 'white', letterSpacing: '0.04em', flexShrink: 0 }),
   blockContainer: (type: keyof typeof BLOCK_COLORS): React.CSSProperties => ({ border: `0.5px solid ${BLOCK_COLORS[type].border}`, borderRadius: 'var(--radius-md)', overflow: 'visible', marginBottom: 4 }),
   blockHeader: (type: keyof typeof BLOCK_COLORS): React.CSSProperties => ({ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 8px', background: BLOCK_COLORS[type].header, borderBottom: `0.5px solid ${BLOCK_COLORS[type].border}`, flexWrap: 'wrap' as const, borderRadius: 'var(--radius-md) var(--radius-md) 0 0' }),
   iconBtn: (danger = false): React.CSSProperties => ({ background: 'none', border: 'none', cursor: 'pointer', padding: '5px', color: danger ? '#c0392b' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-sm)', minWidth: 24, minHeight: 24 }),
-  textarea: (): React.CSSProperties => ({ width: '100%', padding: '8px 10px', fontSize: 12, fontFamily: 'var(--font-mono)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', resize: 'vertical' as const, minHeight: 72 }),
-  input: (): React.CSSProperties => ({ padding: '5px 8px', fontSize: 12, fontFamily: 'var(--font-sans)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)' }),
-  select: (): React.CSSProperties => ({ padding: '5px 8px', fontSize: 12, fontFamily: 'var(--font-sans)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)' }),
-  label: (): React.CSSProperties => ({ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }),
-  btn: (primary = false): React.CSSProperties => ({ padding: '6px 14px', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)', borderRadius: 'var(--radius-md)', border: primary ? 'none' : '0.5px solid var(--border)', background: primary ? 'var(--accent)' : 'var(--bg-tertiary)', color: primary ? 'white' : 'var(--text-secondary)' }),
+  textarea: (): React.CSSProperties => ({ width: '100%', padding: '8px 10px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', resize: 'vertical' as const, minHeight: 72 }),
+  input: (): React.CSSProperties => ({ padding: '5px 8px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-sans)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)' }),
+  select: (): React.CSSProperties => ({ padding: '5px 8px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-sans)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)' }),
+  label: (): React.CSSProperties => ({ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }),
+  btn: (primary = false): React.CSSProperties => ({ padding: '6px 14px', fontSize: 'var(--text-xs)', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)', borderRadius: 'var(--radius-md)', border: primary ? 'none' : '0.5px solid var(--border)', background: primary ? 'var(--accent)' : 'var(--bg-tertiary)', color: primary ? 'white' : 'var(--text-secondary)' }),
 }
 
 // ─── Block action buttons ─────────────────────────────────────────────────────
@@ -531,21 +531,21 @@ function ActionBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone
     <div style={S.blockContainer('action')}>
       <div style={S.blockHeader('action')}>
         <span style={S.badge(BLOCK_COLORS.action.badge)}>{blockIndex !== undefined ? `Step ${blockIndex + 1}` : 'Step'}</span>
-        <input placeholder="Name (optional)" value={action.name || ''} onChange={e => onUpdate({ ...action, name: e.target.value })} style={{ ...S.input(), width: 110, fontSize: 11 }} />
-        <input placeholder="Label" value={action.label || ''} onChange={e => onUpdate({ ...action, label: e.target.value })} style={{ ...S.input(), width: 80, fontSize: 11 }} />
-        <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+        <input placeholder="Name (optional)" value={action.name || ''} onChange={e => onUpdate({ ...action, name: e.target.value })} style={{ ...S.input(), width: 110, fontSize: 'var(--text-xs)' }} />
+        <input placeholder="Label" value={action.label || ''} onChange={e => onUpdate({ ...action, label: e.target.value })} style={{ ...S.input(), width: 80, fontSize: 'var(--text-xs)' }} />
+        <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
           <input type="checkbox" checked={Boolean(action.interval)} onChange={e => onUpdate({ ...action, interval: e.target.checked ? 2 : undefined })} style={{ margin: 0 }} />
           Every
         </label>
         {action.interval !== undefined && <>
           <input type="number" min={2} max={50} value={action.interval} onChange={e => onUpdate({ ...action, interval: Math.min(50, Math.max(2, Number(e.target.value))) })} style={{ ...S.input(), width: 42 }} />
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>steps</span>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>steps</span>
         </>}
         <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
       </div>
       <div style={{ padding: '8px 10px' }}>
         <MacroTextarea value={action.macro || ''} onChange={v => onUpdate({ ...action, macro: v })} placeholder="/cast Spell Name" rows={3} classId={classId} style={{ ...S.textarea(), minHeight: 56, borderColor: overLimit ? '#c0392b' : undefined }} />
-        <div style={{ fontSize: 11, color: overLimit ? '#c0392b' : nearLimit ? '#c8960c' : 'var(--text-muted)', textAlign: 'right', marginTop: 4, lineHeight: 1.4 }}>
+        <div style={{ fontSize: 'var(--text-xs)', color: overLimit ? '#c0392b' : nearLimit ? '#c8960c' : 'var(--text-muted)', textAlign: 'right', marginTop: 4, lineHeight: 1.4 }}>
           {total} / 255 characters {keyPressLen > 0 ? `(incl. key bind)` : ''} · {stepLen} from step{keyPressLen > 0 ? ` · ${keyPressLen} from key bind` : ''}
         </div>
       </div>
@@ -563,7 +563,7 @@ function PauseBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone,
       <div style={S.blockHeader('pause')}>
         <span style={S.badge(BLOCK_COLORS.pause.badge)}>{blockIndex !== undefined ? `Pause ${blockIndex + 1}` : 'Pause'}</span>
         <input type="number" min={1} max={20} value={action.clicks ?? 1} onChange={e => onUpdate({ ...action, clicks: Math.max(1, Number(e.target.value)) })} style={{ ...S.input(), width: 48 }} />
-        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>clicks</span>
+        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>clicks</span>
         <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
       </div>
     </div>
@@ -603,13 +603,13 @@ function LoopBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, 
     <div style={S.blockContainer('loop')}>
       <div style={S.blockHeader('loop')}>
         <span style={S.badge(BLOCK_COLORS.loop.badge)}>{blockIndex !== undefined ? `Loop ${blockIndex + 1}` : 'Loop'}</span>
-        <input placeholder="Name" value={action.name || ''} onChange={e => onUpdate({ ...action, name: e.target.value })} style={{ ...S.input(), width: 100, fontSize: 11 }} />
-        <input placeholder="Label" value={action.label || ''} onChange={e => onUpdate({ ...action, label: e.target.value })} style={{ ...S.input(), width: 80, fontSize: 11 }} />
-        <select value={action.stepFunction || 'Sequential'} onChange={e => onUpdate({ ...action, stepFunction: e.target.value as StepFunction })} style={{ ...S.select(), fontSize: 11 }}>
+        <input placeholder="Name" value={action.name || ''} onChange={e => onUpdate({ ...action, name: e.target.value })} style={{ ...S.input(), width: 100, fontSize: 'var(--text-xs)' }} />
+        <input placeholder="Label" value={action.label || ''} onChange={e => onUpdate({ ...action, label: e.target.value })} style={{ ...S.input(), width: 80, fontSize: 'var(--text-xs)' }} />
+        <select value={action.stepFunction || 'Sequential'} onChange={e => onUpdate({ ...action, stepFunction: e.target.value as StepFunction })} style={{ ...S.select(), fontSize: 'var(--text-xs)' }}>
           {STEP_FUNCTIONS.map(sf => <option key={sf} value={sf}>{sf}</option>)}
         </select>
         <input type="number" min={1} max={50} value={action.repeat ?? 1} onChange={e => onUpdate({ ...action, repeat: Math.min(50, Math.max(1, Number(e.target.value))) })} style={{ ...S.input(), width: 42 }} />
-        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>times</span>
+        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>times</span>
         <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
       </div>
       <div style={{ padding: '8px 10px' }}>
@@ -633,15 +633,15 @@ function IfBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, de
     <div style={S.blockContainer('if')}>
       <div style={S.blockHeader('if')}>
         <span style={S.badge(BLOCK_COLORS.if.badge)}>{blockIndex !== undefined ? `If ${blockIndex + 1}` : 'If'}</span>
-        <input placeholder="= true" value={action.variable || ''} onChange={e => onUpdate({ ...action, variable: e.target.value })} style={{ ...S.input(), flex: 1, minWidth: 100, fontSize: 11 }} />
+        <input placeholder="= true" value={action.variable || ''} onChange={e => onUpdate({ ...action, variable: e.target.value })} style={{ ...S.input(), flex: 1, minWidth: 100, fontSize: 'var(--text-xs)' }} />
         <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
       </div>
       <div style={{ padding: '8px 10px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         {(['then', 'else'] as const).map(branch => (
           <div key={branch}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{branch}</div>
+            <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{branch}</div>
             <BlockList actions={action[branch] || []} onUpdate={(i, u) => updateBranch(branch, i, u)} onDelete={i => deleteBranch(branch, i)} onMove={(i, d) => moveBranch(branch, i, d)} onClone={i => cloneBranch(branch, i)} depth={depth + 1} classId={classId} keyPressLen={keyPressLen} droppableId={branch === 'then' ? (droppableThenId || `if-then:${action.id}`) : (droppableElseId || `if-else:${action.id}`)} />
-            <button onClick={() => onUpdate({ ...action, [branch]: [...(action[branch] || []), { id: nid(), type: 'action' as const, macro: '' }] })} style={{ ...S.btn(), fontSize: 11, marginTop: 4 }}><Plus size={10} style={{ marginRight: 3 }} /> Step</button>
+            <button onClick={() => onUpdate({ ...action, [branch]: [...(action[branch] || []), { id: nid(), type: 'action' as const, macro: '' }] })} style={{ ...S.btn(), fontSize: 'var(--text-xs)', marginTop: 4 }}><Plus size={10} style={{ marginRight: 3 }} /> Step</button>
           </div>
         ))}
       </div>
@@ -663,7 +663,7 @@ function BlockList({ actions, onUpdate, onDelete, onMove, onClone, depth = 0, cl
           style={{ display: 'flex', flexDirection: 'column', gap: 4, minHeight: 32, background: snapshot.isDraggingOver ? 'rgba(29,158,117,0.05)' : 'transparent', borderRadius: 'var(--radius-sm)', transition: 'background 0.15s' }}
         >
           {actions.length === 0 && !snapshot.isDraggingOver && (
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', padding: '8px 0', fontStyle: 'italic' }}>No blocks yet. Add blocks above or drop here.</div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '8px 0', fontStyle: 'italic' }}>No blocks yet. Add blocks above or drop here.</div>
           )}
           {actions.map((action, i) => {
             const typeIndex = actions.slice(0, i).filter(a => a.type === action.type).length
@@ -728,10 +728,10 @@ function AddBlockBar({ onAdd, useSpellIds, onToggleSpellIds }: {
   return (
     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
       {([['action', '+ Step', BLOCK_COLORS.action.badge], ['loop', '+ Loop', BLOCK_COLORS.loop.badge], ['pause', '+ Pause', BLOCK_COLORS.pause.badge], ['if', '+ If', BLOCK_COLORS.if.badge], ['embed', '+ Embed', BLOCK_COLORS.embed.badge]] as const).map(([type, label, color]) => (
-        <button key={type} onClick={() => onAdd(type)} style={{ padding: '5px 12px', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)', borderRadius: 'var(--radius-md)', border: 'none', background: color, color: 'white' }}>{label}</button>
+        <button key={type} onClick={() => onAdd(type)} style={{ padding: '5px 12px', fontSize: 'var(--text-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)', borderRadius: 'var(--radius-md)', border: 'none', background: color, color: 'white' }}>{label}</button>
       ))}
       {onToggleSpellIds !== undefined && (
-        <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8, cursor: 'pointer' }}>
+        <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8, cursor: 'pointer' }}>
           <input type="checkbox" checked={Boolean(useSpellIds)} onChange={e => onToggleSpellIds(e.target.checked)} style={{ margin: 0 }} />
           Use Spell IDs
         </label>
@@ -757,17 +757,17 @@ function ResetModifierPanel({ resetModifiers, onChange }: { resetModifiers: Grip
   return (
     <div>
       <button onClick={() => setOpen(o => !o)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{open ? '▼' : '▶'} Modifier reset overrides</span>
-        {activeCount > 0 && <span style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 600 }}>{activeCount} set</span>}
+        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)' }}>{open ? '▼' : '▶'} Modifier reset overrides</span>
+        {activeCount > 0 && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--accent)', fontWeight: 600 }}>{activeCount} set</span>}
       </button>
       {open && (
         <div style={{ marginTop: 8 }}>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>Override which held modifier keys cause GRIP to reset this sequence. Leave all unchecked to use the game-exported defaults.</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginBottom: 8 }}>Override which held modifier keys cause GRIP to reset this sequence. Leave all unchecked to use the game-exported defaults.</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {RESET_MODIFIER_GROUPS.map((group, gi) => (
               <div key={gi} style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                 {group.mods.map(key => (
-                  <label key={key} style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
+                  <label key={key} style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
                     <input type="checkbox" checked={Boolean(active[key])} onChange={e => toggle(key, e.target.checked)} style={{ margin: 0 }} />
                     {RESET_MODIFIER_LABELS[key] || key}
                   </label>
@@ -792,45 +792,45 @@ function VariablesPanel({ variables, onChange }: { variables: GripVariable[]; on
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>Variables</div>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Manage variables used in this sequence. Variables use <code style={{ fontFamily: 'var(--font-mono)', background: 'var(--bg-tertiary)', padding: '1px 4px', borderRadius: 'var(--radius-sm)' }}>~varname~</code> syntax and get substituted at runtime.</div>
+          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>Variables</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Manage variables used in this sequence. Variables use <code style={{ fontFamily: 'var(--font-mono)', background: 'var(--bg-tertiary)', padding: '1px 4px', borderRadius: 'var(--radius-sm)' }}>~varname~</code> syntax and get substituted at runtime.</div>
         </div>
-        <button onClick={addVariable} style={{ ...S.btn(true), fontSize: 11, flexShrink: 0 }}><Plus size={10} style={{ marginRight: 3 }} /> Variable</button>
+        <button onClick={addVariable} style={{ ...S.btn(true), fontSize: 'var(--text-xs)', flexShrink: 0 }}><Plus size={10} style={{ marginRight: 3 }} /> Variable</button>
       </div>
       {variables.length === 0 ? (
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', padding: '8px 0' }}>
+        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '8px 0' }}>
           No variables yet. Reference them in macro text as <code style={{ fontFamily: 'var(--font-mono)' }}>~varname~</code>.
         </div>
       ) : variables.map(v => (
         <div key={v.id} style={{ border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '10px 12px', marginBottom: 8 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginBottom: 8 }}>
             <div>
-              <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Name</label>
+              <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Name</label>
               <input value={v.name} onChange={e => updateVariable(v.id, { ...v, name: e.target.value })} style={{ ...S.input(), width: '100%', fontFamily: 'var(--font-mono)' }} />
             </div>
             <button onClick={() => deleteVariable(v.id)} style={S.iconBtn(true)}><Trash2 size={15} /></button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
             <div>
-              <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Type</label>
+              <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Type</label>
               <select value={v.type} onChange={e => updateVariable(v.id, { ...v, type: e.target.value as 'text' | 'function' })} style={{ ...S.select(), width: '100%' }}>
                 <option value="text">Plain text</option>
                 <option value="function">Lua function</option>
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Description</label>
+              <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Description</label>
               <input value={v.description} onChange={e => updateVariable(v.id, { ...v, description: e.target.value })} placeholder="Optional" style={{ ...S.input(), width: '100%' }} />
             </div>
           </div>
           {v.type === 'text' ? (
             <div>
-              <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Value</label>
+              <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Value</label>
               <textarea value={v.value} onChange={e => updateVariable(v.id, { ...v, value: e.target.value })} rows={2} spellCheck={false} style={S.textarea()} />
             </div>
           ) : (
             <div>
-              <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Function</label>
+              <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Function</label>
               <textarea value={v.function} onChange={e => updateVariable(v.id, { ...v, function: e.target.value })} rows={4} spellCheck={false} style={{ ...S.textarea(), fontFamily: 'var(--font-mono)' }} />
             </div>
           )}
@@ -851,24 +851,24 @@ function StandaloneMacrosPanel({ macros, onChange, classId }: { macros: Standalo
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>Standalone Macros</div>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Named macro bodies bundled with the export.</div>
+          <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>Standalone Macros</div>
+          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Named macro bodies bundled with the export.</div>
         </div>
-        <button onClick={addMacro} style={{ ...S.btn(true), fontSize: 11, flexShrink: 0 }}><Plus size={10} style={{ marginRight: 3 }} /> Macro</button>
+        <button onClick={addMacro} style={{ ...S.btn(true), fontSize: 'var(--text-xs)', flexShrink: 0 }}><Plus size={10} style={{ marginRight: 3 }} /> Macro</button>
       </div>
       {macros.length === 0 ? (
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', padding: '8px 0' }}>No standalone macros yet.</div>
+        <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', padding: '8px 0' }}>No standalone macros yet.</div>
       ) : macros.map(m => (
         <div key={m.id} style={{ border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '10px 12px', marginBottom: 8 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginBottom: 8 }}>
             <div>
-              <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Name</label>
+              <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Name</label>
               <input value={m.name} onChange={e => updateMacro(m.id, { ...m, name: e.target.value })} style={{ ...S.input(), width: '100%', fontFamily: 'var(--font-mono)' }} />
             </div>
             <button onClick={() => deleteMacro(m.id)} style={S.iconBtn(true)}><Trash2 size={15} /></button>
           </div>
           <div>
-            <label style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Macro Text</label>
+            <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Macro Text</label>
             <MacroTextarea value={m.macro} onChange={v => updateMacro(m.id, { ...m, macro: v })} rows={3} classId={classId} style={S.textarea()} />
           </div>
         </div>
@@ -926,23 +926,23 @@ function VersionPanel({ version, onUpdate, classId }: { version: BuilderVersion;
     <DragDropContext onDragEnd={onDragEnd}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-          <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
             Step Function
             <select value={version.stepFunction} onChange={e => onUpdate({ ...version, stepFunction: e.target.value as StepFunction })} style={S.select()}>
               {STEP_FUNCTIONS.map(sf => <option key={sf} value={sf}>{sf}</option>)}
             </select>
           </label>
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginRight: 4 }}>RESET ON:</span>
+            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', marginRight: 4 }}>RESET ON:</span>
             {([['resetOnCombat', 'Combat'], ['resetOnTarget', 'Target'], ['resetOnGear', 'Gear'], ['resetOnSpec', 'Spec']] as const).map(([field, label]) => (
-              <label key={field} style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', marginRight: 8 }}>
+              <label key={field} style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', marginRight: 8 }}>
                 <input type="checkbox" checked={Boolean(version[field])} onChange={e => onUpdate({ ...version, [field]: e.target.checked })} />{label}
               </label>
             ))}
-            <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
               Idle <input type="number" min={0} value={version.resetTimer} onChange={e => onUpdate({ ...version, resetTimer: Math.max(0, Number(e.target.value)) })} style={{ ...S.input(), width: 52 }} /> sec
             </label>
-            <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8 }}>
+            <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8 }}>
               Repeat <input type="number" min={1} max={50} value={version.repeatCount} onChange={e => onUpdate({ ...version, repeatCount: Math.min(50, Math.max(1, Number(e.target.value) || 1)) })} style={{ ...S.input(), width: 48 }} /> ×
             </label>
           </div>
@@ -976,7 +976,7 @@ function VersionPanel({ version, onUpdate, classId }: { version: BuilderVersion;
                 }
               } catch { onUpdate({ ...version, useSpellIds: toIds }) }
             }} />
-            <button onClick={() => onUpdate({ ...version, actions: [] })} style={{ ...S.btn(), fontSize: 11, display: 'flex', alignItems: 'center', gap: 4 }} title="Reset all blocks">
+            <button onClick={() => onUpdate({ ...version, actions: [] })} style={{ ...S.btn(), fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 4 }} title="Reset all blocks">
               <RotateCcw size={11} /> Reset all
             </button>
           </div>
@@ -1120,20 +1120,20 @@ export default function WorkshopBuildPage() {
 
   const debugWarnings = getDebugWarnings(model)
 
-  if (loading) return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading...</span></div>
+  if (loading) return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Loading...</span></div>
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 24px' }}>
       <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <Link href="/workshop" style={{ fontSize: 13, color: 'var(--text-muted)', textDecoration: 'none' }}>← Workshop</Link>
+        <Link href="/workshop" style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', textDecoration: 'none' }}>← Workshop</Link>
         <span style={{ color: 'var(--border)' }}>/</span>
-        <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Build Sequence</span>
+        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Build Sequence</span>
       </div>
 
       {/* Export bar */}
 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', marginBottom: 12, background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
-  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', flexShrink: 0, letterSpacing: '0.04em' }}>!GRIP1!</span>
-  <input readOnly value={user ? exportCode : '••••••••••••••••••••••••••••••••••••••••••••••••••'} placeholder="Export updates automatically as you edit..." style={{ flex: 1, padding: '5px 8px', fontSize: 11, fontFamily: 'var(--font-mono)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: user ? 'var(--text-secondary)' : 'transparent', textShadow: user ? 'none' : '0 0 8px rgba(255,255,255,0.3)', userSelect: 'none' as const }} />
+  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--accent)', flexShrink: 0, letterSpacing: '0.04em' }}>!GRIP1!</span>
+  <input readOnly value={user ? exportCode : '••••••••••••••••••••••••••••••••••••••••••••••••••'} placeholder="Export updates automatically as you edit..." style={{ flex: 1, padding: '5px 8px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: user ? 'var(--text-secondary)' : 'transparent', textShadow: user ? 'none' : '0 0 8px rgba(255,255,255,0.3)', userSelect: 'none' as const }} />
   {user ? (
     <button onClick={copyExport} disabled={!exportCode} style={{ ...S.btn(true), display: 'flex', alignItems: 'center', gap: 5, opacity: exportCode ? 1 : 0.4 }}>
       {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? 'Copied' : 'Copy'}
@@ -1160,7 +1160,7 @@ export default function WorkshopBuildPage() {
 
       {/* Import bar */}
       <div style={{ marginBottom: 12, border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
-        <button onClick={() => setImportOpen(o => !o)} style={{ width: '100%', padding: '8px 14px', background: 'var(--bg-secondary)', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)' }}>
+        <button onClick={() => setImportOpen(o => !o)} style={{ width: '100%', padding: '8px 14px', background: 'var(--bg-secondary)', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)' }}>
           {importOpen ? '▼' : '▶'} Import macro or export
         </button>
         {importOpen && (
@@ -1169,7 +1169,7 @@ export default function WorkshopBuildPage() {
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <button onClick={importIntoBuilder} style={S.btn(true)}>Import into builder</button>
               <button onClick={() => { setImportInput(''); setImportError('') }} style={S.btn()}>Clear</button>
-              {importError && <span style={{ fontSize: 12, color: '#c0392b' }}>{importError}</span>}
+              {importError && <span style={{ fontSize: 'var(--text-xs)', color: '#c0392b' }}>{importError}</span>}
             </div>
           </div>
         )}
@@ -1179,12 +1179,12 @@ export default function WorkshopBuildPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 0, flexWrap: 'wrap' }}>
         {model.sequences.map(seq => (
           <div key={seq.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', background: seq.id === activeSeqId ? 'var(--bg-secondary)' : 'var(--bg-primary)', border: `0.5px solid ${seq.id === activeSeqId ? 'var(--border-strong)' : 'var(--border)'}`, borderBottom: seq.id === activeSeqId ? '0.5px solid var(--bg-secondary)' : '0.5px solid var(--border)', borderRadius: 'var(--radius-md) var(--radius-md) 0 0', cursor: 'pointer' }} onClick={() => { setActiveSeqId(seq.id); setActiveVerId(seq.versions[0].id) }}>
-            <span style={{ fontSize: 12, fontWeight: 500, color: seq.id === activeSeqId ? 'var(--text-primary)' : 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{seq.name || 'Untitled'}</span>
+            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: seq.id === activeSeqId ? 'var(--text-primary)' : 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{seq.name || 'Untitled'}</span>
             <button onClick={e => { e.stopPropagation(); cloneSequence(seq.id) }} style={S.iconBtn()} title="Clone sequence"><CopyIcon size={14} /></button>
             {model.sequences.length > 1 && <button onClick={e => { e.stopPropagation(); deleteSequence(seq.id) }} style={S.iconBtn(true)} title="Delete sequence"><Trash2 size={14} /></button>}
           </div>
         ))}
-        <button onClick={addSequence} style={{ ...S.btn(), fontSize: 12, borderRadius: 'var(--radius-md) var(--radius-md) 0 0' }}><Plus size={11} style={{ marginRight: 3 }} /> New Sequence</button>
+        <button onClick={addSequence} style={{ ...S.btn(), fontSize: 'var(--text-xs)', borderRadius: 'var(--radius-md) var(--radius-md) 0 0' }}><Plus size={11} style={{ marginRight: 3 }} /> New Sequence</button>
       </div>
 
       {/* Sequence workspace */}
@@ -1192,7 +1192,7 @@ export default function WorkshopBuildPage() {
 
         {/* Config panel */}
         <div style={{ marginBottom: 16 }}>
-          <button onClick={() => setConfigOpen(o => !o)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-sans)', display: 'flex', alignItems: 'center', gap: 6, padding: 0 }}>
+          <button onClick={() => setConfigOpen(o => !o)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-sans)', display: 'flex', alignItems: 'center', gap: 6, padding: 0 }}>
             {configOpen ? '▼' : '▶'} Configuration
           </button>
           {configOpen && (
@@ -1202,7 +1202,7 @@ export default function WorkshopBuildPage() {
                   <label style={S.label()}>Author</label>
                   <input value={model.exportMeta.author || ''} onChange={e => setModel(m => ({ ...m, exportMeta: { ...m.exportMeta, author: e.target.value } }))} placeholder="Your name" style={{ ...S.input(), width: '100%' }} />
                   {model.exportMeta.authorLocked && model.exportMeta.originalAuthor && (
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
                       <span>Originally created by <strong style={{ color: 'var(--text-primary)' }}>{model.exportMeta.originalAuthor}</strong>{model.exportMeta.originalAuthorRealm ? ` (${model.exportMeta.originalAuthorRealm})` : ''}</span>
                     </div>
                   )}
@@ -1254,7 +1254,7 @@ export default function WorkshopBuildPage() {
               </div>
               <div>
                 <label style={S.label()}>Talent string (collection-wide)</label>
-                <input value={model.exportMeta.talentString || ''} onChange={e => setModel(m => ({ ...m, exportMeta: { ...m.exportMeta, talentString: e.target.value } }))} placeholder="Optional, applies to all sequences unless overridden below" style={{ ...S.input(), width: '100%', fontFamily: 'var(--font-mono)', fontSize: 11 }} />
+                <input value={model.exportMeta.talentString || ''} onChange={e => setModel(m => ({ ...m, exportMeta: { ...m.exportMeta, talentString: e.target.value } }))} placeholder="Optional, applies to all sequences unless overridden below" style={{ ...S.input(), width: '100%', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }} />
               </div>
               <div>
                 <label style={S.label()}>Sequence name</label>
@@ -1267,7 +1267,7 @@ export default function WorkshopBuildPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={S.label()}>Talent string (this sequence only)</label>
-                  <input value={activeSeq.talentString} onChange={e => updateSeq({ ...activeSeq, talentString: e.target.value })} placeholder="Optional, per-sequence" style={{ ...S.input(), width: '100%', fontFamily: 'var(--font-mono)', fontSize: 11 }} />
+                  <input value={activeSeq.talentString} onChange={e => updateSeq({ ...activeSeq, talentString: e.target.value })} placeholder="Optional, per-sequence" style={{ ...S.input(), width: '100%', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }} />
                 </div>
                 <div>
                   <label style={S.label()}>WarcraftLogs / author URL</label>
@@ -1280,7 +1280,7 @@ export default function WorkshopBuildPage() {
                   {CONTENT_TYPES.map(ct => {
                     const checked = activeSeq.contentTypes.includes(ct.value)
                     return (
-                      <label key={ct.value} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: checked ? 'var(--text-primary)' : 'var(--text-muted)', padding: '3px 8px', border: `0.5px solid ${checked ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 'var(--radius-md)', cursor: 'pointer', background: checked ? 'var(--bg-tertiary)' : 'transparent' }}>
+                      <label key={ct.value} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-xs)', color: checked ? 'var(--text-primary)' : 'var(--text-muted)', padding: '3px 8px', border: `0.5px solid ${checked ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 'var(--radius-md)', cursor: 'pointer', background: checked ? 'var(--bg-tertiary)' : 'transparent' }}>
                         <input type="checkbox" checked={checked} onChange={e => {
                           const next = e.target.checked
                             ? [...activeSeq.contentTypes, ct.value]
@@ -1313,11 +1313,11 @@ export default function WorkshopBuildPage() {
 
         {/* Version selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-          <label style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Default version</label>
+          <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Default version</label>
           <select value={activeSeq.defaultVersion} onChange={e => updateSeq({ ...activeSeq, defaultVersion: Number(e.target.value) })} style={S.select()}>
             {activeSeq.versions.map((v, i) => <option key={v.id} value={i + 1}>{v.name || `Version ${i + 1}`}</option>)}
           </select>
-          <button onClick={addVersion} style={{ ...S.btn(true), fontSize: 12 }}><Plus size={11} style={{ marginRight: 3 }} /> Add Version</button>
+          <button onClick={addVersion} style={{ ...S.btn(true), fontSize: 'var(--text-xs)' }}><Plus size={11} style={{ marginRight: 3 }} /> Add Version</button>
         </div>
 
         {/* Version tabs — click to switch, separate name field */}
@@ -1325,8 +1325,8 @@ export default function WorkshopBuildPage() {
           {activeSeq.versions.map((ver) => (
             <div key={ver.id} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', background: ver.id === activeVerId ? 'var(--bg-primary)' : 'var(--bg-tertiary)', border: `0.5px solid ${ver.id === activeVerId ? 'var(--accent)' : 'var(--border)'}`, borderBottom: ver.id === activeVerId ? '0.5px solid var(--bg-primary)' : undefined, borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0', cursor: 'pointer' }} onClick={() => setActiveVerId(ver.id)}>
               {ver.id === activeVerId
-                ? <input value={ver.name} onChange={e => { updateVer({ ...ver, name: e.target.value }) }} onClick={e => e.stopPropagation()} title="Rename" style={{ ...S.input(), fontSize: 11, padding: '2px 6px', width: Math.max(60, ver.name.length * 7 + 16), background: 'transparent' }} />
-                : <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>{ver.name || 'Version'}</span>
+                ? <input value={ver.name} onChange={e => { updateVer({ ...ver, name: e.target.value }) }} onClick={e => e.stopPropagation()} title="Rename" style={{ ...S.input(), fontSize: 'var(--text-xs)', padding: '2px 6px', width: Math.max(60, ver.name.length * 7 + 16), background: 'transparent' }} />
+                : <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>{ver.name || 'Version'}</span>
               }
               <button onClick={e => { e.stopPropagation(); cloneVersion(ver.id) }} style={S.iconBtn()} title="Clone version"><CopyIcon size={14} /></button>
               {activeSeq.versions.length > 1 && <button onClick={e => { e.stopPropagation(); deleteVersion(ver.id) }} style={S.iconBtn(true)} title="Delete version"><Trash2 size={14} /></button>}
@@ -1344,17 +1344,17 @@ export default function WorkshopBuildPage() {
       {/* Build warnings */}
       {warnings.length > 0 && (
         <div style={{ marginTop: 12, padding: '12px 16px', background: 'rgba(255,180,0,0.07)', border: '0.5px solid rgba(255,180,0,0.25)', borderRadius: 'var(--radius-lg)' }}>
-          <p style={{ fontSize: 12, fontWeight: 600, color: '#c8960c', marginBottom: 6 }}>Build notes</p>
-          {warnings.map((w, i) => <p key={i} style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>• {typeof w === 'string' ? w : (w as any).message || JSON.stringify(w)}</p>)}
+          <p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: '#c8960c', marginBottom: 6 }}>Build notes</p>
+          {warnings.map((w, i) => <p key={i} style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>• {typeof w === 'string' ? w : (w as any).message || JSON.stringify(w)}</p>)}
         </div>
       )}
 
       {/* Debug warnings */}
       {debugWarnings.length > 0 && (
         <div style={{ marginTop: 12, padding: '12px 16px', background: 'rgba(192,57,43,0.07)', border: '0.5px solid rgba(192,57,43,0.3)', borderRadius: 'var(--radius-lg)' }}>
-          <p style={{ fontSize: 12, fontWeight: 600, color: '#c0392b', marginBottom: 6 }}>Character limit issues</p>
+          <p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: '#c0392b', marginBottom: 6 }}>Character limit issues</p>
           {debugWarnings.map((w, i) => (
-            <p key={i} style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            <p key={i} style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
               <span style={{ color: '#c0392b', fontWeight: 500 }}>• {w.path}</span> is {w.message}
             </p>
           ))}

@@ -236,11 +236,11 @@ export default function BrowseContent({
   const filterPanel = (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-muted)', letterSpacing: '.06em', textTransform: 'uppercase' }}>
+        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-muted)', letterSpacing: '.06em', textTransform: 'uppercase' }}>
           Filters
         </span>
         {hasActiveFilters && (
-          <button onClick={clearFilters} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 3 }}>
+          <button onClick={clearFilters} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 3 }}>
             <X size={11} /> Clear
           </button>
         )}
@@ -303,7 +303,7 @@ export default function BrowseContent({
         <div className="mobile-filter-sheet" onClick={() => setShowMobileFilters(false)}>
           <div className="mobile-filter-inner" onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <span style={{ fontSize: 15, fontWeight: 600 }}>Filters</span>
+              <span style={{ fontSize: 'var(--text-base)', fontWeight: 600 }}>Filters</span>
               <button onClick={() => setShowMobileFilters(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
                 <X size={18} />
               </button>
@@ -328,14 +328,14 @@ export default function BrowseContent({
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search sequences, authors, specs..."
-                style={{ width: '100%', height: 40, paddingLeft: 36, paddingRight: 16, border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)', fontSize: 14, background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+                style={{ width: '100%', height: 40, paddingLeft: 36, paddingRight: 16, border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
               />
             </div>
           </form>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{loading ? '-' : `${count.toLocaleString()} sequences`}</span>
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{loading ? '-' : `${count.toLocaleString()} sequences`}</span>
               <button className="mobile-filter-btn" onClick={() => setShowMobileFilters(true)}>
                 <SlidersHorizontal size={13} />
                 Filters
@@ -344,7 +344,7 @@ export default function BrowseContent({
             </div>
             <div className="sort-bar" style={{ display: 'flex', gap: 2, background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: 2 }}>
               {SORT_OPTIONS.map(opt => (
-                <button key={opt.value} onClick={() => updateUrl({ sort: opt.value })} style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', background: filters.sort === opt.value ? 'var(--bg-primary)' : 'transparent', color: filters.sort === opt.value ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: filters.sort === opt.value ? 500 : 400, fontFamily: 'var(--font-sans)' }}>
+                <button key={opt.value} onClick={() => updateUrl({ sort: opt.value })} style={{ fontSize: 'var(--text-xs)', padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', background: filters.sort === opt.value ? 'var(--bg-primary)' : 'transparent', color: filters.sort === opt.value ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: filters.sort === opt.value ? 500 : 400, fontFamily: 'var(--font-sans)' }}>
                   {opt.label}
                 </button>
               ))}
@@ -359,7 +359,7 @@ export default function BrowseContent({
             </div>
           ) : sequences.length === 0 ? (
             <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '48px 24px', textAlign: 'center' }}>
-              <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>No sequences found. Try adjusting your filters or be the first to post one!</p>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>No sequences found. Try adjusting your filters or be the first to post one!</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -369,9 +369,9 @@ export default function BrowseContent({
 
           {count > (filters.limit || 20) && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 24 }}>
-              <button onClick={() => updateUrl({ page: String(Math.max(1, (filters.page || 1) - 1)) })} disabled={(filters.page || 1) <= 1} style={{ padding: '6px 14px', border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)' }}>Previous</button>
-              <span style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>Page {filters.page || 1}</span>
-              <button onClick={() => updateUrl({ page: String((filters.page || 1) + 1) })} disabled={((filters.page || 1) * (filters.limit || 20)) >= count} style={{ padding: '6px 14px', border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)' }}>Next</button>
+              <button onClick={() => updateUrl({ page: String(Math.max(1, (filters.page || 1) - 1)) })} disabled={(filters.page || 1) <= 1} style={{ padding: '6px 14px', border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)' }}>Previous</button>
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>Page {filters.page || 1}</span>
+              <button onClick={() => updateUrl({ page: String((filters.page || 1) + 1) })} disabled={((filters.page || 1) * (filters.limit || 20)) >= count} style={{ padding: '6px 14px', border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)', background: 'var(--bg-primary)', cursor: 'pointer', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)' }}>Next</button>
             </div>
           )}
         </div>
@@ -383,7 +383,7 @@ export default function BrowseContent({
 function FilterSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 20 }}>
-      <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>{title}</div>
+      <div style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>{title}</div>
       {children}
     </div>
   )

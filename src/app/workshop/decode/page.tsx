@@ -57,25 +57,25 @@ function ActionTree({ nodes, counter }: { nodes: ActionNode[]; counter: { n: num
                 borderBottom: '0.5px solid var(--border)',
               }}>
                 <span style={{
-                  fontSize: 11, fontWeight: 600, padding: '2px 7px',
+                  fontSize: 'var(--text-xs)', fontWeight: 600, padding: '2px 7px',
                   background: 'var(--accent)', color: 'white',
                   borderRadius: 'var(--radius-sm)', letterSpacing: '0.03em',
                 }}>
                   Loop
                 </span>
                 {node.stepFunction && (
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                     {node.stepFunction}
                   </span>
                 )}
                 {node.repeat && node.repeat > 1 && (
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>×{node.repeat}</span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>×{node.repeat}</span>
                 )}
               </div>
               <div style={{ padding: '8px 10px' }}>
                 {node.children && node.children.length > 0
                   ? <ActionTree nodes={node.children} counter={counter} />
-                  : <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Empty loop</span>
+                  : <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Empty loop</span>
                 }
               </div>
             </div>
@@ -95,18 +95,18 @@ function ActionTree({ nodes, counter }: { nodes: ActionNode[]; counter: { n: num
                 borderBottom: '0.5px solid var(--border)',
               }}>
                 <span style={{
-                  fontSize: 11, fontWeight: 600, padding: '2px 7px',
+                  fontSize: 'var(--text-xs)', fontWeight: 600, padding: '2px 7px',
                   background: 'var(--bg-secondary)', color: 'var(--text-secondary)',
                   border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)',
                 }}>If</span>
                 {node.variable && (
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{node.variable}</span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{node.variable}</span>
                 )}
               </div>
               <div style={{ padding: '8px 10px' }}>
                 {node.children && node.children.length > 0
                   ? <ActionTree nodes={node.children} counter={counter} />
-                  : <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Empty branch</span>
+                  : <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Empty branch</span>
                 }
               </div>
             </div>
@@ -119,13 +119,13 @@ function ActionTree({ nodes, counter }: { nodes: ActionNode[]; counter: { n: num
           return (
             <div key={i} style={{
               display: 'flex', gap: 10, padding: '5px 4px',
-              borderBottom: '0.5px solid var(--border)', fontSize: 12,
+              borderBottom: '0.5px solid var(--border)', fontSize: 'var(--text-xs)',
             }}>
               <span style={{ color: 'var(--text-muted)', flexShrink: 0, minWidth: 20, textAlign: 'right' }}>{n}</span>
               <div style={{ flex: 1 }}>
                 {node.kind === 'Repeat' && (
                   <span style={{
-                    fontSize: 10, fontWeight: 600, padding: '1px 5px', marginBottom: 3, display: 'inline-block',
+                    fontSize: 'var(--text-xs)', fontWeight: 600, padding: '1px 5px', marginBottom: 3, display: 'inline-block',
                     background: 'var(--bg-tertiary)', color: 'var(--text-muted)',
                     border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)',
                   }}>Repeat · every {node.interval}</span>
@@ -142,7 +142,7 @@ function ActionTree({ nodes, counter }: { nodes: ActionNode[]; counter: { n: num
         return (
           <div key={i} style={{
             display: 'flex', gap: 10, padding: '5px 4px',
-            borderBottom: '0.5px solid var(--border)', fontSize: 12,
+            borderBottom: '0.5px solid var(--border)', fontSize: 'var(--text-xs)',
           }}>
             <span style={{ color: 'var(--text-muted)', flexShrink: 0, minWidth: 20, textAlign: 'right' }}>–</span>
             <pre style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', margin: 0, whiteSpace: 'pre-wrap', flex: 1 }}>
@@ -162,21 +162,21 @@ function VersionStepView({ version }: { version: DecodeResult['sequences'][0]['v
   return (
     <div style={{ padding: '14px 16px' }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>{version.name}</span>
+        <span style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-secondary)' }}>{version.name}</span>
         {version.stepFunction && (
-          <span style={{ fontSize: 11, padding: '2px 7px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-muted)' }}>
+          <span style={{ fontSize: 'var(--text-xs)', padding: '2px 7px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-muted)' }}>
             {version.stepFunction}
           </span>
         )}
-        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
           {hasActions ? version.actions.length : version.steps.length} steps
         </span>
       </div>
 
       {version.keyPress && (
         <div style={{ marginBottom: 10, padding: '8px 10px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)' }}>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>KeyPress</span>
-          <pre style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--accent)', margin: 0, whiteSpace: 'pre-wrap' }}>{version.keyPress}</pre>
+          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>KeyPress</span>
+          <pre style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', color: 'var(--accent)', margin: 0, whiteSpace: 'pre-wrap' }}>{version.keyPress}</pre>
         </div>
       )}
 
@@ -185,7 +185,7 @@ function VersionStepView({ version }: { version: DecodeResult['sequences'][0]['v
         : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {version.steps.map((step: any, i: number) => (
-              <div key={i} style={{ display: 'flex', gap: 10, padding: '5px 0', borderBottom: '0.5px solid var(--border)', fontSize: 12 }}>
+              <div key={i} style={{ display: 'flex', gap: 10, padding: '5px 0', borderBottom: '0.5px solid var(--border)', fontSize: 'var(--text-xs)' }}>
                 <span style={{ color: 'var(--text-muted)', flexShrink: 0, minWidth: 20, textAlign: 'right' }}>{i + 1}</span>
                 <pre style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', margin: 0, whiteSpace: 'pre-wrap', flex: 1 }}>
                   {[...(step.preMarkers || []), step.text, ...(step.postMarkers || [])].filter(Boolean).join(' ')}
@@ -249,7 +249,7 @@ export default function WorkshopDecodePage() {
     router.push('/workshop/convert')
   }
 
-  if (loading) return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading...</span></div>
+  if (loading) return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Loading...</span></div>
 
   const isGSE = result?.meta?.format === 'GSE3'
   // A converted !GRIP1! keeps the source version, so origin survives the round trip.
@@ -263,21 +263,21 @@ export default function WorkshopDecodePage() {
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px' }}>
       <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <Link href="/workshop" style={{ fontSize: 13, color: 'var(--text-muted)', textDecoration: 'none' }}>← Workshop</Link>
+        <Link href="/workshop" style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', textDecoration: 'none' }}>← Workshop</Link>
         <span style={{ color: 'var(--border)' }}>/</span>
-        <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Decode Export</span>
+        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Decode Export</span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 24, alignItems: 'start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
-            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 4 }}>Inspect</p>
+            <p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 4 }}>Inspect</p>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: 6 }}>Decode Export</h1>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>View loops, actions, and steps from !EMS1!, !GRIP1!, or !GSE3! strings.</p>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>View loops, actions, and steps from !EMS1!, !GRIP1!, or !GSE3! strings.</p>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>Export code</label>
+            <label style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-secondary)' }}>Export code</label>
             <textarea
               value={input}
               onChange={e => setInput(e.target.value)}
@@ -285,7 +285,7 @@ export default function WorkshopDecodePage() {
               rows={8}
               spellCheck={false}
               style={{
-                width: '100%', padding: '10px 12px', fontSize: 12,
+                width: '100%', padding: '10px 12px', fontSize: 'var(--text-xs)',
                 fontFamily: 'var(--font-mono)', background: 'var(--bg-secondary)',
                 border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)',
                 color: 'var(--text-primary)', resize: 'vertical',
@@ -299,7 +299,7 @@ export default function WorkshopDecodePage() {
               disabled={decoding || !input.trim()}
               style={{
                 padding: '8px 16px', background: 'var(--accent)', color: 'white',
-                border: 'none', borderRadius: 'var(--radius-md)', fontSize: 13,
+                border: 'none', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)',
                 fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font-sans)',
               }}
             >
@@ -309,7 +309,7 @@ export default function WorkshopDecodePage() {
               onClick={() => { setInput(''); setResult(null); setError(null) }}
               style={{
                 padding: '8px 16px', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)',
-                border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: 13,
+                border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)',
                 cursor: 'pointer', fontFamily: 'var(--font-sans)',
               }}
             >
@@ -322,7 +322,7 @@ export default function WorkshopDecodePage() {
                   display: 'flex', alignItems: 'center', gap: 6,
                   padding: '8px 14px', background: 'var(--bg-tertiary)',
                   border: '0.5px solid var(--accent)', borderRadius: 'var(--radius-md)',
-                  fontSize: 13, color: 'var(--accent)', fontWeight: 500,
+                  fontSize: 'var(--text-sm)', color: 'var(--accent)', fontWeight: 500,
                   cursor: 'pointer', fontFamily: 'var(--font-sans)',
                 }}
               >
@@ -331,7 +331,7 @@ export default function WorkshopDecodePage() {
             )}
           </div>
 
-          {error && <p style={{ fontSize: 12, color: '#c0392b' }}>{error}</p>}
+          {error && <p style={{ fontSize: 'var(--text-xs)', color: '#c0392b' }}>{error}</p>}
         </div>
 
         <div style={{ minHeight: 400 }}>
@@ -341,14 +341,14 @@ export default function WorkshopDecodePage() {
               background: 'var(--bg-secondary)', border: '0.5px solid var(--border)',
               borderRadius: 'var(--radius-lg)',
             }}>
-              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Decoded macro structure will appear here.</p>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>Decoded macro structure will appear here.</p>
             </div>
           )}
 
           {result && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               <div style={{ background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '16px' }}>
-                <h2 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 10 }}>Export info</h2>
+                <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 10 }}>Export info</h2>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {[
                     ['Format', result.meta.format as string],
@@ -358,15 +358,15 @@ export default function WorkshopDecodePage() {
                     isGSEOrigin ? ['Origin', 'GSE'] : '',
                     isGSEOrigin && originAuthor ? ['Author', originAuthor] : '',
                   ].filter(Boolean).map(([label, value]) => value && (
-                    <span key={label as string} style={{ fontSize: 12, padding: '3px 8px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}>
+                    <span key={label as string} style={{ fontSize: 'var(--text-xs)', padding: '3px 8px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}>
                       <span style={{ color: 'var(--text-muted)' }}>{label}: </span>{value}
                     </span>
                   ))}
                 </div>
                 {(result.meta.exportMeta as any)?.talentString && (
                   <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>Talent build</span>
-                    <code style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', flexShrink: 0 }}>Talent build</span>
+                    <code style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {(result.meta.exportMeta as any).talentString}
                     </code>
                     <button
@@ -383,9 +383,9 @@ export default function WorkshopDecodePage() {
               {result.sequences.map((seq, si) => (
                 <div key={si} style={{ background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
                   <div style={{ padding: '14px 16px', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{seq.name}</h2>
+                    <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>{seq.name}</h2>
                     {isGSEOrigin && seq.author && (
-                      <span style={{ fontSize: 12, padding: '3px 8px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}>
+                      <span style={{ fontSize: 'var(--text-xs)', padding: '3px 8px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}>
                         <span style={{ color: 'var(--text-muted)' }}>Author: </span>{seq.author}
                       </span>
                     )}

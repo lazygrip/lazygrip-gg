@@ -78,7 +78,7 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
       {/* Top row: title + rating */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <h3 style={{
-          fontSize: 15,
+          fontSize: 'var(--text-base)',
           fontWeight: 600,
           color: 'var(--text-primary)',
           lineHeight: 1.3,
@@ -105,10 +105,10 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
             padding: '2px 7px',
           }}>
             <Star size={10} style={{ color: scoreColor, fill: scoreColor }} />
-            <span style={{ fontSize: 13, fontWeight: 700, color: scoreColor, lineHeight: 1 }}>
+            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: scoreColor, lineHeight: 1 }}>
               {avgScore}
             </span>
-            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
               ({ratingCount})
             </span>
           </div>
@@ -129,7 +129,7 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
               display: 'inline-flex',
               alignItems: 'center',
               gap: 3,
-              fontSize: 11,
+              fontSize: 'var(--text-xs)',
               fontWeight: 500,
               padding: '2px 7px',
               borderRadius: 'var(--radius-sm)',
@@ -147,7 +147,7 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
       {/* Description */}
       {plainDescription && (
         <p style={{
-          fontSize: 12,
+          fontSize: 'var(--text-xs)',
           color: 'var(--text-secondary)',
           lineHeight: 1.5,
           display: '-webkit-box',
@@ -172,7 +172,7 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
           <Stat icon={<MessageSquare size={12} />} value={sequence.comment_count ?? 0} />
           <Stat icon={<Bookmark size={12} />} value={sequence.save_count} />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--text-muted)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
           {sequence.author && (
             <span>by{' '}
               <Link
@@ -201,7 +201,7 @@ function Badge({ color, label }: { color: string; label: string }) {
 
   return (
     <span style={{
-      fontSize: 11,
+      fontSize: 'var(--text-xs)',
       fontWeight: 500,
       padding: '2px 7px',
       borderRadius: 'var(--radius-sm)',
@@ -220,7 +220,7 @@ function Stat({ icon, value, highlight }: { icon: React.ReactNode; value: number
       display: 'flex',
       alignItems: 'center',
       gap: 3,
-      fontSize: 12,
+      fontSize: 'var(--text-xs)',
       color: highlight ? 'var(--text-secondary)' : 'var(--text-muted)',
       fontWeight: highlight ? 500 : 400,
     }}>

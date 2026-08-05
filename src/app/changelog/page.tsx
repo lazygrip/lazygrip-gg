@@ -87,7 +87,7 @@ export default async function ChangelogPage() {
           <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0 }}>
             Changelog
           </h1>
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0, marginTop: 2 }}>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', margin: 0, marginTop: 2 }}>
             Every change shipped to LazyGrip.net, pulled live from GitHub.
           </p>
         </div>
@@ -98,7 +98,7 @@ export default async function ChangelogPage() {
           background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
           borderRadius: 'var(--radius-lg)', padding: '32px 24px', textAlign: 'center',
         }}>
-          <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Could not load changelog. Try again later.</p>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Could not load changelog. Try again later.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -108,7 +108,7 @@ export default async function ChangelogPage() {
               borderRadius: 'var(--radius-lg)', padding: '20px 24px',
             }}>
               <div style={{
-                fontSize: 12, fontWeight: 500, color: 'var(--text-muted)',
+                fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-muted)',
                 textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 12,
               }}>
                 {formatDate(date)}
@@ -122,7 +122,7 @@ export default async function ChangelogPage() {
                       width: 6, height: 6, borderRadius: '50%',
                       background: 'var(--accent)', flexShrink: 0, marginTop: 6,
                     }} />
-                    <span style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                       {commit.message}
                     </span>
                   </div>
