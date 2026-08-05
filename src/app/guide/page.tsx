@@ -70,10 +70,10 @@ export default function GuidePage() {
         <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.2, marginBottom: 12, color: 'var(--text-primary)' }}>
           The GRIP-EMS Guide
         </h1>
-        <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.75, maxWidth: 620, marginBottom: 12 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75, maxWidth: 620, marginBottom: 12 }}>
           Written by a player who runs GRIP-EMS through Mythic+ and validates every sequence against Warcraft Logs before publishing it. This is not a feature tour and it is not a rehash of the official documentation. It is a practical guide to making the addon work correctly from the first install through your first validated sequence, written for players of every class and spec.
         </p>
-        <p style={{ fontSize: 15, color: 'var(--text-secondary)', lineHeight: 1.75, maxWidth: 620 }}>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75, maxWidth: 620 }}>
           If your keybind is set but nothing is firing, go straight to{' '}
           <Link href="/guide/installation" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Installation</Link>. On GRIP-EMS v2.3.14 and later this is rarely the cause since Key Down Casting is now forced on automatically, but on older versions the Cvar Health fix takes thirty seconds and solves that problem the majority of the time. If you are coming from an older macro sequencing addon and want to know whether switching is worth it, start with{' '}
           <Link href="/guide/from-legacy-program" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Coming from the legacy program</Link>.
@@ -94,10 +94,10 @@ export default function GuidePage() {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                  <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>{s.title}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)', border: '0.5px solid var(--border)', borderRadius: 99, padding: '1px 8px' }}>{s.time}</span>
+                  <span style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)' }}>{s.title}</span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)', border: '0.5px solid var(--border)', borderRadius: 99, padding: '1px 8px' }}>{s.time}</span>
                 </div>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0 }}>{s.desc}</p>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0 }}>{s.desc}</p>
               </div>
               <ArrowRight size={14} style={{ color: 'var(--text-tertiary)', flexShrink: 0, marginTop: 10 }} />
             </Link>
@@ -106,16 +106,16 @@ export default function GuidePage() {
       </div>
 
       <section style={{ marginBottom: 48 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
+        <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
           Before you open the editor
         </h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
           The single biggest mistake new users make is opening GRIP-EMS and typing spell names before they know what their sequence is supposed to do. The addon executes a rotation you have already designed, it does not design it for you. Sitting down with no plan produces a sequence that technically runs but delivers mediocre results because the step ordering and spacing came from guessing rather than understanding your spec.
         </p>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
           Before you build anything, spend twenty minutes with the Icy Veins guide or your spec Discord and answer four questions. What is your highest priority spell and how often does it need to fire? What is the cooldown you cannot afford to miss on pull? Which spells can be skipped when unavailable without breaking the rotation, and which ones cannot be skipped? And do you need the sequence to behave differently in different content, such as a different opener for Mythic+ versus raid?
         </p>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
           The answers to those questions determine your step count, your step function choice, your reset conditions, and whether you need context versions. The{' '}
           <Link href="/guide/building-sequences" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Building sequences</Link>{' '}
           section walks through exactly how those answers translate into a working sequence for any spec.
@@ -123,20 +123,20 @@ export default function GuidePage() {
       </section>
 
       <section style={{ marginBottom: 48 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
+        <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
           About the sequences on this site
         </h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
           Every sequence published on LazyGrip includes the content type it was validated at, the key level or difficulty tier, and the talent string it was built for. If a sequence does not list validation data, treat it as a starting point to adapt rather than a finished product to import and run blind. A sequence validated at plus 10 on one hero talent path will produce different numbers on a different path because the spells and their interactions differ.
         </p>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.75 }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
           The talent string ships with every sequence for exactly this reason. If your talents do not match, the sequence is still worth importing as a structural reference, but plan on a validation pass before you rely on it in serious content.
         </p>
       </section>
 
       <div style={{ padding: '14px 18px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>The GRIP-EMS Guide</span>
-        <Link href="/guide/installation" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
+        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>The GRIP-EMS Guide</span>
+        <Link href="/guide/installation" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-sm)', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
           Start with Installation <ArrowRight size={13} />
         </Link>
       </div>

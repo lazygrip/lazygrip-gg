@@ -188,7 +188,7 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
           <h1 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 4 }}>
             {view === 'confirm-reset' ? 'Set a new password' : view === 'reset' ? 'Reset password' : isLogin ? 'Welcome back' : 'Create account'}
           </h1>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
             {view === 'confirm-reset'
               ? 'Choose a new password for your account.'
               : view === 'reset'
@@ -206,7 +206,7 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
               borderRadius: 'var(--radius-md)',
               background: '#5865F2',
               color: 'white',
-              cursor: 'pointer', fontSize: 13, fontWeight: 500,
+              cursor: 'pointer', fontSize: 'var(--text-sm)', fontWeight: 500,
               fontFamily: 'var(--font-sans)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}>
@@ -223,7 +223,7 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
               borderRadius: 'var(--radius-md)',
               background: '#148EFF',
               color: 'white',
-              cursor: 'pointer', fontSize: 13, fontWeight: 500,
+              cursor: 'pointer', fontSize: 'var(--text-sm)', fontWeight: 500,
               fontFamily: 'var(--font-sans)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}>
@@ -233,7 +233,7 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
               Continue with Battle.net
             </button>
 
-            <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 16, lineHeight: 1.5 }}>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textAlign: 'center', marginBottom: 16, lineHeight: 1.5 }}>
               Already have an account with Discord or email? Sign in with that first, then connect Battle.net from your profile settings to keep one account.
             </p>
 
@@ -241,7 +241,7 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
               display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16,
             }}>
               <div style={{ flex: 1, height: '0.5px', background: 'var(--border)' }} />
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>or</span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>or</span>
               <div style={{ flex: 1, height: '0.5px', background: 'var(--border)' }} />
             </div>
           </>
@@ -251,7 +251,7 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
             <div style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              color: '#c41e3a', fontSize: 13, textAlign: 'center',
+              color: '#c41e3a', fontSize: 'var(--text-sm)', textAlign: 'center',
             }}>
               <AlertCircle size={14} />
               This reset link is invalid or has expired.
@@ -260,14 +260,14 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
               onClick={() => { setView('reset'); setError(''); setSuccess(''); setSessionError(false) }}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
-                color: 'var(--accent)', fontSize: 13, fontFamily: 'var(--font-sans)',
+                color: 'var(--accent)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)',
               }}
             >
               Request a new one
             </button>
           </div>
         ) : view === 'confirm-reset' && !sessionReady ? (
-          <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', textAlign: 'center' }}>
             Checking your reset link...
           </p>
         ) : success ? (
@@ -276,7 +276,7 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
             border: '0.5px solid rgba(29,158,117,0.2)',
             borderRadius: 'var(--radius-md)',
             padding: '12px 14px',
-            fontSize: 13, color: 'var(--accent-text)',
+            fontSize: 'var(--text-sm)', color: 'var(--accent-text)',
             lineHeight: 1.5,
           }}>
             {success}
@@ -344,7 +344,7 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
                 style={{
                   alignSelf: 'flex-end',
                   background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'var(--text-muted)', fontSize: 12, fontFamily: 'var(--font-sans)',
+                  color: 'var(--text-muted)', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-sans)',
                   marginTop: -6,
                 }}
               >
@@ -356,7 +356,7 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 6,
-                  color: '#c41e3a', fontSize: 12,
+                  color: '#c41e3a', fontSize: 'var(--text-xs)',
                 }}>
                   <AlertCircle size={13} />
                   {error}
@@ -371,7 +371,7 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
                       background: 'none', border: '0.5px solid var(--border-strong)',
                       borderRadius: 'var(--radius-md)', padding: '7px 12px',
                       cursor: resending ? 'not-allowed' : 'pointer',
-                      fontSize: 12, color: 'var(--accent)',
+                      fontSize: 'var(--text-xs)', color: 'var(--accent)',
                       fontFamily: 'var(--font-sans)',
                       opacity: resending ? 0.7 : 1,
                     }}
@@ -389,7 +389,7 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
               border: 'none', borderRadius: 'var(--radius-md)',
               cursor: loading ? 'not-allowed' : 'pointer',
               opacity: loading ? 0.7 : 1,
-              fontSize: 14, fontWeight: 500,
+              fontSize: 'var(--text-sm)', fontWeight: 500,
               fontFamily: 'var(--font-sans)',
             }}>
               {loading ? '...' : view === 'confirm-reset' ? 'Update password' : view === 'reset' ? 'Send reset link' : isLogin ? 'Sign in' : 'Create account'}
@@ -398,13 +398,13 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
         )}
 
         {view !== 'confirm-reset' && (
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', marginTop: 20 }}>
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', textAlign: 'center', marginTop: 20 }}>
             {view === 'reset' ? (
               <button
                 onClick={() => { setView('login'); setError(''); setSuccess(''); setShowResend(false) }}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'var(--accent)', fontSize: 12, fontFamily: 'var(--font-sans)',
+                  color: 'var(--accent)', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-sans)',
                 }}
               >
                 Back to sign in
@@ -416,7 +416,7 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
                   onClick={() => { setView(isLogin ? 'signup' : 'login'); setError(''); setSuccess(''); setShowResend(false) }}
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
-                    color: 'var(--accent)', fontSize: 12, fontFamily: 'var(--font-sans)',
+                    color: 'var(--accent)', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-sans)',
                   }}
                 >
                   {isLogin ? 'Sign up' : 'Sign in'}
@@ -434,7 +434,7 @@ const inputStyle: React.CSSProperties = {
   width: '100%', padding: '9px 12px',
   border: '0.5px solid var(--border-strong)',
   borderRadius: 'var(--radius-md)',
-  fontSize: 13, background: 'var(--bg-secondary)',
+  fontSize: 'var(--text-sm)', background: 'var(--bg-secondary)',
   color: 'var(--text-primary)',
   fontFamily: 'var(--font-sans)',
 }

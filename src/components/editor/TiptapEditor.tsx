@@ -329,7 +329,7 @@ export default function TiptapEditor({ content, onChange, placeholder }: TiptapE
             color: 'var(--text-secondary, #4b5563)',
             borderRadius: 4,
             cursor: 'pointer',
-            fontSize: 11,
+            fontSize: 'var(--text-xs)',
             fontWeight: 500,
             fontFamily: 'var(--font-sans, sans-serif)',
             whiteSpace: 'nowrap',

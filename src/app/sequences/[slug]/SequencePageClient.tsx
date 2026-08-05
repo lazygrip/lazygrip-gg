@@ -9,6 +9,8 @@ import { formatDistanceToNow } from 'date-fns'
 import RenderedContent from '@/components/editor/RenderedContent'
 import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
 import type { SequencePageResult } from '@/lib/sequence-server'
+import { useUsernameGate } from '@/lib/useUsernameGate'
+import UsernameRequiredModal from '@/components/UsernameRequiredModal'
 
 const SITE_OWNER_ID = 'c2374192-e541-4636-9baf-84fc192cff52'
 
@@ -81,6 +83,12 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
   const [deleting, setDeleting] = useState(false)
   const [versionToDelete, setVersionToDelete] = useState<string | null>(null)
   const [deletingVersion, setDeletingVersion] = useState(false)
+  // Username gate: shows the modal when a comment/reply/rating is attempted
+  // without a custom username set. Dismissing the modal ("Not now") leaves
+  // whatever was typed in place -- commentText/replyText/selectedScore are
+  // untouched -- so nothing typed is lost, only the submit is blocked.
+  const [showUsernameModal, setShowUsernameModal] = useState(false)
+  const { checkGate } = useUsernameGate()
 
   // ST/MT linking state
   const [linkedSequence, setLinkedSequence] = useState<LinkedSequence | null>(seeded?.linkedSequence ?? null)
@@ -207,6 +215,13 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
 
   async function confirmRating() {
     if (!user || !sequence || selectedScore === null) return
+
+    const gate = await checkGate(user.id)
+    if (!gate.ok) {
+      setShowUsernameModal(true)
+      return
+    }
+
     setConfirming(true)
 
     const { error: ratingError } = await supabase.from('ratings').upsert({
@@ -260,6 +275,13 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
 
   async function submitComment() {
     if (!user || !sequence || !commentText.trim()) return
+
+    const gate = await checkGate(user.id)
+    if (!gate.ok) {
+      setShowUsernameModal(true)
+      return
+    }
+
     const { data, error } = await supabase
       .from('comments')
       .insert({ sequence_id: sequence.id, author_id: user.id, body: commentText.trim() })
@@ -272,6 +294,13 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
 
   async function submitReply(parentId: string) {
     if (!user || !sequence || !replyText.trim()) return
+
+    const gate = await checkGate(user.id)
+    if (!gate.ok) {
+      setShowUsernameModal(true)
+      return
+    }
+
     const { data, error } = await supabase
       .from('comments')
       .insert({
@@ -488,10 +517,10 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
             width: '100%',
             margin: '0 24px',
           }}>
-            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 10, color: 'var(--text-primary)' }}>
+            <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, marginBottom: 10, color: 'var(--text-primary)' }}>
               Delete this version?
             </h2>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
               This will permanently remove this version from the history. This cannot be undone.
             </p>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -504,7 +533,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                   border: '0.5px solid var(--border-strong)',
                   background: 'var(--bg-secondary)',
                   color: 'var(--text-secondary)',
-                  cursor: 'pointer', fontSize: 13,
+                  cursor: 'pointer', fontSize: 'var(--text-sm)',
                   fontFamily: 'var(--font-sans)',
                 }}
               >
@@ -520,7 +549,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                   background: '#c0392b',
                   color: 'white',
                   cursor: deletingVersion ? 'not-allowed' : 'pointer',
-                  fontSize: 13, fontWeight: 500,
+                  fontSize: 'var(--text-sm)', fontWeight: 500,
                   fontFamily: 'var(--font-sans)',
                   opacity: deletingVersion ? 0.7 : 1,
                 }}
@@ -548,10 +577,10 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
             width: '100%',
             margin: '0 24px',
           }}>
-            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 10, color: 'var(--text-primary)' }}>
+            <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, marginBottom: 10, color: 'var(--text-primary)' }}>
               Delete this sequence?
             </h2>
-            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 24, lineHeight: 1.6 }}>
               This will permanently delete <strong style={{ color: 'var(--text-primary)' }}>{sequence.title}</strong> and all its ratings and comments. This cannot be undone.
             </p>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -564,7 +593,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                   border: '0.5px solid var(--border-strong)',
                   background: 'var(--bg-secondary)',
                   color: 'var(--text-secondary)',
-                  cursor: 'pointer', fontSize: 13,
+                  cursor: 'pointer', fontSize: 'var(--text-sm)',
                   fontFamily: 'var(--font-sans)',
                 }}
               >
@@ -580,7 +609,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                   background: '#c0392b',
                   color: 'white',
                   cursor: deleting ? 'not-allowed' : 'pointer',
-                  fontSize: 13, fontWeight: 500,
+                  fontSize: 'var(--text-sm)', fontWeight: 500,
                   fontFamily: 'var(--font-sans)',
                   opacity: deleting ? 0.7 : 1,
                 }}
@@ -590,6 +619,18 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
             </div>
           </div>
         </div>
+      )}
+
+      {/* Username required modal: shown when comment/reply/rating is attempted
+          without a custom username set. Whatever was typed (commentText,
+          replyText) or selected (selectedScore) stays untouched if dismissed,
+          so nothing is lost -- just re-run the same action after setting one. */}
+      {showUsernameModal && user && (
+        <UsernameRequiredModal
+          userId={user.id}
+          onClose={() => setShowUsernameModal(false)}
+          onSuccess={() => setShowUsernameModal(false)}
+        />
       )}
 
       {/* Header card */}
@@ -617,7 +658,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                 <span style={{
                   background: 'var(--accent)',
                   color: 'white',
-                  fontSize: 11,
+                  fontSize: 'var(--text-xs)',
                   fontWeight: 700,
                   padding: '2px 7px',
                   borderRadius: 'var(--radius-sm)',
@@ -660,7 +701,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
             <span style={{ fontSize: 36, fontWeight: 600, color: 'var(--accent)', lineHeight: 1 }}>
               {sequence.avg_score ?? '—'}
             </span>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
               {sequence.rating_count ?? 0} ratings
             </span>
           </div>
@@ -675,7 +716,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
           paddingTop: 16,
           borderTop: '0.5px solid var(--border)',
         }}>
-          <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+          <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
             Posted by{' '}
             {sequence.author?.username ? (
               <a
@@ -694,7 +735,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
             {isStale && (
               <>
                 <br />
-                <span style={{ fontSize: 12, color: '#a06c00' }}>
+                <span style={{ fontSize: 'var(--text-xs)', color: '#a06c00' }}>
                   Built for {sequence.patch_version ?? 'an unrecorded patch'} — current patch is {currentPatch}. Last updated {daysSinceUpdate} days ago.
                 </span>
               </>
@@ -702,7 +743,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
             {sequence.original_author && sequence.original_author.trim() && (
               <>
                 <br />
-                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
                   Originally created by <strong style={{ color: 'var(--text-secondary)' }}>{sequence.original_author}</strong>
                 </span>
               </>
@@ -720,7 +761,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                     border: '0.5px solid var(--border-strong)',
                     background: 'var(--bg-secondary)',
                     color: 'var(--text-secondary)',
-                    cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)',
+                    cursor: 'pointer', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)',
                   }}
                 >
                   <Pencil size={14} />
@@ -734,7 +775,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                     border: '0.5px solid var(--accent)',
                     background: 'transparent',
                     color: 'var(--accent)',
-                    cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)',
+                    cursor: 'pointer', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)',
                   }}
                 >
                   ↑ Update
@@ -747,7 +788,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                     border: '0.5px solid rgba(192,57,43,0.4)',
                     background: 'rgba(192,57,43,0.08)',
                     color: '#c0392b',
-                    cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)',
+                    cursor: 'pointer', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)',
                   }}
                 >
                   <Trash2 size={14} />
@@ -763,7 +804,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                 border: '0.5px solid var(--border-strong)',
                 background: saved ? 'var(--accent-subtle)' : 'var(--bg-primary)',
                 color: saved ? 'var(--accent-text)' : 'var(--text-secondary)',
-                cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-sans)',
+                cursor: 'pointer', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-sans)',
               }}>
                 <Bookmark size={14} />
                 {saved ? 'Saved' : 'Save'}
@@ -776,7 +817,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                 border: '0.5px solid var(--border-strong)',
                 background: 'var(--bg-primary)',
                 color: 'var(--text-secondary)',
-                textDecoration: 'none', fontSize: 13,
+                textDecoration: 'none', fontSize: 'var(--text-sm)',
               }}>
                 <ExternalLink size={14} />
                 Warcraft Logs
@@ -802,7 +843,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
               {versions.length > 1 && (
                 <div style={{ marginBottom: 14 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>
                       Version:
                     </span>
                     {versions.map(v => (
@@ -819,14 +860,14 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                               ? 'var(--accent)' : 'var(--bg-secondary)',
                             color: selectedVersion.id === v.id ? 'white' : 'var(--text-secondary)',
                             cursor: 'pointer',
-                            fontSize: 12,
+                            fontSize: 'var(--text-xs)',
                             fontWeight: selectedVersion.id === v.id ? 600 : 400,
                             fontFamily: 'var(--font-sans)',
                           }}
                         >
                           {v.version_label}
                           {v.id === sequence.current_version_id && (
-                            <span style={{ marginLeft: 4, opacity: 0.75, fontSize: 10 }}>current</span>
+                            <span style={{ marginLeft: 4, opacity: 0.75, fontSize: 'var(--text-xs)' }}>current</span>
                           )}
                         </button>
                         {isAuthor && v.id !== sequence.current_version_id && (
@@ -855,7 +896,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                   {!isCurrentVersion && (
                     <div style={{
                       marginTop: 8,
-                      fontSize: 12,
+                      fontSize: 'var(--text-xs)',
                       color: '#d97706',
                       fontFamily: 'var(--font-sans)',
                       display: 'flex',
@@ -872,7 +913,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                       background: 'var(--bg-tertiary)',
                       border: '0.5px solid var(--border)',
                       borderRadius: 'var(--radius-sm)',
-                      fontSize: 12,
+                      fontSize: 'var(--text-xs)',
                       color: 'var(--text-secondary)',
                       fontFamily: 'var(--font-sans)',
                       lineHeight: 1.5,
@@ -888,7 +929,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                 display: 'flex', alignItems: 'center',
                 justifyContent: 'space-between', marginBottom: 12,
               }}>
-                <h2 style={{ fontSize: 14, fontWeight: 500 }}>GRIP import string</h2>
+                <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>GRIP import string</h2>
                 <button onClick={() => {
                   const str = selectedVersion?.grip_string
                   if (!str) return
@@ -900,7 +941,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                   border: '0.5px solid var(--accent)',
                   background: 'var(--bg-secondary)',
                   color: 'var(--accent)',
-                  cursor: 'pointer', fontSize: 12, fontFamily: 'var(--font-sans)',
+                  cursor: 'pointer', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-sans)',
                   marginRight: 6,
                 }}>
                   <Wrench size={13} /> Open in Builder
@@ -911,7 +952,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                   border: '0.5px solid var(--border-strong)',
                   background: copied ? 'var(--accent-subtle)' : 'var(--bg-secondary)',
                   color: copied ? 'var(--accent-text)' : 'var(--text-secondary)',
-                  cursor: 'pointer', fontSize: 12, fontFamily: 'var(--font-sans)',
+                  cursor: 'pointer', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-sans)',
                 }}>
                   {copied ? <><Check size={13} /> Copied!</> : <><Copy size={13} /> Copy string</>}
                 </button>
@@ -919,7 +960,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
               <div className="grip-string" style={{ maxHeight: 120, overflow: 'hidden' }}>
                 {selectedVersion.grip_string}
               </div>
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 8 }}>
                 In-game: type /grip import and paste this string
               </p>
             </div>
@@ -950,7 +991,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                         : '0.5px solid var(--border-strong)',
                       background: activeCollectionTab === i ? 'var(--accent)' : 'var(--bg-secondary)',
                       color: activeCollectionTab === i ? 'white' : 'var(--text-secondary)',
-                      cursor: 'pointer', fontSize: 12, fontWeight: activeCollectionTab === i ? 600 : 400,
+                      cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: activeCollectionTab === i ? 600 : 400,
                       fontFamily: 'var(--font-sans)',
                     }}
                   >
@@ -974,9 +1015,9 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                   borderRadius: 'var(--radius-sm)',
                   border: '0.5px solid var(--border)',
                 }}>
-                  <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Talent build</p>
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 4 }}>Talent build</p>
                   <div style={{
-                    fontFamily: 'var(--font-mono)', fontSize: 10,
+                    fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)',
                     wordBreak: 'break-all', color: 'var(--text-secondary)',
                   }}>
                     {activeEntry.talent_string}
@@ -984,7 +1025,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                 </div>
               )}
 
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
                 {(showAllSteps ? activeEntry.steps : activeEntry.steps.slice(0, 8)).map((step: any, i: number) => (
                   <div key={i} style={{
                     display: 'flex', gap: 10, padding: '6px 0',
@@ -1000,7 +1041,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                         </div>
                       ))}
                     </div>
-                    <span style={{ fontSize: 10, color: 'var(--text-muted)', alignSelf: 'flex-start', paddingTop: 2 }}>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', alignSelf: 'flex-start', paddingTop: 2 }}>
                       {typeof step === 'object' && step.char_count ? `${step.char_count}/255` : ''}
                     </span>
                   </div>
@@ -1010,7 +1051,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                 <button onClick={() => setShowAllSteps(s => !s)} style={{
                   display: 'flex', alignItems: 'center', gap: 4,
                   marginTop: 12, background: 'none', border: 'none',
-                  cursor: 'pointer', fontSize: 12, color: 'var(--accent)',
+                  cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--accent)',
                   fontFamily: 'var(--font-sans)',
                 }}>
                   {showAllSteps
@@ -1030,10 +1071,10 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
               borderRadius: 'var(--radius-lg)',
               padding: '18px',
             }}>
-              <h2 style={{ fontSize: 14, fontWeight: 500, marginBottom: 12 }}>
+              <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 500, marginBottom: 12 }}>
                 Steps ({steps.length})
               </h2>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
                 {visibleSteps.map((step: any, i: number) => (
                   <div key={i} style={{
                     display: 'flex',
@@ -1052,7 +1093,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                       ))}
                     </div>
                     <span style={{
-                      fontSize: 10,
+                      fontSize: 'var(--text-xs)',
                       color: 'var(--text-muted)',
                       alignSelf: 'flex-start',
                       paddingTop: 2,
@@ -1066,7 +1107,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                 <button onClick={() => setShowAllSteps(s => !s)} style={{
                   display: 'flex', alignItems: 'center', gap: 4,
                   marginTop: 12, background: 'none', border: 'none',
-                  cursor: 'pointer', fontSize: 12, color: 'var(--accent)',
+                  cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--accent)',
                   fontFamily: 'var(--font-sans)',
                 }}>
                   {showAllSteps
@@ -1085,7 +1126,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
             borderRadius: 'var(--radius-lg)',
             padding: '18px',
           }}>
-            <h2 style={{ fontSize: 14, fontWeight: 500, marginBottom: 16 }}>
+            <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 500, marginBottom: 16 }}>
               Comments ({totalComments})
             </h2>
 
@@ -1099,7 +1140,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                   style={{
                     width: '100%', padding: '10px 12px',
                     border: '0.5px solid var(--border-strong)',
-                    borderRadius: 'var(--radius-md)', fontSize: 13,
+                    borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)',
                     background: 'var(--bg-secondary)', color: 'var(--text-primary)',
                     resize: 'vertical', fontFamily: 'var(--font-sans)',
                     marginBottom: 8,
@@ -1108,20 +1149,20 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                 <button onClick={submitComment} disabled={!commentText.trim()} style={{
                   padding: '7px 16px', background: 'var(--accent)', color: 'white',
                   border: 'none', borderRadius: 'var(--radius-md)',
-                  cursor: 'pointer', fontSize: 13, fontWeight: 500,
+                  cursor: 'pointer', fontSize: 'var(--text-sm)', fontWeight: 500,
                   fontFamily: 'var(--font-sans)',
                 }}>
                   Post comment
                 </button>
               </div>
             ) : (
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 16 }}>
                 <a href="/auth/login" style={{ color: 'var(--accent)' }}>Sign in</a> to leave a comment.
               </p>
             )}
 
             {comments.length === 0 ? (
-              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No comments yet. Be the first!</p>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>No comments yet. Be the first!</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 {comments.map(comment => (
@@ -1156,7 +1197,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
             borderRadius: 'var(--radius-lg)',
             padding: '16px',
           }}>
-            <h3 style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>Rate this sequence</h3>
+            <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 500, marginBottom: 10 }}>Rate this sequence</h3>
             {user ? (
               <div>
                 <div style={{ display: 'flex', gap: 3, marginBottom: 8 }}>
@@ -1172,7 +1213,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                         background: n <= (hoveredRating ?? selectedScore ?? userRating ?? 0)
                           ? 'var(--accent)' : 'var(--bg-tertiary)',
                         color: n <= (hoveredRating ?? selectedScore ?? userRating ?? 0) ? 'white' : 'var(--text-muted)',
-                        fontSize: 10, fontWeight: 500,
+                        fontSize: 'var(--text-xs)', fontWeight: 500,
                         fontFamily: 'var(--font-sans)',
                       }}
                     >
@@ -1181,16 +1222,16 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                   ))}
                 </div>
                 {userRating && selectedScore === null && (
-                  <p style={{ fontSize: 11, color: 'var(--accent)' }}>
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--accent)' }}>
                     You rated this {userRating}/10
                   </p>
                 )}
                 {selectedScore !== null && (
                   <div style={{ marginTop: 10, paddingTop: 10, borderTop: '0.5px solid var(--border)' }}>
-                    <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', marginBottom: 6 }}>
                       Nothing is saved yet — pick a score of {selectedScore}/10, add detail if you like, then confirm.
                     </p>
-                    <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>
+                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 6 }}>
                       {selectedScore <= 5 ? 'What went wrong? (optional)' : 'What worked well? (optional)'}
                     </p>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
@@ -1204,7 +1245,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                           style={{
                             padding: '4px 8px', borderRadius: 'var(--radius-sm)',
                             border: '0.5px solid var(--border)', cursor: 'pointer',
-                            fontSize: 11, fontFamily: 'var(--font-sans)',
+                            fontSize: 'var(--text-xs)', fontFamily: 'var(--font-sans)',
                             background: pendingTags.includes(tag) ? 'var(--accent)' : 'var(--bg-secondary)',
                             color: pendingTags.includes(tag) ? 'white' : 'var(--text-secondary)',
                           }}
@@ -1221,7 +1262,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                       style={{
                         width: '100%', padding: '6px 8px', marginBottom: 8,
                         border: '0.5px solid var(--border)',
-                        borderRadius: 'var(--radius-md)', fontSize: 11,
+                        borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)',
                         background: 'var(--bg-secondary)', color: 'var(--text-primary)',
                         resize: 'vertical', fontFamily: 'var(--font-sans)',
                       }}
@@ -1233,7 +1274,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                         style={{
                           padding: '5px 12px', background: 'var(--accent)', color: 'white',
                           border: 'none', borderRadius: 'var(--radius-md)', cursor: confirming ? 'not-allowed' : 'pointer',
-                          fontSize: 11, fontWeight: 500, fontFamily: 'var(--font-sans)',
+                          fontSize: 'var(--text-xs)', fontWeight: 500, fontFamily: 'var(--font-sans)',
                           opacity: confirming ? 0.7 : 1,
                         }}
                       >
@@ -1244,25 +1285,25 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                         disabled={confirming}
                         style={{
                           padding: '5px 12px', background: 'none', color: 'var(--text-muted)',
-                          border: 'none', cursor: 'pointer', fontSize: 11, fontFamily: 'var(--font-sans)',
+                          border: 'none', cursor: 'pointer', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-sans)',
                         }}
                       >
                         Cancel
                       </button>
                     </div>
-                    <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 6 }}>
+                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 6 }}>
                       Tags are private to the sequence author. Comments are public.
                     </p>
                   </div>
                 )}
                 {tagsSubmitted && selectedScore === null && (
-                  <p style={{ fontSize: 11, color: 'var(--accent)', marginTop: 8 }}>
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--accent)', marginTop: 8 }}>
                     Thanks for the detail.
                   </p>
                 )}
               </div>
             ) : (
-              <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
                 <a href="/auth/login" style={{ color: 'var(--accent)' }}>Sign in</a> to rate
               </p>
             )}
@@ -1276,21 +1317,21 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
               borderRadius: 'var(--radius-lg)',
               padding: '16px',
             }}>
-              <h3 style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>
+              <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 500, marginBottom: 10 }}>
                 Why people are rating this
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {tagBreakdown.map(({ tag, count }) => (
                   <div key={tag} style={{
                     display: 'flex', justifyContent: 'space-between',
-                    fontSize: 12, color: 'var(--text-secondary)',
+                    fontSize: 'var(--text-xs)', color: 'var(--text-secondary)',
                   }}>
                     <span>{tag}</span>
                     <span style={{ color: 'var(--text-muted)' }}>×{count}</span>
                   </div>
                 ))}
               </div>
-              <p style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 10 }}>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 10 }}>
                 Only visible to you as the sequence author.
               </p>
             </div>
@@ -1303,8 +1344,8 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
             borderRadius: 'var(--radius-lg)',
             padding: '16px',
           }}>
-            <h3 style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>Details</h3>
-            <table style={{ width: '100%', fontSize: 12 }}>
+            <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 500, marginBottom: 10 }}>Details</h3>
+            <table style={{ width: '100%', fontSize: 'var(--text-xs)' }}>
               <tbody>
                 {[
                   ['Class', sequence.class_name],
@@ -1335,7 +1376,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
               borderRadius: 'var(--radius-lg)',
               padding: '16px',
             }}>
-              <h3 style={{ fontSize: 13, fontWeight: 500, marginBottom: 10 }}>
+              <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 500, marginBottom: 10 }}>
                 ST / MT variant
               </h3>
 
@@ -1353,12 +1394,12 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                       marginBottom: canManageLinks ? 10 : 0,
                     }}
                   >
-                    <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>
+                    <div style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>
                       {linkedSequence.title}
                     </div>
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                       <span style={{
-                        fontSize: 10, padding: '1px 5px',
+                        fontSize: 'var(--text-xs)', padding: '1px 5px',
                         borderRadius: 'var(--radius-sm)',
                         background: 'var(--accent-subtle)',
                         color: 'var(--accent-text)',
@@ -1367,7 +1408,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                       </span>
                       {linkedSequence.hero_talent && (
                         <span style={{
-                          fontSize: 10, padding: '1px 5px',
+                          fontSize: 'var(--text-xs)', padding: '1px 5px',
                           borderRadius: 'var(--radius-sm)',
                           background: 'rgba(163,48,201,0.1)',
                           color: '#a330c9',
@@ -1390,7 +1431,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                         background: 'none',
                         color: 'var(--text-muted)',
                         cursor: unlinkLoading ? 'not-allowed' : 'pointer',
-                        fontSize: 11, fontFamily: 'var(--font-sans)',
+                        fontSize: 'var(--text-xs)', fontFamily: 'var(--font-sans)',
                         opacity: unlinkLoading ? 0.6 : 1,
                       }}
                     >
@@ -1411,7 +1452,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                         border: '0.5px solid var(--border-strong)',
                         background: 'var(--bg-secondary)',
                         color: 'var(--text-secondary)',
-                        cursor: 'pointer', fontSize: 12,
+                        cursor: 'pointer', fontSize: 'var(--text-xs)',
                         fontFamily: 'var(--font-sans)',
                       }}
                     >
@@ -1420,7 +1461,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                     </button>
                   ) : (
                     <div>
-                      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 6, lineHeight: 1.5 }}>
+                      <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 6, lineHeight: 1.5 }}>
                         Open the other sequence on lazygrip.net, copy its URL, and paste it below. You can paste the full URL or just the last part after <span style={{ fontFamily: 'var(--font-mono)' }}>/sequences/</span>.
                       </p>
                       <input
@@ -1433,7 +1474,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                         style={{
                           width: '100%', padding: '7px 10px',
                           border: `0.5px solid ${linkError ? '#c0392b' : 'var(--border-strong)'}`,
-                          borderRadius: 'var(--radius-md)', fontSize: 12,
+                          borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)',
                           background: 'var(--bg-secondary)', color: 'var(--text-primary)',
                           fontFamily: 'var(--font-mono)',
                           marginBottom: 6,
@@ -1441,7 +1482,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                         }}
                       />
                       {linkError && (
-                        <p style={{ fontSize: 11, color: '#c0392b', marginBottom: 6 }}>{linkError}</p>
+                        <p style={{ fontSize: 'var(--text-xs)', color: '#c0392b', marginBottom: 6 }}>{linkError}</p>
                       )}
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button
@@ -1454,7 +1495,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                             background: 'var(--accent)',
                             color: 'white',
                             cursor: (!linkSlug.trim() || linkLoading) ? 'not-allowed' : 'pointer',
-                            fontSize: 12, fontWeight: 500,
+                            fontSize: 'var(--text-xs)', fontWeight: 500,
                             fontFamily: 'var(--font-sans)',
                             opacity: (!linkSlug.trim() || linkLoading) ? 0.6 : 1,
                           }}
@@ -1470,7 +1511,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                             border: '0.5px solid var(--border-strong)',
                             background: 'none',
                             color: 'var(--text-muted)',
-                            cursor: 'pointer', fontSize: 12,
+                            cursor: 'pointer', fontSize: 'var(--text-xs)',
                             fontFamily: 'var(--font-sans)',
                           }}
                         >
@@ -1492,10 +1533,10 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
               borderRadius: 'var(--radius-lg)',
               padding: '16px',
             }}>
-              <h3 style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Talent build</h3>
+              <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 500, marginBottom: 8 }}>Talent build</h3>
               <div style={{
                 fontFamily: 'var(--font-mono)',
-                fontSize: 10,
+                fontSize: 'var(--text-xs)',
                 background: 'var(--bg-tertiary)',
                 padding: '8px',
                 borderRadius: 'var(--radius-sm)',
@@ -1515,8 +1556,8 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
               borderRadius: 'var(--radius-lg)',
               padding: '16px',
             }}>
-              <h3 style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Performance notes</h3>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+              <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 500, marginBottom: 8 }}>Performance notes</h3>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                 {selectedVersion.performance_notes}
               </p>
             </div>
@@ -1530,12 +1571,12 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
               borderRadius: 'var(--radius-lg)',
               padding: '16px',
             }}>
-              <h3 style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>Warcraft Logs</h3>
+              <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 500, marginBottom: 8 }}>Warcraft Logs</h3>
               <a
                 href={warcraftLogsHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ fontSize: 12, color: 'var(--accent)', wordBreak: 'break-all' }}
+                style={{ fontSize: 'var(--text-xs)', color: 'var(--accent)', wordBreak: 'break-all' }}
               >
                 View log report
               </a>
@@ -1580,14 +1621,14 @@ function CommentThread({
           width: 32, height: 32, borderRadius: '50%',
           background: 'var(--accent-subtle)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 12, fontWeight: 500, color: 'var(--accent-text)',
+          fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--accent-text)',
           flexShrink: 0,
         }}>
           {(comment.author?.username ?? '?')[0].toUpperCase()}
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'baseline', marginBottom: 4 }}>
-            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
+            <span style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)' }}>
               {comment.author?.username ? (
                 <a
                   href={`/user/${comment.author.username}`}
@@ -1599,7 +1640,7 @@ function CommentThread({
                 </a>
               ) : comment.author?.username}
             </span>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)' }} suppressHydrationWarning>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }} suppressHydrationWarning>
               {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
             </span>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
@@ -1608,7 +1649,7 @@ function CommentThread({
                   onClick={() => onReplyClick(comment.id)}
                   style={{
                     background: 'none', border: 'none',
-                    cursor: 'pointer', fontSize: 11,
+                    cursor: 'pointer', fontSize: 'var(--text-xs)',
                     color: isReplying ? 'var(--accent)' : 'var(--text-muted)',
                     fontFamily: 'var(--font-sans)',
                     padding: '2px 4px', borderRadius: 4,
@@ -1637,7 +1678,7 @@ function CommentThread({
               )}
             </div>
           </div>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
 		  {comment.body}
 		  </p>
 
@@ -1652,7 +1693,7 @@ function CommentThread({
                 style={{
                   width: '100%', padding: '8px 10px',
                   border: '0.5px solid var(--accent)',
-                  borderRadius: 'var(--radius-md)', fontSize: 13,
+                  borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)',
                   background: 'var(--bg-secondary)', color: 'var(--text-primary)',
                   resize: 'vertical', fontFamily: 'var(--font-sans)',
                   marginBottom: 6,
@@ -1664,7 +1705,7 @@ function CommentThread({
                 style={{
                   padding: '6px 14px', background: 'var(--accent)', color: 'white',
                   border: 'none', borderRadius: 'var(--radius-md)',
-                  cursor: 'pointer', fontSize: 12, fontWeight: 500,
+                  cursor: 'pointer', fontSize: 'var(--text-xs)', fontWeight: 500,
                   fontFamily: 'var(--font-sans)',
                 }}
               >
@@ -1717,7 +1758,7 @@ function Badge({ color, children }: { color: string; children: React.ReactNode }
   const b = parseInt(hex.slice(4,6), 16) || 100
   return (
     <span style={{
-      fontSize: 12, fontWeight: 500, padding: '3px 8px',
+      fontSize: 'var(--text-xs)', fontWeight: 500, padding: '3px 8px',
       borderRadius: 'var(--radius-sm)',
       background: `rgba(${r},${g},${b},0.12)`,
       color: color === '#888' ? 'var(--text-secondary)' : color,

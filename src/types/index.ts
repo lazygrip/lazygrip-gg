@@ -24,6 +24,10 @@ export type Profile = {
   battletag: string | null
   bio: string | null
   created_at: string
+  // Set once the user completes the /welcome onboarding interstitial (custom
+  // username + guidelines acknowledgment). Null until then. Added alongside
+  // the has_completed_onboarding() DB function and the username-deadline policy.
+  terms_accepted_at?: string | null
 }
 
 export type LinkedSequence = {

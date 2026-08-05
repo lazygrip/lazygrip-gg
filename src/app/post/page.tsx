@@ -7,6 +7,8 @@ import { AlertCircle, ChevronUp, ChevronDown, Wand2 } from 'lucide-react'
 import TiptapEditor from '@/components/editor/TiptapEditor'
 import type { SequenceStep } from '@/types'
 import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
+import { useUsernameGate } from '@/lib/useUsernameGate'
+import UsernameRequiredModal from '@/components/UsernameRequiredModal'
 
 const PATCH_VERSIONS = ['12.0', '12.0.5', '12.0.7']
 const DEFAULT_GRIP_VERSION = '2.1.20'
@@ -77,6 +79,9 @@ function PostForm() {
   const supabase = createClient()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [showUsernameModal, setShowUsernameModal] = useState(false)
+  const [gatedUserId, setGatedUserId] = useState<string | null>(null)
+  const { checkGate } = useUsernameGate()
   const [loadingEdit, setLoadingEdit] = useState(isEditMode)
   const [editSlug, setEditSlug] = useState<string | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -680,6 +685,12 @@ async function runDecode(exportString: string) {
       setAutosaveStatus('saved')
     } catch (err) {
       console.error('[autosave] failed:', err)
+      // Deliberately does not trigger the username modal here -- autosave runs
+      // silently in the background and popping a modal mid-typing would be
+      // jarring. The middleware already prevents incomplete-onboarding users
+      // from reaching this page in normal use; if this fires anyway (stale
+      // session), the "Autosave failed" indicator plus the Publish button's
+      // own gate check (which DOES show the modal) is enough of a signal.
       setAutosaveStatus('error')
     } finally {
       autosaveInFlightRef.current = false
@@ -710,6 +721,21 @@ async function runDecode(exportString: string) {
     if (!form.class_id || !form.content_type) {
       setError('Class and content type are required.')
       return
+    }
+
+    // Gate check before either submit path runs. The middleware in
+    // src/middleware.ts already blocks incomplete-onboarding users from
+    // reaching /post at all, so this is a backstop for a stale session or
+    // a race between the middleware check and this submit, not the primary
+    // defense. The DB-side RLS/RPC checks remain the real enforcement either way.
+    const { data: { user: gateUser } } = await supabase.auth.getUser()
+    if (gateUser) {
+      const gate = await checkGate(gateUser.id)
+      if (!gate.ok) {
+        setGatedUserId(gateUser.id)
+        setShowUsernameModal(true)
+        return
+      }
     }
 
     // Collection submit path -- one record, collection_sequences jsonb
@@ -881,7 +907,13 @@ async function runDecode(exportString: string) {
         }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
-        setError(message)
+        if (message.startsWith('username_required')) {
+          const { data: { user: currentUser } } = await supabase.auth.getUser()
+          if (currentUser) setGatedUserId(currentUser.id)
+          setShowUsernameModal(true)
+        } else {
+          setError(message)
+        }
       } finally {
         setSubmitting(false)
       }
@@ -1093,7 +1125,13 @@ async function runDecode(exportString: string) {
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
-      setError(message)
+      if (message.startsWith('username_required')) {
+        const { data: { user: currentUser } } = await supabase.auth.getUser()
+        if (currentUser) setGatedUserId(currentUser.id)
+        setShowUsernameModal(true)
+      } else {
+        setError(message)
+      }
     } finally {
       setSubmitting(false)
     }
@@ -1101,14 +1139,14 @@ async function runDecode(exportString: string) {
 
   if (loadingEdit || checkingDrafts) return (
     <div style={{ maxWidth: 760, margin: '80px auto', padding: '0 24px', textAlign: 'center' }}>
-      <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Loading...</p>
+      <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>Loading...</p>
     </div>
   )
 
   if (pendingDrafts && pendingDrafts.length > 0) return (
     <div style={{ maxWidth: 760, margin: '80px auto', padding: '0 24px' }}>
       <h1 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>You have unfinished drafts</h1>
-      <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 20 }}>
+      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 20 }}>
         Pick up where you left off, or discard the ones you don't need.
       </p>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1119,8 +1157,8 @@ async function runDecode(exportString: string) {
             padding: '14px 16px',
           }}>
             <div>
-              <p style={{ fontSize: 14, fontWeight: 500 }}>{d.title || 'Untitled draft'}</p>
-              <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+              <p style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>{d.title || 'Untitled draft'}</p>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
                 {d.class_name || 'No class set'} — last edited {new Date(d.updated_at).toLocaleString()}
               </p>
             </div>
@@ -1133,7 +1171,7 @@ async function runDecode(exportString: string) {
                 }}
                 style={{
                   background: 'var(--accent)', color: 'white', border: 'none',
-                  borderRadius: 'var(--radius-md)', padding: '8px 14px', fontSize: 13, cursor: 'pointer',
+                  borderRadius: 'var(--radius-md)', padding: '8px 14px', fontSize: 'var(--text-sm)', cursor: 'pointer',
                 }}
               >
                 Resume
@@ -1144,7 +1182,7 @@ async function runDecode(exportString: string) {
                 style={{
                   background: 'var(--bg-secondary)', color: 'var(--text-secondary)',
                   border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)',
-                  padding: '8px 14px', fontSize: 13, cursor: 'pointer',
+                  padding: '8px 14px', fontSize: 'var(--text-sm)', cursor: 'pointer',
                 }}
               >
                 Discard
@@ -1159,10 +1197,23 @@ async function runDecode(exportString: string) {
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', padding: '32px 24px' }}>
 
+      {/* Username required modal: shown when a publish or autosave attempt
+          hits the DB-side onboarding gate. Middleware normally prevents
+          reaching this page at all without a completed username, so this is
+          a backstop for a stale session, not the primary defense. Form state
+          is untouched if dismissed -- nothing typed is lost. */}
+      {showUsernameModal && gatedUserId && (
+        <UsernameRequiredModal
+          userId={gatedUserId}
+          onClose={() => setShowUsernameModal(false)}
+          onSuccess={() => setShowUsernameModal(false)}
+        />
+      )}
+
       <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 6 }}>
         {isEditMode ? 'Edit sequence' : 'Post a sequence'}
       </h1>
-      <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 28 }}>
+      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 28 }}>
         {isEditMode
           ? 'Update your sequence details below. Changes will be live immediately.'
           : 'Share your GRIP-EMS sequence with the community. Include your GRIP export string so others can import it directly.'}
@@ -1181,7 +1232,7 @@ async function runDecode(exportString: string) {
             }}
             style={{
               background: 'none', border: '1px solid #c41e3a', borderRadius: 'var(--radius-md)',
-              padding: '8px 14px', color: '#c41e3a', fontSize: 13, fontWeight: 500,
+              padding: '8px 14px', color: '#c41e3a', fontSize: 'var(--text-sm)', fontWeight: 500,
               cursor: 'pointer',
             }}
           >
@@ -1201,19 +1252,19 @@ async function runDecode(exportString: string) {
                 border: '0.5px solid rgba(29,158,117,0.3)',
                 borderRadius: 'var(--radius-md)',
               }}>
-                <span style={{ fontSize: 16, flexShrink: 0, lineHeight: 1.4 }}>👆</span>
+                <span style={{ fontSize: 'var(--text-base)', flexShrink: 0, lineHeight: 1.4 }}>👆</span>
                 <div>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-sans)', marginBottom: 3 }}>
+                  <p style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-sans)', marginBottom: 3 }}>
                     Start here: paste your GRIP export string
                   </p>
-                  <p style={{ fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', lineHeight: 1.5 }}>
                     In GRIP-EMS, open your sequence and click Export. Paste the string below and LazyGrip will automatically fill in your class, spec, step function, and steps. Collection exports with multiple sequences are supported.
                   </p>
                 </div>
               </div>
             )}
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 5 }}>
+              <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 5 }}>
                 GRIP export string
               </label>
               <style>{`
@@ -1234,10 +1285,10 @@ async function runDecode(exportString: string) {
                 onChange={e => handleGripStringChange(e.target.value)}
                 placeholder="Paste your GRIP1 export string here. Class, spec, and step function will fill automatically. Collection exports with multiple sequences are supported."
                 rows={4}
-                style={{ fontFamily: 'var(--font-mono)', fontSize: 12, resize: 'vertical' }}
+                style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', resize: 'vertical' }}
               />
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
-                <p style={{ fontSize: 11, color: 'var(--text-muted)', flex: 1 }}>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', flex: 1 }}>
                   Paste your export string and class, spec, step function, and steps will decode automatically.
                 </p>
                 <button
@@ -1248,7 +1299,7 @@ async function runDecode(exportString: string) {
                     display: 'flex', alignItems: 'center', gap: 5,
                     padding: '5px 10px', background: decoding ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
                     border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)',
-                    fontSize: 12, color: decoding ? 'var(--text-muted)' : 'var(--text-secondary)',
+                    fontSize: 'var(--text-xs)', color: decoding ? 'var(--text-muted)' : 'var(--text-secondary)',
                     cursor: decoding || !form.grip_string.trim() ? 'not-allowed' : 'pointer',
                     fontFamily: 'var(--font-sans)', whiteSpace: 'nowrap',
                   }}
@@ -1258,7 +1309,7 @@ async function runDecode(exportString: string) {
                 </button>
               </div>
               {decodeError && (
-                <p style={{ fontSize: 12, color: '#c41e3a', marginTop: 6, fontFamily: 'var(--font-sans)' }}>
+                <p style={{ fontSize: 'var(--text-xs)', color: '#c41e3a', marginTop: 6, fontFamily: 'var(--font-sans)' }}>
                   {decodeError}
                 </p>
               )}
@@ -1268,12 +1319,12 @@ async function runDecode(exportString: string) {
             {!collectionSequences && (
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                  <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
+                  <label style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-secondary)' }}>
                     Steps (plain text)
                   </label>
                   {stepsAutoPopulated && (
                     <span style={{
-                      fontSize: 11, color: 'var(--accent)', fontFamily: 'var(--font-sans)',
+                      fontSize: 'var(--text-xs)', color: 'var(--accent)', fontFamily: 'var(--font-sans)',
                       padding: '2px 7px', background: 'rgba(29,158,117,0.1)',
                       borderRadius: 'var(--radius-sm)', border: '0.5px solid rgba(29,158,117,0.3)',
                     }}>
@@ -1286,9 +1337,9 @@ async function runDecode(exportString: string) {
                   onChange={e => handleStepsChange(e.target.value)}
                   placeholder={`/targetenemy [noharm][dead]\n/cast [noform:1] Bear Form\n/cast Mangle`}
                   rows={8}
-                  style={{ fontFamily: 'var(--font-mono)', fontSize: 12, resize: 'vertical' }}
+                  style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', resize: 'vertical' }}
                 />
-                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 4 }}>
                   Paste steps one per line, or decode from your export string above. Users can read these without importing.
                 </p>
               </div>
@@ -1303,7 +1354,7 @@ async function runDecode(exportString: string) {
                 background: 'rgba(29,158,117,0.07)',
                 border: '0.5px solid rgba(29,158,117,0.3)',
                 borderRadius: 'var(--radius-md)',
-                fontSize: 13,
+                fontSize: 'var(--text-sm)',
                 color: 'var(--text-secondary)',
                 fontFamily: 'var(--font-sans)',
               }}>
@@ -1312,7 +1363,7 @@ async function runDecode(exportString: string) {
 
               {/* Collection page title */}
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 5 }}>
+                <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 5 }}>
                   Page title *
                 </label>
                 <input
@@ -1321,7 +1372,7 @@ async function runDecode(exportString: string) {
                   onChange={e => { setCollectionTitle(e.target.value); scheduleAutosave() }}
                   placeholder="e.g. Slowdog's Ret Paladin M+ — Templar ST & MT V1.0"
                 />
-                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 4 }}>
                   This is the title of the sequence page. Each tab inside will use the label you give it below.
                 </p>
               </div>
@@ -1351,7 +1402,7 @@ async function runDecode(exportString: string) {
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span style={{
-                            fontSize: 11, color: 'var(--text-muted)',
+                            fontSize: 'var(--text-xs)', color: 'var(--text-muted)',
                             fontFamily: 'var(--font-mono)',
                             padding: '2px 6px',
                             background: 'var(--bg-primary)',
@@ -1360,13 +1411,13 @@ async function runDecode(exportString: string) {
                           }}>
                             {seq.name}
                           </span>
-                          <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>
+                          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>
                             {seq.steps.length} steps
                           </span>
                         </div>
 
                         <div>
-                          <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                          <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 4 }}>
                             Tab label
                           </label>
                           <input
@@ -1380,7 +1431,7 @@ async function runDecode(exportString: string) {
                         </div>
 
                         <div>
-                          <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                          <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 4 }}>
                             Talent string <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional, per-sequence)</span>
                           </label>
                           <input
@@ -1389,7 +1440,7 @@ async function runDecode(exportString: string) {
                             onChange={e => updateCollectionSequence(seq.index, { talent_string: e.target.value })}
                             placeholder="Paste talent import string if different from the other sequence..."
                             disabled={!seq.checked}
-                            style={{ fontFamily: 'var(--font-mono)', fontSize: 12, opacity: seq.checked ? 1 : 0.5 }}
+                            style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', opacity: seq.checked ? 1 : 0.5 }}
                           />
                         </div>
                       </div>
@@ -1403,7 +1454,7 @@ async function runDecode(exportString: string) {
                   type="button"
                   onClick={() => { setCollectionSequences(prev => prev ? prev.map(s => ({ ...s, checked: true })) : prev); scheduleAutosave() }}
                   style={{
-                    fontSize: 12, color: 'var(--text-secondary)', background: 'transparent',
+                    fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', background: 'transparent',
                     border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)',
                     padding: '4px 10px', cursor: 'pointer', fontFamily: 'var(--font-sans)',
                   }}
@@ -1414,7 +1465,7 @@ async function runDecode(exportString: string) {
                   type="button"
                   onClick={() => { setCollectionSequences(prev => prev ? prev.map(s => ({ ...s, checked: false })) : prev); scheduleAutosave() }}
                   style={{
-                    fontSize: 12, color: 'var(--text-secondary)', background: 'transparent',
+                    fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', background: 'transparent',
                     border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)',
                     padding: '4px 10px', cursor: 'pointer', fontFamily: 'var(--font-sans)',
                   }}
@@ -1539,7 +1590,7 @@ async function runDecode(exportString: string) {
               </Field>
             </div>
             {collectionSequences && (
-              <p style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginTop: 4 }}>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginTop: 4 }}>
                 These fields apply to the collection page. Step function per sequence is read from the export string automatically.
               </p>
             )}
@@ -1578,7 +1629,7 @@ async function runDecode(exportString: string) {
                   value={form.talent_string}
                   onChange={e => setField('talent_string', e.target.value)}
                   placeholder="Paste talent string..."
-                  style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}
+                  style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}
                 />
               </Field>
             )}
@@ -1608,7 +1659,7 @@ async function runDecode(exportString: string) {
               display: 'flex', alignItems: 'center', gap: 8,
               background: 'rgba(196,30,58,0.08)', border: '0.5px solid rgba(196,30,58,0.2)',
               borderRadius: 'var(--radius-md)', padding: '10px 14px',
-              color: '#c41e3a', fontSize: 13,
+              color: '#c41e3a', fontSize: 'var(--text-sm)',
             }}>
               <AlertCircle size={15} />
               {error}
@@ -1622,7 +1673,7 @@ async function runDecode(exportString: string) {
               style={{
                 background: 'var(--accent)', color: 'white', border: 'none',
                 borderRadius: 'var(--radius-md)', padding: '12px 24px',
-                fontSize: 14, fontWeight: 500,
+                fontSize: 'var(--text-sm)', fontWeight: 500,
                 cursor: submitting ? 'not-allowed' : 'pointer',
                 opacity: submitting ? 0.7 : 1, fontFamily: 'var(--font-sans)',
               }}
@@ -1637,7 +1688,7 @@ async function runDecode(exportString: string) {
             </button>
             {autosaveStatus !== 'idle' && (
               <span style={{
-                fontSize: 12, fontFamily: 'var(--font-sans)',
+                fontSize: 'var(--text-xs)', fontFamily: 'var(--font-sans)',
                 color: autosaveStatus === 'error' ? '#c41e3a' : 'var(--text-muted)',
               }}>
                 {autosaveStatus === 'saving' && 'Saving draft...'}
@@ -1656,7 +1707,7 @@ async function runDecode(exportString: string) {
                 />
                 <label
                   htmlFor="minor-edit"
-                  style={{ fontSize: 13, color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
+                  style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
                 >
                   Minor edit — updates title, description, performance notes, and metadata without creating a new version
                 </label>
@@ -1670,7 +1721,7 @@ async function runDecode(exportString: string) {
                 style={{
                   background: 'var(--bg-secondary)', color: 'var(--text-secondary)',
                   border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)',
-                  padding: '12px 20px', fontSize: 14, cursor: 'pointer',
+                  padding: '12px 20px', fontSize: 'var(--text-sm)', cursor: 'pointer',
                   fontFamily: 'var(--font-sans)',
                 }}
               >
@@ -1689,7 +1740,7 @@ export default function PostPage() {
   return (
     <Suspense fallback={
       <div style={{ maxWidth: 760, margin: '80px auto', padding: '0 24px', textAlign: 'center' }}>
-        <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Loading...</p>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>Loading...</p>
       </div>
     }>
       <PostForm />
@@ -1703,7 +1754,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
       borderRadius: 'var(--radius-lg)', padding: '20px',
     }}>
-      <h2 style={{ fontSize: 14, fontWeight: 500, marginBottom: 16, color: 'var(--text-primary)' }}>
+      <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 500, marginBottom: 16, color: 'var(--text-primary)' }}>
         {title}
       </h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -1716,12 +1767,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 5 }}>
+      <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 5 }}>
         {label}
       </label>
       {children}
       {hint && (
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{hint}</p>
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 4 }}>{hint}</p>
       )}
     </div>
   )
