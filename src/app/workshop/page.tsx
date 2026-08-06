@@ -42,7 +42,7 @@ Macro Export Tools
 href="/workshop/decode"
 eyebrow="Inspect"
 title="Decode Export"
-description="View loops, actions, steps, and talent builds from !EMS1!, !GRIP1!, or !GSE3! strings."
+description="View loops, actions, steps, and talent builds from !EMS1!, !GRIP1!, or legacy program export strings."
 icon={<Search size={20} />}
 cta="Open decoder"
 />
@@ -50,7 +50,7 @@ cta="Open decoder"
 href="/workshop/convert"
 eyebrow="Transform"
 title="Convert to GRIP"
-description="Paste a GSE3 export and get a native !GRIP1! string with proper loop architecture and keypress handling."
+description="Paste a legacy program export and get a native !GRIP1! string with proper loop architecture and keypress handling."
 icon={<ArrowRightLeft size={20} />}
 cta="Open converter"
 />

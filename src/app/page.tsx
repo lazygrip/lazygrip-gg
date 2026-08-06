@@ -150,7 +150,7 @@ export default function HomePage() {
                 Build GRIP sequences in the browser
               </h2>
               <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 600, marginBottom: 16 }}>
-                The Workshop includes a full sequence builder. Create collections with multiple sequences and versions, add loops, if branches, and pause blocks, set keypress macros, and export a ready-to-import GRIP string without ever opening the addon. Import any existing GRIP or GSE export to inspect and edit it directly.
+                The Workshop includes a full sequence builder. Create collections with multiple sequences and versions, add loops, if branches, and pause blocks, set keypress macros, and export a ready-to-import GRIP string without ever opening the addon. Import any existing GRIP or legacy program export to inspect and edit it directly.
               </p>
               <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' as const }}>
                 {[

@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   const cleaned = code.trim().replace(/\s+/g, '')
 
   if (!/^!(EMS1|GRIP1|GSE3|FRG1|GEMSCP1)!/i.test(cleaned)) {
-    return NextResponse.json({ error: 'Paste an !EMS1!, !GRIP1!, !GSE3!, !FRG1!, or !GEMSCP1! export code.' }, { status: 422 })
+    return NextResponse.json({ error: 'Paste an !EMS1!, !GRIP1!, !FRG1!, !GEMSCP1!, or legacy program export code.' }, { status: 422 })
   }
 
   let data: any

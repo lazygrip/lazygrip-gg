@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    return NextResponse.json({ error: 'Paste an !EMS1!, !GRIP1!, or !GSE3! export code.' }, { status: 422 })
+    return NextResponse.json({ error: 'Paste an !EMS1!, !GRIP1!, or legacy program export code.' }, { status: 422 })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Failed to decode export.'
     return NextResponse.json({ error: message }, { status: 422 })

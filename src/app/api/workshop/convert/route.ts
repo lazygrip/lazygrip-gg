@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   if (!code || typeof code !== 'string') return NextResponse.json({ error: 'code is required.' }, { status: 400 })
 
   if (!/^!GSE3!/i.test(code.trim())) {
-    return NextResponse.json({ error: 'Convert expects a !GSE3! export code.' }, { status: 422 })
+    return NextResponse.json({ error: 'Convert expects a legacy program export code.' }, { status: 422 })
   }
 
   try {
