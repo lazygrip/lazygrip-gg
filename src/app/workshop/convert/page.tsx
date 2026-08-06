@@ -238,7 +238,7 @@ export default function WorkshopConvertPage() {
     if (timerRef.current) clearTimeout(timerRef.current)
     const code = input.trim()
     if (!code) { setResult(null); setDecoded(null); setError(null); return }
-    if (!/^!GSE3!/i.test(code)) { setError('Paste a !GSE3! export code.'); setResult(null); setDecoded(null); return }
+    if (!/^!GSE3!/i.test(code)) { setError('Paste a legacy program export code.'); setResult(null); setDecoded(null); return }
     setError(null)
     timerRef.current = setTimeout(() => convert(code), 350)
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
@@ -293,16 +293,16 @@ export default function WorkshopConvertPage() {
             <p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 4 }}>Transform</p>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: 6 }}>Convert to GRIP</h1>
             <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              Paste a GSE3 export and get a native !GRIP1! string with proper loop architecture and keypress handling.
+              Paste a legacy program export and get a native !GRIP1! string with proper loop architecture and keypress handling.
             </p>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <label style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-secondary)' }}>GSE3 export</label>
+            <label style={{ fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-secondary)' }}>Legacy program export</label>
             <textarea
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Paste !GSE3!..."
+              placeholder="Paste a legacy program export..."
               rows={8}
               spellCheck={false}
               style={{
@@ -358,7 +358,7 @@ export default function WorkshopConvertPage() {
                   Converted to GRIP: <strong style={{ color: 'var(--text-primary)' }}>{result.sequenceCount}</strong> sequence{result.sequenceCount !== 1 ? 's' : ''} — ready to import into GRIP.
                 </p>
                 <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 8 }}>
-                  Origin: GSE{originAuthor ? `, author ${originAuthor}` : ''}
+                  Origin: Legacy program{originAuthor ? `, author ${originAuthor}` : ''}
                 </p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {result.sequenceNames.map(name => (

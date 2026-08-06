@@ -221,7 +221,7 @@ export default function WorkshopDecodePage() {
     if (timerRef.current) clearTimeout(timerRef.current)
     const code = input.trim()
     if (!code) { setResult(null); setError(null); return }
-    if (!/^!(EMS1|GRIP1|GSE3)!/i.test(code)) { setError('Paste an !EMS1!, !GRIP1!, or !GSE3! export code.'); setResult(null); return }
+    if (!/^!(EMS1|GRIP1|GSE3)!/i.test(code)) { setError('Paste an !EMS1!, !GRIP1!, or legacy program export code.'); setResult(null); return }
     setError(null)
     timerRef.current = setTimeout(() => decode(code), 350)
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
@@ -273,7 +273,7 @@ export default function WorkshopDecodePage() {
           <div>
             <p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 4 }}>Inspect</p>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: 6 }}>Decode Export</h1>
-            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>View loops, actions, and steps from !EMS1!, !GRIP1!, or !GSE3! strings.</p>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>View loops, actions, and steps from !EMS1!, !GRIP1!, or legacy program export strings.</p>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -281,7 +281,7 @@ export default function WorkshopDecodePage() {
             <textarea
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Paste !EMS1!, !GRIP1!, or !GSE3!..."
+              placeholder="Paste !EMS1!, !GRIP1!, or a legacy program export..."
               rows={8}
               spellCheck={false}
               style={{
@@ -355,7 +355,7 @@ export default function WorkshopDecodePage() {
                     ['Version', result.meta.version as string],
                     result.sequences[0]?.class && ['Class', result.sequences[0].class],
                     result.sequences[0]?.spec && ['Spec', result.sequences[0].spec],
-                    isGSEOrigin ? ['Origin', 'GSE'] : '',
+                    isGSEOrigin ? ['Origin', 'Legacy program'] : '',
                     isGSEOrigin && originAuthor ? ['Author', originAuthor] : '',
                   ].filter(Boolean).map(([label, value]) => value && (
                     <span key={label as string} style={{ fontSize: 'var(--text-xs)', padding: '3px 8px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}>

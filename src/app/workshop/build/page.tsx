@@ -1165,7 +1165,7 @@ export default function WorkshopBuildPage() {
         </button>
         {importOpen && (
           <div style={{ padding: '12px 14px', background: 'var(--bg-primary)', borderTop: '0.5px solid var(--border)' }}>
-            <textarea value={importInput} onChange={e => setImportInput(e.target.value)} placeholder="Paste !GRIP1! or !EMS1! export, !GSE3! macro, or raw /cast lines..." rows={4} spellCheck={false} style={{ ...S.textarea(), marginBottom: 8 }} />
+            <textarea value={importInput} onChange={e => setImportInput(e.target.value)} placeholder="Paste !GRIP1! or !EMS1! export, a legacy program macro, or raw /cast lines..." rows={4} spellCheck={false} style={{ ...S.textarea(), marginBottom: 8 }} />
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               <button onClick={importIntoBuilder} style={S.btn(true)}>Import into builder</button>
               <button onClick={() => { setImportInput(''); setImportError('') }} style={S.btn()}>Clear</button>
