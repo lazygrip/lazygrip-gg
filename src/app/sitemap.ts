@@ -173,12 +173,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.6,
     },
     {
-      url: 'https://lazygrip.net/workshop/convert',
-      lastModified: CONTENT_UPDATED,
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    },
-    {
       url: 'https://lazygrip.net/workshop/decode',
       lastModified: CONTENT_UPDATED,
       changeFrequency: 'monthly',

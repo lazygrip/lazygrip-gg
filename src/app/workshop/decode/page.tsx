@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowRightLeft, Copy, Check } from 'lucide-react'
+import { Copy, Check } from 'lucide-react'
 
 interface ActionNode {
   index: number
@@ -244,11 +244,6 @@ export default function WorkshopDecodePage() {
     setTimeout(() => setCopiedTalent(null), 1500)
   }
 
-  function handleConvertToGRIP() {
-    sessionStorage.setItem('workshop_convert_input', input.trim())
-    router.push('/workshop/convert')
-  }
-
   if (loading) return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Loading...</span></div>
 
   const isGSE = result?.meta?.format === 'GSE3'
@@ -315,20 +310,6 @@ export default function WorkshopDecodePage() {
             >
               Clear
             </button>
-            {isGSE && (
-              <button
-                onClick={handleConvertToGRIP}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '8px 14px', background: 'var(--bg-tertiary)',
-                  border: '0.5px solid var(--accent)', borderRadius: 'var(--radius-md)',
-                  fontSize: 'var(--text-sm)', color: 'var(--accent)', fontWeight: 500,
-                  cursor: 'pointer', fontFamily: 'var(--font-sans)',
-                }}
-              >
-                <ArrowRightLeft size={13} /> Convert to GRIP
-              </button>
-            )}
           </div>
 
           {error && <p style={{ fontSize: 'var(--text-xs)', color: '#c0392b' }}>{error}</p>}
