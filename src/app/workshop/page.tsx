@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Search, ArrowRightLeft, Wrench, ExternalLink } from 'lucide-react'
+import { Search, Wrench, ExternalLink } from 'lucide-react'
 
 export default function WorkshopPage() {
 const [loading, setLoading] = useState(true)
@@ -45,14 +45,6 @@ title="Decode Export"
 description="View loops, actions, steps, and talent builds from !EMS1!, !GRIP1!, or legacy program export strings."
 icon={<Search size={20} />}
 cta="Open decoder"
-/>
-<ToolCard
-href="/workshop/convert"
-eyebrow="Transform"
-title="Convert to GRIP"
-description="Paste a legacy program export and get a native !GRIP1! string with proper loop architecture and keypress handling."
-icon={<ArrowRightLeft size={20} />}
-cta="Open converter"
 />
 <ToolCard
 href="/workshop/build"
