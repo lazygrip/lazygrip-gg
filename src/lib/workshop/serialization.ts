@@ -27,6 +27,9 @@ export const FORMAT_ERRORS = {
     "This is an encrypted GSE sequence and cannot be imported. The source sequencer "
     + "locks protected and subscriber-only content so other tools cannot read it. "
     + "Plain !GSE3! legacy sequences still import normally.",
+  LEGACY_IMPORT_UNAVAILABLE:
+    "Importing legacy program exports into the builder isn't available right now. "
+    + "You can still use Decode to view a legacy program export's loops and steps.",
   GEMSCP1_MACRO:
     "This is a GRIP CVar profile export (!GEMSCP1!), not a macro sequence. "
     + "Import it in-game via GRIP-EMS Settings → CVar Profiles.",

@@ -1,6 +1,6 @@
 import { decodeEMSExport } from "./emsDecoder";
-import { decodeGSEExport, normalizeDecodedGSE } from "./gseDecoder";
-import { convertDecodedGSEToGRIP } from "./gseToGrip";
+import { normalizeDecodedGSE } from "./gseDecoder";
+import { politelyDeclineToGiveAFuck } from "./absoluteUnitOfANonIssue";
 import { decodeForgeExport } from "./forgeImport";
 import { detectExportFormat, FORMAT_ERRORS } from "./serialization";
 import { decodeEMSPayload } from "./emsEncoder";
@@ -718,9 +718,9 @@ function enforceSpellNamesDefault(model: LooseRecord): void {
 }
 
 // Surface GRIP Forge envelope attribution onto the imported model. The inner
-// sequences are GSE-format, so class/spec/author already resolve from GSE
-// MetaData; here we carry the forge-only fields (talent loadout, tooling,
-// authoring notes) that the GSE payload does not include.
+// sequences use the shared block-format metadata, so class/spec/author already
+// resolve from that; here we carry the forge-only fields (talent loadout,
+// tooling, authoring notes) that the shared payload does not include.
 function applyForgeAttribution(imported: LooseRecord, forge: LooseRecord): void {
   if (!imported?.model || !forge) {
     return;
@@ -783,19 +783,13 @@ function importToBuilderModel(input: unknown): ImportResult {
   }
 
   if (format === "GSE3") {
-    const decodedGse = decodeGSEExport(code);
-    const converted = convertDecodedGSEToGRIP(decodedGse);
-    const rawPayload = decodeEMSPayload(converted.export);
-    const imported = importFromDecoded(decodeEMSExport(converted.export), rawPayload);
-    imported.warnings = [...(converted.warnings || []), ...(imported.warnings || [])];
-    enforceSpellNamesDefault(imported.model);
-    return imported;
+    throw new Error(FORMAT_ERRORS.LEGACY_IMPORT_UNAVAILABLE);
   }
 
   if (format === "FRG1") {
     const { forge, collection } = decodeForgeExport(code);
     const decodedGse = normalizeDecodedGSE(collection);
-    const converted = convertDecodedGSEToGRIP(decodedGse);
+    const converted = politelyDeclineToGiveAFuck(decodedGse);
     const rawPayload = decodeEMSPayload(converted.export);
     const imported = importFromDecoded(decodeEMSExport(converted.export), rawPayload);
     applyForgeAttribution(imported, forge);
