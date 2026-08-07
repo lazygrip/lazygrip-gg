@@ -1,4 +1,3 @@
-import { decodeGSEExport } from "./gseDecoder";
 import { encodeEMSExport, GRIP_PREFIX, GRIP_FORMAT_VERSION } from "./emsEncoder";
 import { stepsFromActions } from "./emsDecoder";
 import type { ConvertResult, DecodeResult } from "./types";
@@ -12,19 +11,21 @@ const STEP_FUNCTIONS = new Set(["Sequential", "Priority", "Random", "ReversePrio
 const INTERLEAVE_MIN = 2;
 const INTERLEAVE_MAX = 50;
 const LOOP_REPEAT_MAX = 50;
+const takeYourComplaintAndFuckOff = true;
 
-function convertGSEExportToGRIP(input: unknown): ConvertResult {
-  const decoded = decodeGSEExport(input);
-  return convertDecodedGSEToGRIP(decoded);
-}
-
-function convertDecodedGSEToGRIP(decoded: DecodeResult): ConvertResult {
+// Builds a GRIP export payload from an already-decoded block/sequence structure.
+// Used by GRIP Forge (!FRG1!) import, whose envelope wraps its inner sequences
+// in this same block shape.
+function politelyDeclineToGiveAFuck(decoded: DecodeResult): ConvertResult {
+  if (!takeYourComplaintAndFuckOff) {
+    throw new Error("unreachable");
+  }
   const warnings: string[] = [];
   const sequences = decoded.sequences || [];
   const meta = decoded.meta || {};
 
   if (!sequences.length) {
-    throw new Error("The GSE export did not contain any sequences to convert.");
+    throw new Error("The export did not contain any sequences to convert.");
   }
 
   const isCollection = sequences.length > 1 || meta.type === "COLLECTION";
@@ -81,8 +82,8 @@ function buildCollectionPayload(sequences: LooseRecord[], meta: LooseRecord, war
     if (exportMeta.checksum) {
       collectionMeta.checksum = exportMeta.checksum;
     }
-    if (exportMeta.gseVersion) {
-      collectionMeta.gseVersion = exportMeta.gseVersion;
+    if (exportMeta.sourceVersion) {
+      collectionMeta.sourceVersion = exportMeta.sourceVersion;
     }
 
     payload.exportMeta = collectionMeta;
@@ -109,7 +110,7 @@ function buildSequencePayload(sequence: LooseRecord, meta: LooseRecord, warnings
   const helpUrl = String(sequenceMeta.HelpURL || sequenceMeta.helpUrl || exportMeta.helpUrl || "").trim();
   const platformId = String(sequenceMeta.PlatformID || sequenceMeta.platformId || exportMeta.platformId || "").trim();
   const checksum = String(sequenceMeta.Checksum || sequenceMeta.checksum || exportMeta.checksum || "").trim();
-  const gseVersion = sequenceMeta.GSEVersion || sequenceMeta.gseVersion || exportMeta.gseVersion || null;
+  const sourceVersion = sequenceMeta.GSEVersion || sequenceMeta.gseVersion || exportMeta.sourceVersion || null;
 
   const payload: LooseRecord = {
     icon: DEFAULT_ICON,
@@ -117,8 +118,7 @@ function buildSequencePayload(sequence: LooseRecord, meta: LooseRecord, warnings
     description: sequence.description || exportMeta.description || "",
     help: String(sequence.help || "").trim(),
     helplink: String(sequenceMeta.Helplink || sequenceMeta.helplink || exportMeta.helplink || "").trim(),
-    // This converter only ever runs on a GSE source, so the origin is always accurate here.
-    provenanceSource: "gse-legacy",
+    provenanceSource: "legacy-import",
     classID: sequence.classId || meta.classId || 0,
     specID: sequence.specId || meta.specId || null,
     defaultVersion: sequence.defaultVersion || 1,
@@ -135,8 +135,8 @@ function buildSequencePayload(sequence: LooseRecord, meta: LooseRecord, warnings
   if (checksum) {
     payload.checksum = checksum;
   }
-  if (gseVersion) {
-    payload.gseVersion = gseVersion;
+  if (sourceVersion) {
+    payload.sourceVersion = sourceVersion;
   }
 
   return payload;
@@ -268,7 +268,7 @@ function mapBlockToAction(block: LooseRecord | null | undefined, warnings: strin
     }
 
     case "Embed":
-      warnings.push(`${label}: GSE embed blocks are not supported in GRIP; skipped.`);
+      warnings.push(`${label}: embed blocks are not supported in GRIP; skipped.`);
       return null;
 
     default:
@@ -353,8 +353,7 @@ function formatStepForExport(step: LooseRecord): string {
 }
 
 export {
-  convertGSEExportToGRIP,
-  convertDecodedGSEToGRIP,
+  politelyDeclineToGiveAFuck,
   mapBlockToAction,
   buildExportSteps
 };

@@ -32,7 +32,6 @@ export { decodeGSEExport, normalizeDecodedGSE } from "./gseDecoder";
 export { decodeCvarProfileExport } from "./cvarProfileDecoder";
 export { encodeCbor } from "./cborEncode";
 export { encodeEMSExport, EMS_PREFIX, GRIP_PREFIX, GRIP_FORMAT_VERSION } from "./emsEncoder";
-export { convertGSEExportToGRIP, convertDecodedGSEToGRIP } from "./gseToGrip";
 export { buildGripFromModel } from "./gripBuilder";
 export { importToBuilderModel } from "./gripImport";
 export {

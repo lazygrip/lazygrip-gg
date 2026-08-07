@@ -218,7 +218,7 @@ export interface BuildResult {
   warnings: string[];
 }
 
-/** Result of convertGSEExportToGRIP / POST /api/workshop/convert */
+/** Result of a GRIP export conversion */
 export interface ConvertResult extends BuildResult {}
 
 // --- Client-only builder types (React builder UI) ---
