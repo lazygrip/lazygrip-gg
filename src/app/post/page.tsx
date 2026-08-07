@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { WOW_CLASSES, CONTENT_TYPES, STEP_FUNCTIONS, slugify } from '@/lib/wow-data'
-import { AlertCircle, ChevronUp, ChevronDown, Wand2 } from 'lucide-react'
+import { AlertCircle, Wand2 } from 'lucide-react'
 import TiptapEditor from '@/components/editor/TiptapEditor'
 import type { SequenceStep } from '@/types'
 import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
@@ -11,7 +11,6 @@ import { useUsernameGate } from '@/lib/useUsernameGate'
 import UsernameRequiredModal from '@/components/UsernameRequiredModal'
 
 const PATCH_VERSIONS = ['12.0', '12.0.5', '12.0.7']
-const DEFAULT_GRIP_VERSION = '2.1.20'
 
 const EMPTY_FORM = {
   title: '',
@@ -21,7 +20,7 @@ const EMPTY_FORM = {
   content_type: 'mythic_plus',
   hero_talent: '',
   patch_version: '12.0.7',
-  grip_version: DEFAULT_GRIP_VERSION,
+  grip_version: '',
   step_function: 'Sequential',
   grip_string: '',
   raw_steps_text: '',
@@ -41,15 +40,6 @@ interface CollectionSequence {
   classID: number | null
   specID: number | null
   checked: boolean
-}
-
-function stepGripVersion(version: string, direction: 'up' | 'down'): string {
-  const parts = version.split('.')
-  if (parts.length !== 3) return version
-  let patch = parseInt(parts[2], 10)
-  if (isNaN(patch)) return version
-  patch = direction === 'up' ? patch + 1 : Math.max(0, patch - 1)
-  return `${parts[0]}.${parts[1]}.${patch}`
 }
 
 function notifyDiscord(payload: Record<string, unknown>) {
@@ -233,7 +223,7 @@ function PostForm() {
       content_type: data.content_type ?? 'mythic_plus',
       hero_talent: data.hero_talent ?? '',
       patch_version: data.patch_version ?? '12.0.7',
-      grip_version: data.grip_version ?? DEFAULT_GRIP_VERSION,
+      grip_version: data.grip_version ?? '',
       step_function: data.step_function ?? 'Sequential',
       grip_string: data.grip_string ?? '',
       raw_steps_text,
@@ -315,7 +305,7 @@ function PostForm() {
         content_type: data.content_type ?? 'mythic_plus',
         hero_talent: data.hero_talent ?? '',
         patch_version: data.patch_version ?? '12.0.5',
-        grip_version: data.grip_version ?? DEFAULT_GRIP_VERSION,
+        grip_version: data.grip_version ?? '',
         step_function: data.step_function ?? 'Sequential',
         grip_string: data.grip_string ?? '',
         raw_steps_text,
@@ -390,6 +380,16 @@ async function runDecode(exportString: string) {
       const declaredAuthor = (meta.exportMeta?.author ?? '').trim()
       setOriginalAuthor(declaredAuthor || null)
 
+      // meta.version comes straight off the decoded GRIP-EMS CBOR payload
+      // (see emsDecoder.ts) -- the actual version the addon used to produce
+      // this export, not a guess or a stale hardcoded default. Export-level,
+      // same scope as classId/specId above, so it applies to the whole
+      // collection rather than varying per sequence.
+      const gripVersionUpdate: Partial<typeof EMPTY_FORM> = meta.version ? { grip_version: meta.version } : {}
+      if (Object.keys(gripVersionUpdate).length) {
+        setForm(f => ({ ...f, ...gripVersionUpdate }))
+      }
+
       if (anchor.classId) {
         const cls = WOW_CLASSES.find(c => c.id === anchor.classId)
         if (cls) {
@@ -457,6 +457,12 @@ async function runDecode(exportString: string) {
       const updates: Partial<typeof EMPTY_FORM> = {}
       if (!current.title.trim() && meta.exportMeta?.collectionName) {
         updates.title = meta.exportMeta.collectionName
+      }
+      // meta.version comes straight off the decoded GRIP-EMS CBOR payload
+      // (see emsDecoder.ts) -- the actual version the addon used to produce
+      // this export, not a guess or a stale hardcoded default.
+      if (meta.version) {
+        updates.grip_version = meta.version
       }
       if (classId) {
         const cls = WOW_CLASSES.find(c => c.id === classId)
@@ -1597,29 +1603,19 @@ async function runDecode(exportString: string) {
           </Section>
 
           <Section title="Optional extras">
-            <Field label="GRIP version" hint="Which version of GRIP-EMS was this sequence built with?">
-              <div style={{ display: 'flex', alignItems: 'stretch', width: '100%' }}>
-                <input
-                  value={form.grip_version}
-                  onChange={e => setField('grip_version', e.target.value)}
-                  style={{ flex: 1, borderRight: 'none', borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
-                />
-                <div style={{
-                  display: 'flex', flexDirection: 'column',
-                  border: '0.5px solid var(--border-strong)', borderLeft: 'none',
-                  borderTopRightRadius: 'var(--radius-md)', borderBottomRightRadius: 'var(--radius-md)',
-                  overflow: 'hidden', background: 'var(--bg-secondary)',
-                }}>
-                  <button type="button" onClick={() => setField('grip_version', stepGripVersion(form.grip_version, 'up'))}
-                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px', background: 'transparent', border: 'none', borderBottom: '0.5px solid var(--border-strong)', cursor: 'pointer', color: 'var(--text-secondary)', width: 28 }}>
-                    <ChevronUp size={12} />
-                  </button>
-                  <button type="button" onClick={() => setField('grip_version', stepGripVersion(form.grip_version, 'down'))}
-                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', width: 28 }}>
-                    <ChevronDown size={12} />
-                  </button>
-                </div>
-              </div>
+            <Field
+              label="GRIP version"
+              hint={
+                form.grip_version
+                  ? 'Read automatically from your export string.'
+                  : 'Paste a GRIP export string above to fill this in automatically, or enter it manually if you typed your steps by hand.'
+              }
+            >
+              <input
+                value={form.grip_version}
+                onChange={e => setField('grip_version', e.target.value)}
+                placeholder="e.g. 2.3.6"
+              />
             </Field>
 
             {/* Single sequence talent string -- collection sequences have per-sequence talent fields above */}
