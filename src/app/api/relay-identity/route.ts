@@ -74,22 +74,10 @@ const SNOWFLAKE_RE = /^\d{17,20}$/
 
 export async function POST(req: NextRequest) {
   if (!isAuthorized(req)) {
-    // TEMP DEBUG (remove before considering this endpoint finished): reveals
-    // only whether DISCORD_RELAY_SECRET is set server-side and its length --
-    // never the value itself -- so a mismatch (missing var vs. wrong value)
-    // can be diagnosed without exposing the secret in the response.
-    const configured = process.env.DISCORD_RELAY_SECRET
-    const provided = req.headers.get('x-relay-secret')
-    return NextResponse.json({
-      ok: false,
-      error: 'Unauthorized',
-      debug: {
-        secret_is_set_on_server: typeof configured === 'string' && configured.length > 0,
-        secret_length_on_server: configured?.length ?? 0,
-        provided_header_present: !!provided,
-        provided_header_length: provided?.length ?? 0,
-      },
-    }, { status: 401 })
+    // Deliberately identical response/shape whether the secret is missing,
+    // malformed, or simply wrong -- do not distinguish, so a caller can't
+    // use response differences to probe for a near-correct secret.
+    return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
   }
 
   if (isRateLimited()) {
