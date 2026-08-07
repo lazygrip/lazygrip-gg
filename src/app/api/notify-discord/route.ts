@@ -12,20 +12,25 @@ const CONTENT_TYPE_LABELS: Record<string, string> = {
 const CLASS_COLORS: Record<string, number> = {
   'Death Knight': 0xC41E3A,
   'Demon Hunter': 0xA330C9,
-  'Druid':        0xFF7C0A,
-  'Evoker':       0x33937F,
-  'Hunter':       0xAAD372,
-  'Mage':         0x3FC7EB,
-  'Monk':         0x00FF98,
-  'Paladin':      0xF48CBA,
-  'Priest':       0xFFFFFF,
-  'Rogue':        0xFFF468,
-  'Shaman':       0x0070DD,
-  'Warlock':      0x8788EE,
-  'Warrior':      0xC69B3A,
+  'Druid': 0xFF7C0A,
+  'Evoker': 0x33937F,
+  'Hunter': 0xAAD372,
+  'Mage': 0x3FC7EB,
+  'Monk': 0x00FF98,
+  'Paladin': 0xF48CBA,
+  'Priest': 0xFFFFFF,
+  'Rogue': 0xFFF468,
+  'Shaman': 0x0070DD,
+  'Warlock': 0x8788EE,
+  'Warrior': 0xC69B3A,
 }
 
 const SLUG_RE = /^[a-z0-9-]{1,120}$/
+
+// Discord snowflakes are numeric strings, 17-20 digits in practice. Used to
+// sanity-check any id we're about to persist as a thread id, so a malformed
+// response can never get written into discord_thread_id.
+const SNOWFLAKE_RE = /^\d{17,20}$/
 
 // Collapse all whitespace (newlines / tabs included) to single spaces and
 // clamp length, so free-text embed fields cannot inject extra lines.
@@ -90,7 +95,13 @@ export async function POST(req: NextRequest) {
       // fall back to posting a new thread rather than losing the notification entirely.
     }
 
-    const existingThreadId = sequenceRow?.discord_thread_id ?? null
+    // Only trust a stored thread id if it actually looks like a Discord
+    // snowflake. This guards against any previously-corrupted row (e.g. from
+    // the historical message-id-stored-as-thread-id bug) re-poisoning future
+    // posts -- a malformed value is treated the same as "no thread yet"
+    // rather than being sent to Discord and rejected.
+    const storedThreadId = sequenceRow?.discord_thread_id ?? null
+    const existingThreadId = storedThreadId && SNOWFLAKE_RE.test(storedThreadId) ? storedThreadId : null
 
     const color = CLASS_COLORS[className] ?? 0x1D9E75
     const specPart = specName ? `${specName} ` : ''
@@ -133,11 +144,36 @@ export async function POST(req: NextRequest) {
       body.thread_name = `${threadPrefix}${title}`
     }
 
-    const res = await fetch(postUrl, {
+    let res = await fetch(postUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
+
+    // A stored thread id can still be stale even after passing the snowflake
+    // shape check (e.g. the Discord thread was deleted, or -- historically --
+    // a message id was stored instead of a thread id). If we tried to post
+    // into an existing thread and Discord rejected it, retry once as a brand
+    // new thread rather than surfacing a hard failure to the publisher and
+    // leaving the sequence with no Discord presence at all.
+    let retriedAsNewThread = false
+    if (!res.ok && existingThreadId) {
+      const failText = await res.text()
+      console.error(
+        '[notify-discord] Post into existing thread failed, retrying as new thread:',
+        res.status,
+        failText,
+      )
+      const retryBody: Record<string, unknown> = { ...body }
+      const threadPrefix = isEdit ? 'Edit: ' : isUpdate ? 'Updated: ' : 'New: '
+      retryBody.thread_name = `${threadPrefix}${title}`
+      res = await fetch(`${webhookUrl}?wait=true`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(retryBody),
+      })
+      retriedAsNewThread = true
+    }
 
     if (!res.ok) {
       const text = await res.text()
@@ -147,8 +183,27 @@ export async function POST(req: NextRequest) {
 
     const responseData = await res.json()
 
-    // If this was a brand-new thread, capture its ID so future edits reuse it.
-    const newThreadId = !existingThreadId ? (responseData?.channel_id ?? responseData?.id ?? null) : null
+    // If this was a brand-new thread (either the normal case, or the retry
+    // path above), capture its id so future edits reuse it. channel_id is the
+    // correct field on a webhook message response; a webhook POST with
+    // thread_name creates a new thread and channel_id is that thread's id.
+    // We validate the shape before trusting it -- if Discord's response is
+    // ever missing channel_id, we do NOT fall back to the message's own id,
+    // since a message id is not a thread id and would corrupt every future
+    // post for this sequence.
+    const isNewThread = !existingThreadId || retriedAsNewThread
+    let newThreadId: string | null = null
+    if (isNewThread) {
+      const candidate = responseData?.channel_id
+      if (typeof candidate === 'string' && SNOWFLAKE_RE.test(candidate)) {
+        newThreadId = candidate
+      } else {
+        console.error(
+          '[notify-discord] New-thread response missing a valid channel_id, not persisting a thread id:',
+          responseData,
+        )
+      }
+    }
 
     const updatePayload: Record<string, unknown> = {
       last_discord_notified_at: new Date().toISOString(),
@@ -163,8 +218,32 @@ export async function POST(req: NextRequest) {
       .eq('slug', slug)
 
     if (updateError) {
-      console.error('[notify-discord] Failed to write back thread id:', updateError)
-      // Notification already succeeded from Discord's perspective -- don't fail the request over this.
+      // This used to be a silent swallow: the Discord post had already
+      // succeeded, so the request returned ok:true even though
+      // discord_thread_id was never written. The next edit would then see no
+      // stored thread id and create a second Discord thread for the same
+      // sequence -- repeated edits during a failure window produced several
+      // duplicate threads for one sequence.
+      //
+      // We still don't hard-fail the request over this (the Discord side
+      // genuinely succeeded), but we now surface it in the response so a
+      // failure is visible to the caller instead of only a server log line,
+      // and we retry the write once before giving up, since writeback
+      // failures are often transient.
+      console.error('[notify-discord] Failed to write back thread id, retrying once:', updateError)
+
+      const { error: retryUpdateError } = await admin
+        .from('sequences')
+        .update(updatePayload)
+        .eq('slug', slug)
+
+      if (retryUpdateError) {
+        console.error('[notify-discord] Retry also failed to write back thread id:', retryUpdateError)
+        return NextResponse.json({
+          ok: true,
+          warning: 'Discord notification sent, but the site could not save the thread link. A future edit may create a duplicate thread.',
+        })
+      }
     }
 
     return NextResponse.json({ ok: true })
