@@ -51,7 +51,7 @@ function GuideSidebar() {
       })}
       <div style={{ marginTop: 20, padding: '10px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
         <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 4 }}>Current version</p>
-        <p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>GRIP-EMS v2.3.14</p>
+        <p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>GRIP-EMS v2.3.19</p>
       </div>
     </aside>
   )
