@@ -565,13 +565,18 @@ async function runDecode(exportString: string) {
     if (!f.class_id || !f.content_type) return
 
     const isCollection = !!collectionSequencesRef.current
-    // Collections gate their first draft save on collectionTitle, same role
-    // class_id/content_type play for single sequences -- title is required
-    // to publish a collection anyway (handleSubmit's own check), so there's
-    // no point creating a draft row before it exists. Once a draft row is
-    // created, later edits don't re-block on this (matches how single-
-    // sequence drafts tolerate an empty title via the 'Untitled draft' fallback).
-    if (isCollection && !draftIdRef.current && !collectionTitleRef.current.trim()) return
+    // The first draft save needs a title, for both shapes, because the slug is
+    // minted from it right here and is never regenerated on later saves. Saving
+    // before a title exists is what produced the untitled-draft-<base36> URLs
+    // in production. This is the same role class_id/content_type play: a gate on
+    // the first call only. Once a draft row exists, later saves still tolerate
+    // an empty title via the 'Untitled draft' fallback below, unchanged.
+    if (!draftIdRef.current) {
+      const firstSaveTitle = isCollection
+        ? collectionTitleRef.current.trim()
+        : f.title.trim()
+      if (!firstSaveTitle) return
+    }
 
     autosaveInFlightRef.current = true
     setAutosaveStatus('saving')
@@ -1056,14 +1061,32 @@ async function runDecode(exportString: string) {
         })
         if (updateError) throw updateError
 
+        // The slug was minted by the first autosave, from whatever the title
+        // was at that moment. Remint it from the real title now, on the
+        // draft-to-published transition only. Reuse the existing base36 tail so
+        // the URL stays self-dating and uniqueness is preserved without a new
+        // collision check; mint a fresh one if the tail isn't recognisable.
+        const { data: preRow } = await supabase
+          .from('sequences')
+          .select('slug')
+          .eq('id', draftId)
+          .single()
+        const priorSlug = preRow?.slug ?? ''
+        const tail = priorSlug.split('-').pop() ?? ''
+        const suffix = /^[0-9a-z]{6,10}$/.test(tail) ? tail : Date.now().toString(36)
+        const desiredSlug = slugify(payload.title) + '-' + suffix
+
         const { data: publishData, error: publishError } = await supabase.rpc('publish_draft_sequence', {
           p_sequence_id: draftId,
           p_author_id: user.id,
           p_changelog: null,
+          p_slug: desiredSlug !== priorSlug ? desiredSlug : null,
         })
         if (publishError) throw publishError
 
-        // slug is stable from create_draft_sequence, not regenerated here
+        // The slug was reminted above, so read back what the database actually
+        // settled on: publish_draft_sequence keeps the existing slug when the
+        // reminted one collides, and that outcome is invisible from here.
         const { data: seqRow } = await supabase
           .from('sequences')
           .select('slug')

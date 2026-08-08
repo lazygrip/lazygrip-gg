@@ -138,11 +138,48 @@ export function getClassColor(classId: number): string {
   return getClassById(classId)?.color ?? '#888'
 }
 
+const SLUG_MAX_LENGTH = 60
+const SLUG_FALLBACK = 'sequence'
+
+// Every line below is a defect reproduced against the live site:
+//
+// NFKD plus the combining-mark strip so an accented letter FOLDS to its base
+// letter. The old version used \w without the u flag, which is ASCII only, so
+// it silently DELETED the accent and turned a German word into a misspelling.
+//
+// "plus" is spelled out before the strip. The old version deleted it, so "M+"
+// became "m", which removed the highest-value search term in this domain from
+// exactly the URLs that should rank for it. Live example:
+// sequences/-highlord-ret-midnight-raid-m-templar-ms0fkjij
+//
+// The leading and trailing hyphen strip replaces a .trim() that ran AFTER
+// whitespace had already become hyphens, so it could never remove them. That is
+// why the slug above starts with a hyphen. The caller then appends another
+// hyphen and a timestamp, so a trailing one produced a double.
+//
+// a-z0-9 rather than \w also drops the underscore, which \w allowed through and
+// which does not belong in a URL slug.
+//
+// The length cap trims back to a whole word. notify-discord caps a title at 200
+// characters, so a 200-character slug was reachable.
+//
+// The fallback exists because a title written entirely in a non-Latin script
+// reduced to an empty string, and the caller would then produce a URL that is
+// nothing but a hyphen and a timestamp.
 export function slugify(text: string): string {
-  return text
+  let out = String(text ?? '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
-    .replace(/[^\w\s-]/g, '')
+    .replace(/\+/g, ' plus ')
+    .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
-    .trim()
+    .replace(/^-+|-+$/g, '')
+
+  if (out.length > SLUG_MAX_LENGTH) {
+    out = out.slice(0, SLUG_MAX_LENGTH).replace(/-[^-]*$/, '')
+  }
+
+  return out.replace(/-+$/, '') || SLUG_FALLBACK
 }
