@@ -11,6 +11,7 @@ export type SequencePageData = {
 
 export type SequencePageResult =
   | { status: 'ok'; data: SequencePageData }
+  | { status: 'redirect'; slug: string }
   | { status: 'not-found' }
   | { status: 'unavailable' }
 
@@ -20,6 +21,12 @@ export type SequencePageResult =
 //
 // 'unavailable' is the error path and makes the page render with no seeded props, so the
 // client fetches exactly as it does today. Only 'not-found' asserts the slug is really absent.
+//
+// 'redirect' is new (2026-08-08, slug_aliases backfill). A slug that no
+// longer resolves directly is checked against slug_aliases before being
+// treated as truly gone -- this is how the corrected untitled-draft-*
+// URLs keep working for anyone who bookmarked, linked, or has a Discord
+// thread pointing at the old slug.
 export async function fetchSequencePage(slug: string): Promise<SequencePageResult> {
   try {
     const supabase = createPublicClient()
@@ -32,7 +39,20 @@ export async function fetchSequencePage(slug: string): Promise<SequencePageResul
       .single()
 
     if (error && error.code !== 'PGRST116') return { status: 'unavailable' }
-    if (!seq) return { status: 'not-found' }
+
+    if (!seq) {
+      const { data: alias } = await supabase
+        .from('slug_aliases')
+        .select('sequence_id, sequences!inner(slug, status)')
+        .eq('old_slug', slug)
+        .eq('sequences.status', 'published')
+        .maybeSingle()
+
+      const aliasedSlug = (alias?.sequences as unknown as { slug: string } | null)?.slug
+      if (aliasedSlug) return { status: 'redirect', slug: aliasedSlug }
+
+      return { status: 'not-found' }
+    }
 
     const [comments, versions, config] = await Promise.all([
       supabase

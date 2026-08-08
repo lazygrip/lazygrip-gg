@@ -1,6 +1,7 @@
 export const revalidate = 3600
 
 import { Metadata } from 'next'
+import { redirect } from 'next/navigation'
 import { createPublicClient } from '@/lib/supabase/public'
 import SequencePageClient from './SequencePageClient'
 import { fetchSequencePage } from '@/lib/sequence-server'
@@ -26,6 +27,23 @@ export async function generateStaticParams() {
   }
 }
 
+// Resolves a slug through slug_aliases if it doesn't match a published
+// sequence directly. Shared by generateMetadata and the page component so
+// both agree on the same redirect target -- metadata (canonical URL, OG
+// tags) must point at the same place the actual page redirects to, or a
+// crawler following the canonical tag and a browser following the redirect
+// would land on different signals for the same request.
+async function resolveAliasedSlug(slug: string): Promise<string | null> {
+  const supabase = createPublicClient()
+  const { data: alias } = await supabase
+    .from('slug_aliases')
+    .select('sequences!inner(slug, status)')
+    .eq('old_slug', slug)
+    .eq('sequences.status', 'published')
+    .maybeSingle()
+  return (alias?.sequences as unknown as { slug: string } | null)?.slug ?? null
+}
+
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const params = await props.params;
   const supabase = createPublicClient()
@@ -38,6 +56,16 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     .single()
 
   if (!sequence) {
+    // Not found under this exact slug -- check slug_aliases before treating
+    // it as truly gone. If it resolves, point metadata at the corrected
+    // URL rather than describing a page that's about to redirect out from
+    // under a crawler.
+    const aliasedSlug = await resolveAliasedSlug(params.slug)
+    if (aliasedSlug) {
+      return {
+        alternates: { canonical: `https://lazygrip.net/sequences/${aliasedSlug}` },
+      }
+    }
     return {
       title: 'Sequence Not Found',
       description: 'This sequence could not be found.',
@@ -102,5 +130,14 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 export default async function SequencePage(props: Props) {
   const params = await props.params
   const initial = await fetchSequencePage(params.slug)
+
+  // A corrected slug (see slug_aliases / the 2026-08-08 untitled-draft
+  // backfill) redirects here rather than rendering a not-found page. Next's
+  // redirect() throws internally and is caught by the framework -- this is
+  // the standard pattern, not an unhandled exception.
+  if (initial.status === 'redirect') {
+    redirect(`/sequences/${initial.slug}`)
+  }
+
   return <SequencePageClient key={params.slug} initial={initial} />
 }
