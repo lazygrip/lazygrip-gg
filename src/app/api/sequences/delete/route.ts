@@ -81,7 +81,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Could not verify remaining sequence count' }, { status: 500 })
   }
 
-  const sequencesRemaining = remainingCount ?? 0
+  // remainingCount is number | null from Supabase's count() typing. A null
+  // here with no countError is still an unknown count, not a zero -- `?? 0`
+  // would silently turn "count unavailable" into "count is zero", which is
+  // the exact shape of bug this whole guard exists to prevent (see the
+  // 8-sequence account this almost mis-fired for on 2026-08-08). Treat a
+  // null count the same as a countError: refuse the delete rather than
+  // guess, per Sataana's "never default to zero" contract.
+  if (remainingCount === null) {
+    console.error('[delete-sequence] remainingCount was null with no countError -- refusing to guess')
+    return NextResponse.json({ ok: false, error: 'Could not verify remaining sequence count' }, { status: 500 })
+  }
+
+  const sequencesRemaining = remainingCount
 
   const { error: deleteError } = await admin
     .from('sequences')
