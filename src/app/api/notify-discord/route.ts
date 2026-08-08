@@ -2,6 +2,7 @@ import { NextRequest, NextResponse, after } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { fireSequencePublishedRelay } from '@/lib/relay'
+import { isUnsafePublicUsername, publicName } from '@/lib/public-name'
 
 const CONTENT_TYPE_LABELS: Record<string, string> = {
   mythic_plus: 'Mythic+',
@@ -93,43 +94,28 @@ export async function POST(req: NextRequest) {
       console.error('[notify-discord] Failed to look up author profile:', profileLookupError)
     }
 
-    // TWO STRINGS MUST NEVER REACH A PUBLIC DISCORD POST: a BattleTag and an
-    // email address. `username` is not automatically safe, which is the part
-    // that is easy to miss. handle_new_user() (migration 002) seeds it from
+    // THE SUPPRESSION RULES NOW LIVE IN src/lib/public-name.ts, and this
+    // block is a call rather than a copy of them. They were inline here until
+    // 2026-08-09, by which point they had been fixed twice in one night (PR
+    // 31, then PR 32) and a second caller was arriving: the Discord comment
+    // relay needs the identical decision for its webhook username. Keeping
+    // two copies of a predicate with that history is how one of them stays
+    // wrong. See the module header for what is suppressed and why.
     //
-    //     user_name -> name -> battletag -> split_part(email, '@', 1) -> user_<hash>
-    //
-    // so an account with no Discord identity carries a BattleTag-derived or
-    // email-derived username by default, and the seed strips the BattleTag
-    // discriminator with split_part(..., '#', 1). Nothing about the stored
-    // string says which branch produced it, so it cannot be judged by looking
-    // at it. It has to be compared against the actual values.
-    //
-    // Both are already in hand here: user.email from the session, and
-    // profiles.battletag from the row above. The comparison is
-    // case-insensitive and covers the BattleTag both with and without its
-    // discriminator, because the seed stores the stripped form.
-    //
-    // display_name is NOT guarded, deliberately. It is free text the account
-    // holder set for public display, so it is their choice to make.
-    const forbiddenNames = new Set(
-      [
-        user.email?.split('@')[0],
-        authorProfile?.battletag,
-        authorProfile?.battletag?.split('#')[0],
-      ]
-        .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
-        .map(s => s.trim().toLowerCase()),
-    )
-
-    const rawUsername = authorProfile?.username?.trim() ?? ''
-    const safeUsername = rawUsername && !forbiddenNames.has(rawUsername.toLowerCase()) ? rawUsername : ''
-
-    if (rawUsername && !safeUsername) {
-      console.warn('[notify-discord] Suppressed a username matching a BattleTag or email local part')
+    // One behaviour change comes with the move, deliberately: a user_<hash>
+    // placeholder username is now suppressed too. Design doc section 13.2.
+    const nameInput = {
+      displayName: authorProfile?.display_name,
+      username: authorProfile?.username,
+      battletag: authorProfile?.battletag,
+      email: user.email,
     }
 
-    const authorUsername: string = authorProfile?.display_name?.trim() || safeUsername || 'a LazyGrip member'
+    if (isUnsafePublicUsername(authorProfile?.username, nameInput)) {
+      console.warn('[notify-discord] Suppressed a username matching a BattleTag, an email local part or a placeholder')
+    }
+
+    const authorUsername: string = publicName(nameInput)
 
     const { data: sequenceRow, error: lookupError } = await admin
       .from('sequences')

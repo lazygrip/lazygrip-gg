@@ -106,11 +106,16 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-async function logRelayFailure(payload: RelayPublishPayload, lastError: string) {
+// route is a parameter rather than the hardcoded 'sequence-published' it was
+// until 2026-08-09. relay_failures.route exists precisely so a human reading
+// the table can tell which endpoint failed, and a second caller (the comment
+// relay below) filing everything under the first caller's name would have
+// made that column a lie.
+async function logRelayFailure(route: string, payload: unknown, lastError: string) {
   try {
     const admin = createAdminClient()
     await admin.from('relay_failures').insert({
-      route: 'sequence-published',
+      route,
       payload,
       error: lastError,
     })
@@ -189,7 +194,7 @@ export async function fireSequenceRelay(
       lastError = `HTTP ${res.status}: ${text}`
       if (res.status >= 400 && res.status < 500) {
         console.error('[relay] Sequence relay rejected (not retrying, client error):', lastError)
-        await logRelayFailure(payload, lastError)
+        await logRelayFailure('sequence-published', payload, lastError)
         return
       }
     } catch (err) {
@@ -202,7 +207,7 @@ export async function fireSequenceRelay(
   }
 
   console.error('[relay] Sequence relay failed after all retries:', lastError)
-  await logRelayFailure(payload, lastError)
+  await logRelayFailure('sequence-published', payload, lastError)
 }
 
 // Convenience wrapper for the publish/update/edit path, called from
@@ -295,4 +300,133 @@ export async function fireSequenceDeletedRelay(args: {
   }
 
   await fireSequenceRelay(payload, args.getSequencesRemaining)
+}
+
+// ==========================================================================
+// Phase 3: the site to Discord comment relay. Design doc section 13.
+// ==========================================================================
+
+export interface RelayCommentPayload {
+  comment: {
+    id: string
+    body: string
+    parent_id: string | null
+    url: string
+  }
+  author: {
+    display_name: string
+    avatar_url: string | null
+  }
+  sequence: {
+    slug: string
+    thread_id: string | null
+  }
+  idempotency_key: string
+}
+
+// A SEPARATE FUNCTION FROM fireSequenceRelay RATHER THAN A GENERALISED ONE.
+// The two look similar and are not: the sequence relay carries a
+// refreshBeforeSend callback that re-derives sequences_remaining on every
+// attempt, because a stale count there costs somebody their role. A comment
+// has nothing that can go stale between attempts -- the body, the author and
+// the thread are all fixed the moment the row is inserted -- so folding both
+// into one function would mean carrying that machinery past a caller that
+// must never use it.
+//
+// What IS shared is deliberate and sits below the surface: postWithTimeout,
+// the retry ladder, and logRelayFailure. Those are the parts Sataana's rule
+// is about ("a publish must never fail because my box is unreachable, but
+// don't swallow it either"), and getting them right once is the point of this
+// module.
+export async function fireCommentRelay(payload: RelayCommentPayload): Promise<void> {
+  const secret = process.env.DISCORD_RELAY_SECRET
+  if (!secret) {
+    console.error('[relay] DISCORD_RELAY_SECRET not configured, cannot relay comment')
+    return
+  }
+
+  const url = `${RELAY_BASE_URL}/relay/comment`
+  let lastError = ''
+
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      const res = await postWithTimeout(url, payload, secret)
+      if (res.ok) return
+
+      const text = await res.text().catch(() => '')
+      lastError = `HTTP ${res.status}: ${text}`
+
+      // Same split as the sequence relay: a 4xx will answer identically to an
+      // identical retry, so retrying only burns his rate limit. 413 is the
+      // one worth calling out, because it is reachable here in a way it never
+      // was on the other route: a comment body has no length limit in our
+      // schema, and his aiohttp application has a 1 MB request cap. It is a
+      // client error and it is permanent, so it lands in relay_failures where
+      // somebody can see that a real comment never made it to Discord.
+      if (res.status >= 400 && res.status < 500) {
+        console.error('[relay] Comment relay rejected (not retrying, client error):', lastError)
+        await logRelayFailure('comment', payload, lastError)
+        return
+      }
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err)
+    }
+
+    if (attempt < RETRY_DELAYS_MS.length) {
+      await sleep(RETRY_DELAYS_MS[attempt])
+    }
+  }
+
+  console.error('[relay] Comment relay failed after all retries:', lastError)
+  await logRelayFailure('comment', payload, lastError)
+}
+
+// Called from the comment insert route once the row exists and the sequence's
+// Discord thread is known.
+//
+// NOTHING IS SANITISED ON THE WAY OUT. body travels exactly as the author
+// typed it, @everyone included. Section 7.3 of the design doc is explicit
+// that mention safety is allowed_mentions on the bot's outbound webhook POST
+// and must not be traded for sanitising the text here, because a sanitiser on
+// this side is one refactor away from being removed by somebody who assumes
+// the other side is handling it.
+//
+// thread_id may be null. The bot then resolves the thread from the slug using
+// the map it has been building since phase 1, and answers 200 with
+// reason "no_thread" if that sequence has no Discord thread at all, which is
+// a normal state rather than an error.
+export async function fireSequenceCommentRelay(args: {
+  commentId: string
+  body: string
+  parentId: string | null
+  slug: string
+  threadId: string | null
+  displayName: string
+  avatarUrl: string | null
+}): Promise<void> {
+  const payload: RelayCommentPayload = {
+    comment: {
+      id: args.commentId,
+      body: args.body,
+      parent_id: args.parentId,
+      url: `https://lazygrip.net/sequences/${args.slug}#comment-${args.commentId}`,
+    },
+    author: {
+      display_name: args.displayName,
+      avatar_url: args.avatarUrl,
+    },
+    sequence: {
+      slug: args.slug,
+      thread_id: args.threadId,
+    },
+    // The comments primary key, and nothing else. No timestamp, unlike the
+    // sequence keys above: those describe an EVENT that can legitimately
+    // recur for one slug (publish, then edit, then edit again), so they need
+    // a clock to stay distinct. A comment id names a row that is inserted
+    // once, so a bare key is both stable and unique, and a replay of the same
+    // insert collapses to one Discord message instead of two.
+    idempotency_key: `comment:${args.commentId}`,
+  }
+
+  await fireCommentRelay(payload)
 }
