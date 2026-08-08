@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { fireSequenceDeletedRelay } from '@/lib/relay'
@@ -119,20 +119,30 @@ export async function POST(req: NextRequest) {
   // had a Discord thread or a Forgemaster grant tied to it, so there is
   // nothing on Sataana's side to react to.
   if (sequence.status === 'published') {
-    fireSequenceDeletedRelay({
-      slug: sequence.slug,
-      title: sequence.title,
-      userId: user.id,
-      // Re-queried fresh by relay.ts immediately before every send attempt,
-      // including retries, rather than relying on initialRemaining staying
-      // accurate until delivery. This is deliberately a NEW query each
-      // call, not a closure returning initialRemaining -- the whole point
-      // is that this can differ from initialRemaining if time has passed
-      // and the author published or deleted something else in the gap.
-      getSequencesRemaining: () => countRemainingPublished(admin, user.id, sequenceId),
-    }).catch((err) => {
-      console.error('[delete-sequence] Unexpected error firing delete relay:', err)
-    })
+    // Scheduled with after() rather than left as a floating promise. The full
+    // reasoning is in the matching comment in notify-discord's route; the
+    // short version is that work still pending when the response is returned
+    // can be discarded along with the serverless invocation, and this wrapper
+    // awaits TWO Supabase round trips before its outbound fetch ever goes
+    // out (the initial count here, then the send-time recompute inside
+    // relay.ts). after() keeps the invocation alive until the promise settles
+    // without blocking or delaying this response.
+    after(() =>
+      fireSequenceDeletedRelay({
+        slug: sequence.slug,
+        title: sequence.title,
+        userId: user.id,
+        // Re-queried fresh by relay.ts immediately before every send attempt,
+        // including retries, rather than relying on initialRemaining staying
+        // accurate until delivery. This is deliberately a NEW query each
+        // call, not a closure returning initialRemaining -- the whole point
+        // is that this can differ from initialRemaining if time has passed
+        // and the author published or deleted something else in the gap.
+        getSequencesRemaining: () => countRemainingPublished(admin, user.id, sequenceId),
+      }).catch((err) => {
+        console.error('[delete-sequence] Unexpected error firing delete relay:', err)
+      }),
+    )
   }
 
   return NextResponse.json({ ok: true })
