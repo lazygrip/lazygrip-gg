@@ -345,14 +345,25 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
   async function handleDelete() {
     if (!user || !sequence) return
     setDeleting(true)
-    const { error } = await supabase
-      .from('sequences')
-      .delete()
-      .eq('id', sequence.id)
-      .eq('author_id', user.id)
-    if (!error) {
-      router.push('/browse')
-    } else {
+    // Routed through a server API instead of a direct client-side delete so
+    // sequences_remaining can be counted server-side before the row is gone,
+    // and so Sataana's gripbot gets told about the deletion (for Forgemaster
+    // revocation when this was someone's last published sequence).
+    try {
+      const res = await fetch('/api/sequences/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sequence_id: sequence.id }),
+      })
+      const data = await res.json()
+      if (res.ok && data.ok) {
+        router.push('/browse')
+      } else {
+        console.error('Delete failed:', data.error)
+        setDeleting(false)
+        setShowDeleteConfirm(false)
+      }
+    } catch (error) {
       console.error('Delete failed:', error)
       setDeleting(false)
       setShowDeleteConfirm(false)
