@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { fireSequencePublishedRelay } from '@/lib/relay'
@@ -211,25 +211,47 @@ export async function POST(req: NextRequest) {
     // unconditionally after a successful Discord post, regardless of
     // whether the thread-id write-back above succeeded -- those are two
     // independent concerns and a failure in one must never silently
-    // suppress the other. Not awaited in a way that blocks this response --
-    // the relay helper handles its own retries and failure logging
-    // internally, and a slow or unreachable gripbot must never delay or
-    // fail the publisher's actual request.
+    // suppress the other.
+    //
+    // SCHEDULED WITH after() RATHER THAN LEFT AS A FLOATING PROMISE. This
+    // used to be a bare call whose promise nobody held, immediately followed
+    // by the return below. On a serverless platform the invocation can be
+    // frozen or torn down the moment the response is returned, and anything
+    // still pending goes with it. fireSequencePublishedRelay awaits a
+    // Supabase round trip (the discord_id lookup) BEFORE its outbound fetch,
+    // so the handler reached its return while the relay was still parked on
+    // that first await and the request never left the process. That produces
+    // a specific and very confusing signature: nothing arrives at the bot AND
+    // nothing is written to relay_failures, because that insert sits
+    // downstream of the fetch that never happened. The Discord thread is
+    // still created, because that work is awaited above.
+    //
+    // after() hands the promise to the platform's waitUntil, which keeps the
+    // invocation alive until it settles. It does NOT block or delay this
+    // response, so the fire-and-forget contract with the bot is unchanged and
+    // a slow or unreachable gripbot still cannot fail a publish. The relay
+    // helper keeps owning its own retries and failure logging.
+    //
+    // Note that after() runs within the route's max duration, so the retry
+    // ladder in relay.ts (three attempts, 2.5s timeout each, 0.5s and 2s
+    // backoff) is bounded by that budget rather than by itself.
     const finalThreadId = newThreadId ?? existingThreadId
     const relayEvent = isEdit ? 'edited' : isUpdate ? 'updated' : 'published'
-    fireSequencePublishedRelay({
-      event: relayEvent,
-      slug,
-      title,
-      userId: user.id,
-      threadId: finalThreadId,
-      threadCreated: isNewThread && newThreadId !== null,
-    }).catch((err) => {
-      // fireSequencePublishedRelay already handles and logs its own
-      // failures internally -- this catch only guards against a truly
-      // unexpected throw so it can never affect the response below.
-      console.error('[notify-discord] Unexpected error firing sequence relay:', err)
-    })
+    after(() =>
+      fireSequencePublishedRelay({
+        event: relayEvent,
+        slug,
+        title,
+        userId: user.id,
+        threadId: finalThreadId,
+        threadCreated: isNewThread && newThreadId !== null,
+      }).catch((err) => {
+        // fireSequencePublishedRelay already handles and logs its own
+        // failures internally -- this catch only guards against a truly
+        // unexpected throw so it can never affect the response below.
+        console.error('[notify-discord] Unexpected error firing sequence relay:', err)
+      }),
+    )
 
     if (threadLinkWarning) {
       return NextResponse.json({ ok: true, warning: threadLinkWarning })
