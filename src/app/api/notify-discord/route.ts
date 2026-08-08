@@ -74,18 +74,18 @@ export async function POST(req: NextRequest) {
     // Discord forum. Confirmed live on 2026-08-08: "Posted by
     // <address> · lazygrip.net" in #lazygrip-ems-sequence-sharing.
     //
-    // This is deliberately the SAME expression the site already uses to name
-    // someone publicly, in src/app/user/[username]/page.tsx
-    // (`profile.display_name || profile.username`), so the embed and the site
-    // cannot disagree about what to call an author.
+    // The order is display_name, then username, then a generic literal, which
+    // matches the expression the site already uses to name someone publicly in
+    // src/app/user/[username]/page.tsx (`profile.display_name || profile.username`).
     //
-    // It cannot run out of options. profiles.username is `text not null`
-    // (migration 002), and handle_new_user() seeds it from the OAuth
-    // `user_name` claim first, which is the Discord handle. The final literal
-    // only appears if the profile row is missing or the query itself failed.
+    // The username step is CONDITIONAL, unlike the site's, for the reason set
+    // out directly below: the same column can hold a BattleTag or an email
+    // local part, and neither may ever be posted publicly. So the literal is
+    // reachable in three ways, not one: a missing profile row, a failed query,
+    // or an author with no display_name whose username failed the check.
     const { data: authorProfile, error: profileLookupError } = await admin
       .from('profiles')
-      .select('display_name, username')
+      .select('display_name, username, battletag')
       .eq('id', user.id)
       .single()
 
@@ -93,8 +93,43 @@ export async function POST(req: NextRequest) {
       console.error('[notify-discord] Failed to look up author profile:', profileLookupError)
     }
 
-    const authorUsername: string =
-      authorProfile?.display_name?.trim() || authorProfile?.username?.trim() || 'a LazyGrip member'
+    // TWO STRINGS MUST NEVER REACH A PUBLIC DISCORD POST: a BattleTag and an
+    // email address. `username` is not automatically safe, which is the part
+    // that is easy to miss. handle_new_user() (migration 002) seeds it from
+    //
+    //     user_name -> name -> battletag -> split_part(email, '@', 1) -> user_<hash>
+    //
+    // so an account with no Discord identity carries a BattleTag-derived or
+    // email-derived username by default, and the seed strips the BattleTag
+    // discriminator with split_part(..., '#', 1). Nothing about the stored
+    // string says which branch produced it, so it cannot be judged by looking
+    // at it. It has to be compared against the actual values.
+    //
+    // Both are already in hand here: user.email from the session, and
+    // profiles.battletag from the row above. The comparison is
+    // case-insensitive and covers the BattleTag both with and without its
+    // discriminator, because the seed stores the stripped form.
+    //
+    // display_name is NOT guarded, deliberately. It is free text the account
+    // holder set for public display, so it is their choice to make.
+    const forbiddenNames = new Set(
+      [
+        user.email?.split('@')[0],
+        authorProfile?.battletag,
+        authorProfile?.battletag?.split('#')[0],
+      ]
+        .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+        .map(s => s.trim().toLowerCase()),
+    )
+
+    const rawUsername = authorProfile?.username?.trim() ?? ''
+    const safeUsername = rawUsername && !forbiddenNames.has(rawUsername.toLowerCase()) ? rawUsername : ''
+
+    if (rawUsername && !safeUsername) {
+      console.warn('[notify-discord] Suppressed a username matching a BattleTag or email local part')
+    }
+
+    const authorUsername: string = authorProfile?.display_name?.trim() || safeUsername || 'a LazyGrip member'
 
     const { data: sequenceRow, error: lookupError } = await admin
       .from('sequences')
