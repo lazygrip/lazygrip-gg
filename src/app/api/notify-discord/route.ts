@@ -63,11 +63,38 @@ export async function POST(req: NextRequest) {
     const contentType = typeof contentTypeRaw === 'string' && contentTypeRaw in CONTENT_TYPE_LABELS ? contentTypeRaw : ''
     const isUpdate = raw.isUpdate
     const isEdit = raw.isEdit
-    const metaUsername = user.user_metadata?.username
-    const authorUsername: string =
-      (typeof metaUsername === 'string' ? metaUsername : user.email) ?? 'unknown'
-
     const admin = createAdminClient()
+
+    // The public name for the embed footer.
+    //
+    // This used to read `user.user_metadata?.username` and fall back to
+    // `user.email`. user_metadata is Supabase AUTH metadata, which is a
+    // different field from public.profiles.username and is absent for most
+    // accounts, so that fallback published real email addresses into a public
+    // Discord forum. Confirmed live on 2026-08-08: "Posted by
+    // <address> · lazygrip.net" in #lazygrip-ems-sequence-sharing.
+    //
+    // This is deliberately the SAME expression the site already uses to name
+    // someone publicly, in src/app/user/[username]/page.tsx
+    // (`profile.display_name || profile.username`), so the embed and the site
+    // cannot disagree about what to call an author.
+    //
+    // It cannot run out of options. profiles.username is `text not null`
+    // (migration 002), and handle_new_user() seeds it from the OAuth
+    // `user_name` claim first, which is the Discord handle. The final literal
+    // only appears if the profile row is missing or the query itself failed.
+    const { data: authorProfile, error: profileLookupError } = await admin
+      .from('profiles')
+      .select('display_name, username')
+      .eq('id', user.id)
+      .single()
+
+    if (profileLookupError) {
+      console.error('[notify-discord] Failed to look up author profile:', profileLookupError)
+    }
+
+    const authorUsername: string =
+      authorProfile?.display_name?.trim() || authorProfile?.username?.trim() || 'a LazyGrip member'
 
     const { data: sequenceRow, error: lookupError } = await admin
       .from('sequences')

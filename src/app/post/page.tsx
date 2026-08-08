@@ -865,7 +865,6 @@ async function runDecode(exportString: string) {
             className: cls?.name ?? '',
             specName: form.spec_name,
             contentType: form.content_type,
-            authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
             heroTalent: form.hero_talent,
           })
 
@@ -910,7 +909,6 @@ async function runDecode(exportString: string) {
             className: cls?.name ?? '',
             specName: form.spec_name,
             contentType: form.content_type,
-            authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
             heroTalent: form.hero_talent,
           })
 
@@ -1021,7 +1019,6 @@ async function runDecode(exportString: string) {
             className: selectedClass?.name ?? '',
             specName: payload.spec_name,
             contentType: payload.content_type,
-            authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
             heroTalent: payload.hero_talent,
             isUpdate: editMode === 'update',
             isEdit: editMode === 'edit',
@@ -1100,7 +1097,6 @@ async function runDecode(exportString: string) {
           className: selectedClass?.name ?? '',
           specName: payload.spec_name,
           contentType: payload.content_type,
-          authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
           heroTalent: payload.hero_talent,
         })
 
@@ -1146,7 +1142,6 @@ async function runDecode(exportString: string) {
           className: selectedClass?.name ?? '',
           specName: payload.spec_name,
           contentType: payload.content_type,
-          authorUsername: user?.user_metadata?.username ?? user?.email ?? 'unknown',
           heroTalent: payload.hero_talent,
         })
 
