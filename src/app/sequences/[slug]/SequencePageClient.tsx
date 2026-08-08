@@ -14,6 +14,44 @@ import UsernameRequiredModal from '@/components/UsernameRequiredModal'
 
 const SITE_OWNER_ID = 'c2374192-e541-4636-9baf-84fc192cff52'
 
+// Every comment insert on this page goes through POST /api/comments rather
+// than through supabase.from('comments').insert directly. The write itself is
+// unchanged -- the route uses the caller's own session client, so the same RLS
+// policy still decides it -- but a server-side insert is the only place the
+// Discord comment relay can be fired from without trusting the browser to
+// make a second call it could simply skip. Design doc section 13.2.
+//
+// Returns the inserted row in the same shape the old .select('*, author:
+// profiles(*)') produced, so the optimistic state updates below are unchanged.
+// Returns null on failure, having already logged it, because all three call
+// sites treated an insert error the same way: log and leave the UI alone.
+async function insertComment(args: {
+  sequenceId: string
+  body: string
+  parentId?: string
+}): Promise<Comment | null> {
+  try {
+    const res = await fetch('/api/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sequenceId: args.sequenceId,
+        body: args.body,
+        ...(args.parentId ? { parentId: args.parentId } : {}),
+      }),
+    })
+    const json = await res.json().catch(() => null)
+    if (!res.ok || !json?.ok) {
+      console.error('Comment insert error:', json?.error ?? res.status)
+      return null
+    }
+    return json.comment as Comment
+  } catch (err) {
+    console.error('Comment insert error:', err)
+    return null
+  }
+}
+
 function nestComments(flat: Comment[]): Comment[] {
   const map = new Map<string, Comment>()
   const roots: Comment[] = []
@@ -238,12 +276,12 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
     }
 
     if (tagNote.trim()) {
-      const { data, error } = await supabase
-        .from('comments')
-        .insert({ sequence_id: sequence.id, author_id: user.id, body: tagNote.trim() })
-        .select('*, author:profiles(*)')
-        .single()
-      if (error) console.error('Comment insert error:', error)
+      // A rating note IS an ordinary comments row, which makes it a third
+      // relay source and the easiest of the three to overlook.
+      const data = await insertComment({
+        sequenceId: sequence.id,
+        body: tagNote.trim(),
+      })
       if (data) setComments(c => nestComments([...flattenComments(c), data]))
     }
 
@@ -282,12 +320,10 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
       return
     }
 
-    const { data, error } = await supabase
-      .from('comments')
-      .insert({ sequence_id: sequence.id, author_id: user.id, body: commentText.trim() })
-      .select('*, author:profiles(*)')
-      .single()
-    if (error) console.error('Comment insert error:', error)
+    const data = await insertComment({
+      sequenceId: sequence.id,
+      body: commentText.trim(),
+    })
     if (data) setComments(c => nestComments([...flattenComments(c), data]))
     setCommentText('')
   }
@@ -301,18 +337,16 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
       return
     }
 
-    const { data, error } = await supabase
-      .from('comments')
-      .insert({
-        sequence_id: sequence.id,
-        author_id: user.id,
-        body: replyText.trim(),
-        parent_id: parentId,
-      })
-      .select('*, author:profiles(*)')
-      .single()
-    if (error) { console.error('Reply insert error:', error); return }
-    if (data) setComments(c => nestComments([...flattenComments(c), data]))
+    // parent_id is stored and shown as a nested reply on the site. The relay
+    // carries it but the bot deliberately ignores it: Discord thread replies
+    // are flat, and design doc 7.4 says flatten rather than reconstruct.
+    const data = await insertComment({
+      sequenceId: sequence.id,
+      body: replyText.trim(),
+      parentId,
+    })
+    if (!data) return
+    setComments(c => nestComments([...flattenComments(c), data]))
     setReplyText('')
     setReplyingTo(null)
   }
