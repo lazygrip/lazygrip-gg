@@ -35,6 +35,18 @@ import { createAdminClient } from './supabase/admin'
 // every send, including retries. A retried delete now always carries
 // whatever is true right now, not whatever was true when the delete
 // happened.
+//
+// 2026-08-08, later same day: both directions confirmed live against
+// Sataana's actual bot -- grant, revoke, and the stale-count race all
+// proven correct with the recompute in place. He asked, as an explicit
+// "your call, not a request", for event_at on every event: his staleness
+// guard is no longer load-bearing now that the recompute above closes the
+// race properly, but it costs nothing to send and would catch a future
+// regression if the recompute above ever silently breaks. Added below,
+// stamped the same way idempotency_key already is -- fresh at construction
+// for publish/update/edit, and freshly re-stamped at send time for deletes
+// alongside the sequences_remaining recompute, since a delayed retry
+// should report when it actually went out, not when the delete happened.
 
 const RELAY_BASE_URL = 'https://discord.griphub.dev'
 const RELAY_TIMEOUT_MS = 2500
@@ -64,6 +76,12 @@ export interface RelayPublishPayload {
     thread_created: boolean
   }
   idempotency_key: string
+  // ISO timestamp of when this event was actually sent (not when the
+  // underlying action -- publish, delete -- happened). Optional on
+  // Sataana's side; his guard treats its absence as "behave exactly as
+  // before". For deletes it's re-stamped on every send attempt by
+  // fireSequenceRelay, same lifecycle as the sequences_remaining refresh.
+  event_at?: string
 }
 
 async function postWithTimeout(url: string, body: unknown, secret: string): Promise<Response> {
@@ -115,6 +133,11 @@ async function logRelayFailure(payload: RelayPublishPayload, lastError: string) 
 // retried or delayed delete event picks up a current count instead of
 // carrying whatever was true at construction time. Callers that don't need
 // this (publish/update/edit) simply omit it and behavior is unchanged.
+//
+// event_at is re-stamped on every attempt too, whether or not
+// refreshBeforeSend is provided -- it should always reflect when the
+// network call actually went out, not when fireSequenceRelay was first
+// invoked.
 export async function fireSequenceRelay(
   payload: RelayPublishPayload,
   refreshBeforeSend?: () => Promise<number | null>,
@@ -151,6 +174,8 @@ export async function fireSequenceRelay(
         author: { ...payload.author, sequences_remaining: fresh },
       }
     }
+
+    payload = { ...payload, event_at: new Date().toISOString() }
 
     try {
       const res = await postWithTimeout(url, payload, secret)
@@ -206,6 +231,7 @@ export async function fireSequencePublishedRelay(args: {
     console.error('[relay] Failed to pre-resolve discord_id for publish relay:', err)
   }
 
+  const now = new Date().toISOString()
   const payload: RelayPublishPayload = {
     event: args.event,
     sequence: {
@@ -220,7 +246,8 @@ export async function fireSequencePublishedRelay(args: {
     ...(args.threadId
       ? { discord: { thread_id: args.threadId, thread_created: args.threadCreated } }
       : {}),
-    idempotency_key: `${args.slug}:${args.event}:${new Date().toISOString()}`,
+    idempotency_key: `${args.slug}:${args.event}:${now}`,
+    event_at: now,
   }
 
   await fireSequenceRelay(payload)
@@ -250,6 +277,7 @@ export async function fireSequenceDeletedRelay(args: {
   getSequencesRemaining: () => Promise<number | null>
 }): Promise<void> {
   const initialCount = await args.getSequencesRemaining()
+  const now = new Date().toISOString()
 
   const payload: RelayPublishPayload = {
     event: 'deleted',
@@ -262,7 +290,8 @@ export async function fireSequenceDeletedRelay(args: {
       user_id: args.userId,
       ...(initialCount !== null ? { sequences_remaining: initialCount } : {}),
     },
-    idempotency_key: `${args.slug}:deleted:${new Date().toISOString()}`,
+    idempotency_key: `${args.slug}:deleted:${now}`,
+    event_at: now,
   }
 
   await fireSequenceRelay(payload, args.getSequencesRemaining)
