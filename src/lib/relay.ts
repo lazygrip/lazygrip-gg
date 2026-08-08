@@ -12,16 +12,29 @@ import { createAdminClient } from './supabase/admin'
 // not once per call site, since more call sites (comment relay) are coming.
 //
 // Behavior:
-//   1. Fire the request with a short timeout (2.5s, inside his 2-3s ask).
-//   2. On failure, retry twice with backoff (0.5s, 2s) -- transient network
-//      blips and cold starts on his end are the common case, not a reason
-//      to immediately give up or immediately queue.
-//   3. If all attempts fail, log to relay_failures so a human can see it --
-//      never just a console.error that scrolls off into Vercel's log
-//      retention window unseen. This is the "don't swallow it" half.
-//   4. The calling route's response to the user is never blocked on or
-//      affected by any of this -- callers should not await this in a way
-//      that delays their own response. Call it and let it run.
+// 1. Fire the request with a short timeout (2.5s, inside his 2-3s ask).
+// 2. On failure, retry twice with backoff (0.5s, 2s) -- transient network
+// blips and cold starts on his end are the common case, not a reason
+// to immediately give up or immediately queue.
+// 3. If all attempts fail, log to relay_failures so a human can see it --
+// never just a console.error that scrolls off into Vercel's log
+// retention window unseen. This is the "don't swallow it" half.
+// 4. The calling route's response to the user is never blocked on or
+// affected by any of this -- callers should not await this in a way
+// that delays their own response. Call it and let it run.
+//
+// 2026-08-08 delivery-time recompute: a live run showed a delete's
+// sequences_remaining go stale between when it was computed and when it
+// was actually delivered -- a second publish landed in the ~57s gap, so
+// the count that arrived was true when computed and false when acted on.
+// Sataana's fix on his end (event_at staleness guard) only prevents the
+// bad revoke; it doesn't stop the count from being wrong. The actual fix,
+// per Sataana's own suggestion, is to never let a stale count leave this
+// file: fireSequenceDeletedRelay now takes a function that computes the
+// count on demand, and fireSequenceRelay calls it fresh immediately before
+// every send, including retries. A retried delete now always carries
+// whatever is true right now, not whatever was true when the delete
+// happened.
 
 const RELAY_BASE_URL = 'https://discord.griphub.dev'
 const RELAY_TIMEOUT_MS = 2500
@@ -41,8 +54,9 @@ export interface RelayPublishPayload {
     discord_id?: string
     // Required when event is 'deleted', ignored otherwise. The count of
     // published sequences this author has left after this deletion. Only
-    // ever set from a real count taken before the row was removed -- never
-    // guessed, never defaulted to 0. See fireDeletedRelay below.
+    // ever set from a real count taken fresh at send time -- never
+    // guessed, never defaulted to 0, and never held over from an earlier
+    // computation. See fireSequenceDeletedRelay below.
     sequences_remaining?: number
   }
   discord?: {
@@ -94,7 +108,17 @@ async function logRelayFailure(payload: RelayPublishPayload, lastError: string) 
 // retrying internally and never throws. Callers should invoke it without
 // awaiting (or await it after their own response is already prepared) so a
 // slow or failing relay never delays the user-facing request.
-export async function fireSequenceRelay(payload: RelayPublishPayload): Promise<void> {
+//
+// refreshBeforeSend is optional. When provided, it's called immediately
+// before every send attempt (including retries) and its result overwrites
+// payload.author.sequences_remaining for that attempt. This is how a
+// retried or delayed delete event picks up a current count instead of
+// carrying whatever was true at construction time. Callers that don't need
+// this (publish/update/edit) simply omit it and behavior is unchanged.
+export async function fireSequenceRelay(
+  payload: RelayPublishPayload,
+  refreshBeforeSend?: () => Promise<number | null>,
+): Promise<void> {
   const secret = process.env.DISCORD_RELAY_SECRET
   if (!secret) {
     console.error('[relay] DISCORD_RELAY_SECRET not configured, cannot fire relay event')
@@ -105,6 +129,29 @@ export async function fireSequenceRelay(payload: RelayPublishPayload): Promise<v
   let lastError = ''
 
   for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    if (refreshBeforeSend) {
+      // Recompute right before this specific attempt goes out. If the
+      // refresh itself fails or comes back null, do not fall back to the
+      // stale value already on the payload and do not default to 0 --
+      // either would reintroduce the exact bug this exists to prevent.
+      // Treat it as a transient failure and let the normal retry loop
+      // below handle backoff, same as a network error would.
+      const fresh = await refreshBeforeSend()
+      if (fresh === null) {
+        lastError = 'sequences_remaining refresh returned null, refusing to send a stale or guessed count'
+        console.error('[relay]', lastError)
+        if (attempt < RETRY_DELAYS_MS.length) {
+          await sleep(RETRY_DELAYS_MS[attempt])
+          continue
+        }
+        break
+      }
+      payload = {
+        ...payload,
+        author: { ...payload.author, sequences_remaining: fresh },
+      }
+    }
+
     try {
       const res = await postWithTimeout(url, payload, secret)
       if (res.ok) return
@@ -179,18 +226,31 @@ export async function fireSequencePublishedRelay(args: {
   await fireSequenceRelay(payload)
 }
 
-// Convenience wrapper for the delete path. sequencesRemaining MUST be a real
-// count taken before the row was deleted -- see the delete route for where
-// that count comes from. Sataana was explicit: a "deleted" event with no
-// count is rejected on his side as a 400, not assumed to be zero, because
-// assuming zero is how someone with multiple sequences loses Forgemaster
-// over a single deletion.
+// Convenience wrapper for the delete path.
+//
+// getSequencesRemaining replaces a static sequencesRemaining number. It's
+// called fresh immediately before every send attempt (including retries),
+// so a delete that gets delayed or retried always reports the count that's
+// true right now rather than the count that was true when the delete
+// happened. The caller (the delete route) still does the original
+// before-the-delete count for its own bookkeeping and to decide whether to
+// proceed with the delete at all -- this callback is purely for what goes
+// out on the wire, and it should re-query rather than close over that
+// earlier value.
+//
+// Sataana was explicit: a "deleted" event with no count is rejected on his
+// side as a 400, not assumed to be zero, because assuming zero is how
+// someone with multiple sequences loses Forgemaster over a single
+// deletion. Returning null from getSequencesRemaining is treated as a
+// transient failure inside fireSequenceRelay (retried, never defaulted).
 export async function fireSequenceDeletedRelay(args: {
   slug: string
   title: string
   userId: string
-  sequencesRemaining: number
+  getSequencesRemaining: () => Promise<number | null>
 }): Promise<void> {
+  const initialCount = await args.getSequencesRemaining()
+
   const payload: RelayPublishPayload = {
     event: 'deleted',
     sequence: {
@@ -200,10 +260,10 @@ export async function fireSequenceDeletedRelay(args: {
     },
     author: {
       user_id: args.userId,
-      sequences_remaining: args.sequencesRemaining,
+      ...(initialCount !== null ? { sequences_remaining: initialCount } : {}),
     },
     idempotency_key: `${args.slug}:deleted:${new Date().toISOString()}`,
   }
 
-  await fireSequenceRelay(payload)
+  await fireSequenceRelay(payload, args.getSequencesRemaining)
 }

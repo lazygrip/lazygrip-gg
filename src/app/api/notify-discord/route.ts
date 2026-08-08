@@ -180,6 +180,7 @@ export async function POST(req: NextRequest) {
       .update(updatePayload)
       .eq('slug', slug)
 
+    let threadLinkWarning: string | null = null
     if (updateError) {
       console.error('[notify-discord] Failed to write back thread id, retrying once:', updateError)
 
@@ -190,18 +191,30 @@ export async function POST(req: NextRequest) {
 
       if (retryUpdateError) {
         console.error('[notify-discord] Retry also failed to write back thread id:', retryUpdateError)
-        return NextResponse.json({
-          ok: true,
-          warning: 'Discord notification sent, but the site could not save the thread link. A future edit may create a duplicate thread.',
-        })
+        // Do NOT return here. Whether this site's own copy of the thread
+        // id got saved is unrelated to whether Sataana's bot should be
+        // told the publish happened -- a Discord thread genuinely exists
+        // at this point regardless of what Supabase does next. Returning
+        // early here previously skipped fireSequencePublishedRelay
+        // entirely with no exception and nothing logged to
+        // relay_failures, which is exactly the failure mode that made a
+        // real publish invisible to Sataana's bot on 2026-08-08 with zero
+        // trace in any log. Record the warning and keep going so the
+        // relay call below still fires.
+        threadLinkWarning =
+          'Discord notification sent, but the site could not save the thread link. A future edit may create a duplicate thread.'
       }
     }
 
     // Fire the relay to Sataana's gripbot now that we know the resolved
-    // thread id and whether it was newly created. Not awaited in a way that
-    // blocks this response -- the relay helper handles its own retries and
-    // failure logging internally, and a slow or unreachable gripbot must
-    // never delay or fail the publisher's actual request.
+    // thread id and whether it was newly created. This now runs
+    // unconditionally after a successful Discord post, regardless of
+    // whether the thread-id write-back above succeeded -- those are two
+    // independent concerns and a failure in one must never silently
+    // suppress the other. Not awaited in a way that blocks this response --
+    // the relay helper handles its own retries and failure logging
+    // internally, and a slow or unreachable gripbot must never delay or
+    // fail the publisher's actual request.
     const finalThreadId = newThreadId ?? existingThreadId
     const relayEvent = isEdit ? 'edited' : isUpdate ? 'updated' : 'published'
     fireSequencePublishedRelay({
@@ -217,6 +230,10 @@ export async function POST(req: NextRequest) {
       // unexpected throw so it can never affect the response below.
       console.error('[notify-discord] Unexpected error firing sequence relay:', err)
     })
+
+    if (threadLinkWarning) {
+      return NextResponse.json({ ok: true, warning: threadLinkWarning })
+    }
 
     return NextResponse.json({ ok: true })
   } catch (err) {

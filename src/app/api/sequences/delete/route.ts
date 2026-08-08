@@ -11,14 +11,47 @@ import { fireSequenceDeletedRelay } from '@/lib/relay'
 //
 // Sataana needs sequences_remaining specifically to know whether to revoke
 // Forgemaster (only on an explicit 0, never guessed, never defaulted). That
-// count has to be taken BEFORE the delete, or it's wrong -- counting after
-// the row is already gone just tells you how many were left excluding the
-// one that's now missing anyway, which happens to be the same number only
-// by coincidence of query timing, not by design. Getting this backwards
-// quietly would produce exactly the kind of bug Sataana flagged: someone
-// with five sequences losing their role over one deletion.
+// count has to be taken BEFORE the delete for the authorization/proceed
+// decision below, or it's wrong -- counting after the row is already gone
+// just tells you how many were left excluding the one that's now missing
+// anyway, which happens to be the same number only by coincidence of query
+// timing, not by design. Getting this backwards quietly would produce
+// exactly the kind of bug Sataana flagged: someone with five sequences
+// losing their role over one deletion.
+//
+// 2026-08-08: what actually goes out over the relay is now computed
+// separately by relay.ts at send time (see getSequencesRemaining below),
+// not taken from this initial count. A live run showed the initial count
+// go stale in the gap between the delete happening and the relay actually
+// being delivered -- see relay.ts for the full explanation. The count
+// below is still required and still guards the delete itself; it's just no
+// longer assumed to still be accurate by the time the network call fires.
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+async function countRemainingPublished(
+  admin: ReturnType<typeof createAdminClient>,
+  userId: string,
+  excludeSequenceId: string,
+): Promise<number | null> {
+  const { count, error } = await admin
+    .from('sequences')
+    .select('id', { count: 'exact', head: true })
+    .eq('author_id', userId)
+    .eq('status', 'published')
+    .neq('id', excludeSequenceId)
+
+  if (error) {
+    console.error('[delete-sequence] Failed to count remaining sequences:', error)
+    return null
+  }
+
+  // count is number | null from Supabase's typing. A null here with no
+  // error is still an unknown count, not a zero -- treat it the same as an
+  // error rather than letting a caller default it to 0. See the 8-sequence
+  // account this almost mis-fired for on 2026-08-08.
+  return count
+}
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -60,40 +93,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
   }
 
-  // Count this author's OTHER published sequences before deleting this one.
-  // This is the number after the delete completes, which is why it excludes
-  // the row about to be removed rather than counting all published rows and
-  // subtracting one -- excluding it here is equivalent and avoids an
-  // off-by-one if this route is ever changed to soft-delete instead.
-  const { count: remainingCount, error: countError } = await admin
-    .from('sequences')
-    .select('id', { count: 'exact', head: true })
-    .eq('author_id', user.id)
-    .eq('status', 'published')
-    .neq('id', sequenceId)
-
-  if (countError) {
-    // Do not proceed with a delete we can't accurately report on. Sataana's
-    // contract treats sequences_remaining as required and load-bearing for
-    // a role revocation decision -- sending a wrong or missing count is
-    // worse than failing this request and asking the user to retry.
-    console.error('[delete-sequence] Failed to count remaining sequences:', countError)
+  // Initial count, taken before the delete, purely to decide whether we can
+  // proceed and report on this delete at all. Do not proceed with a delete
+  // we can't accurately report on -- Sataana's contract treats
+  // sequences_remaining as required and load-bearing for a role revocation
+  // decision, and sending a wrong or missing count is worse than failing
+  // this request and asking the user to retry.
+  const initialRemaining = await countRemainingPublished(admin, user.id, sequenceId)
+  if (initialRemaining === null) {
     return NextResponse.json({ ok: false, error: 'Could not verify remaining sequence count' }, { status: 500 })
   }
-
-  // remainingCount is number | null from Supabase's count() typing. A null
-  // here with no countError is still an unknown count, not a zero -- `?? 0`
-  // would silently turn "count unavailable" into "count is zero", which is
-  // the exact shape of bug this whole guard exists to prevent (see the
-  // 8-sequence account this almost mis-fired for on 2026-08-08). Treat a
-  // null count the same as a countError: refuse the delete rather than
-  // guess, per Sataana's "never default to zero" contract.
-  if (remainingCount === null) {
-    console.error('[delete-sequence] remainingCount was null with no countError -- refusing to guess')
-    return NextResponse.json({ ok: false, error: 'Could not verify remaining sequence count' }, { status: 500 })
-  }
-
-  const sequencesRemaining = remainingCount
 
   const { error: deleteError } = await admin
     .from('sequences')
@@ -114,7 +123,13 @@ export async function POST(req: NextRequest) {
       slug: sequence.slug,
       title: sequence.title,
       userId: user.id,
-      sequencesRemaining,
+      // Re-queried fresh by relay.ts immediately before every send attempt,
+      // including retries, rather than relying on initialRemaining staying
+      // accurate until delivery. This is deliberately a NEW query each
+      // call, not a closure returning initialRemaining -- the whole point
+      // is that this can differ from initialRemaining if time has passed
+      // and the author published or deleted something else in the gap.
+      getSequencesRemaining: () => countRemainingPublished(admin, user.id, sequenceId),
     }).catch((err) => {
       console.error('[delete-sequence] Unexpected error firing delete relay:', err)
     })
