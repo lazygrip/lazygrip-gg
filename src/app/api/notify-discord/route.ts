@@ -3,37 +3,22 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { fireSequencePublishedRelay } from '@/lib/relay'
 import { isUnsafePublicUsername, publicName } from '@/lib/public-name'
+import { buildSequenceEmbed, cleanText, SLUG_RE, SNOWFLAKE_RE } from '@/lib/discord-embed'
 
-const CONTENT_TYPE_LABELS: Record<string, string> = {
-  mythic_plus: 'Mythic+',
-  raid: 'Raid',
-  leveling: 'Leveling',
-  open_world: 'Open World',
-  pvp: 'PvP',
-}
-const CLASS_COLORS: Record<string, number> = {
-  'Death Knight': 0xC41E3A,
-  'Demon Hunter': 0xA330C9,
-  'Druid': 0xFF7C0A,
-  'Evoker': 0x33937F,
-  'Hunter': 0xAAD372,
-  'Mage': 0x3FC7EB,
-  'Monk': 0x00FF98,
-  'Paladin': 0xF48CBA,
-  'Priest': 0xFFFFFF,
-  'Rogue': 0xFFF468,
-  'Shaman': 0x0070DD,
-  'Warlock': 0x8788EE,
-  'Warrior': 0xC69B3A,
-}
-
-const SLUG_RE = /^[a-z0-9-]{1,120}$/
-const SNOWFLAKE_RE = /^\d{17,20}$/
-
-function cleanText(value: unknown, max: number): string {
-  if (typeof value !== 'string') return ''
-  return value.replace(/\s+/g, ' ').trim().slice(0, max)
-}
+// CONTENT_TYPE_LABELS, CLASS_COLORS, cleanText, SLUG_RE, SNOWFLAKE_RE and the
+// embed construction itself all moved to src/lib/discord-embed.ts on
+// 2026-08-09. This route stopped being the only thing that posts a sequence
+// card to Discord that day: the backfill route at
+// src/app/api/admin/sequence-thread/route.ts creates threads for the 40
+// published sequences that never got one, and it has to produce a card
+// identical to this one. Design doc section 14.6.
+//
+// Same move, same reasoning, as public-name.ts on the line above -- when a
+// second caller shows up for a decision, the decision becomes a module instead
+// of a copy. What did NOT move is who the author is: this route still resolves
+// that from the authenticated session below, and the backfill route resolves
+// it from the sequence row's author_id, which is exactly why the builder takes
+// a finished authorName string and does not work it out for itself.
 
 export async function POST(req: NextRequest) {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL
@@ -55,15 +40,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Invalid slug' }, { status: 400 })
     }
 
-    const classNameRaw = raw.className
-    const contentTypeRaw = raw.contentType
+    // The title is the only embed field still normalised here, and it has to
+    // be: this route uses it in three places that must all be the same string
+    // -- the embed, the Discord thread name, and the title in the relay
+    // payload at the bottom of this function. className, specName, heroTalent
+    // and contentType go to buildSequenceEmbed exactly as they arrived on the
+    // request body, because the rules for those four (known class names only,
+    // known content types only, whitespace-collapsed and capped free text)
+    // moved into the builder with the embed they belong to.
     const title = cleanText(raw.title, 200) || 'Untitled sequence'
-    const className = typeof classNameRaw === 'string' && classNameRaw in CLASS_COLORS ? classNameRaw : ''
-    const specName = cleanText(raw.specName, 60)
-    const heroTalent = cleanText(raw.heroTalent, 60)
-    const contentType = typeof contentTypeRaw === 'string' && contentTypeRaw in CONTENT_TYPE_LABELS ? contentTypeRaw : ''
-    const isUpdate = raw.isUpdate
-    const isEdit = raw.isEdit
+
+    // Boolean() only so these satisfy the builder's boolean fields. Both were
+    // bare `unknown` off the request body before and were read for their
+    // truthiness in all three places they are used, so coercing them here is
+    // the identical test written once instead of three times.
+    const isUpdate = Boolean(raw.isUpdate)
+    const isEdit = Boolean(raw.isEdit)
     const admin = createAdminClient()
 
     // The public name for the embed footer.
@@ -119,7 +111,7 @@ export async function POST(req: NextRequest) {
 
     const { data: sequenceRow, error: lookupError } = await admin
       .from('sequences')
-      .select('discord_thread_id')
+      .select('discord_thread_id, author_id')
       .eq('slug', slug)
       .single()
 
@@ -127,33 +119,48 @@ export async function POST(req: NextRequest) {
       console.error('[notify-discord] Failed to look up sequence:', lookupError)
     }
 
+    // OWNERSHIP. Everything above this point authenticates the CALLER; nothing
+    // above it ties the caller to the sequence they named. The row is fetched
+    // by slug alone through the ADMIN client, so RLS does not apply either,
+    // and user.id was read for exactly two things: the footer profile lookup
+    // and the relay userId. Without this check any logged-in account could
+    // post any published sequence's slug and land a card in that sequence's
+    // Discord thread under their own name, with a relay firing "published"
+    // attributed to them. Worse for a sequence that has no thread yet -- and
+    // 37 published sequences are in that state -- the post below CREATES the
+    // thread and the write-back at the bottom binds discord_thread_id to it
+    // permanently, so somebody else's post becomes that sequence's thread
+    // forever. The only caller of this route in the codebase is
+    // src/app/post/page.tsx (publish, update and edit), which only ever
+    // operates on a sequence the signed-in user owns, so this refuses nothing
+    // legitimate.
+    //
+    // A row that was NOT found keeps the tolerant behaviour it already had. A
+    // missing row is a separate pre-existing question and deliberately not
+    // answered here.
+    if (sequenceRow && sequenceRow.author_id !== user.id) {
+      console.warn(`[notify-discord] Refused a notification for a sequence owned by another user: ${slug}`)
+      return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 })
+    }
+
     const storedThreadId = sequenceRow?.discord_thread_id ?? null
     const existingThreadId = storedThreadId && SNOWFLAKE_RE.test(storedThreadId) ? storedThreadId : null
 
-    const color = CLASS_COLORS[className] ?? 0x1D9E75
-    const specPart = specName ? `${specName} ` : ''
-    const heroTalentPart = heroTalent ? ` — ${heroTalent}` : ''
-    const contentLabel = CONTENT_TYPE_LABELS[contentType] ?? contentType
-    const url = `https://lazygrip.net/sequences/${slug}`
-
-    let embedTitle = title
-    if (isEdit) embedTitle = `📝 ${title}`
-    else if (isUpdate) embedTitle = `🔄 ${title}`
-
-    const embed = {
-      title: embedTitle,
-      url,
-      color,
-      description: `**${specPart}${className}${heroTalentPart}** — ${contentLabel}`,
-      author: {
-        name: 'LazyGrip.net',
-        url: 'https://lazygrip.net',
-      },
-      footer: {
-        text: `Posted by ${authorUsername} · lazygrip.net`,
-      },
-      timestamp: new Date().toISOString(),
-    }
+    // authorUsername is passed in rather than derived inside the builder. The
+    // builder is shared with the backfill route, which has no session at all
+    // and must attribute its threads to the sequence's own author_id, so the
+    // one thing the two callers disagree about is deliberately left to them.
+    const embed = buildSequenceEmbed({
+      slug,
+      title,
+      className: raw.className,
+      specName: raw.specName,
+      heroTalent: raw.heroTalent,
+      contentType: raw.contentType,
+      authorName: authorUsername,
+      isEdit,
+      isUpdate,
+    })
 
     const postUrl = existingThreadId
       ? `${webhookUrl}?thread_id=${existingThreadId}&wait=true`
@@ -164,9 +171,33 @@ export async function POST(req: NextRequest) {
       username: 'LazyGrip',
     }
 
+    // THE BARE TITLE, NO PREFIX. This used to read
+    //
+    //   const threadPrefix = isEdit ? 'Edit: ' : isUpdate ? 'Updated: ' : 'New: '
+    //   body.thread_name = `${threadPrefix}${title}`
+    //
+    // and those prefixes are what made the forum unreadable. A thread name is
+    // permanent, so "New: " described a thread's first minute and then stayed
+    // there forever, and a sequence that was published, updated and edited
+    // ended up with whichever word happened to win the race to create it. All
+    // 18 existing threads were renamed in place to the bare sequence title on
+    // 2026-08-09; leaving the prefix here means the very next publish
+    // reintroduces exactly what was just cleaned up. Do not restore it as a
+    // typo fix.
+    //
+    // Nothing is lost by dropping it, because the prefix was never the signal
+    // it looked like. The embed already carries a pencil glyph for an edit and
+    // a cycle glyph for an update, and that is where the signal belongs: on
+    // the message, which is the thing that is actually new, rather than on the
+    // thread's permanent name. Those glyphs are untouched.
+    //
+    // Note the guard this sits inside: thread_name is only ever sent when
+    // there is NO existing thread id, so this affects the creation of new
+    // threads only. It cannot rename a thread that already exists -- Discord
+    // ignores thread_name when the webhook targets an existing thread, and the
+    // only reason we ever send it is to name the thread being created.
     if (!existingThreadId) {
-      const threadPrefix = isEdit ? 'Edit: ' : isUpdate ? 'Updated: ' : 'New: '
-      body.thread_name = `${threadPrefix}${title}`
+      body.thread_name = title
     }
 
     let res = await fetch(postUrl, {
@@ -184,8 +215,13 @@ export async function POST(req: NextRequest) {
         failText,
       )
       const retryBody: Record<string, unknown> = { ...body }
-      const threadPrefix = isEdit ? 'Edit: ' : isUpdate ? 'Updated: ' : 'New: '
-      retryBody.thread_name = `${threadPrefix}${title}`
+      // Bare title here too, for the reason set out at the other thread_name
+      // assignment above. This is the second of the two places the "New: " /
+      // "Updated: " / "Edit: " prefix used to be applied, and it is the one
+      // that is easy to miss: it fires when a post into a recorded thread
+      // fails, which means the thread it names is being created right now and
+      // will keep this name permanently, exactly like the first one.
+      retryBody.thread_name = title
       res = await fetch(`${webhookUrl}?wait=true`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
