@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { timingSafeEqual } from 'node:crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SNOWFLAKE_RE } from '@/lib/discord-embed'
@@ -109,7 +110,9 @@ export async function POST(req: NextRequest) {
 
     const { data: existing, error: lookupError } = await admin
       .from('comments')
-      .select('id, source')
+      // sequence_id joins the select so the opt-out check and the revalidate
+      // below can both be served by one further read of sequences.
+      .select('id, source, sequence_id')
       .eq('discord_message_id', discordMessageId)
       .single()
 
@@ -133,6 +136,68 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // ONE READ OF sequences SERVING TWO PURPOSES: the slug for the revalidate at
+    // the bottom, and the author for the opt-out check immediately below.
+    //
+    // 500 ON A FAILED LOOKUP, unlike the insert route which continues as not
+    // opted out. There is no safe direction to fail in here: the write is about
+    // to happen and the slug is needed either way, so guessing would mean either
+    // editing a comment the author has opted out of bridging or leaving a stale
+    // page with no way to know which.
+    const { data: sequence, error: sequenceError } = await admin
+      .from('sequences')
+      .select('slug, author_id')
+      .eq('id', existing.sequence_id)
+      .single()
+
+    if (sequenceError || !sequence) {
+      console.error(
+        '[relay/discord-comment-edit] Failed to look up sequence for comment:',
+        existing.id,
+        sequenceError,
+      )
+      return NextResponse.json({ ok: false, error: 'Could not resolve sequence' }, { status: 500 })
+    }
+
+    // THE SEQUENCE AUTHOR'S BRIDGE OPT-OUT (migration 017). The flag gates all
+    // four bridge paths, not creation alone -- Jesper's call on 2026-08-10,
+    // design section 21.3. The accepted cost is recorded on the delete route,
+    // which is where it bites.
+    //
+    // 409 AND NOT 403 ON THIS ROUTE, AND THE DIFFERENCE WAS MEASURED OFF THE
+    // BOT. commentrelay.py has no 403 branch on edit or delete, so a 403 falls
+    // past every branch to _last_error, and an off-box Cloudflare Worker parses
+    // last_error out of /healthz -- which would turn one user's preference into
+    // a standing alarm. The existing 409 branch warns, does not retry, and
+    // leaves last_error alone, which is exactly the handling this case wants.
+    // Its log line will read that the comment is not discord-sourced, which is
+    // inaccurate for this case; that is a bot-side wording follow-up and not a
+    // reason to pick a worse status here.
+    if (sequence.author_id) {
+      const { data: ownerProfile, error: optOutError } = await admin
+        .from('profiles')
+        .select('discord_bridge_opted_out')
+        .eq('id', sequence.author_id)
+        .single()
+
+      if (optOutError) {
+        // Not fatal: a preference read that failed must not block an edit the
+        // way a failed sequence lookup does, since the slug is still in hand.
+        console.error(
+          '[relay/discord-comment-edit] Failed to read sequence author bridge opt-out:',
+          optOutError,
+        )
+      } else if (ownerProfile?.discord_bridge_opted_out === true) {
+        console.log(
+          `[relay/discord-comment-edit] Refused edit on ${sequence.slug}: sequence author has opted out of the Discord bridge`,
+        )
+        return NextResponse.json(
+          { ok: false, error: 'Sequence author has opted out of the Discord bridge', reason: 'author_opted_out' },
+          { status: 409 },
+        )
+      }
+    }
+
     const { error: updateError } = await admin
       .from('comments')
       .update({ body })
@@ -143,9 +208,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Could not edit comment' }, { status: 500 })
     }
 
+    // Drop the cached sequence page so its raw HTML carries the edited text
+    // rather than the original for up to an hour. try/catch and log only: the
+    // edit is committed, and a cache-invalidation failure must not be reported
+    // to the bot as an edit that did not happen.
+    try {
+      revalidatePath(`/sequences/${sequence.slug}`)
+    } catch (err) {
+      console.error('[relay/discord-comment-edit] revalidatePath failed:', err)
+    }
+
     // No outbound relay here either, for the reason the insert route's header
     // gives: relaying this edit back to Discord would edit the message that
-    // caused it.
+    // caused it. revalidatePath sends nothing anywhere and does not change that.
     return NextResponse.json({ ok: true, comment_id: existing.id })
   } catch (err) {
     console.error('[relay/discord-comment-edit] Unexpected error:', err)
