@@ -352,11 +352,35 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
   }
 
   async function deleteComment(commentId: string) {
-    const { error } = await supabase
-      .from('comments')
-      .update({ is_deleted: true })
-      .eq('id', commentId)
-    if (error) { console.error('Comment delete error:', error); return }
+    // Routed through a server API instead of a direct client-side update so the
+    // cached sequence page can be revalidated after the write. A browser write
+    // has no server moment to hang revalidatePath off, so the raw HTML kept
+    // serving a comment its author had already removed for up to an hour.
+    //
+    // The authorization is unchanged: api/comments/delete soft-deletes through
+    // the SESSION client, so migration 002's `using (auth.uid() = author_id)`
+    // decides it exactly as it decided this write. Nothing here became more
+    // permissive by moving server-side.
+    //
+    // The optimistic update below stays exactly as it was, and it is why this
+    // move is safe: the person who deleted the comment still sees it disappear
+    // at once rather than waiting on a round trip, and everyone else now gets a
+    // correct cached page instead of waiting for their own client reconcile.
+    try {
+      const res = await fetch('/api/comments/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commentId }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) {
+        console.error('Comment delete error:', data.error)
+        return
+      }
+    } catch (error) {
+      console.error('Comment delete error:', error)
+      return
+    }
     setComments(c => {
       const flat = flattenComments(c).map(comment =>
         comment.id !== commentId ? comment : { ...comment, is_deleted: true, body: '[deleted]' }

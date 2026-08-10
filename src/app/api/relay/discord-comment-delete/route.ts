@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { timingSafeEqual } from 'node:crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SNOWFLAKE_RE } from '@/lib/discord-embed'
@@ -92,7 +93,9 @@ export async function POST(req: NextRequest) {
 
     const { data: existing, error: lookupError } = await admin
       .from('comments')
-      .select('id, source')
+      // sequence_id joins the select so the opt-out check and the revalidate
+      // below can both be served by one further read of sequences.
+      .select('id, source, sequence_id')
       .eq('discord_message_id', discordMessageId)
       .single()
 
@@ -115,6 +118,72 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // ONE READ OF sequences SERVING TWO PURPOSES: the slug for the revalidate at
+    // the bottom, and the author for the opt-out check immediately below.
+    //
+    // 500 ON A FAILED LOOKUP, unlike the insert route which continues as not
+    // opted out. There is no safe direction to fail in here: the write is about
+    // to happen and the slug is needed either way.
+    const { data: sequence, error: sequenceError } = await admin
+      .from('sequences')
+      .select('slug, author_id')
+      .eq('id', existing.sequence_id)
+      .single()
+
+    if (sequenceError || !sequence) {
+      console.error(
+        '[relay/discord-comment-delete] Failed to look up sequence for comment:',
+        existing.id,
+        sequenceError,
+      )
+      return NextResponse.json({ ok: false, error: 'Could not resolve sequence' }, { status: 500 })
+    }
+
+    // THE SEQUENCE AUTHOR'S BRIDGE OPT-OUT (migration 017), and THIS IS THE ROUTE
+    // WHERE THE ACCEPTED COST LANDS, so it is written down here rather than left
+    // for a reviewer to discover.
+    //
+    // The opt-out gates all four bridge paths, not creation alone. The narrower
+    // alternative -- gate creation only -- was on the table and would have kept
+    // this route working, so that a message the author deletes on Discord still
+    // disappears from the site. Jesper chose all four on 2026-08-10, knowing the
+    // cost: WITH THE OPT-OUT ON, A MESSAGE DELETED ON DISCORD STAYS VISIBLE ON
+    // THE SITE, because the only path that could remove it is the one being
+    // refused right here. Design section 21.3. This is a decision, not an
+    // oversight, and reversing it means reversing that decision.
+    //
+    // 409 AND NOT 403, MEASURED OFF THE BOT. commentrelay.py has no 403 branch on
+    // edit or delete, so a 403 falls past every branch to _last_error, which an
+    // off-box Cloudflare Worker parses out of /healthz -- turning a user
+    // preference into a standing alarm. The existing 409 branch warns, does not
+    // retry, and leaves last_error alone. Its log line will read that the comment
+    // is not discord-sourced, which is inaccurate for this case; that is a
+    // bot-side wording follow-up, not a reason to pick a worse status.
+    if (sequence.author_id) {
+      const { data: ownerProfile, error: optOutError } = await admin
+        .from('profiles')
+        .select('discord_bridge_opted_out')
+        .eq('id', sequence.author_id)
+        .single()
+
+      if (optOutError) {
+        // Not fatal: a preference read that failed must not block a deletion the
+        // way a failed sequence lookup does, since the slug is still in hand.
+        console.error(
+          '[relay/discord-comment-delete] Failed to read sequence author bridge opt-out:',
+          optOutError,
+        )
+      } else if (ownerProfile?.discord_bridge_opted_out === true) {
+        console.log(
+          `[relay/discord-comment-delete] Refused delete on ${sequence.slug}: sequence author has opted out of the Discord bridge`,
+        )
+        return NextResponse.json(
+          { ok: false, error: 'Sequence author has opted out of the Discord bridge', reason: 'author_opted_out' },
+          { status: 409 },
+        )
+      }
+    }
+
     // Setting is_deleted twice is harmless, so a replayed delete event is
     // idempotent without needing a marker of its own the way the insert route
     // needs one for 23505.
@@ -128,9 +197,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Could not delete comment' }, { status: 500 })
     }
 
+    // Drop the cached sequence page so its raw HTML stops serving a comment the
+    // author has removed. This one matters more than the edit route's: a stale
+    // edit shows old wording, a stale delete shows text somebody deleted.
+    // try/catch and log only -- the soft delete is committed either way.
+    try {
+      revalidatePath(`/sequences/${sequence.slug}`)
+    } catch (err) {
+      console.error('[relay/discord-comment-delete] revalidatePath failed:', err)
+    }
+
     // No outbound relay here either, for the reason the insert route's header
     // gives: relaying this deletion back to Discord would delete the message
-    // that caused it.
+    // that caused it. revalidatePath sends nothing anywhere and does not change
+    // that.
     return NextResponse.json({ ok: true, comment_id: existing.id })
   } catch (err) {
     console.error('[relay/discord-comment-delete] Unexpected error:', err)
