@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { timingSafeEqual } from 'node:crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SLUG_RE, SNOWFLAKE_RE } from '@/lib/discord-embed'
@@ -108,6 +109,7 @@ export async function POST(req: NextRequest) {
   //   d. read body
   //   e. validate body
   //   f. resolve the sequence
+  //   f2. refuse if the sequence author has opted out of the bridge
   //   g. resolve the author from discord_id, never from the body
   //   h. run the two posting gates
   //   i. insert
@@ -200,11 +202,17 @@ export async function POST(req: NextRequest) {
 
     const admin = createAdminClient()
 
+    // author_id is selected on both branches for the opt-out check below. The
+    // flag is the SEQUENCE OWNER's, not the commenter's (design section 21.3).
     const { data: sequence, error: sequenceError } = hasSlug
-      ? await admin.from('sequences').select('id, slug').eq('slug', slugRaw as string).single()
+      ? await admin
+          .from('sequences')
+          .select('id, slug, author_id')
+          .eq('slug', slugRaw as string)
+          .single()
       : await admin
           .from('sequences')
-          .select('id, slug')
+          .select('id, slug, author_id')
           .eq('discord_thread_id', threadIdRaw as string)
           .single()
 
@@ -215,6 +223,61 @@ export async function POST(req: NextRequest) {
         sequenceError,
       )
       return NextResponse.json({ ok: false, error: 'No such sequence' }, { status: 404 })
+    }
+
+    // f2. THE SEQUENCE AUTHOR'S BRIDGE OPT-OUT. profiles.discord_bridge_opted_out
+    // (migration 017) is per-user and covers every sequence that author owns, in
+    // both directions of the bridge. It is read at relay time, so it governs
+    // every future relay and unwinds nothing already posted.
+    //
+    // IT SITS BEFORE THE IDENTITY LOOKUP DELIBERATELY. The opt-out is a fact
+    // about the sequence, so there is no reason to resolve who the commenter is
+    // before refusing -- and no reason to hand an opted-out thread's traffic to
+    // a Discord-id lookup that cannot change the answer.
+    //
+    // 403 AND NOT 200, AND THIS WAS MEASURED OFF THE BOT RATHER THAN CHOSEN.
+    // The first instinct was "200, because an opt-out is a preference and not a
+    // failure", and commentrelay.py as deployed falsifies it:
+    //
+    //   200 + linked:false   the bot increments dropped_unlinked and REACTS with
+    //                        the link prompt, so every message in an opted-out
+    //                        thread would earn a reaction
+    //   plain 200            the bot increments relayed and logs a relay of
+    //                        comment None. A counter that lies
+    //   403 + reason         the bot logs the refusal and calls _prompt, which
+    //                        finds no emoji registered for an unknown reason and
+    //                        stays silent by design. No reaction, no miscount,
+    //                        no last_error
+    //
+    // So 403 is the only one of the three that behaves correctly against the bot
+    // exactly as it is deployed today, with zero bot-side changes required.
+    //
+    // A FAILED LOOKUP MEANS NOT OPTED OUT. Same reasoning as the outbound path
+    // in api/comments/route.ts: this is a preference, not a security gate, and
+    // refusing real relays because a read failed transiently is the worse of the
+    // two failures. The three checks that ARE security gates -- the secret, and
+    // the two posting gates below -- all fail closed and are untouched by this.
+    if (sequence.author_id) {
+      const { data: ownerProfile, error: optOutError } = await admin
+        .from('profiles')
+        .select('discord_bridge_opted_out')
+        .eq('id', sequence.author_id)
+        .single()
+
+      if (optOutError) {
+        console.error(
+          '[relay/discord-comment] Failed to read sequence author bridge opt-out:',
+          optOutError,
+        )
+      } else if (ownerProfile?.discord_bridge_opted_out === true) {
+        console.log(
+          `[relay/discord-comment] Refused inbound relay on ${sequence.slug}: sequence author has opted out of the Discord bridge`,
+        )
+        return NextResponse.json(
+          { ok: false, error: 'Sequence author has opted out of the Discord bridge', reason: 'author_opted_out' },
+          { status: 403 },
+        )
+      }
     }
 
     // g. OBLIGATION 1. The author is resolved here, from the Discord id, and
@@ -310,14 +373,40 @@ export async function POST(req: NextRequest) {
       // means that index did its job, so answer 200 with a duplicate marker: a
       // 500 here would make the bot retry the replay forever.
       if (insertError.code === '23505') {
+        // THE DUPLICATE BRANCH REVALIDATES TOO, AND THAT IS NOT REDUNDANT. A
+        // replayed insert means the row is present; if the ORIGINAL insert's
+        // revalidate was the call that failed, this replay is the second chance
+        // to get the cached page right. Cheap, idempotent, and the only path
+        // that can repair that case.
+        try {
+          revalidatePath(`/sequences/${sequence.slug}`)
+        } catch (err) {
+          console.error('[relay/discord-comment] revalidatePath failed on duplicate:', err)
+        }
         return NextResponse.json({ ok: true, linked: true, duplicate: true })
       }
       console.error('[relay/discord-comment] Insert failed:', insertError)
       return NextResponse.json({ ok: false, error: 'Could not post comment' }, { status: 500 })
     }
 
-    // NOTHING FOLLOWS THE INSERT. No deferred work, no outbound relay call of
-    // any kind. See the header: that absence is the loop prevention.
+    // NO OUTBOUND RELAY FOLLOWS THE INSERT. No deferred work, no call to
+    // fireSequenceCommentRelay, no fetch to Discord of any kind. See the header:
+    // that absence is the loop prevention, and the revalidate below does not
+    // weaken it. revalidatePath drops this deployment's cached copy of one page
+    // and sends nothing anywhere; it cannot re-post the message that created
+    // this comment. The rule to preserve is "nothing outbound", not "no code".
+    //
+    // Without it the raw HTML for the sequence page keeps serving a comment list
+    // that predates this relay for up to an hour, which is what crawlers and
+    // no-JS clients see. Browsers reconcile on mount and would recover anyway.
+    // try/catch because a cache-invalidation failure must not turn a comment
+    // that IS in the database into a 500 the bot then retries.
+    try {
+      revalidatePath(`/sequences/${sequence.slug}`)
+    } catch (err) {
+      console.error('[relay/discord-comment] revalidatePath failed:', err)
+    }
+
     return NextResponse.json({
       ok: true,
       linked: true,

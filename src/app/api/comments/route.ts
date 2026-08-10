@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse, after } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { fireSequenceCommentRelay } from '@/lib/relay'
@@ -98,7 +99,10 @@ export async function POST(req: NextRequest) {
 
     const { data: sequenceRow, error: sequenceLookupError } = await admin
       .from('sequences')
-      .select('slug, discord_thread_id')
+      // author_id joins the select for the opt-out read below. The flag is the
+      // SEQUENCE OWNER's, not the commenter's: one setting on the profile
+      // covering every sequence that author owns, per design section 21.3.
+      .select('slug, discord_thread_id, author_id')
       .eq('id', sequenceId)
       .single()
 
@@ -108,7 +112,65 @@ export async function POST(req: NextRequest) {
 
     const slug = sequenceRow?.slug ?? ''
 
+    // Drop the cached sequence page so the raw HTML carries this comment.
+    //
+    // WHAT THIS BUYS, stated precisely because the obvious story is wrong. The
+    // page is NOT visibly broken without it: SequencePageClient's mount effect
+    // reconciles comments straight from Supabase on every seeded load, so the
+    // author and every other visitor see the new comment a moment after
+    // hydration even on a cache HIT. What stays stale without this call is the
+    // raw HTML served to crawlers and to any no-JS client -- measured at an
+    // x-vercel-cache HIT with age 841s carrying none of the page's three
+    // comments -- and the brief pre-reconcile flash of the old list.
+    //
+    // Inside try/catch because of the invariant stated above: everything from
+    // here down is best-effort and none of it may affect the response. A
+    // comment that is in the database has succeeded.
     if (slug) {
+      try {
+        revalidatePath(`/sequences/${slug}`)
+      } catch (err) {
+        console.error('[comments] revalidatePath failed:', err)
+      }
+    }
+
+    // The sequence author's bridge opt-out, read explicitly rather than through
+    // a PostgREST embed on the sequences select above -- same reasoning as the
+    // battletag read further down, where leaning on a wildcard/nested select to
+    // carry a field a behaviour depends on is the coupling that breaks silently
+    // when somebody narrows the select later.
+    //
+    // A FAILED LOOKUP MEANS NOT OPTED OUT. This is a preference, not a security
+    // gate: refusing to relay because a read failed would silently drop real
+    // comments on a transient database error, which is a worse failure than
+    // relaying one comment the author would rather not have relayed.
+    let authorOptedOut = false
+    if (sequenceRow?.author_id) {
+      const { data: ownerProfile, error: optOutError } = await admin
+        .from('profiles')
+        .select('discord_bridge_opted_out')
+        .eq('id', sequenceRow.author_id)
+        .single()
+
+      if (optOutError) {
+        console.error('[comments] Failed to read sequence author bridge opt-out:', optOutError)
+      } else {
+        authorOptedOut = ownerProfile?.discord_bridge_opted_out === true
+      }
+    }
+
+    if (slug && authorOptedOut) {
+      // The reason token matches the `reason` field the three inbound relay
+      // routes return, so one grep for author_opted_out finds all four bridge
+      // paths in the source and all four in production logs. This path is the
+      // only one of the four with no status to carry it: nothing is refused
+      // here, the comment is written and the response is the usual 200.
+      console.log(
+        `[comments] Outbound relay skipped for comment ${comment.id} on ${slug}, reason=author_opted_out: sequence author has opted out of the Discord bridge`,
+      )
+    }
+
+    if (slug && !authorOptedOut) {
       // battletag is not read off the row the insert returned. profiles(*)
       // does include it, but leaning on a wildcard select to carry a field
       // the privacy rules depend on is exactly the coupling that breaks
