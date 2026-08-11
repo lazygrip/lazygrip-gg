@@ -3,7 +3,16 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { fireSequencePublishedRelay } from '@/lib/relay'
 import { isUnsafePublicUsername, publicName } from '@/lib/public-name'
-import { buildSequenceEmbed, cleanText, SLUG_RE, SNOWFLAKE_RE } from '@/lib/discord-embed'
+import {
+  buildImportMessage,
+  buildSequenceEmbed,
+  cleanText,
+  postImportMessage,
+  resolveAppliedTags,
+  SLUG_RE,
+  SNOWFLAKE_RE,
+} from '@/lib/discord-embed'
+import { decodeExport } from '@/lib/workshop'
 
 // CONTENT_TYPE_LABELS, CLASS_COLORS, cleanText, SLUG_RE, SNOWFLAKE_RE and the
 // embed construction itself all moved to src/lib/discord-embed.ts on
@@ -40,14 +49,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Invalid slug' }, { status: 400 })
     }
 
-    // The title is the only embed field still normalised here, and it has to
-    // be: this route uses it in three places that must all be the same string
-    // -- the embed, the Discord thread name, and the title in the relay
-    // payload at the bottom of this function. className, specName, heroTalent
-    // and contentType go to buildSequenceEmbed exactly as they arrived on the
-    // request body, because the rules for those four (known class names only,
-    // known content types only, whitespace-collapsed and capped free text)
-    // moved into the builder with the embed they belong to.
+    // THE BODY'S TITLE, WHICH IS NO LONGER THE ONE THAT REACHES DISCORD. It is
+    // the FALLBACK for `sequenceTitle`, bound further down beside the four
+    // other fields that moved onto the sequence row on 2026-08-11.
+    //
+    // It stays here, and it keeps this name, because it cannot move: the
+    // sequence row is not read until the ownership check some eighty lines
+    // below, and this line is what gives the route something to say when that
+    // read finds nothing. Normalising it here also means the fallback and the
+    // row path have both been through the same cleanText call with the same
+    // 200-character cap, so whichever of the two wins, the embed title, the
+    // thread name and the relay payload are still one identical string.
     const title = cleanText(raw.title, 200) || 'Untitled sequence'
 
     // Boolean() only so these satisfy the builder's boolean fields. Both were
@@ -109,9 +121,25 @@ export async function POST(req: NextRequest) {
 
     const authorUsername: string = publicName(nameInput)
 
+    // WIDENED ON 2026-08-11 TO THE SAME COLUMN LIST THE BACKFILL ROUTE READS.
+    // It used to ask for discord_thread_id and author_id only, because the
+    // embed was built entirely from the request body. It no longer is; see the
+    // block at the buildSequenceEmbed call below for why the row won that
+    // argument.
+    //
+    // This costs nothing. The read already happened on every call for the
+    // ownership check directly beneath it, so widening the projection adds
+    // columns to a round trip that was being made anyway.
+    //
+    // wow_build is NOT in this list and must not be added yet. The column does
+    // not exist until PR 2, and PostgREST rejects the whole query on one
+    // unknown column -- which here would 500 every publish on the site, not
+    // just the Discord half of it.
     const { data: sequenceRow, error: lookupError } = await admin
       .from('sequences')
-      .select('discord_thread_id, author_id')
+      .select(
+        'id, slug, title, author_id, class_name, spec_name, hero_talent, content_type, status, discord_thread_id, spec_id, talent_string, grip_string, grip_version, patch_version, created_at, updated_at',
+      )
       .eq('slug', slug)
       .single()
 
@@ -146,21 +174,149 @@ export async function POST(req: NextRequest) {
     const storedThreadId = sequenceRow?.discord_thread_id ?? null
     const existingThreadId = storedThreadId && SNOWFLAKE_RE.test(storedThreadId) ? storedThreadId : null
 
+    // ======================================================================
+    // THE CARD IS BUILT FROM THE ROW, NOT FROM THE REQUEST BODY
+    // ======================================================================
+    //
+    // className, specName, heroTalent and contentType came off `raw` until
+    // 2026-08-11. They now come off sequenceRow, and the body is used only
+    // when there is no row at all.
+    //
+    // WHY. The body is client-supplied and unvalidated -- this route's only
+    // checks on it are SLUG_RE on the slug and a whitespace-collapse on the
+    // title -- so a caller could put any class name, any spec and any content
+    // type on the card for a sequence they own, and now that those values also
+    // choose the FORUM TAGS, the body would be choosing how the sequence is
+    // filed in the forum. The row is truth: it is what the site itself renders
+    // on the sequence page, and it is what the backfill route reads.
+    //
+    // WHY IT COSTS NOTHING. The row was already being read one block above for
+    // the ownership check, on every call, so this is a projection widened on a
+    // query that was happening anyway -- no extra round trip.
+    //
+    // WHAT IT CLOSES. Two callers rendering the same sequence differently.
+    // notify-discord posting the body and sequence-thread posting the row is a
+    // difference that shows up as two cards disagreeing in the same forum with
+    // nothing failing to say so, which is the exact drift the shared builder
+    // module was extracted to prevent.
+    //
+    // The fallback keys on the ROW's absence, not on a field being empty: a
+    // row that exists and has a null class_name genuinely has no class name,
+    // and reaching into the body to fill that in would reintroduce the problem
+    // for precisely the rows where the site knows least.
+    const className = sequenceRow ? sequenceRow.class_name : raw.className
+    const specName = sequenceRow ? sequenceRow.spec_name : raw.specName
+    const heroTalent = sequenceRow ? sequenceRow.hero_talent : raw.heroTalent
+    const contentType = sequenceRow ? sequenceRow.content_type : raw.contentType
+
+    // THE TITLE BELONGS IN THAT LIST HARDEST OF ALL, and the move above
+    // skipped it. It is the one value on this route that is not merely
+    // rendered: it becomes the PERMANENT forum thread name, which no later
+    // publish can rename because thread_name is only honoured on the post that
+    // creates the thread. It is also the embed title and the title the relay
+    // hands to Sataana's bot. A body-supplied title therefore let a caller name
+    // another surface's permanent object, which is the same argument that moved
+    // the four fields above and applies here with the least room to undo it.
+    //
+    // ONE EXTRA STEP THE OTHER FOUR DO NOT NEED. Those four go to the builder
+    // raw, because the builder narrows them itself. The title does not pass
+    // through that narrowing, so the row's column is put through the same
+    // cleanText(200) the body title went through above -- otherwise a stored
+    // title carrying a newline would produce an embed title and a thread name
+    // that disagree, which is the precise failure cleanText exists to prevent.
+    //
+    // The fallback is two-legged rather than one: no row at all, or a row whose
+    // title cleans to nothing. The second leg matters because title is NOT NULL
+    // in shape but not in practice -- whitespace cleans to the empty string --
+    // and an empty thread name is a Discord 400 that would fail the publish.
+    //
+    // ORDERING IS SAFE. All five notifyDiscord call sites in
+    // src/app/post/page.tsx fire after their insert or RPC has resolved, so the
+    // row is already current by the time this route reads it and every
+    // legitimate publish renders exactly the string the body would have.
+    const rowTitle = sequenceRow ? cleanText(sequenceRow.title, 200) : ''
+    const sequenceTitle = rowTitle || title
+
+    // BUILD CONTEXT: THE EXPORT ENVELOPE WINS, THE COLUMN IS THE FALLBACK.
+    // Identical rule and identical reasoning to the backfill route. The
+    // envelope is what the addon stamped at export time; grip_version is a
+    // form field that src/app/post/page.tsx currently fills with the WIRE
+    // FORMAT version, so on 25 of the 30 rows carrying both, the column says
+    // 2.1.20 where the export says 2.3.10. Fixing the form is PR 2's job; this
+    // route reads, and reading the better source needs no migration.
+    //
+    // decodeExport THROWS on an unknown or encrypted prefix, and a decode
+    // failure must never fail a publish -- the card and the thread matter far
+    // more than the version line on it. Log once, carry on with no build
+    // context.
+    let envelopeEmsVersion: string | null = null
+    let envelopeWowPatch: string | null = null
+    let envelopeWowBuild: string | null = null
+    let exportTalentString: string | null = null
+
+    const gripString = typeof sequenceRow?.grip_string === 'string' ? sequenceRow.grip_string : ''
+    if (gripString.trim()) {
+      try {
+        const decoded = decodeExport(gripString)
+        const envelope = decoded?.meta?.envelope
+        const exportMeta = decoded?.meta?.exportMeta
+        envelopeEmsVersion =
+          typeof envelope?.addonVersion === 'string' ? envelope.addonVersion : null
+        envelopeWowPatch = typeof envelope?.wowPatch === 'string' ? envelope.wowPatch : null
+        envelopeWowBuild = typeof envelope?.wowBuild === 'string' ? envelope.wowBuild : null
+        exportTalentString =
+          typeof exportMeta?.talentString === 'string' ? exportMeta.talentString : null
+      } catch (err) {
+        console.warn('[notify-discord] Could not decode grip_string for build context:', slug, err)
+      }
+    }
+
+    const emsVersion =
+      envelopeEmsVersion ||
+      (typeof sequenceRow?.grip_version === 'string' ? sequenceRow.grip_version : '')
+    const wowPatch =
+      envelopeWowPatch ||
+      (typeof sequenceRow?.patch_version === 'string' ? sequenceRow.patch_version : '')
+
+    // No column to fall back to: wow_build lands in PR 2.
+    const wowBuild = envelopeWowBuild || ''
+
+    // The talent string runs the other way round -- column first, export as
+    // the gap-filler -- for the reason spelled out at the same lines in the
+    // backfill route: the column is what the author chose to publish, and the
+    // export only supplies one for the 10 rows where the column is empty.
+    const columnTalentString =
+      typeof sequenceRow?.talent_string === 'string' ? sequenceRow.talent_string.trim() : ''
+    const talentString = columnTalentString || exportTalentString || ''
+
     // authorUsername is passed in rather than derived inside the builder. The
     // builder is shared with the backfill route, which has no session at all
     // and must attribute its threads to the sequence's own author_id, so the
     // one thing the two callers disagree about is deliberately left to them.
     const embed = buildSequenceEmbed({
       slug,
-      title,
-      className: raw.className,
-      specName: raw.specName,
-      heroTalent: raw.heroTalent,
-      contentType: raw.contentType,
+      title: sequenceTitle,
+      className,
+      specName,
+      heroTalent,
+      contentType,
+      specId: sequenceRow?.spec_id,
+      talentString,
+      emsVersion,
+      wowPatch,
+      wowBuild,
+      createdAt: sequenceRow?.created_at,
+      updatedAt: sequenceRow?.updated_at,
       authorName: authorUsername,
       isEdit,
       isUpdate,
     })
+
+    // The forum tags for whichever of the two paths below creates a thread.
+    // Resolved once here, from the same row-first values the card is built
+    // from, so a card and its tags can never disagree about what class a
+    // sequence is.
+    const appliedTags = resolveAppliedTags(className, contentType)
 
     const postUrl = existingThreadId
       ? `${webhookUrl}?thread_id=${existingThreadId}&wait=true`
@@ -197,7 +353,17 @@ export async function POST(req: NextRequest) {
     // ignores thread_name when the webhook targets an existing thread, and the
     // only reason we ever send it is to name the thread being created.
     if (!existingThreadId) {
-      body.thread_name = title
+      body.thread_name = sequenceTitle
+
+      // applied_tags rides along with thread_name and only with thread_name,
+      // because this is the post that CREATES the thread and Discord accepts
+      // the tags only there. Changing a thread's tags afterwards is a
+      // bot-token PATCH, which this route does not have. Sent only when
+      // non-empty: an empty applied_tags array is accepted and does nothing,
+      // and omitting it keeps the payload honest.
+      if (appliedTags.length > 0) {
+        body.applied_tags = appliedTags
+      }
     }
 
     let res = await fetch(postUrl, {
@@ -221,7 +387,17 @@ export async function POST(req: NextRequest) {
       // that is easy to miss: it fires when a post into a recorded thread
       // fails, which means the thread it names is being created right now and
       // will keep this name permanently, exactly like the first one.
-      retryBody.thread_name = title
+      retryBody.thread_name = sequenceTitle
+      // THE SECOND OF THE TWO THREAD-CREATING SITES, and the one that is easy
+      // to miss -- it fires when a post into a recorded thread fails, which
+      // means a thread is being created right here and will keep whatever tags
+      // it is given now, exactly like the first site. `body` cannot already
+      // carry applied_tags at this point: the block above only sets them when
+      // there is no existing thread id, and this retry only runs when there
+      // is.
+      if (appliedTags.length > 0) {
+        retryBody.applied_tags = appliedTags
+      }
       res = await fetch(`${webhookUrl}?wait=true`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -290,6 +466,42 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const finalThreadId = newThreadId ?? existingThreadId
+
+    // ======================================================================
+    // THE IMPORT STRING, AS A SECOND MESSAGE UNDER THE CARD
+    // ======================================================================
+    //
+    // Posted on EVERY notification, not only on the one that creates the
+    // thread. That is deliberate. This route already re-posts the card on
+    // every publish, update and edit, so a thread accumulates cards; if the
+    // import string were posted once at creation, an updated sequence would
+    // end up with a fresh card sitting above a stale string, and a player
+    // scrolling to the newest card would copy an import that no longer matches
+    // it. Pairing each card with the string that belongs to it is the only
+    // arrangement where the newest thing in the thread is also the correct
+    // thing.
+    //
+    // A FAILURE HERE MUST NOT FAIL THE PUBLISH. The card is posted, the thread
+    // link is written and the relay still has to fire, so the failure is
+    // logged, folded into the same warning string the write-back retry uses,
+    // and the response stays ok.
+    const importMessage = finalThreadId
+      ? buildImportMessage(sequenceRow?.grip_string, slug)
+      : null
+    if (importMessage && finalThreadId) {
+      try {
+        await postImportMessage(webhookUrl, finalThreadId, importMessage)
+      } catch (err) {
+        console.error('[notify-discord] Could not post the import string into the thread:', slug, err)
+        const importWarning =
+          'Discord notification sent, but the import string could not be posted into the thread.'
+        threadLinkWarning = threadLinkWarning
+          ? `${threadLinkWarning} ${importWarning}`
+          : importWarning
+      }
+    }
+
     // Fire the relay to Sataana's gripbot now that we know the resolved
     // thread id and whether it was newly created. This now runs
     // unconditionally after a successful Discord post, regardless of
@@ -319,13 +531,12 @@ export async function POST(req: NextRequest) {
     // Note that after() runs within the route's max duration, so the retry
     // ladder in relay.ts (three attempts, 2.5s timeout each, 0.5s and 2s
     // backoff) is bounded by that budget rather than by itself.
-    const finalThreadId = newThreadId ?? existingThreadId
     const relayEvent = isEdit ? 'edited' : isUpdate ? 'updated' : 'published'
     after(() =>
       fireSequencePublishedRelay({
         event: relayEvent,
         slug,
-        title,
+        title: sequenceTitle,
         userId: user.id,
         threadId: finalThreadId,
         threadCreated: isNewThread && newThreadId !== null,
