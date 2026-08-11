@@ -191,9 +191,18 @@ export default function ProfileTabs({ seqs, comments, isOwnProfile }: ProfileTab
                   href={`/sequences/${c.sequence.slug}#comment-${c.id}`}
                   style={{ textDecoration: 'none' }}
                 >
+                  {/* Deliberately distinct from SequenceRow's look, not just a
+                      variant of it: Slowdog tested clicking a sequence card
+                      expecting comment-jump behavior, which means the two
+                      card types read as interchangeable at a glance. Left
+                      border in the accent color (sequence cards use the
+                      class color instead, never accent) and an explicit
+                      "Jump to comment" label do the disambiguating work that
+                      the small MessageSquare icon alone wasn't doing. */}
                   <div style={{
                     background: 'var(--bg-primary)',
                     border: '0.5px solid var(--border)',
+                    borderLeft: '3px solid var(--accent)',
                     borderRadius: 'var(--radius-lg)',
                     padding: '12px 16px',
                     display: 'flex',
@@ -201,19 +210,28 @@ export default function ProfileTabs({ seqs, comments, isOwnProfile }: ProfileTab
                     alignItems: 'flex-start',
                     cursor: 'pointer',
                   }}>
-                    <div style={{ color: 'var(--text-muted)', flexShrink: 0, marginTop: 2 }}>
+                    <div style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 2 }}>
                       <MessageSquare size={14} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
                         {truncateCommentBody(c.body)}
                       </p>
-                      <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center' }}>
+                      <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center', flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
                           on {c.sequence.title}
                         </span>
                         <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
                           · {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
+                        </span>
+                        <span style={{
+                          fontSize: 'var(--text-xs)',
+                          color: 'var(--accent)',
+                          fontWeight: 500,
+                          marginLeft: 'auto',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          Jump to comment →
                         </span>
                       </div>
                     </div>
