@@ -3,7 +3,16 @@ import { timingSafeEqual } from 'node:crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { fireSequencePublishedRelay } from '@/lib/relay'
 import { isUnsafePublicUsername, publicName } from '@/lib/public-name'
-import { buildSequenceEmbed, cleanText, SLUG_RE, SNOWFLAKE_RE } from '@/lib/discord-embed'
+import {
+  buildImportMessage,
+  buildSequenceEmbed,
+  cleanText,
+  postImportMessage,
+  resolveAppliedTags,
+  SLUG_RE,
+  SNOWFLAKE_RE,
+} from '@/lib/discord-embed'
+import { decodeExport } from '@/lib/workshop'
 
 // Operator-only route that gives one published sequence a Discord forum
 // thread, posted as if its REAL AUTHOR had published it. Design doc section
@@ -126,10 +135,22 @@ export async function POST(req: NextRequest) {
 
     // One read serves both modes: it proves the sequence exists, it carries
     // the thread id both modes have to refuse over, and in create mode it
-    // carries everything the embed and the relay need.
+    // carries everything the embed, the tags, the import message and the relay
+    // need.
+    //
+    // WHAT IS NOT IN THIS LIST, AND MUST NOT BE ADDED YET: wow_build. There is
+    // no such column on public.sequences today -- it lands in PR 2 alongside
+    // the post-form capture fix -- and PostgREST rejects the WHOLE query on a
+    // single unknown column with a 42703. Adding it early would not degrade
+    // this route, it would break every call to it, including the repoint mode
+    // that never touches the build context at all. The build number reaches
+    // the card from the export envelope instead, which is the better source
+    // anyway; see the precedence note further down.
     const { data: sequence, error: lookupError } = await admin
       .from('sequences')
-      .select('id, slug, title, author_id, class_name, spec_name, hero_talent, content_type, status, discord_thread_id')
+      .select(
+        'id, slug, title, author_id, class_name, spec_name, hero_talent, content_type, status, discord_thread_id, spec_id, talent_string, grip_string, grip_version, patch_version, created_at, updated_at',
+      )
       .eq('slug', slug)
       .single()
 
@@ -265,9 +286,81 @@ export async function POST(req: NextRequest) {
     // payload -- exactly as notify-discord does it, with the same helper.
     const title = cleanText(sequence.title, 200) || 'Untitled sequence'
 
+    // ======================================================================
+    // BUILD CONTEXT, AND THE ONE PRECEDENCE RULE THAT GOVERNS IT
+    // ======================================================================
+    //
+    // THE EXPORT ENVELOPE WINS. THE DATABASE COLUMN IS THE FALLBACK.
+    //
+    // The envelope is what the addon itself stamped into the export at export
+    // time, so it is a measurement of the client that produced the sequence.
+    // The column is a form field. On 25 of the 30 published rows that carry
+    // both, the two DISAGREE, and the export is the correct one: the column
+    // says 2.1.20 where the export says 2.3.10, because src/app/post/page.tsx
+    // writes the WIRE FORMAT version into grip_version rather than the addon
+    // version. That form bug belongs to PR 2 and is deliberately not fixed
+    // here -- this route only reads, and reading the better of two sources
+    // costs nothing, needs no migration, and does not touch the write path.
+    //
+    // The 31 rows with no envelope keep the column, which is why the fallback
+    // exists at all rather than the column simply being dropped.
+    let envelopeEmsVersion: string | null = null
+    let envelopeWowPatch: string | null = null
+    let envelopeWowBuild: string | null = null
+    let exportTalentString: string | null = null
+
+    if (typeof sequence.grip_string === 'string' && sequence.grip_string.trim()) {
+      // decodeExport THROWS rather than returning an error result on an
+      // unknown or encrypted prefix, and GSE3_ENCRYPTED is a real format the
+      // site stores and cannot read. A decode failure must never stop a thread
+      // being created -- the card is worth posting without a version line, and
+      // this route's whole reason for existing is that these 40 sequences have
+      // no thread. So: log once, carry on with no build context, and let the
+      // columns answer instead.
+      try {
+        const decoded = decodeExport(sequence.grip_string)
+        const envelope = decoded?.meta?.envelope
+        const exportMeta = decoded?.meta?.exportMeta
+        envelopeEmsVersion =
+          typeof envelope?.addonVersion === 'string' ? envelope.addonVersion : null
+        envelopeWowPatch = typeof envelope?.wowPatch === 'string' ? envelope.wowPatch : null
+        envelopeWowBuild = typeof envelope?.wowBuild === 'string' ? envelope.wowBuild : null
+        exportTalentString =
+          typeof exportMeta?.talentString === 'string' ? exportMeta.talentString : null
+      } catch (err) {
+        console.warn('[admin/sequence-thread] Could not decode grip_string for build context:', slug, err)
+      }
+    }
+
+    const emsVersion =
+      envelopeEmsVersion || (typeof sequence.grip_version === 'string' ? sequence.grip_version : '')
+    const wowPatch =
+      envelopeWowPatch || (typeof sequence.patch_version === 'string' ? sequence.patch_version : '')
+
+    // No column to fall back to. wow_build lands in PR 2; until it does, a
+    // build number only ever reaches the card from an export that carried one.
+    const wowBuild = envelopeWowBuild || ''
+
+    // THE TALENT STRING RUNS THE OTHER WAY ROUND, and the asymmetry is
+    // deliberate rather than an oversight. The column is what the AUTHOR chose
+    // to publish on the site, so where it holds something it is the thing they
+    // meant to show, and the export is only filling a gap. It fills a real
+    // one: 10 rows carry a talent string in the export that never reached the
+    // column, and on those the card would otherwise have no Talent Build field
+    // even though the data was sitting inside the string it already decoded.
+    const columnTalentString =
+      typeof sequence.talent_string === 'string' ? sequence.talent_string.trim() : ''
+    const talentString = columnTalentString || exportTalentString || ''
+
     // isEdit and isUpdate are both false: a backfill is the publish that
     // should have happened at the time, so the card carries no pencil and no
     // cycle glyph.
+    //
+    // created_at and updated_at go in so the card is stamped with the
+    // SEQUENCE's time rather than the backfill's. Without them every one of
+    // these 40 cards would claim its sequence was published on the day the
+    // backfill ran, and a webhook message cannot be edited afterwards with a
+    // bot token, so that claim would be permanent.
     const embed = buildSequenceEmbed({
       slug,
       title,
@@ -275,6 +368,13 @@ export async function POST(req: NextRequest) {
       specName: sequence.spec_name,
       heroTalent: sequence.hero_talent,
       contentType: sequence.content_type,
+      specId: sequence.spec_id,
+      talentString,
+      emsVersion,
+      wowPatch,
+      wowBuild,
+      createdAt: sequence.created_at,
+      updatedAt: sequence.updated_at,
       authorName,
       isEdit: false,
       isUpdate: false,
@@ -289,14 +389,32 @@ export async function POST(req: NextRequest) {
     // pre-existing threads were renamed to their bare titles the same day; a
     // backfill that reintroduced prefixes on 40 more would undo that on the
     // spot.
+    const createBody: Record<string, unknown> = {
+      embeds: [embed],
+      username: 'LazyGrip',
+      thread_name: title,
+    }
+
+    // FORUM TAGS, AND THE ONLY MOMENT THEY CAN BE SET FROM HERE. applied_tags
+    // is accepted on the post that CREATES the thread; changing them later
+    // means a bot-token PATCH on the thread, which is a different credential
+    // and a different build. So the 40 backfilled threads get their class and
+    // content tags now or they get them by hand.
+    //
+    // The key is sent only when the array is non-empty. Discord accepts
+    // applied_tags: [] and does exactly nothing with it, so this changes no
+    // thread; it keeps the payload honest, and it means a row whose class name
+    // and content type both failed to resolve produces a post indistinguishable
+    // from the one this route sent before tags existed.
+    const appliedTags = resolveAppliedTags(sequence.class_name, sequence.content_type)
+    if (appliedTags.length > 0) {
+      createBody.applied_tags = appliedTags
+    }
+
     const res = await fetch(`${webhookUrl}?wait=true`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        embeds: [embed],
-        username: 'LazyGrip',
-        thread_name: title,
-      }),
+      body: JSON.stringify(createBody),
     })
 
     if (!res.ok) {
@@ -353,6 +471,32 @@ export async function POST(req: NextRequest) {
         // going, and let the caller re-link this one by hand with a repoint
         // call naming the thread id below.
         warning = `Thread ${newThreadId} was created but the site could not save the link. Re-run this route in repoint mode with that threadId.`
+      }
+    }
+
+    // ======================================================================
+    // THE IMPORT STRING, AS A SECOND MESSAGE IN THE NEW THREAD
+    // ======================================================================
+    //
+    // Placed exactly here on purpose: after newThreadId is established, after
+    // the site has stored the link, and before the relay.
+    //
+    // A FAILURE HERE MUST NOT FAIL THE ROUTE. By this line the thread exists
+    // in Discord and the database knows about it, so the two things this route
+    // is responsible for have both happened; returning a 502 now would tell
+    // the caller to retry a call that can only answer 409, and the operator
+    // would then have to work out from the message that a repoint was needed.
+    // A missing second message is a minute of manual posting instead. So the
+    // failure is logged and travels back as a warning string, the same shape
+    // the write-back retry above uses, and the response stays ok.
+    const importMessage = buildImportMessage(sequence.grip_string, slug)
+    if (importMessage) {
+      try {
+        await postImportMessage(webhookUrl, newThreadId, importMessage)
+      } catch (err) {
+        console.error('[admin/sequence-thread] Could not post the import string into the thread:', slug, err)
+        const importWarning = `Thread ${newThreadId} was created but the import string could not be posted into it.`
+        warning = warning ? `${warning} ${importWarning}` : importWarning
       }
     }
 
