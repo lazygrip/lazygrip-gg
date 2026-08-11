@@ -54,7 +54,7 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <script
         dangerouslySetInnerHTML={{
-          __html: "try{var m=document.cookie.match(/(?:^|;\\s*)theme=(dark|light)/);document.documentElement.setAttribute('data-theme',m?m[1]:'light')}catch(e){document.documentElement.setAttribute('data-theme','light')}",
+          __html: "try{var m=document.cookie.match(/(?:^|;\\s*)theme=(dark|light)/);document.documentElement.setAttribute('data-theme',m?m[1]:'dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}",
         }}
       />
       <body>

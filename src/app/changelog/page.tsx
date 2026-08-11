@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import { GitCommit } from 'lucide-react'
+import PageHeader from '@/components/ui/PageHeader'
+import Card from '@/components/ui/Card'
 
 export const metadata: Metadata = {
   title: 'Changelog',
@@ -76,37 +78,20 @@ export default async function ChangelogPage() {
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
-        <div style={{
-          width: 40, height: 40, background: 'var(--accent)', borderRadius: 10,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}>
-          <GitCommit size={20} color="white" strokeWidth={2.5} />
-        </div>
-        <div>
-          <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)', margin: 0 }}>
-            Changelog
-          </h1>
-          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)', margin: 0, marginTop: 2 }}>
-            Every change shipped to LazyGrip.net, pulled live from GitHub.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        icon={GitCommit}
+        title="Changelog"
+        description="Every change shipped to LazyGrip.net, pulled live from GitHub."
+      />
 
       {grouped.length === 0 ? (
-        <div style={{
-          background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
-          borderRadius: 'var(--radius-lg)', padding: '32px 24px', textAlign: 'center',
-        }}>
+        <Card style={{ padding: '32px 24px', textAlign: 'center' }}>
           <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>Could not load changelog. Try again later.</p>
-        </div>
+        </Card>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {grouped.map(([date, entries]) => (
-            <div key={date} style={{
-              background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
-              borderRadius: 'var(--radius-lg)', padding: '20px 24px',
-            }}>
+            <Card key={date} style={{ padding: '20px 24px' }}>
               <div style={{
                 fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-muted)',
                 textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 12,
@@ -128,7 +113,7 @@ export default async function ChangelogPage() {
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}

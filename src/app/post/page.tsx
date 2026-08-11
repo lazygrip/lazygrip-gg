@@ -10,7 +10,7 @@ import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
 import { useUsernameGate } from '@/lib/useUsernameGate'
 import UsernameRequiredModal from '@/components/UsernameRequiredModal'
 
-const PATCH_VERSIONS = ['12.0', '12.0.5', '12.0.7']
+const PATCH_VERSIONS = ['12.0', '12.0.5', '12.0.7', '12.1']
 
 const EMPTY_FORM = {
   title: '',
@@ -19,7 +19,7 @@ const EMPTY_FORM = {
   spec_name: '',
   content_type: 'mythic_plus',
   hero_talent: '',
-  patch_version: '12.0.7',
+  patch_version: '12.1',
   grip_version: '',
   step_function: 'Sequential',
   grip_string: '',
@@ -222,7 +222,7 @@ function PostForm() {
       spec_name: data.spec_name ?? '',
       content_type: data.content_type ?? 'mythic_plus',
       hero_talent: data.hero_talent ?? '',
-      patch_version: data.patch_version ?? '12.0.7',
+      patch_version: data.patch_version ?? '12.1',
       grip_version: data.grip_version ?? '',
       step_function: data.step_function ?? 'Sequential',
       grip_string: data.grip_string ?? '',
@@ -304,7 +304,7 @@ function PostForm() {
         spec_name: data.spec_name ?? '',
         content_type: data.content_type ?? 'mythic_plus',
         hero_talent: data.hero_talent ?? '',
-        patch_version: data.patch_version ?? '12.0.5',
+        patch_version: data.patch_version ?? '12.1',
         grip_version: data.grip_version ?? '',
         step_function: data.step_function ?? 'Sequential',
         grip_string: data.grip_string ?? '',

@@ -1250,7 +1250,7 @@ export default function WorkshopBuildPage() {
               </div>
               <div>
                 <label style={S.label()}>WoW patch</label>
-                <input value={model.exportMeta.wowPatch || ''} onChange={e => setModel(m => ({ ...m, exportMeta: { ...m.exportMeta, wowPatch: e.target.value } }))} placeholder="Optional, e.g. 12.0.7" style={{ ...S.input(), width: 160 }} />
+                <input value={model.exportMeta.wowPatch || ''} onChange={e => setModel(m => ({ ...m, exportMeta: { ...m.exportMeta, wowPatch: e.target.value } }))} placeholder="Optional, e.g. 12.1.0" style={{ ...S.input(), width: 160 }} />
               </div>
               <div>
                 <label style={S.label()}>Talent string (collection-wide)</label>
