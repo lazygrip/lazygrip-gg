@@ -1,11 +1,9 @@
 import { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
-import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
-import { formatDistanceToNow } from 'date-fns'
 import { sanitizeAvatarUrl } from '@/lib/url-safety'
-import { MessageSquare } from 'lucide-react'
+import StatBlock from '@/components/ui/StatBlock'
+import ProfileTabs from './ProfileTabs'
 
 interface Props {
   params: Promise<{ username: string }>
@@ -76,15 +74,6 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
       images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'LazyGrip.net — GRIP-EMS sequences for World of Warcraft' }],
     },
   }
-}
-
-function truncateCommentBody(body: string, max = 140): string {
-  const cleaned = body.replace(/\s+/g, ' ').trim()
-  if (cleaned.length <= max) return cleaned
-  const head = cleaned.slice(0, max + 1)
-  const lastSpace = head.lastIndexOf(' ')
-  const truncated = lastSpace > 0 ? head.slice(0, lastSpace) : cleaned.slice(0, max)
-  return truncated.replace(/[\s,.;:!?-]+$/, '') + '…'
 }
 
 export default async function UserProfilePage(props: Props) {
@@ -219,191 +208,28 @@ export default async function UserProfilePage(props: Props) {
           sequence -- a brand new creator with zero posts gets no empty
           "0 views / 0 saves / no rating" row to look sparse over, the
           Sequences section's own "No sequences posted yet" message below
-          already covers that case. */}
+          already covers that case. Switched to the shared StatBlock from
+          the homepage redesign (numeral-first, no dividers) for visual
+          consistency across the site rather than this page's own
+          bordered-card look, which now reads as out of step with
+          everything else since that redesign landed. */}
       {seqs.length > 0 && (
-        <div style={{
-          display: 'flex',
-          gap: 0,
-          background: 'var(--bg-primary)',
-          border: '0.5px solid var(--border)',
-          borderRadius: 'var(--radius-lg)',
-          marginBottom: 20,
-          overflow: 'hidden',
-        }}>
-          <StatBlock label="Total views" value={totalViews.toLocaleString()} />
-          <StatBlock label="Total saves" value={totalSaves.toLocaleString()} />
-          <StatBlock label="Avg rating" value={avgRating != null ? avgRating.toFixed(1) : '—'} last />
+        <div style={{ marginBottom: 24 }}>
+          <StatBlock
+            stats={[
+              { value: totalViews.toLocaleString(), label: 'Total views' },
+              { value: totalSaves.toLocaleString(), label: 'Total saves' },
+              { value: avgRating != null ? avgRating.toFixed(1) : '—', label: 'Avg rating' },
+            ]}
+          />
         </div>
       )}
 
-      {/* Sequences */}
-      <div style={{
-        fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-muted)',
-        textTransform: 'uppercase', letterSpacing: '.06em',
-        marginBottom: 10,
-      }}>
-        Sequences
-      </div>
-
-      {seqs.length === 0 ? (
-        <div style={{
-          background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
-          borderRadius: 'var(--radius-lg)', padding: '40px 24px', textAlign: 'center',
-        }}>
-          {isOwnProfile ? (
-            <>
-              <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>
-                You haven't posted a sequence yet.
-              </p>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginTop: 4 }}>
-                Post your first one and this page fills in with your stats, comments, and more.
-              </p>
-              <Link href="/post" style={{
-                display: 'inline-block',
-                marginTop: 14,
-                padding: '8px 16px',
-                background: 'var(--accent)',
-                color: 'white',
-                textDecoration: 'none',
-                borderRadius: 'var(--radius-md)',
-                fontSize: 'var(--text-sm)',
-                fontWeight: 500,
-              }}>
-                Post your first sequence
-              </Link>
-            </>
-          ) : (
-            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>No sequences posted yet.</p>
-          )}
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {seqs.map(seq => (
-            <SequenceRow key={seq.id} seq={seq} />
-          ))}
-        </div>
-      )}
-
-      {/* Recent comments by this creator, across any sequence, with a
-          jump-link straight to each one -- kohtas's "offer support for our
-          sequences" request, part 2. Only rendered when there's at least
-          one, matching the same empty-state reasoning as the stats block
-          above: nothing to say beats an empty box. */}
-      {comments.length > 0 && (
-        <div style={{ marginTop: 20 }}>
-          <div style={{
-            fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-muted)',
-            textTransform: 'uppercase', letterSpacing: '.06em',
-            marginBottom: 10,
-          }}>
-            Recent Comments
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {comments.map(c => (
-              <Link
-                key={c.id}
-                href={`/sequences/${c.sequence.slug}#comment-${c.id}`}
-                style={{ textDecoration: 'none' }}
-              >
-                <div style={{
-                  background: 'var(--bg-primary)',
-                  border: '0.5px solid var(--border)',
-                  borderRadius: 'var(--radius-lg)',
-                  padding: '12px 16px',
-                  display: 'flex',
-                  gap: 10,
-                  alignItems: 'flex-start',
-                  cursor: 'pointer',
-                }}>
-                  <div style={{ color: 'var(--text-muted)', flexShrink: 0, marginTop: 2 }}>
-                    <MessageSquare size={14} />
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
-                      {truncateCommentBody(c.body)}
-                    </p>
-                    <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center' }}>
-                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-                        on {c.sequence.title}
-                      </span>
-                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-                        · {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+      <ProfileTabs
+        seqs={seqs}
+        comments={comments}
+        isOwnProfile={isOwnProfile}
+      />
     </div>
-  )
-}
-
-function StatBlock({ label, value, last }: { label: string; value: string; last?: boolean }) {
-  return (
-    <div style={{
-      flex: 1,
-      padding: '18px 20px',
-      textAlign: 'center',
-      borderRight: last ? 'none' : '0.5px solid var(--border)',
-    }}>
-      <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.2 }}>
-        {value}
-      </div>
-      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 4 }}>
-        {label}
-      </div>
-    </div>
-  )
-}
-
-function SequenceRow({ seq }: { seq: any }) {
-  const classColor = getClassColor(seq.class_id)
-  const contentLabel = CONTENT_TYPES.find(c => c.value === seq.content_type)?.label ?? seq.content_type
-
-  return (
-    <Link href={`/sequences/${seq.slug}`} style={{ textDecoration: 'none' }}>
-      <div
-        style={{
-          background: 'var(--bg-primary)',
-          border: '0.5px solid var(--border)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '14px 18px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 14,
-          borderLeft: `3px solid ${classColor}`,
-          cursor: 'pointer',
-          transition: 'box-shadow 0.15s',
-        }}
-
-      >
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {seq.title}
-          </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: 'var(--text-xs)', color: classColor }}>{seq.class_name}</span>
-            {seq.spec_name && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {seq.spec_name}</span>}
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {contentLabel}</span>
-            {seq.hero_talent && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {seq.hero_talent}</span>}
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 16, flexShrink: 0, alignItems: 'center' }}>
-          {seq.avg_score && seq.rating_count > 0 && (
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--accent)', lineHeight: 1 }}>{seq.avg_score}</div>
-              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{seq.rating_count} ratings</div>
-            </div>
-          )}
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{seq.view_count?.toLocaleString() ?? 0} views</div>
-            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{formatDistanceToNow(new Date(seq.created_at), { addSuffix: true })}</div>
-          </div>
-        </div>
-      </div>
-    </Link>
   )
 }
