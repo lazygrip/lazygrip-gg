@@ -172,35 +172,47 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
 
   // Scroll-to-comment for links like /sequences/[slug]#comment-<id>, e.g.
   // from the "comments by this creator" list on a public profile page.
-  // Gated on comments.length rather than firing straight from the mount
-  // effect, since the target node doesn't exist in the DOM until comments
-  // have actually loaded and rendered -- scrolling before that would
-  // silently do nothing, the same class of bug as scrolling before a
-  // seeded/fetched state settles anywhere else in this file.
+  //
+  // REWORKED 2026-08-11 after the first version failed to scroll on a real
+  // click-through (reported: lands on the page but stays at the top). Not
+  // fully root-caused live -- could not reproduce against a running
+  // instance in this session -- so this version is deliberately more
+  // defensive rather than a single confident fix: it retries for a short
+  // window instead of assuming one specific render will have the target
+  // node, since the original single-shot version was betting on exact
+  // effect-timing relative to Next.js client-side navigation that wasn't
+  // actually verified.
   useEffect(() => {
     if (hasScrolledToHash.current) return
-    if (comments.length === 0) return
     const hash = window.location.hash
     if (!hash.startsWith('#comment-')) return
 
-    hasScrolledToHash.current = true
-    // One tick so the browser has committed the layout for the comments
-    // that just rendered -- getElementById immediately after setComments
-    // resolves can still race the paint on some browsers.
-    requestAnimationFrame(() => {
+    let attempts = 0
+    const maxAttempts = 20 // ~2s at 100ms, generous for a slow fetch/paint
+    const tryScroll = () => {
       const el = document.getElementById(hash.slice(1))
-      if (!el) return
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      const prevOutline = el.style.outline
-      const prevTransition = el.style.transition
-      el.style.transition = 'outline-color 0.3s ease'
-      el.style.outline = '2px solid var(--accent)'
-      el.style.borderRadius = 'var(--radius-md)'
-      setTimeout(() => {
-        el.style.outline = prevOutline
-        el.style.transition = prevTransition
-      }, 2200)
-    })
+      if (el) {
+        hasScrolledToHash.current = true
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        const prevOutline = el.style.outline
+        const prevTransition = el.style.transition
+        el.style.transition = 'outline-color 0.3s ease'
+        el.style.outline = '2px solid var(--accent)'
+        el.style.borderRadius = 'var(--radius-md)'
+        setTimeout(() => {
+          el.style.outline = prevOutline
+          el.style.transition = prevTransition
+        }, 2200)
+        return
+      }
+      attempts++
+      if (attempts < maxAttempts) {
+        setTimeout(tryScroll, 100)
+      } else {
+        console.warn(`[scroll-to-comment] Gave up looking for ${hash} after ${maxAttempts} attempts`)
+      }
+    }
+    tryScroll()
   }, [comments])
 
   // supabase-js query builders are lazy thenables: the request is only issued when the builder

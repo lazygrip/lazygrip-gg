@@ -60,11 +60,29 @@ export default function ProfileTabs({ seqs, comments, isOwnProfile }: ProfileTab
   const [activeTab, setActiveTab] = useState<'sequences' | 'comments'>('sequences')
 
   return (
-    <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+    <>
+      {/* Same class-based media query pattern as layout/Header.tsx (768px
+          breakpoint, matching that component). Deliberately not relying on
+          flexWrap's default wrapping behavior here -- the first version did,
+          and on a real viewport the chat panel wrapped below the (much
+          taller) sequences list instead of staying pinned at the top of its
+          own column, which is the opposite of what "pinned, always visible"
+          was supposed to mean. Below 768px the columns stack in DOM order
+          (tabs, then chat) rather than side by side. */}
+      <style>{`
+        .profile-columns { display: flex; gap: 20px; align-items: flex-start; }
+        .profile-columns-left { flex: 1 1 0%; min-width: 0; }
+        .profile-columns-right { flex: 0 0 300px; position: sticky; top: 20px; }
+        @media (max-width: 768px) {
+          .profile-columns { flex-direction: column; }
+          .profile-columns-right { flex-basis: auto; width: 100%; position: static; }
+        }
+      `}</style>
+      <div className="profile-columns">
       {/* Left: tabbed Sequences / Comments, everything that existed on this
           page before today just reorganized under tabs instead of stacked
           as two always-visible sections. */}
-      <div style={{ flex: '1 1 480px', minWidth: 0 }}>
+      <div className="profile-columns-left">
         <div style={{
           display: 'flex', gap: 0,
           borderBottom: '0.5px solid var(--border)',
@@ -178,10 +196,12 @@ export default function ProfileTabs({ seqs, comments, isOwnProfile }: ProfileTab
           invented messages -- chat itself (schema, realtime vs. polling,
           moderation/blocking) is unscoped as of 2026-08-11 and is its own
           session's work. This exists so the layout is correct now and chat
-          slots in later without another restructure. */}
-      <div style={{
-        flex: '0 1 320px',
-        minWidth: 260,
+          slots in later without another restructure.
+
+          className="profile-columns-right" (not inline flex/width) is what
+          keeps this pinned at the top of its column rather than wrapping
+          below a tall sequences list -- see the <style> block above. */}
+      <div className="profile-columns-right" style={{
         background: 'var(--bg-primary)',
         border: '0.5px dashed var(--border-strong)',
         borderRadius: 'var(--radius-lg)',
@@ -201,7 +221,8 @@ export default function ProfileTabs({ seqs, comments, isOwnProfile }: ProfileTab
           Coming soon.
         </p>
       </div>
-    </div>
+      </div>
+    </>
   )
 }
 
@@ -215,8 +236,8 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
         border: 'none',
         borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
         color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
-        fontSize: 'var(--text-sm)',
-        fontWeight: active ? 500 : 400,
+        fontSize: 'var(--text-base)',
+        fontWeight: active ? 600 : 500,
         cursor: 'pointer',
         fontFamily: 'var(--font-sans)',
         marginBottom: -1,
