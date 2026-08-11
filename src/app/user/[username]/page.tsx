@@ -208,20 +208,43 @@ export default async function UserProfilePage(props: Props) {
           sequence -- a brand new creator with zero posts gets no empty
           "0 views / 0 saves / no rating" row to look sparse over, the
           Sequences section's own "No sequences posted yet" message below
-          already covers that case. Switched to the shared StatBlock from
-          the homepage redesign (numeral-first, no dividers) for visual
-          consistency across the site rather than this page's own
-          bordered-card look, which now reads as out of step with
-          everything else since that redesign landed. */}
+          already covers that case.
+
+          Uses the shared StatBlock for the number/label rendering itself
+          (kept consistent with the homepage redesign's numeral-first
+          style), but wrapped here in this page's own bordered card with
+          column dividers -- Slowdog's explicit call (2026-08-11) to keep
+          this page's original boxed-stats look rather than StatBlock's
+          bare inline look used elsewhere. StatBlock is intentionally left
+          unmodified so the homepage and any other usage are unaffected;
+          this wrapper is local to this page only. */}
       {seqs.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
-          <StatBlock
-            stats={[
-              { value: totalViews.toLocaleString(), label: 'Total views' },
-              { value: totalSaves.toLocaleString(), label: 'Total saves' },
-              { value: avgRating != null ? avgRating.toFixed(1) : '—', label: 'Avg rating' },
-            ]}
-          />
+        <div
+          style={{
+            background: 'var(--bg-primary)',
+            border: '0.5px solid var(--border)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '24px 0',
+            marginBottom: 24,
+            display: 'flex',
+          }}
+        >
+          {[
+            { value: totalViews.toLocaleString(), label: 'Total views' },
+            { value: totalSaves.toLocaleString(), label: 'Total saves' },
+            { value: avgRating != null ? avgRating.toFixed(1) : '—', label: 'Avg rating' },
+          ].map((stat, i) => (
+            <div
+              key={stat.label}
+              style={{
+                flex: 1,
+                textAlign: 'center',
+                borderLeft: i > 0 ? '0.5px solid var(--border)' : 'none',
+              }}
+            >
+              <StatBlock stats={[stat]} />
+            </div>
+          ))}
         </div>
       )}
 
