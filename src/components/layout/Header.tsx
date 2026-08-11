@@ -1,11 +1,12 @@
 'use client'
 import Link from 'next/link'
-import Image from 'next/image'
+import { usePathname } from 'next/navigation'
 import { Search, PlusCircle, LogOut, LayoutList, Bookmark, Settings, Sun, Moon, Menu, X, FileEdit } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState, useRef } from 'react'
 import { useTheme } from '@/components/ThemeProvider'
 import { sanitizeAvatarUrl } from '@/lib/url-safety'
+import SequenceMark from '@/components/ui/SequenceMark'
 
 export default function Header() {
   const [user, setUser] = useState<any>(null)
@@ -18,6 +19,7 @@ export default function Header() {
   const dropdownRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
   const { theme, toggle } = useTheme()
+  const pathname = usePathname()
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -130,7 +132,9 @@ export default function Header() {
           alignItems: 'center',
           gap: 16,
         }}>
-          {/* Logo */}
+          {/* Logo — the same sequence mark used on the homepage hero, not the old generic
+              shield icon. The two were never the same shape before, which is a big part of
+              why the site read as "homepage got redesigned, rest didn't" even once it had. */}
           <Link href="/" style={{
             display: 'flex',
             alignItems: 'center',
@@ -142,34 +146,47 @@ export default function Header() {
             letterSpacing: '-0.02em',
             flexShrink: 0,
           }}>
-            <Image src="/icon.png" alt="LazyGrip logo" width={64} height={64} style={{ borderRadius: 7 }} />
+            <SequenceMark size={30} />
             LazyGrip<span style={{ color: 'var(--accent)' }}>.net</span>
           </Link>
 
-          {/* Desktop Nav */}
+          {/* Desktop Nav — active section gets a solid underline instead of relying on hover
+              alone, so returning visitors always have a sense of where they are. */}
+          {/* Pills, not plain text links — matches the chip language the rest of the site
+              uses now (class chips, content-type chips, utility-bar triggers). Active page
+              gets the same tinted accent-pill treatment as an active class chip; everything
+              else is a ghost pill until hovered. */}
           <nav className="desktop-nav" style={{ gap: 4, flex: 1 }}>
-            {navLinks.map(link => (
-              <Link key={link.href} href={link.href} style={{
-                fontSize: 'var(--text-sm)',
-                color: 'var(--text-secondary)',
-                textDecoration: 'none',
-                padding: '4px 10px',
-                borderRadius: 'var(--radius-sm)',
-                transition: 'all 0.15s',
-                whiteSpace: 'nowrap',
-              }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = 'var(--bg-tertiary)'
-                  e.currentTarget.style.color = 'var(--text-primary)'
+            {navLinks.map(link => {
+              const active = pathname === link.href.split('?')[0]
+              return (
+                <Link key={link.href} href={link.href} style={{
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: active ? 600 : 500,
+                  color: active ? 'var(--accent)' : 'var(--text-secondary)',
+                  textDecoration: 'none',
+                  padding: '6px 14px',
+                  borderRadius: 99,
+                  background: active ? 'var(--accent-subtle)' : 'transparent',
+                  border: active ? '0.5px solid rgba(29,158,117,0.25)' : '0.5px solid transparent',
+                  transition: 'all 0.15s',
+                  whiteSpace: 'nowrap',
                 }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = 'transparent'
-                  e.currentTarget.style.color = 'var(--text-secondary)'
-                }}
-              >
-                {link.label}
-              </Link>
-            ))}
+                  onMouseEnter={e => {
+                    if (active) return
+                    e.currentTarget.style.background = 'var(--bg-tertiary)'
+                    e.currentTarget.style.color = 'var(--text-primary)'
+                  }}
+                  onMouseLeave={e => {
+                    if (active) return
+                    e.currentTarget.style.background = 'transparent'
+                    e.currentTarget.style.color = 'var(--text-secondary)'
+                  }}
+                >
+                  {link.label}
+                </Link>
+              )
+            })}
           </nav>
 
           {/* Spacer on mobile */}

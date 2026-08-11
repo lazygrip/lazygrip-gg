@@ -1,5 +1,9 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import GuideHeader from '@/components/guide/GuideHeader'
+import GuideSection from '@/components/guide/GuideSection'
+import GuideCallout from '@/components/guide/GuideCallout'
+import { guideCodeStyle } from '@/components/guide/GuideCode'
 
 export const metadata: Metadata = {
   title: 'Building Sequences | GRIP-EMS Guide',
@@ -17,23 +21,18 @@ export const metadata: Metadata = {
   },
 }
 
+const inlineCode = guideCodeStyle
+
 export default function BuildingSequencesPage() {
   return (
     <div style={{ maxWidth: 720 }}>
-      <nav style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 24, display: 'flex', gap: 6, alignItems: 'center' }}>
-        <Link href="/guide" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Guide</Link>
-        <span>/</span>
-        <span style={{ color: 'var(--text-primary)' }}>Building sequences</span>
-      </nav>
+      <GuideHeader
+        crumbLabel="Building sequences"
+        title="Building sequences"
+        description="The best way to understand how to build a GRIP-EMS sequence is to read one that works and understand why it is built the way it is. This section dissects a real Guardian Druid Mythic+ sequence step by step, then covers the patterns and decisions that apply across every spec."
+      />
 
-      <h1 style={{ fontSize: 32, fontWeight: 700, letterSpacing: '-0.03em', marginBottom: 12 }}>
-        Building sequences
-      </h1>
-      <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 40 }}>
-        The best way to understand how to build a GRIP-EMS sequence is to read one that works and understand why it is built the way it is. This section dissects a real Guardian Druid Mythic+ sequence step by step, then covers the patterns and decisions that apply across every spec.
-      </p>
-
-      <Section title="The sequence: Elune's Chosen M+ V7.1">
+      <GuideSection title="The sequence: Elune's Chosen M+ V7.1">
         <MetaTable rows={[
           ['Author', 'Slowdog'],
           ['Spec', 'Guardian Druid'],
@@ -58,9 +57,9 @@ export default function BuildingSequencesPage() {
 
         <p style={{ marginTop: 16 }}>This sequence runs 30 steps in a Sequential loop with resetOnCombat enabled, meaning it fires the opener every pull and loops through the rotation continuously from there. At 150ms intervals on Razer hardware this produces Thrash at roughly 47% of total damage done, Ironfur uptime in the 91 to 97% range, and zero deaths across the validated keys.</p>
         <p style={{ marginTop: 12 }}>Two modifiers run throughout the entire sequence. Shift fires Frenzied Regeneration on demand without breaking the loop. Ctrl fires Ironfur manually when you need it outside the automatic cycling. Every step except the two MOONSPAM steps and steps 15 and 30 carries both modifier lines so they are always available regardless of where you are in the rotation.</p>
-      </Section>
+      </GuideSection>
 
-      <Section title="Step by step breakdown">
+      <GuideSection title="Step by step breakdown">
         <p>The sequence has a clear internal structure once you see it: an opener block, then a repeating loop built around Thrash and Mangle with Ironfur cycling at fixed intervals, Lunar Beam weaved at positions 5, 12, 19, and 26, and MOONSPAM at positions 8 and 22 handling Moonfire delivery and Barkskin as a reset gate.</p>
 
         {[
@@ -124,47 +123,47 @@ export default function BuildingSequencesPage() {
           <p style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>Steps 9 through 30: the loop continues</p>
           <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>Steps 9 through 30 repeat the same pattern established in steps 2 through 8: Thrash and Mangle alternating, Ironfur at steps 14, 21, and 28, Lunar Beam weaved at steps 12, 19, and 26, MOONSPAM at step 22, and a bare Ironfur at steps 15 and 30 without the nomod guards so it fires regardless of modifier state. Step 30 ends the loop and resets to step 2 on the next press.</p>
         </div>
-      </Section>
+      </GuideSection>
 
-      <Section title="The KeyPress field and what it is for">
+      <GuideSection title="The KeyPress field and what it is for">
         <p>GRIP-EMS has a KeyPress field that fires on every single keypress regardless of where the sequence is in its step list. It is not a step in the rotation. It is a persistent header that runs before every step fires.</p>
         <p style={{ marginTop: 12 }}>Modifier handling belongs here and only here. If you put <code style={inlineCode}>[mod:shift]</code> lines inside individual steps instead of in KeyPress, every step has to carry that conditional which eats into the 255-character step limit and reduces CPM across all abilities. Putting modifiers in KeyPress means a single line handles the modifier for every press and your steps stay clean.</p>
         <p style={{ marginTop: 12 }}>There is a meaningful secondary benefit. When modifiers live in KeyPress, the Rotation Preview panel in the GRIP-EMS editor can display your actual spell names instead of showing only the raw conditional text. If your sequence preview shows <code style={inlineCode}>/cast [mod:shift]</code> instead of the spell name, the modifier is in the steps rather than in KeyPress.</p>
-        <Callout>
+        <GuideCallout>
           Do not put combat spells in KeyPress. Anything in KeyPress fires on every single keypress including before combat, during movement, and any other context where you press the key. Modifiers and channel-stop lines belong there. Rotation spells belong in steps.
-        </Callout>
-      </Section>
+        </GuideCallout>
+      </GuideSection>
 
-      <Section title="The reset=target castsequence pattern">
+      <GuideSection title="The reset=target castsequence pattern">
         <p>Some abilities should fire once on each new target rather than on a timer or as a rotation step. Hunter's Mark is the canonical example. You want it to apply when you engage a target, reapply when you switch targets, and not spam continuously on every keypress.</p>
         <p style={{ marginTop: 12 }}>The correct pattern for this in GRIP-EMS is a castsequence with a target reset, placed in a step near the top of the loop:</p>
 
-        <CodeBlock>/castsequence [nochanneling,exists] reset=target Hunter's Mark, null</CodeBlock>
+        <CodeBlock>{'/castsequence [nochanneling,exists] reset=target Hunter\'s Mark, null'}</CodeBlock>
 
         <p style={{ marginTop: 12 }}>This fires Hunter's Mark on the first press after you acquire a target, then advances the castsequence to <code style={inlineCode}>null</code>, which is a no-op. The sequence stays on null for every subsequent press against that target, so Hunter's Mark does not repeat. When you switch targets the castsequence resets to Hunter's Mark and fires again on the first press.</p>
         <p style={{ marginTop: 12 }}>The <code style={inlineCode}>[exists]</code> conditional prevents the line from attempting to fire when you have no target. The <code style={inlineCode}>[nochanneling]</code> prevents it from interrupting a channel. Both guards are necessary for the pattern to work cleanly in M+ where target switching is frequent.</p>
         <p style={{ marginTop: 12 }}>The same pattern works for any ability you want to fire once per target: Faerie Fire, Misdirection to a specific target, any debuff that should land on engage and reapply on target change. Swap Hunter's Mark for the ability name and the behavior is identical.</p>
-        <Callout>
+        <GuideCallout>
           Do not put Hunter's Mark in KeyPress. KeyPress fires on every keypress, so Hunter's Mark would attempt to cast continuously. The reset=target castsequence is the correct approach.
-        </Callout>
-      </Section>
+        </GuideCallout>
+      </GuideSection>
 
-      <Section title="Hierarchical actions: when to use the node editor instead">
+      <GuideSection title="Hierarchical actions: when to use the node editor instead">
         <p>Everything in this guide so far writes conditional logic directly into macro text, using bracket conditionals like <code style={inlineCode}>[mod:shift]</code> and <code style={inlineCode}>[nomod:shift, nomod:ctrl, combat]</code> right inside each step. That is a deliberate choice. It keeps you in full control of exactly what compiles and exactly how many of your 255 characters it costs, and it is the pattern the Elune's Chosen example above uses throughout. But it is not the only way GRIP-EMS lets you build conditional logic, and for some patterns it is not the right tool.</p>
         <p style={{ marginTop: 12 }}>Beyond the flat step list, GRIP-EMS has a hierarchical action tree with a visual node editor. Five node types are available: Action, which is a single macro step and the leaf of the tree; Loop, which repeats its children a set number of times or indefinitely; Repeat, which runs its children N times and then moves on; Conditional, which evaluates a Lua condition before running its children; and If, ElseIf, and Else, which give you proper branching with multiple condition paths instead of chaining bracket conditionals by hand.</p>
         <p style={{ marginTop: 12 }}>An If node compiles a True branch and a False branch into a single chunk of macro conditional text, the same kind of output you have been reading throughout this page, except the editor builds it for you from whatever you put in each branch. If your True branch is empty, the compiler does not emit a clumsy empty-clause-with-semicolon-fallthrough. It automatically applies De Morgan negation and emits the shorter negated form instead, the same way <code style={inlineCode}>[noindoors]</code> reads cleaner than an empty bracket followed by a semicolon. A path indicator badge next to the Cond box tells you which compile path the node took, Single line, Two-line split, Per-step, or Optimised fall-through, and the Compiled Output preview pane shows you the literal macrotext the engine will actually run. That preview is the real value here: it lets you verify exactly what is going to fire before you save, which is easy to get wrong reading raw bracket syntax by eye once a branch has more than one action in it.</p>
         <p style={{ marginTop: 12 }}>That last point is the actual reason to reach for the node editor instead of hand-written brackets. A single toggle, like the Shift modifier pattern used throughout the Guardian Druid sequence above, is faster to write and easier to scan as a flat inline conditional, which is why this guide teaches it that way. But once a branch needs more than one action, an opener that casts two or three different spells depending on whether you are indoors, mounted, or in a specific stance, hand-chaining semicolons gets error-prone fast and a single mistake silently breaks the branch. The visual tree keeps each branch's actions grouped and editable on their own, and the Compiled Output preview catches mistakes before they reach your action bar instead of after.</p>
-        <Callout>
+        <GuideCallout>
           If you are building something more involved than a single modifier toggle, multiple actions per branch, nested conditions, or logic you keep getting wrong reading it back as bracket text, switch to the node editor for that part of the sequence rather than fighting it in raw macro syntax. The two approaches compile to the same kind of macro conditional output underneath, so you are not choosing a worse system, just a different editing surface for more complex logic.
-        </Callout>
-      </Section>
+        </GuideCallout>
+      </GuideSection>
 
-      <Section title="Charged and empower spells: why they break automated sequencing">
+      <GuideSection title="Charged and empower spells: why they break automated sequencing">
         <p>Charged spells and empower spells, Evoker's Fire Breath and Upheaval being the clearest examples, behave differently from a normal cast and that difference is what causes automated sequences to hitch, freeze, or feel wrong even when every step looks correct on paper.</p>
         <p style={{ marginTop: 12 }}>A normal spell either casts or it does not. A charged or empower spell has stages: holding the button charges it up, and releasing early locks in whatever charge level you have reached so far. Mechanically each charge level is treated as a different spell, and moving between them stops the previous cast rather than smoothly continuing it. When that stop happens automatically instead of on your own release, it costs a hitch, roughly a full GCD of dead time, before anything can be cast again. This is not a bug in GRIP-EMS. It is the same behavior press and hold casting has always had with charged spells, and automating the press does not remove it.</p>
-        <Callout>
+        <GuideCallout>
           If you let press and hold run its full charge without ever cutting it off early, there is no hitch. The problem only shows up when a sequence cancels the charge partway through, which is exactly what happens if you try to time charge level via pause steps or spam intervals instead of holding to completion.
-        </Callout>
+        </GuideCallout>
         <p style={{ marginTop: 16 }}>Two approaches have actually worked for players sequencing these spells, and one approach that sounds reasonable does not.</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
           <div style={{ padding: '14px 16px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
@@ -184,9 +183,9 @@ export default function BuildingSequencesPage() {
           </div>
         </div>
         <p style={{ marginTop: 16 }}>None of this is Evoker specific in principle, it applies to any spell WoW treats as charged or empowered, but Evoker is currently the class where it comes up. If you are building a sequence around Aug Evoker's Ebon Might upkeep or a Devastation opener that leans on Fire Breath or Upheaval, plan for one of the two working approaches above rather than assuming a normal cast-step pattern will behave the same way it does for every other ability in your kit.</p>
-      </Section>
+      </GuideSection>
 
-      <Section title="The decisions that matter">
+      <GuideSection title="The decisions that matter">
         <DecisionBlock
           question="Why Sequential and not Priority"
           answer="Priority would always try Thrash first on every keypress, which sounds efficient but produces a different problem. Mangle, Ironfur, and Lunar Beam would only fire when Thrash is on cooldown, which means your Ironfur uptime becomes dependent on Thrash cooldown math rather than the structured cycling the sequence enforces. Sequential gives you predictable step positions and predictable uptime."
@@ -203,7 +202,7 @@ export default function BuildingSequencesPage() {
           question="Why Ironfur every 7 steps"
           answer="Ironfur's base duration is 7 seconds and the sequence runs at roughly one step per GCD at 150ms. Placing Ironfur at every 7th step means a new Ironfur cast lands approximately when the previous one expires. This is the mechanism behind the 91 to 97% uptime. If you remove Ironfur steps or change their spacing, uptime drops and it shows immediately in logs."
         />
-      </Section>
+      </GuideSection>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 48, paddingTop: 24, borderTop: '0.5px solid var(--border)' }}>
         <Link href="/guide/how-it-works" style={{ fontSize: 'var(--text-sm)', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
@@ -212,28 +211,6 @@ export default function BuildingSequencesPage() {
         <Link href="/guide/from-legacy-program" style={{ fontSize: 'var(--text-sm)', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
           Next: Coming from the legacy program →
         </Link>
-      </div>
-    </div>
-  )
-}
-
-const inlineCode: React.CSSProperties = {
-  fontFamily: 'var(--font-mono)',
-  fontSize: 'var(--text-xs)',
-  background: 'var(--bg-tertiary)',
-  padding: '1px 5px',
-  borderRadius: 3,
-  color: 'var(--accent)',
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: 48 }}>
-      <h2 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 16, color: 'var(--text-primary)' }}>
-        {title}
-      </h2>
-      <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-        {children}
       </div>
     </div>
   )
@@ -291,21 +268,6 @@ function CodeBlock({ children }: { children: React.ReactNode }) {
       background: 'var(--bg-tertiary)', border: '0.5px solid var(--border)',
       borderRadius: 'var(--radius-md)', padding: '12px 14px',
       color: 'var(--accent)', marginTop: 12, overflowX: 'auto',
-    }}>
-      {children}
-    </div>
-  )
-}
-
-function Callout({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{
-      marginTop: 12, padding: '12px 14px',
-      background: 'rgba(29,158,117,0.07)',
-      border: '0.5px solid rgba(29,158,117,0.25)',
-      borderLeft: '3px solid var(--accent)',
-      borderRadius: 'var(--radius-md)',
-      fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6,
     }}>
       {children}
     </div>

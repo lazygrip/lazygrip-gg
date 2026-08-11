@@ -1,6 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowRight, ArrowLeft } from 'lucide-react'
+import GuideHeader from '@/components/guide/GuideHeader'
+import GuideSection from '@/components/guide/GuideSection'
+import GuideInfoBox from '@/components/guide/GuideInfoBox'
+import GuideCode from '@/components/guide/GuideCode'
 
 export const metadata: Metadata = {
   title: 'Coming from the Legacy Program | GRIP-EMS Guide',
@@ -18,22 +22,6 @@ export const metadata: Metadata = {
   },
 }
 
-function Code({ children }: { children: React.ReactNode }) {
-  return (
-    <code style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', background: 'var(--bg-tertiary)', border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-sm)', padding: '1px 6px', color: 'var(--accent-text)' }}>
-      {children}
-    </code>
-  )
-}
-
-function InfoBox({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '14px 16px', marginTop: 14, marginBottom: 4 }}>
-      <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>{children}</div>
-    </div>
-  )
-}
-
 function CompareRow({ label, grip, gse }: { label: string; grip: string; gse: string }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr 1fr', gap: 1 }}>
@@ -47,20 +35,14 @@ function CompareRow({ label, grip, gse }: { label: string; grip: string; gse: st
 export default function FromLegacyProgramPage() {
   return (
     <div>
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.2, marginBottom: 12, color: 'var(--text-primary)' }}>
-          Coming from the legacy program
-        </h1>
-        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75, maxWidth: 620 }}>
-          If you use an older macro sequencing addon and are evaluating whether to switch, this section is written specifically for you. The legacy program works and a lot of good sequences exist for it. The reason to use GRIP-EMS is the structure you can build into a sequence and the diagnostic tooling around it, plus the fact that every feature is free. This is not a pitch, it is an honest breakdown of what is different.
-        </p>
-      </div>
+      <GuideHeader
+        crumbLabel="Coming from the legacy program"
+        title="Coming from the legacy program"
+        description="If you use an older macro sequencing addon and are evaluating whether to switch, this section is written specifically for you. The legacy program works and a lot of good sequences exist for it. The reason to use GRIP-EMS is the structure you can build into a sequence and the diagnostic tooling around it, plus the fact that every feature is free. This is not a pitch, it is an honest breakdown of what is different."
+      />
 
-      <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
-          Getting your sequences into GRIP-EMS
-        </h2>
-        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 14 }}>
+      <GuideSection title="Getting your sequences into GRIP-EMS">
+        <p style={{ marginBottom: 14 }}>
           This is probably what you came here for first. GRIP-EMS imports sequences from the legacy program automatically and the process takes about two minutes. Import reliability has improved significantly in recent releases, so if you tried this previously and had issues, it is worth trying again.
         </p>
 
@@ -82,37 +64,30 @@ export default function FromLegacyProgramPage() {
           ))}
         </div>
 
-        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
-          After importing, run <Code>/gems repairall</Code> to scan every transferred sequence across 13 diagnostic categories. Most issues from format differences get flagged and fixed automatically. This takes about thirty seconds and saves you from discovering problems mid-pull.
+        <p>
+          After importing, run <GuideCode>/gems repairall</GuideCode> to scan every transferred sequence across 13 diagnostic categories. Most issues from format differences get flagged and fixed automatically. This takes about thirty seconds and saves you from discovering problems mid-pull.
         </p>
-        <InfoBox>
+        <GuideInfoBox>
           Sequences from the legacy program frequently overshoot WoW&apos;s 255-character step limit because it builds longer individual step strings than GRIP-EMS allows. The Repair module flags these on import and the fix is to split the oversized step into two shorter steps carrying the same spells. This is one of the most common issues when porting sequences from the legacy program, so if repair comes back with character limit violations do not be alarmed, it is normal and fixable in a few minutes.
-        </InfoBox>
-        <InfoBox>
+        </GuideInfoBox>
+        <GuideInfoBox>
           Sequences shared in English by another player import and translate to your client language automatically. Spell names stored as IDs under the hood re-render in your locale on import, so a sequence built on an English client works for German or French players without any manual editing.
-        </InfoBox>
-      </section>
+        </GuideInfoBox>
+      </GuideSection>
 
-      <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
-          How advancement actually works
-        </h2>
-        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 14 }}>
+      <GuideSection title="How advancement actually works">
+        <p style={{ marginBottom: 14 }}>
           Both engines advance one step per keypress and neither one waits for a cast to land. What can make a press do nothing is the macro line on the step. If a /cast names a spell that is still on cooldown, WoW stops running that macro there and the lines under it never fire, so the press comes up empty and the step advances anyway. A /castsequence parked on an entry that is on cooldown behaves the same. That is the WoW macro engine reading your text, so you get it under either addon. Conditional lines are different: a conditional that does not apply is skipped and the next line still runs.
         </p>
-        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 14 }}>
+        <p style={{ marginBottom: 14 }}>
           The practical consequence is that loop length is a real cost. In a flat sequential loop every step gets one visit per pass, so a 30 step loop clicked every 150ms is roughly 4.5 seconds between visits to any single step. A press that came up empty is not retried, and that step is spent until the loop comes back around. If a defensive needs to come around faster than that, shorten the loop, move the step earlier, or give it a per-step interval.
         </p>
-        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
+        <p>
           Advancement being deterministic is what makes a sequence readable. One press is one step, so a step position means something and you can reason about the rotation by reading it top to bottom. It is also what makes log comparison useful. Two runs of the same sequence at the same click rate walk the same steps in the same order, so a difference in the numbers points at the sequence or the pull rather than at the engine.
         </p>
-      </section>
+      </GuideSection>
 
-      <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
-          What is different between the two addons
-        </h2>
-
+      <GuideSection title="What is different between the two addons">
         <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: 16 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr 1fr', gap: 1, background: 'var(--border)' }}>
             <div style={{ padding: '10px 14px', background: 'var(--bg-secondary)', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}></div>
@@ -131,13 +106,9 @@ export default function FromLegacyProgramPage() {
             <CompareRow label="Cross-language sharing" grip="Spell IDs stored internally, renders in recipient's language" gse="Spell names in source language, may not fire on other clients" />
           </div>
         </div>
-      </section>
+      </GuideSection>
 
-      <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
-          Things that trip up switchers specifically
-        </h2>
-
+      <GuideSection title="Things that trip up switchers specifically">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {[
             {
@@ -167,19 +138,16 @@ export default function FromLegacyProgramPage() {
             </div>
           ))}
         </div>
-      </section>
+      </GuideSection>
 
-      <section style={{ marginBottom: 40 }}>
-        <h2 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 14, color: 'var(--text-primary)' }}>
-          You do not have to choose permanently
-        </h2>
-        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75, marginBottom: 12 }}>
+      <GuideSection title="You do not have to choose permanently">
+        <p style={{ marginBottom: 12 }}>
           Both addons can be installed at the same time and the sequence formats do not cross-contaminate. A reasonable approach is to move one spec across first, the one whose sequence you edit and tune the most, and keep your existing legacy program sequences for everything else until you have decided the tooling is worth the move for those specs too.
         </p>
-        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
+        <p>
           Translating sequences between the formats is not automatic, but the underlying macro logic is the same since both addons use WoW&apos;s standard macro conditional syntax. A sequence from the legacy program can be rebuilt in GRIP-EMS step by step without starting from scratch. Step spacing and timing can still shift once the step count or the click rate changes, so plan on a validation pass after porting rather than assuming the numbers will be identical.
         </p>
-      </section>
+      </GuideSection>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 16, borderTop: '0.5px solid var(--border)' }}>
         <Link href="/guide/building-sequences" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', textDecoration: 'none' }}>
