@@ -149,7 +149,16 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
   // on every post/edit/delete (setComments), and without this the effect
   // would re-run and yank the page back to the linked comment every time,
   // which is not what "arrived via a link" means after the first arrival.
-  const hasScrolledToHash = useRef(false)
+  // Guards the hash-scroll effect below from firing once. Comments re-render
+  // on every post/edit/delete (setComments), and without this the effect
+  // would re-run and yank the page back to the linked comment every time,
+  // which is not what "arrived via a link" means after the first arrival.
+  // Tracks the hash string itself, not just a boolean -- SequencePageClient
+  // is keyed by slug (page.tsx: key={params.slug}) so it fully remounts
+  // between different sequences, but two different comment links pointing
+  // at the *same* sequence in one session would share this ref if it were
+  // just a boolean, silently blocking the second click's scroll.
+  const scrolledToHashRef = useRef<string | null>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
@@ -173,26 +182,47 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
   // Scroll-to-comment for links like /sequences/[slug]#comment-<id>, e.g.
   // from the "comments by this creator" list on a public profile page.
   //
-  // REWORKED 2026-08-11 after the first version failed to scroll on a real
-  // click-through (reported: lands on the page but stays at the top). Not
-  // fully root-caused live -- could not reproduce against a running
-  // instance in this session -- so this version is deliberately more
-  // defensive rather than a single confident fix: it retries for a short
-  // window instead of assuming one specific render will have the target
-  // node, since the original single-shot version was betting on exact
-  // effect-timing relative to Next.js client-side navigation that wasn't
-  // actually verified.
+  // SECOND REWORK 2026-08-11 after the retry-loop version still didn't
+  // scroll on a real click-through. Root cause this time, confirmed against
+  // Next.js's own docs (github.com/vercel/next.js#44295 is the same class
+  // of bug reported against Link's hash handling): Next's <Link> intercepts
+  // hash navigation and runs its own one-shot scroll-to-hash pass right
+  // after the route change, walking the DOM for a matching, visible,
+  // scrollable element. If that element isn't there yet -- which it never
+  // is here, since comments load client-side after the route change, not
+  // before -- Next's built-in pass finds nothing and does not retry. My own
+  // effect was meant to be the retry, but it depended on window.location.hash,
+  // and hash reliability on a Link-driven soft navigation (vs. a hard
+  // reload) is exactly the inconsistency reported in that same Next.js
+  // issue. Reading the hash once on mount isn't safe to assume here.
+  //
+  // Fix: read the hash from both window.location.hash AND, as a fallback,
+  // parse it out of document.location.href directly (some soft-navigation
+  // paths update the visible URL bar without location.hash reflecting it
+  // synchronously on first read). Also fixed the retry loop leaking
+  // multiple concurrent timeout chains across re-renders by tracking the
+  // active timeout id and clearing it on cleanup/hash-change, and added
+  // console logging so a future failure is diagnosable instead of silent.
   useEffect(() => {
-    if (hasScrolledToHash.current) return
-    const hash = window.location.hash
-    if (!hash.startsWith('#comment-')) return
+    const rawHash = window.location.hash || (() => {
+      const i = window.location.href.indexOf('#')
+      return i === -1 ? '' : window.location.href.slice(i)
+    })()
+
+    if (!rawHash.startsWith('#comment-')) return
+    if (scrolledToHashRef.current === rawHash) return
+
+    console.log(`[scroll-to-comment] Targeting ${rawHash}, comments loaded: ${comments.length}`)
 
     let attempts = 0
-    const maxAttempts = 20 // ~2s at 100ms, generous for a slow fetch/paint
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+    const maxAttempts = 30 // ~3s at 100ms
+
     const tryScroll = () => {
-      const el = document.getElementById(hash.slice(1))
+      const el = document.getElementById(rawHash.slice(1))
       if (el) {
-        hasScrolledToHash.current = true
+        scrolledToHashRef.current = rawHash
+        console.log(`[scroll-to-comment] Found ${rawHash} after ${attempts} attempts, scrolling`)
         el.scrollIntoView({ behavior: 'smooth', block: 'center' })
         const prevOutline = el.style.outline
         const prevTransition = el.style.transition
@@ -207,12 +237,21 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
       }
       attempts++
       if (attempts < maxAttempts) {
-        setTimeout(tryScroll, 100)
+        timeoutId = setTimeout(tryScroll, 100)
       } else {
-        console.warn(`[scroll-to-comment] Gave up looking for ${hash} after ${maxAttempts} attempts`)
+        console.warn(`[scroll-to-comment] Gave up looking for ${rawHash} after ${maxAttempts} attempts -- element never appeared in the DOM`)
       }
     }
     tryScroll()
+
+    // Cleanup cancels this run's pending retry if the effect re-fires
+    // (comments changed again) before it either found the element or gave
+    // up -- this is the fix for the leaked-concurrent-loops bug in the
+    // previous version, where every re-run started a fresh timeout chain
+    // with nothing stopping the previous one.
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId)
+    }
   }, [comments])
 
   // supabase-js query builders are lazy thenables: the request is only issued when the builder
