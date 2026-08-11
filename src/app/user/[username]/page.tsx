@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { formatDistanceToNow } from 'date-fns'
 import { sanitizeAvatarUrl } from '@/lib/url-safety'
+import { MessageSquare } from 'lucide-react'
 
 interface Props {
   params: Promise<{ username: string }>
@@ -77,6 +78,15 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   }
 }
 
+function truncateCommentBody(body: string, max = 140): string {
+  const cleaned = body.replace(/\s+/g, ' ').trim()
+  if (cleaned.length <= max) return cleaned
+  const head = cleaned.slice(0, max + 1)
+  const lastSpace = head.lastIndexOf(' ')
+  const truncated = lastSpace > 0 ? head.slice(0, lastSpace) : cleaned.slice(0, max)
+  return truncated.replace(/[\s,.;:!?-]+$/, '') + '…'
+}
+
 export default async function UserProfilePage(props: Props) {
   const params = await props.params;
   const supabase = await createClient()
@@ -88,6 +98,17 @@ export default async function UserProfilePage(props: Props) {
     .single()
 
   if (!profile) notFound()
+
+  // Who's looking. Every existing auth.getUser() call in this codebase is
+  // in a client component (checked 2026-08-11, none in a server component
+  // until now) -- there's no established pattern to deviate from here, this
+  // is just the first server component with a reason to know the viewer.
+  // Safe to do here specifically because this route is server-rendered on
+  // demand (confirmed 'ƒ' in the build output, not statically cached), so a
+  // per-visitor auth read can't leak between visitors the way it would on a
+  // cached or SSG route.
+  const { data: { user: viewer } } = await supabase.auth.getUser()
+  const isOwnProfile = viewer?.id === profile.id
 
   const { data: sequences } = await supabase
     .from('sequences')
@@ -101,6 +122,32 @@ export default async function UserProfilePage(props: Props) {
   const displayColor = profile.avatar_color ?? '#1D9E75'
   const safeAvatarUrl = sanitizeAvatarUrl(profile.avatar_url)
   const joinDate = new Date(profile.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+
+  // Recent comments this creator has left across the site, kohtas's "offer
+  // support for our sequences" request read as: a visitor lands on a
+  // creator's profile and can jump straight to things that creator said.
+  // Includes replies as well as top-level comments (Slowdog's call,
+  // 2026-08-11) -- a reply is still this person's words and still worth
+  // surfacing. sequence:sequences!inner(...) with status eq published is
+  // belt-and-braces: the sequence detail page 404s anything unpublished
+  // already, so there is no reachable route to comment on a draft through
+  // normal use, but a defensive filter costs nothing and means this can
+  // never produce a link to a page that 404s.
+  const { data: recentComments } = await supabase
+    .from('comments')
+    .select('id, body, created_at, sequence:sequences!inner(slug, title, status)')
+    .eq('author_id', profile.id)
+    .eq('is_deleted', false)
+    .eq('sequence.status', 'published')
+    .order('created_at', { ascending: false })
+    .limit(10)
+
+  const comments = (recentComments ?? []) as unknown as {
+    id: string
+    body: string
+    created_at: string
+    sequence: { slug: string; title: string; status: string }
+  }[]
 
   // Aggregate stats across this creator's published sequences. Summed here
   // rather than tracked as a running total on profiles, since seqs is
@@ -203,13 +250,91 @@ export default async function UserProfilePage(props: Props) {
           background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
           borderRadius: 'var(--radius-lg)', padding: '40px 24px', textAlign: 'center',
         }}>
-          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>No sequences posted yet.</p>
+          {isOwnProfile ? (
+            <>
+              <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>
+                You haven't posted a sequence yet.
+              </p>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', marginTop: 4 }}>
+                Post your first one and this page fills in with your stats, comments, and more.
+              </p>
+              <Link href="/post" style={{
+                display: 'inline-block',
+                marginTop: 14,
+                padding: '8px 16px',
+                background: 'var(--accent)',
+                color: 'white',
+                textDecoration: 'none',
+                borderRadius: 'var(--radius-md)',
+                fontSize: 'var(--text-sm)',
+                fontWeight: 500,
+              }}>
+                Post your first sequence
+              </Link>
+            </>
+          ) : (
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>No sequences posted yet.</p>
+          )}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {seqs.map(seq => (
             <SequenceRow key={seq.id} seq={seq} />
           ))}
+        </div>
+      )}
+
+      {/* Recent comments by this creator, across any sequence, with a
+          jump-link straight to each one -- kohtas's "offer support for our
+          sequences" request, part 2. Only rendered when there's at least
+          one, matching the same empty-state reasoning as the stats block
+          above: nothing to say beats an empty box. */}
+      {comments.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <div style={{
+            fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-muted)',
+            textTransform: 'uppercase', letterSpacing: '.06em',
+            marginBottom: 10,
+          }}>
+            Recent Comments
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {comments.map(c => (
+              <Link
+                key={c.id}
+                href={`/sequences/${c.sequence.slug}#comment-${c.id}`}
+                style={{ textDecoration: 'none' }}
+              >
+                <div style={{
+                  background: 'var(--bg-primary)',
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 'var(--radius-lg)',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  gap: 10,
+                  alignItems: 'flex-start',
+                  cursor: 'pointer',
+                }}>
+                  <div style={{ color: 'var(--text-muted)', flexShrink: 0, marginTop: 2 }}>
+                    <MessageSquare size={14} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
+                      {truncateCommentBody(c.body)}
+                    </p>
+                    <div style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center' }}>
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                        on {c.sequence.title}
+                      </span>
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                        · {formatDistanceToNow(new Date(c.created_at), { addSuffix: true })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
     </div>
