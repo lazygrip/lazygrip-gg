@@ -1125,7 +1125,18 @@ function SequenceRow({ seq, showAuthor, onUnsave }: { seq: any; showAuthor: bool
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {contentLabel}</span>
             {seq.hero_talent && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {seq.hero_talent}</span>}
             {showAuthor && seq.author?.username && (
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· by {seq.author.username}</span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                · by{' '}
+                <Link
+                  href={`/user/${seq.author.username}`}
+                  onClick={e => e.stopPropagation()}
+                  style={{ color: 'var(--text-muted)', textDecoration: 'none' }}
+                  onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                  onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+                >
+                  {seq.author.username}
+                </Link>
+              </span>
             )}
           </div>
         </div>

@@ -122,6 +122,11 @@ export type Comment = {
   parent_id: string | null
   body: string
   is_deleted: boolean
+  // Added by migration 012, alongside comments.source's default of 'web'
+  // and comments.discord_message_id -- present on every row since that
+  // migration, this type just hadn't caught up until now (2026-08-11).
+  source: 'web' | 'discord'
+  discord_message_id: string | null
   created_at: string
   updated_at: string
   author?: Profile

@@ -115,6 +115,10 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
   const [commentText, setCommentText] = useState('')
   const [replyingTo, setReplyingTo] = useState<string | null>(null)
   const [replyText, setReplyText] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editText, setEditText] = useState('')
+  const [editSaving, setEditSaving] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
   const [user, setUser] = useState<any>(null)
   const [saved, setSaved] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -141,6 +145,11 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
 
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
+  // Guards the hash-scroll effect below to firing once. Comments re-render
+  // on every post/edit/delete (setComments), and without this the effect
+  // would re-run and yank the page back to the linked comment every time,
+  // which is not what "arrived via a link" means after the first arrival.
+  const hasScrolledToHash = useRef(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
@@ -160,6 +169,39 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
       fetchTagBreakdown(sequence.id)
     }
   }, [sequence, user])
+
+  // Scroll-to-comment for links like /sequences/[slug]#comment-<id>, e.g.
+  // from the "comments by this creator" list on a public profile page.
+  // Gated on comments.length rather than firing straight from the mount
+  // effect, since the target node doesn't exist in the DOM until comments
+  // have actually loaded and rendered -- scrolling before that would
+  // silently do nothing, the same class of bug as scrolling before a
+  // seeded/fetched state settles anywhere else in this file.
+  useEffect(() => {
+    if (hasScrolledToHash.current) return
+    if (comments.length === 0) return
+    const hash = window.location.hash
+    if (!hash.startsWith('#comment-')) return
+
+    hasScrolledToHash.current = true
+    // One tick so the browser has committed the layout for the comments
+    // that just rendered -- getElementById immediately after setComments
+    // resolves can still race the paint on some browsers.
+    requestAnimationFrame(() => {
+      const el = document.getElementById(hash.slice(1))
+      if (!el) return
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      const prevOutline = el.style.outline
+      const prevTransition = el.style.transition
+      el.style.transition = 'outline-color 0.3s ease'
+      el.style.outline = '2px solid var(--accent)'
+      el.style.borderRadius = 'var(--radius-md)'
+      setTimeout(() => {
+        el.style.outline = prevOutline
+        el.style.transition = prevTransition
+      }, 2200)
+    })
+  }, [comments])
 
   // supabase-js query builders are lazy thenables: the request is only issued when the builder
   // is awaited or .then()-ed. A bare `supabase.rpc(...)` statement builds the request and drops
@@ -387,6 +429,48 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
       )
       return nestComments(flat.filter(x => !x.is_deleted))
     })
+  }
+
+  async function submitEdit(commentId: string) {
+    if (!user || !editText.trim()) return
+    setEditSaving(true)
+    setEditError(null)
+
+    // Same fetch-a-server-route shape as deleteComment, for the same reason:
+    // api/comments/edit is the only place revalidatePath can be hung off
+    // this write, so the edit is invisible to crawlers/no-JS clients for up
+    // to an hour without it, same as an undeleted comment used to be.
+    try {
+      const res = await fetch('/api/comments/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commentId, body: editText.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) {
+        // Surfaced inline rather than logged-only: unlike delete, which the
+        // optimistic UI already commits to before the request even starts,
+        // edit keeps the textarea open and needs to tell the person their
+        // change did not save, especially the 409 case (a Discord-sourced
+        // comment can't be edited here) which is a real, expected outcome,
+        // not a fault.
+        setEditError(data.error || 'Could not save edit. Please try again.')
+        setEditSaving(false)
+        return
+      }
+      setComments(c => {
+        const flat = flattenComments(c).map(comment =>
+          comment.id !== commentId ? comment : { ...comment, body: data.comment.body }
+        )
+        return nestComments(flat)
+      })
+      setEditingId(null)
+      setEditText('')
+    } catch (error) {
+      console.error('Comment edit error:', error)
+      setEditError('Could not save edit. Please try again.')
+    }
+    setEditSaving(false)
   }
 
   async function toggleSave() {
@@ -1249,6 +1333,17 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                     onReplyTextChange={setReplyText}
                     onReplySubmit={submitReply}
                     onDelete={deleteComment}
+                    editingId={editingId}
+                    editText={editText}
+                    editSaving={editSaving}
+                    editError={editError}
+                    onEditClick={(id, currentBody) => {
+                      setEditingId(editingId === id ? null : id)
+                      setEditText(currentBody)
+                      setEditError(null)
+                    }}
+                    onEditTextChange={setEditText}
+                    onEditSubmit={submitEdit}
                   />
                 ))}
               </div>
@@ -1668,18 +1763,39 @@ interface CommentThreadProps {
   onReplyTextChange: (text: string) => void
   onReplySubmit: (parentId: string) => void
   onDelete: (id: string) => void
+  editingId: string | null
+  editText: string
+  editSaving: boolean
+  editError: string | null
+  onEditClick: (id: string, currentBody: string) => void
+  onEditTextChange: (text: string) => void
+  onEditSubmit: (id: string) => void
   depth?: number
 }
 
 function CommentThread({
   comment, user, isOwner, replyingTo, replyText,
-  onReplyClick, onReplyTextChange, onReplySubmit, onDelete, depth = 0,
+  onReplyClick, onReplyTextChange, onReplySubmit, onDelete,
+  editingId, editText, editSaving, editError,
+  onEditClick, onEditTextChange, onEditSubmit, depth = 0,
 }: CommentThreadProps) {
   const isReplying = replyingTo === comment.id
+  const isEditing = editingId === comment.id
   const canDelete = user && (user.id === comment.author_id || isOwner)
+  // Author-only, deliberately narrower than canDelete: a sequence owner may
+  // remove someone else's comment from their own sequence, but rewriting
+  // someone else's words is a different and much more sensitive action, so
+  // isOwner does not grant it the way it grants delete.
+  //
+  // source === 'web' hides the button on Discord-relayed comments rather
+  // than showing it and letting api/comments/edit's 409 explain why after
+  // the fact -- the route enforces this regardless, this is purely so the
+  // person doesn't hit a confusing rejection on a comment they could never
+  // have edited here in the first place.
+  const canEdit = user && user.id === comment.author_id && comment.source === 'web'
 
   return (
-    <div style={{ marginLeft: depth > 0 ? 20 : 0 }}>
+    <div id={`comment-${comment.id}`} style={{ marginLeft: depth > 0 ? 20 : 0 }}>
       <div style={{ display: 'flex', gap: 10 }}>
         {depth > 0 && (
           <div style={{ paddingTop: 6, color: 'var(--text-muted)', flexShrink: 0 }}>
@@ -1729,6 +1845,22 @@ function CommentThread({
                   {isReplying ? 'Cancel' : 'Reply'}
                 </button>
               )}
+              {canEdit && !isEditing && (
+                <button
+                  onClick={() => onEditClick(comment.id, comment.body)}
+                  title="Edit comment"
+                  style={{
+                    background: 'none', border: 'none',
+                    cursor: 'pointer', color: 'var(--text-muted)',
+                    padding: '2px 4px', borderRadius: 4,
+                    display: 'flex', alignItems: 'center',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                >
+                  <Pencil size={12} />
+                </button>
+              )}
               {canDelete && (
                 <button
                   onClick={() => onDelete(comment.id)}
@@ -1747,9 +1879,58 @@ function CommentThread({
               )}
             </div>
           </div>
-          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-		  {comment.body}
-		  </p>
+          {isEditing ? (
+            <div style={{ marginTop: 4 }}>
+              <textarea
+                value={editText}
+                onChange={e => onEditTextChange(e.target.value)}
+                rows={3}
+                style={{
+                  width: '100%', padding: '8px 10px',
+                  border: '0.5px solid var(--border-strong)',
+                  borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)',
+                  background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                  resize: 'vertical', fontFamily: 'var(--font-sans)',
+                  marginBottom: 6,
+                }}
+              />
+              {editError && (
+                <p style={{ fontSize: 'var(--text-xs)', color: '#c0392b', marginBottom: 6 }}>{editError}</p>
+              )}
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button
+                  onClick={() => onEditSubmit(comment.id)}
+                  disabled={!editText.trim() || editSaving}
+                  style={{
+                    padding: '5px 12px', background: 'var(--accent)', color: 'white',
+                    border: 'none', borderRadius: 'var(--radius-md)',
+                    cursor: editSaving ? 'not-allowed' : 'pointer',
+                    opacity: editSaving ? 0.7 : 1,
+                    fontSize: 'var(--text-xs)', fontWeight: 500,
+                    fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  {editSaving ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                  onClick={() => onEditClick(comment.id, comment.body)}
+                  disabled={editSaving}
+                  style={{
+                    padding: '5px 12px', background: 'none',
+                    border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)',
+                    cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)',
+                    fontFamily: 'var(--font-sans)',
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+              {comment.body}
+            </p>
+          )}
 
           {isReplying && (
             <div style={{ marginTop: 10 }}>
@@ -1799,6 +1980,13 @@ function CommentThread({
               onReplyTextChange={onReplyTextChange}
               onReplySubmit={onReplySubmit}
               onDelete={onDelete}
+              editingId={editingId}
+              editText={editText}
+              editSaving={editSaving}
+              editError={editError}
+              onEditClick={onEditClick}
+              onEditTextChange={onEditTextChange}
+              onEditSubmit={onEditSubmit}
               depth={depth + 1}
             />
           ))}

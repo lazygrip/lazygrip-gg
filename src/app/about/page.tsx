@@ -21,14 +21,16 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
-        <div style={{
-          width: 40, height: 40, background: 'var(--accent)', borderRadius: 10,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}>
-          <Shield size={20} color="white" strokeWidth={2.5} />
+      {/* Same layered-glow badge anchor used on the homepage, guide, and workshop headers —
+          consistent visual language instead of a flat solid-color icon square. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 32 }}>
+        <div style={{ position: 'relative', width: 44, height: 44, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div aria-hidden style={{ position: 'absolute', width: 84, height: 84, borderRadius: '50%', background: 'radial-gradient(circle, var(--accent-subtle) 0%, transparent 70%)' }} />
+          <div style={{ position: 'relative', width: 44, height: 44, borderRadius: 12, background: 'var(--accent-subtle)', border: '0.5px solid rgba(29,158,117,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Shield size={19} style={{ color: 'var(--accent)' }} />
+          </div>
         </div>
-        <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+        <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
           About LazyGrip.net
         </h1>
       </div>

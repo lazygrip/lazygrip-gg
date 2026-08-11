@@ -3,6 +3,8 @@ import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AlertCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import Card from '@/components/ui/Card'
+import Button from '@/components/ui/Button'
 
 // Mirrors public.profiles_username_format CHECK constraint:
 //   username !~ '^user_[0-9a-f]{8}$' and username ~ '^[A-Za-z0-9_.-]{2,32}$'
@@ -113,10 +115,7 @@ function WelcomeForm() {
 
   return (
     <div style={{ maxWidth: 480, margin: '80px auto', padding: '0 24px' }}>
-      <div style={{
-        background: 'var(--bg-primary)', border: '0.5px solid var(--border-strong)',
-        borderRadius: 'var(--radius-lg)', padding: 32,
-      }}>
+      <Card style={{ padding: 32 }}>
         <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8, fontFamily: 'var(--font-sans)' }}>
           Welcome back to LazyGrip
         </h1>
@@ -140,7 +139,7 @@ function WelcomeForm() {
               placeholder="Choose a username..."
               disabled={submitting}
               style={{
-                width: '100%', padding: '10px 12px', fontSize: 'var(--text-sm)',
+                width: '100%', padding: '9px 12px', fontSize: 'var(--text-sm)',
                 border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)',
                 background: 'var(--bg-secondary)', color: 'var(--text-primary)',
                 fontFamily: 'var(--font-sans)', marginBottom: 16,
@@ -165,22 +164,17 @@ function WelcomeForm() {
             </div>
           )}
 
-          <button
+          <Button
             type="submit"
+            variant="primary"
+            fullWidth
             disabled={submitting || (needsUsername && !username.trim())}
-            style={{
-              background: 'var(--accent)', color: 'white', border: 'none',
-              borderRadius: 'var(--radius-md)', padding: '10px 24px',
-              fontSize: 'var(--text-sm)', fontWeight: 500, width: '100%',
-              cursor: submitting ? 'not-allowed' : 'pointer',
-              opacity: submitting || (needsUsername && !username.trim()) ? 0.6 : 1,
-              fontFamily: 'var(--font-sans)',
-            }}
+            style={{ padding: '10px', fontSize: 'var(--text-sm)' }}
           >
             {submitting ? 'Saving...' : 'Continue'}
-          </button>
+          </Button>
         </form>
-      </div>
+      </Card>
     </div>
   )
 }

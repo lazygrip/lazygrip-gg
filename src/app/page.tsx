@@ -1,397 +1,530 @@
-'use client'
+import { ArrowRight, Wrench, Trophy, Eye, HelpCircle, PlusCircle } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
+import { WOW_CLASSES, CONTENT_TYPES, getClassColor } from '@/lib/wow-data'
+import { fetchHomeStats, fetchTrendingSequences, fetchRecentSequences } from '@/lib/home-stats'
+import Card from '@/components/ui/Card'
+import Badge from '@/components/ui/Badge'
+import StatBlock from '@/components/ui/StatBlock'
+import SequenceMark from '@/components/ui/SequenceMark'
 
-import Link from 'next/link'
-import { Shield, ArrowRight, Zap, Users, Star, Wrench } from 'lucide-react'
-import { WOW_CLASSES } from '@/lib/wow-data'
+// Homepage is otherwise static (no cookies/headers touched — see public.ts), so without this
+// it builds once and the stat block numbers freeze until the next deploy. 1h matches the
+// revalidate window changelog already uses elsewhere in the app.
+export const revalidate = 3600
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [stats, trending, recent] = await Promise.all([
+    fetchHomeStats(),
+    fetchTrendingSequences(6),
+    fetchRecentSequences(10),
+  ])
+
   return (
     <div>
       <style>{`
+        .info-trigger { position: relative; display: inline-block; }
+        .info-trigger .info-tooltip {
+          position: absolute;
+          top: calc(100% + 10px);
+          width: 320px;
+          max-width: 82vw;
+          background: var(--bg-primary);
+          border: 0.5px solid var(--border-strong);
+          border-radius: var(--radius-lg);
+          box-shadow: var(--shadow-md);
+          padding: 16px;
+          opacity: 0;
+          visibility: hidden;
+          pointer-events: none;
+          transform: translateY(-4px);
+          transition: opacity 0.15s, transform 0.15s;
+          z-index: 60;
+          text-align: left;
+        }
+        /* Invisible bridge over the 10px gap above the tooltip. Without this, that gap is a
+           dead zone: it belongs to neither the pill nor the tooltip, so a mouse crossing it
+           drops :hover for a frame, pointer-events snaps back to none, and the tooltip closes
+           before the cursor ever reaches the link inside it. This keeps the hover area
+           unbroken from the pill straight through to the card. */
+        .info-trigger .info-tooltip::before {
+          content: '';
+          position: absolute;
+          top: -10px;
+          left: 0;
+          right: 0;
+          height: 10px;
+        }
+        .info-trigger:hover .info-tooltip,
+        .info-trigger:focus-within .info-tooltip {
+          opacity: 1;
+          visibility: visible;
+          pointer-events: auto;
+          transform: translateY(0);
+        }
+        .info-trigger-left .info-tooltip { left: 0; }
+        .info-trigger-right .info-tooltip { right: 0; }
+        .info-trigger-center .info-tooltip { left: 50%; transform: translateX(-50%) translateY(-4px); }
+        .info-trigger-center:hover .info-tooltip,
+        .info-trigger-center:focus-within .info-tooltip { transform: translateX(-50%) translateY(0); }
+        .info-trigger-link:hover { border-color: var(--accent) !important; background: var(--bg-secondary) !important; }
+        .explore-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 32px; }
+        .browse-chip-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+
+        /* Spec tooltip — hover a class chip, see its specs, click one straight to that
+           filtered browse view. Flies out to the side of the chip (vertically centered)
+           rather than dropping below it, so it never covers the next row of chips. Left-
+           column chips open leftward, right-column chips open rightward — outward, away
+           from the other column, instead of the two columns' tooltips landing on each other. */
+        .spec-trigger { position: relative; }
+        .spec-trigger .spec-tooltip {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          min-width: 170px;
+          max-width: 60vw;
+          background: var(--bg-primary);
+          border: 0.5px solid var(--border-strong);
+          border-radius: var(--radius-md);
+          box-shadow: var(--shadow-md);
+          padding: 6px;
+          opacity: 0;
+          visibility: hidden;
+          pointer-events: none;
+          transition: opacity 0.12s;
+          z-index: 70;
+        }
+        /* Opens outward, away from the other column — left-column chips fly out to the left
+           (toward the leaderboard side), right-column chips fly out to the right (toward the
+           page edge). Previous version had these backwards, opening inward onto each other. */
+        .spec-trigger-l .spec-tooltip { right: calc(100% - 20px); }
+        .spec-trigger-r .spec-tooltip { left: calc(100% - 20px); }
+        .spec-trigger:hover .spec-tooltip,
+        .spec-trigger:focus-within .spec-tooltip {
+          opacity: 1;
+          visibility: visible;
+          pointer-events: auto;
+        }
+        .spec-link {
+          display: block;
+          padding: 6px 8px;
+          border-radius: var(--radius-sm);
+          font-size: var(--text-sm);
+          color: var(--text-secondary);
+          text-decoration: none;
+          white-space: nowrap;
+        }
+        .spec-link:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+
         @media (max-width: 640px) {
-          .hero-heading { font-size: 28px !important; letter-spacing: -0.02em !important; }
-          .workshop-grid { grid-template-columns: 1fr !important; }
-          .workshop-cta { width: 100% !important; justify-content: center !important; }
-          .hero-stats { gap: 16px !important; flex-wrap: wrap !important; }
+          .hero-heading { font-size: 32px !important; letter-spacing: -0.02em !important; }
+          .hero-stats { justify-content: center !important; }
+          .class-chip-row { justify-content: center !important; }
+          .utility-bar { flex-direction: column; align-items: center; gap: 14px; }
+          .info-tooltip { left: 50% !important; right: auto !important; transform: translateX(-50%) translateY(-4px) !important; width: 280px; }
+          .info-trigger:hover .info-tooltip, .info-trigger:focus-within .info-tooltip { transform: translateX(-50%) translateY(0) !important; }
+          .explore-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+          .browse-divider { border-left: none !important; padding-left: 0 !important; border-top: 0.5px solid var(--border); padding-top: 32px !important; }
         }
       `}</style>
 
-      {/* Hero */}
-      <section style={{
-        background: 'var(--bg-primary)',
-        borderBottom: '0.5px solid var(--border)',
-        padding: '52px 24px',
-      }}>
-        <div style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            background: 'var(--accent-subtle)',
-            color: 'var(--accent-text)',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 500,
-            padding: '4px 12px',
-            borderRadius: 99,
-            marginBottom: 20,
-            border: '0.5px solid rgba(29,158,117,0.2)',
-          }}>
-            <Shield size={12} />
-            Community sequences for GRIP-EMS
+      {/* Hero — kept deliberately short: one screen, no scroll needed to see the CTA and the
+          proof numbers together. Reordered from a nav-like utility bar sitting above an
+          undersized mark to a conventional mark → headline → pitch → actions → proof stack
+          (mirrors how Linear and Raycast build a hero: one bold focal element, then a single
+          top-to-bottom read), so the section reads as one composed block instead of
+          independently floating pieces. */}
+      <section
+        className="bg-hero"
+        style={{
+          background: 'var(--bg-primary)',
+          borderBottom: '0.5px solid var(--border)',
+          padding: '52px 24px 56px',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ maxWidth: 760, margin: '0 auto', textAlign: 'center', position: 'relative' }}>
+          {/* Mark — the site's one true visual anchor. Bigger, with a layered two-ring glow
+              (a wide soft field plus a tighter, brighter core, the way Raycast backs its
+              headline with a bold graphic rather than a small logo) instead of a single
+              faint blur, so it actually holds the top of the composition. */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div
+                aria-hidden
+                style={{
+                  position: 'absolute',
+                  width: 280, height: 280,
+                  borderRadius: '50%',
+                  background: 'radial-gradient(circle, var(--accent-subtle) 0%, transparent 70%)',
+                }}
+              />
+              <div
+                aria-hidden
+                style={{
+                  position: 'absolute',
+                  width: 160, height: 160,
+                  borderRadius: '50%',
+                  background: 'radial-gradient(circle, rgba(29,158,117,0.4) 0%, transparent 72%)',
+                }}
+              />
+              <SequenceMark size={112} />
+            </div>
           </div>
 
-          <h1 className="hero-heading" style={{
-            fontSize: 40,
-            fontWeight: 600,
-            letterSpacing: '-0.03em',
-            lineHeight: 1.1,
-            marginBottom: 16,
-            color: 'var(--text-primary)',
-          }}>
-            Your rotation should work<br />
-            <span style={{ color: 'var(--accent)' }}>every pull, every time</span>
+          <h1
+            className="hero-heading"
+            style={{
+              fontSize: 'var(--text-4xl)',
+              fontWeight: 700,
+              letterSpacing: '-0.03em',
+              lineHeight: 1.08,
+              marginBottom: 16,
+              color: 'var(--text-primary)',
+            }}
+          >
+            You blacked out.
+            <br />
+            <span style={{ color: 'var(--accent)' }}>Your rotation didn&apos;t.</span>
           </h1>
 
-          <p style={{
-            fontSize: 'var(--text-base)',
-            color: 'var(--text-secondary)',
-            lineHeight: 1.6,
-            maxWidth: 520,
-            margin: '0 auto 28px',
-          }}>
-            GRIP-EMS is a World of Warcraft macro sequencer. One keybind steps through a
-            rotation you build: loop blocks, priority weighting, per-step intervals,
-            conditionals on the line. LazyGrip is the community library for sequences built
-            around it.
+          <p
+            style={{
+              fontSize: 'var(--text-base)',
+              color: 'var(--text-secondary)',
+              lineHeight: 1.5,
+              maxWidth: 460,
+              margin: '0 auto 20px',
+            }}
+          >
+            Your brain lags under pressure, but your macro won&apos;t. Because &quot;I panicked&quot;
+            isn&apos;t a strategy.
           </p>
 
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/browse" style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              background: 'var(--accent)',
-              color: 'white',
-              textDecoration: 'none',
-              padding: '10px 20px',
-              borderRadius: 'var(--radius-md)',
-              fontSize: 'var(--text-base)',
-              fontWeight: 500,
-            }}>
-              Browse sequences
-              <ArrowRight size={15} />
-            </Link>
-            <Link href="/auth/signup" style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              background: 'var(--bg-secondary)',
-              color: 'var(--text-primary)',
-              textDecoration: 'none',
-              padding: '10px 20px',
-              borderRadius: 'var(--radius-md)',
-              fontSize: 'var(--text-base)',
-              fontWeight: 500,
-              border: '0.5px solid var(--border-strong)',
-            }}>
-              Post your sequence
-            </Link>
+          {/* Product anchor — the headline and pitch above never actually say what this is.
+              A short, punchy motto needs something concrete to land on, so this names the
+              real system (GRIP-EMS) and what the site is right before the CTAs. Deliberately
+              plain text, no pill chrome — a bordered badge here reads as a fourth button next
+              to the three real CTAs below; this needs to read as a label/statement instead. */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginBottom: 36 }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-2xl)', fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.02em', lineHeight: 1 }}>
+              GRIP-EMS
+            </span>
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
+              sequence library for World of Warcraft
+            </span>
           </div>
 
-          {/* Stats */}
-          <div className="hero-stats" style={{
-            display: 'flex',
-            gap: 32,
-            justifyContent: 'center',
-            marginTop: 40,
-            paddingTop: 32,
-            borderTop: '0.5px solid var(--border)',
-          }}>
-            {[
-              { icon: <Zap size={14} />, label: 'GRIP-EMS native' },
-              { icon: <Users size={14} />, label: 'Community rated' },
-              { icon: <Star size={14} />, label: 'All 13 classes' },
-            ].map(item => (
-              <div key={item.label} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                fontSize: 'var(--text-sm)',
-                color: 'var(--text-secondary)',
-              }}>
-                <span style={{ color: 'var(--accent)' }}>{item.icon}</span>
-                {item.label}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Workshop banner */}
-      <section style={{ borderBottom: '0.5px solid var(--border)', padding: '32px 24px', background: 'var(--bg-secondary)' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div className="workshop-grid" style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr auto',
-            gap: 24,
-            alignItems: 'center',
-            background: 'var(--bg-primary)',
-            border: '0.5px solid var(--border)',
-            borderLeft: '3px solid var(--accent)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '24px 28px',
-          }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span style={{ color: 'var(--accent)' }}><Wrench size={16} /></span>
-                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, color: 'var(--accent)' }}>Workshop</span>
-              </div>
-              <h2 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: 8 }}>
-                Build GRIP sequences in the browser
-              </h2>
-              <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 600, marginBottom: 16 }}>
-                The Workshop includes a full sequence builder. Create collections with multiple sequences and versions, add loops, if branches, and pause blocks, set keypress macros, and export a ready-to-import GRIP string without ever opening the addon. Import any existing GRIP or legacy program export to inspect and edit it directly.
-              </p>
-              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' as const }}>
-                {[
-                  'Spell autocomplete by class',
-                  'Drag and drop reordering',
-                  'Character limit warnings',
-                  'Spell ID conversion',
-                  'Clone sequences and versions',
-                ].map(feature => (
-                  <span key={feature} style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <span style={{ color: 'var(--accent)', fontSize: 10 }}>&#10003;</span> {feature}
-                  </span>
-                ))}
+          {/* Action row — three entry points into the site as CTAs directly under the pitch,
+              not a nav-like bar floating above the mark. Same hover-tooltip mechanic as
+              before, same order (Why GRIP-EMS? → Build in browser → Post your sequence),
+              just tightened into a centered cluster instead of spread edge-to-edge. */}
+          <div className="utility-bar" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 40, position: 'relative' }}>
+            <div className="info-trigger info-trigger-left">
+              <a
+                href="/guide"
+                className="info-trigger-link"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 10,
+                  background: 'var(--bg-tertiary)', border: '0.5px solid var(--border-strong)',
+                  borderRadius: 99, padding: '8px 16px 8px 8px',
+                  fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)',
+                  textDecoration: 'none', transition: 'border-color 0.15s',
+                }}
+              >
+                <span style={{
+                  width: 26, height: 26, borderRadius: '50%', background: 'var(--accent-subtle)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0,
+                }}>
+                  <HelpCircle size={15} />
+                </span>
+                Why GRIP-EMS?
+              </a>
+              <div className="info-tooltip">
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+                  Because a sequence is only as good as the structure behind it. You get loop
+                  blocks, priority and reverse-priority weighting, per-step intervals so a cooldown
+                  gets tried every fourth press instead of every press, conditionals evaluated on
+                  the line, and variables you can reuse across sequences. All of it is free — no
+                  supporter tier, nothing behind a payment.
+                </p>
+                <a href="/guide" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 10, fontSize: 'var(--text-xs)', color: 'var(--accent)', fontWeight: 500, textDecoration: 'none' }}>
+                  Read the guide <ArrowRight size={11} />
+                </a>
               </div>
             </div>
-            <Link href="/workshop" className="workshop-cta" style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              background: 'var(--accent)',
-              color: 'white',
-              textDecoration: 'none',
-              padding: '10px 20px',
-              borderRadius: 'var(--radius-md)',
-              fontSize: 'var(--text-base)',
-              fontWeight: 500,
-              flexShrink: 0,
-              whiteSpace: 'nowrap' as const,
-            }}>
-              Open Workshop <ArrowRight size={13} />
-            </Link>
+
+            <div className="info-trigger info-trigger-center">
+              <a
+                href="/workshop"
+                className="info-trigger-link"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 10,
+                  background: 'var(--bg-tertiary)', border: '0.5px solid var(--border-strong)',
+                  borderRadius: 99, padding: '8px 16px 8px 8px',
+                  fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)',
+                  textDecoration: 'none', transition: 'border-color 0.15s',
+                }}
+              >
+                <span style={{
+                  width: 26, height: 26, borderRadius: '50%', background: 'var(--accent-subtle)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0,
+                }}>
+                  <Wrench size={14} />
+                </span>
+                Build GRIP sequences in the browser
+              </a>
+              <div className="info-tooltip">
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0, marginBottom: 10 }}>
+                  The Workshop is a full sequence builder in the browser. Create collections with
+                  multiple sequences and versions, add loops, if branches, and pause blocks, set
+                  keypress macros, and export a ready-to-import GRIP string without ever opening
+                  the addon.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
+                  {[
+                    'Spell autocomplete by class',
+                    'Drag and drop reordering',
+                    'Spell ID conversion',
+                  ].map(feature => (
+                    <span key={feature} style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ color: 'var(--accent)', fontSize: 10 }}>&#10003;</span> {feature}
+                    </span>
+                  ))}
+                </div>
+                <a href="/workshop" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-xs)', color: 'var(--accent)', fontWeight: 500, textDecoration: 'none' }}>
+                  Open Workshop <ArrowRight size={11} />
+                </a>
+              </div>
+            </div>
+
+            <div className="info-trigger info-trigger-right">
+              <a
+                href="/auth/signup"
+                className="info-trigger-link"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 10,
+                  background: 'var(--bg-tertiary)', border: '0.5px solid var(--border-strong)',
+                  borderRadius: 99, padding: '8px 16px 8px 8px',
+                  fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)',
+                  textDecoration: 'none', transition: 'border-color 0.15s',
+                }}
+              >
+                <span style={{
+                  width: 26, height: 26, borderRadius: '50%', background: 'var(--accent-subtle)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0,
+                }}>
+                  <PlusCircle size={14} />
+                </span>
+                Post your sequence
+              </a>
+              <div className="info-tooltip">
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0, marginBottom: 10 }}>
+                  Create a free account, paste your GRIP export string, fill in your class and
+                  spec, and it goes live on the site. Takes about a minute, and there&apos;s no
+                  paid tier to unlock.
+                </p>
+                <a href="/auth/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-xs)', color: 'var(--accent)', fontWeight: 500, textDecoration: 'none' }}>
+                  Create an account <ArrowRight size={11} />
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {stats && (
+            <div className="hero-stats" style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
+              <StatBlock
+                stats={[
+                  { value: String(stats.sequenceCount), label: 'Sequences' },
+                  { value: `${stats.classCount}/13`, label: 'Classes covered' },
+                  { value: String(stats.memberCount), label: 'Members' },
+                  { value: stats.viewCount.toLocaleString(), label: 'Views' },
+                ]}
+              />
+            </div>
+          )}
+
+          {/* Current GRIP-EMS version — used to only live in the guide sidebar, which meant
+              a first-time visitor had no way to know it without digging into docs. This is
+              exactly the kind of "proof the site is maintained" detail that belongs up front. */}
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '5px 12px',
+            borderRadius: 99,
+            background: 'var(--bg-tertiary)',
+            border: '0.5px solid var(--border-strong)',
+          }}>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Current version</span>
+            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>GRIP-EMS v2.3.19</span>
           </div>
         </div>
       </section>
 
-      {/* Why GRIP-EMS */}
-      <section style={{
-        borderBottom: '0.5px solid var(--border)',
-        padding: '48px 24px',
-      }}>
-        <div style={{ maxWidth: 720, margin: '0 auto' }}>
-          <h2 style={{
-            fontSize: 22,
-            fontWeight: 600,
-            letterSpacing: '-0.02em',
-            marginBottom: 16,
-            color: 'var(--text-primary)',
-          }}>
-            Why GRIP-EMS?
-          </h2>
-          <p style={{
-            fontSize: 'var(--text-base)',
-            color: 'var(--text-secondary)',
-            lineHeight: 1.75,
-            marginBottom: 32,
-            maxWidth: 620,
-          }}>
-            Because a sequence is only as good as the structure behind it. You get loop
-            blocks, priority and reverse-priority weighting, per-step intervals so a cooldown
-            gets tried every fourth press instead of every press, conditionals evaluated on
-            the line, and variables you can reuse across sequences. The engine advances one
-            step per press and never checks whether anything cast, so what makes a press
-            count is the macro line on the step and where that step sits in the loop. All of
-            it is free. There is no supporter tier and nothing behind a payment.
-          </p>
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-            gap: 12,
-          }}>
-            {[
-              {
-                label: 'Per-step intervals',
-                desc: 'Set how often each step fires. Every press, or every third, or every eighth.',
-                color: '#1D9E75',
-              },
-              {
-                label: 'Cooldowns on schedule',
-                desc: 'High-priority abilities fire when the sequence reaches them, not whenever the engine cycles back around.',
-                color: '#5a8dee',
-              },
-              {
-                label: 'Consistent across keys',
-                desc: 'The same sequence produces the same uptime numbers pull to pull because the execution model doesn\'t drift.',
-                color: '#a330c9',
-              },
-            ].map(card => (
-              <div key={card.label} style={{
-                background: 'var(--bg-primary)',
-                border: '0.5px solid var(--border)',
-                borderRadius: 'var(--radius-lg)',
-                padding: '16px',
-              }}>
-                <div style={{
-                  width: 32,
-                  height: 4,
-                  background: card.color,
-                  borderRadius: 2,
-                  marginBottom: 10,
-                }} />
-                <div style={{
-                  fontSize: 'var(--text-base)',
-                  fontWeight: 600,
-                  color: 'var(--text-primary)',
-                  marginBottom: 6,
-                }}>
-                  {card.label}
-                </div>
-                <div style={{
-                  fontSize: 'var(--text-sm)',
-                  color: 'var(--text-secondary)',
-                  lineHeight: 1.6,
-                }}>
-                  {card.desc}
-                </div>
+      {/* Recent activity ticker — infinite CSS marquee, no client JS. Pattern borrowed from
+          ScaryLarryGames/GSE United and Modrinth, both of which run a scrolling strip of
+          recent community activity right under the hero as a "this place is alive" signal.
+          Omits itself entirely if there's nothing to show, rather than rendering an empty rail. */}
+      {recent.length > 0 && (
+        <section style={{ borderBottom: '0.5px solid var(--border)', padding: '14px 0', background: 'var(--bg-secondary)', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', width: 'max-content' }} className="marquee-track">
+            {[recent, recent].map((batch, batchIdx) => (
+              <div key={batchIdx} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                {batch.map((seq, i) => (
+                  <a
+                    key={`${batchIdx}-${seq.id}-${i}`}
+                    href={`/sequences/${seq.slug}`}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '0 20px', textDecoration: 'none', whiteSpace: 'nowrap',
+                      borderRight: '0.5px solid var(--border)',
+                    }}
+                  >
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: getClassColor(seq.class_id), flexShrink: 0 }} />
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', fontWeight: 500 }}>{seq.title}</span>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {seq.class_name}</span>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {formatDistanceToNow(new Date(seq.created_at), { addSuffix: true })}</span>
+                  </a>
+                ))}
               </div>
             ))}
           </div>
+        </section>
+      )}
 
-          <div style={{ marginTop: 24 }}>
-            <Link href="/guide" style={{
-              fontSize: 'var(--text-sm)',
-              color: 'var(--accent)',
-              textDecoration: 'none',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-            }}>
-              Learn more about GRIP-EMS <ArrowRight size={13} />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Browse by class */}
+      {/* Explore — leaderboard, browse-by-class, and browse-by-content as three columns in
+          one section instead of three separate full-width stops. This is the actual "well
+          organized, easy to navigate" part of the page: everything you'd want to do next is
+          visible at once, side by side, rather than a long stack you scroll through in order. */}
       <section style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 24px' }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 20,
-        }}>
-          <h2 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em' }}>Browse by class</h2>
-          <Link href="/browse" style={{
-            fontSize: 'var(--text-sm)',
-            color: 'var(--accent)',
-            textDecoration: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-          }}>
-            View all <ArrowRight size={13} />
-          </Link>
-        </div>
-
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-          gap: 10,
-        }}>
-          {WOW_CLASSES.map(cls => (
-            <Link
-              key={cls.id}
-              href={`/browse/${cls.slug}`}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                background: 'var(--bg-primary)',
-                border: '0.5px solid var(--border)',
-                borderRadius: 'var(--radius-lg)',
-                padding: '10px 14px',
-                textDecoration: 'none',
-                transition: 'border-color 0.15s',
-              }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = cls.color + '80'}
-              onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
-            >
-              <div style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: cls.color,
-                flexShrink: 0,
-              }} />
-              <span style={{
-                fontSize: 'var(--text-base)',
-                fontWeight: 500,
-                color: 'var(--text-primary)',
-              }}>
-                {cls.name}
-              </span>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Content type quick filters */}
-      <section style={{
-        maxWidth: 1200,
-        margin: '0 auto',
-        padding: '0 24px 48px',
-      }}>
-        <h2 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em', marginBottom: 20 }}>
-          Browse by content
-        </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
-          {[
-            { slug: 'mythic-plus', label: 'Mythic+', desc: 'Dungeon tank, heal, and DPS rotations', color: '#5a8dee' },
-            { slug: 'raid', label: 'Raid', desc: 'Boss-ready sequences with cooldown timing', color: '#e0522a' },
-            { slug: 'pvp', label: 'PvP', desc: 'Arena and battleground rotations', color: '#a330c9' },
-            { slug: 'solo', label: 'Solo / Leveling', desc: 'Open world and solo content', color: '#1D9E75' },
-          ].map(ct => (
-            <Link key={ct.slug} href={`/browse/${ct.slug}`} style={{
-              background: 'var(--bg-primary)',
-              border: '0.5px solid var(--border)',
-              borderRadius: 'var(--radius-lg)',
-              padding: '16px',
-              textDecoration: 'none',
-              display: 'block',
-              transition: 'border-color 0.15s',
-            }}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = ct.color + '60')}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
-            >
-              <div style={{
-                width: 32,
-                height: 4,
-                background: ct.color,
-                borderRadius: 2,
-                marginBottom: 10,
-              }} />
-              <div style={{ fontSize: 'var(--text-base)', fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4 }}>
-                {ct.label}
+        <div className="explore-grid">
+          {/* Top sequences */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Trophy size={16} color="var(--accent)" />
+                <h2 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em' }}>Top sequences</h2>
               </div>
-              <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                {ct.desc}
+              <a href="/browse?sort=most_viewed" style={{ fontSize: 'var(--text-sm)', color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                View all <ArrowRight size={13} />
+              </a>
+            </div>
+
+            {trending.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {trending.map((seq, i) => {
+                  const classColor = getClassColor(seq.class_id)
+                  return (
+                    <a key={seq.id} href={`/sequences/${seq.slug}`} style={{ textDecoration: 'none' }}>
+                      <Card accentColor={classColor} padding="sm" style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+                        <span style={{
+                          width: 18, fontSize: 'var(--text-sm)', fontWeight: 700,
+                          color: i < 3 ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0, textAlign: 'center',
+                        }}>
+                          {i + 1}
+                        </span>
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3,
+                          }}>
+                            {seq.title}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Badge color={classColor} style={{ color: 'var(--text-primary)' }}>{seq.class_name}</Badge>
+                            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {seq.author?.display_name || seq.author?.username || 'Unknown'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, color: 'var(--text-muted)' }}>
+                          <Eye size={12} />
+                          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                            {seq.view_count?.toLocaleString() ?? 0}
+                          </span>
+                        </div>
+                      </Card>
+                    </a>
+                  )
+                })}
               </div>
-            </Link>
-          ))}
+            ) : (
+              <Card padding="sm" style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>No sequences yet — be the first to post one.</p>
+              </Card>
+            )}
+          </div>
+
+          {/* Browse — class and content-type together in one column, gridded (not
+              ragged flex-wrap) so it reads as one tidy block next to the leaderboard
+              instead of a loose wall of pills. Left border + padding gives it real
+              separation from the leaderboard rather than the two blocks touching. */}
+          <div className="browse-divider" style={{ borderLeft: '0.5px solid var(--border)', paddingLeft: 32 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em', marginBottom: 16 }}>Browse Sequences</h2>
+
+            <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '.06em', marginBottom: 10 }}>
+              By class <span style={{ textTransform: 'none' as const, fontWeight: 400, color: 'var(--text-muted)' }}>— hover for specs</span>
+            </div>
+            <div className="browse-chip-grid" style={{ marginBottom: 24 }}>
+              {WOW_CLASSES.map((cls, i) => (
+                <div key={cls.id} className={`spec-trigger ${i % 2 === 0 ? 'spec-trigger-l' : 'spec-trigger-r'}`}>
+                  <a
+                    href={`/browse/${cls.slug}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 7,
+                      padding: '7px 12px',
+                      borderRadius: 99,
+                      textDecoration: 'none',
+                      background: `${cls.color}14`,
+                      border: `0.5px solid ${cls.color}45`,
+                      transition: 'background-color 0.15s, border-color 0.15s',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: cls.color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cls.name}</span>
+                  </a>
+                  <div className="spec-tooltip">
+                    {cls.specs.map(spec => (
+                      <a key={spec.id} href={`/browse/${cls.slug}?spec_id=${spec.id}`} className="spec-link">
+                        {spec.name}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '.06em', marginBottom: 10 }}>
+              By content
+            </div>
+            <div className="browse-chip-grid">
+              {CONTENT_TYPES.map(ct => (
+                <a
+                  key={ct.slug}
+                  href={`/browse/${ct.slug}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '7px 12px',
+                    borderRadius: 99,
+                    textDecoration: 'none',
+                    background: 'var(--bg-tertiary)',
+                    border: '0.5px solid var(--border-strong)',
+                    color: 'var(--text-primary)',
+                    fontSize: 'var(--text-sm)',
+                    fontWeight: 500,
+                  }}
+                >
+                  {ct.label}
+                </a>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
     </div>
