@@ -1,13 +1,84 @@
-@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
+
+/* Self-hosted, not Google Fonts — Expressway is a licensed commercial font supplied directly
+   for this project, not a freely-redistributable webfont. Regular/SemiBold/Bold (400/600/700)
+   covers every fontWeight the site actually requests except 500, which sits between Regular
+   and SemiBold with no exact master — browsers resolve that to the nearest available weight. */
+@font-face {
+  font-family: 'Expressway';
+  src: url('/fonts/Expressway-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Expressway';
+  src: url('/fonts/Expressway-SemiBold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Expressway';
+  src: url('/fonts/Expressway-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Dark is the primary/default theme (matches GSE and Nexus, the genre convention for this
+   audience) so it lives in :root — the base a no-JS or no-cookie visitor gets. Light is the
+   explicit opt-in override below, reachable via the theme toggle, kept fully designed rather
+   than a stripped-down alternate. */
 :root {
-  --font-sans: 'Exo 2', sans-serif;
+  --font-sans: 'Expressway', sans-serif;
   --font-mono: 'DM Mono', monospace;
 
+  --bg-primary: #1e1c2e;
+  --bg-secondary: #171524;
+  --bg-tertiary: #2a2740;
+
+  --text-primary: #ece9f8;
+  --text-secondary: #9e9bba;
+  --text-muted: #8783a3;
+  /* Alias: three guide pages already reference --text-tertiary, which was never
+     defined anywhere — an invalid custom property the browser silently drops.
+     Defining it here (rather than rewriting those pages to --text-muted now)
+     keeps this a zero-risk fix; they'll be rewritten properly in the guide pass. */
+  --text-tertiary: var(--text-muted);
+
+  --border: rgba(180,170,255,0.08);
+  --border-strong: rgba(180,170,255,0.15);
+
+  --accent: #1D9E75;
+  --accent-hover: #22b585;
+  --accent-subtle: #0d2a1e;
+  --accent-text: #2dd4a0;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
+
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+  --text-3xl: 36px;
+  --text-4xl: 52px;
+  --text-5xl: 64px;
+}
+
+[data-theme="light"] {
   --bg-primary: #ffffff;
   --bg-secondary: #f8f7f5;
   --bg-tertiary: #f0efe9;
@@ -24,42 +95,8 @@
   --accent-subtle: #e1f5ee;
   --accent-text: #0f6e56;
 
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-
-  --text-xs: 12px;
-  --text-sm: 14px;
-  --text-base: 16px;
-  --text-lg: 18px;
-  --text-xl: 22px;
-  --text-2xl: 28px;
-  --text-3xl: 36px;
-}
-
-[data-theme="dark"] {
-  --bg-primary: #1e1c2e;
-  --bg-secondary: #171524;
-  --bg-tertiary: #2a2740;
-
-  --text-primary: #ece9f8;
-  --text-secondary: #9e9bba;
-  --text-muted: #8783a3;
-
-  --border: rgba(180,170,255,0.08);
-  --border-strong: rgba(180,170,255,0.15);
-
-  --accent: #1D9E75;
-  --accent-hover: #22b585;
-  --accent-subtle: #0d2a1e;
-  --accent-text: #2dd4a0;
-
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
-  --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -76,6 +113,46 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   transition: background 0.2s, color 0.2s;
+}
+
+/* Background texture: a faint diagonal hairline grid for sections that need depth
+   without a raster asset. Built from --border so it adapts automatically between
+   light and dark theme rather than needing a second texture image. */
+.bg-texture {
+  background-image:
+    repeating-linear-gradient(45deg, var(--border) 0, var(--border) 1px, transparent 1px, transparent 28px),
+    repeating-linear-gradient(-45deg, var(--border) 0, var(--border) 1px, transparent 1px, transparent 28px);
+  background-position: 0 0;
+}
+
+/* Hero background: a denser diagonal repeat than .bg-texture plus two off-center accent
+   glows. Modrinth's hero runs a bold, clearly-visible geometric tile behind the mark and
+   headline rather than a hairline you have to look for; GSE Tools and ScaryLarryGames both
+   put a soft radial glow directly behind their hero mark. This combines both cues instead
+   of the flat single-color hero the homepage had before. */
+.bg-hero {
+  background-image:
+    radial-gradient(ellipse 640px 420px at 50% 0%, var(--accent-subtle) 0%, transparent 65%),
+    repeating-linear-gradient(45deg, var(--border-strong) 0, var(--border-strong) 1px, transparent 1px, transparent 22px),
+    repeating-linear-gradient(-45deg, var(--border-strong) 0, var(--border-strong) 1px, transparent 1px, transparent 22px);
+  background-position: 0 0;
+}
+
+/* Marquee: pure-CSS infinite scroll for the homepage "recently posted" ticker. The row is
+   rendered twice back to back (see RecentTicker) and this animates exactly -50%, so the
+   seam between the two copies is invisible and the loop never jumps. */
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee-track {
+  animation: marquee-scroll 42s linear infinite;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track { animation: none; }
 }
 
 /* Class color utilities */

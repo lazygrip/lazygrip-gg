@@ -1,5 +1,9 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import GuideHeader from '@/components/guide/GuideHeader'
+import GuideSection from '@/components/guide/GuideSection'
+import GuideCallout from '@/components/guide/GuideCallout'
+import { guideCodeStyle } from '@/components/guide/GuideCode'
 
 export const metadata: Metadata = {
   title: 'Installation | GRIP-EMS Guide',
@@ -20,20 +24,17 @@ export const metadata: Metadata = {
 export default function InstallationPage() {
   return (
     <div style={{ maxWidth: 720 }}>
-      <nav style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 24, display: 'flex', gap: 6, alignItems: 'center' }}>
-        <Link href="/guide" style={{ color: 'var(--text-muted)', textDecoration: 'none' }}>Guide</Link>
-        <span>/</span>
-        <span style={{ color: 'var(--text-primary)' }}>Installation</span>
-      </nav>
+      <GuideHeader
+        crumbLabel="Installation"
+        title="Installation"
+        description={
+          <>
+            Installing GRIP-EMS takes about two minutes. The part most guides skip is what comes after. There are in-game settings that have to be configured before anything will work, and none of them are set correctly by default. This page covers the install steps and the most critical setting. The full settings breakdown is on the <Link href="/guide/settings" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Settings</Link> page.
+          </>
+        }
+      />
 
-      <h1 style={{ fontSize: 32, fontWeight: 700, letterSpacing: '-0.03em', marginBottom: 12 }}>
-        Installation
-      </h1>
-      <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 40 }}>
-        Installing GRIP-EMS takes about two minutes. The part most guides skip is what comes after. There are in-game settings that have to be configured before anything will work, and none of them are set correctly by default. This page covers the install steps and the most critical setting. The full settings breakdown is on the <Link href="/guide/settings" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Settings</Link> page.
-      </p>
-
-      <Section title="Step 1: Download and enable">
+      <GuideSection title="Step 1: Download and enable" layout="stack">
         <Step number={1} label="Download from CurseForge, Wago, or WoWInterface">
           <p>GRIP-EMS is free on all three platforms. Use whichever addon manager you already have.</p>
           <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
@@ -56,19 +57,19 @@ export default function InstallationPage() {
 
         <Step number={2} label="Enable the addon in-game">
           <p>At the character select screen, click <strong>AddOns</strong> in the bottom left corner and make sure GRIP-EMS is checked. Log into your character.</p>
-          <p style={{ marginTop: 8 }}>If you do not see GRIP-EMS in the list, your addon manager did not install it correctly. Try a manual download and drop the folder into your <code style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>World of Warcraft\_retail_\Interface\AddOns</code> directory.</p>
+          <p style={{ marginTop: 8 }}>If you do not see GRIP-EMS in the list, your addon manager did not install it correctly. Try a manual download and drop the folder into your <code style={guideCodeStyle}>World of Warcraft\_retail_\Interface\AddOns</code> directory.</p>
         </Step>
-      </Section>
+      </GuideSection>
 
-      <Section title="Step 2: The settings you should still check">
+      <GuideSection title="Step 2: The settings you should still check" layout="stack">
         <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 20 }}>
           As of GRIP-EMS v2.3.14, the addon forces Key Down Casting on automatically every time you log in, so that part of setup is no longer something you need to touch. Two things still matter for sequences to feel right, and neither is set to an ideal value by default.
         </p>
 
         <Step number={1} label="Key Down Casting is handled for you now">
           <p>GRIP-EMS fires through WoW's <strong>key-down</strong> event system. By default WoW uses key-up, which means a sequence would register the press only when you release the key rather than when you press it. At 150ms intervals that is the difference between a functioning rotation and nothing happening at all.</p>
-          <p style={{ marginTop: 8 }}>Starting in v2.3.14, GRIP-EMS sets <code style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>ActionButtonUseKeyDown</code> to enabled itself on every login, whether or not you have ever opened the settings. It is no longer a row in the CVar Health tab and there is nothing to fix here manually.</p>
-          <Callout>Running an older version than 2.3.14? Update through your addon manager first. On anything older, open <code style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>/gems settings</code>, go to the CVar Health tab, and click Fix if the row is not green. That is the single most common reason a pre-2.3.14 install does nothing on keypress.</Callout>
+          <p style={{ marginTop: 8 }}>Starting in v2.3.14, GRIP-EMS sets <code style={guideCodeStyle}>ActionButtonUseKeyDown</code> to enabled itself on every login, whether or not you have ever opened the settings. It is no longer a row in the CVar Health tab and there is nothing to fix here manually.</p>
+          <GuideCallout>Running an older version than 2.3.14? Update through your addon manager first. On anything older, open <code style={guideCodeStyle}>/gems settings</code>, go to the CVar Health tab, and click Fix if the row is not green. That is the single most common reason a pre-2.3.14 install does nothing on keypress.</GuideCallout>
         </Step>
 
         <Step number={2} label="Verify your SpellQueueWindow">
@@ -79,9 +80,9 @@ export default function InstallationPage() {
           <p>GRIP-EMS advances one step per keypress. Your hardware or software needs to send repeated keypresses at a consistent interval. The right value depends on your setup but 150ms is a reliable starting point that works across most hardware and latency combinations. If you are using Razer hardware, set your repeat rate to 150ms in Synapse.</p>
           <p style={{ marginTop: 8 }}>Once you have a sequence running and some combat data logged, the Tempo Advisor on the Settings page shows a recommended click rate worked out from your sequence's actual step timing and how you play it. That number is more accurate than any static figure and gets sharper the more you play that sequence.</p>
         </Step>
-      </Section>
+      </GuideSection>
 
-      <Section title="What you will not see and why">
+      <GuideSection title="What you will not see and why" layout="stack">
         <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
           GRIP-EMS does not work like the legacy program, which creates a draggable button you place on a bar and bind. GRIP-EMS binds a key directly to a sequence inside the addon. For sequences with multiple versions, a macro is created and can be placed on your action bar, but for single-version sequences there is nothing to drag. If you are looking for a button to appear and it is not appearing, that is expected behavior and not a bug.
         </p>
@@ -91,9 +92,9 @@ export default function InstallationPage() {
         <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 12 }}>
           If you specifically want a button on your action bar that you can drag and drop the way you would with the legacy program, that workflow still exists as an optional add-on rather than a built-in GRIP-EMS feature. Daxomault's <a href="https://www.curseforge.com/wow/addons/grip-ems-actionbutton-override" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>GRIP-EMS Actionbutton Override</a> plugin adds action bar override and drag-and-drop keybinding on top of GRIP-EMS. It is not required and the keybind-only approach above is still the default and the one most players end up using, but it is there if you prefer to keep sequences on your bars.
         </p>
-      </Section>
+      </GuideSection>
 
-      <Section title="Quick sanity check">
+      <GuideSection title="Quick sanity check" layout="stack">
         <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 16 }}>Before moving on, confirm these four things are true:</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
@@ -108,9 +109,9 @@ export default function InstallationPage() {
             </div>
           ))}
         </div>
-      </Section>
+      </GuideSection>
 
-      <Section title="Troubleshooting common problems">
+      <GuideSection title="Troubleshooting common problems" layout="stack">
         <TroubleshootItem
           problem="Keybind is set but nothing fires"
           solution="First, update GRIP-EMS through your addon manager. As of v2.3.14, Key Down Casting is forced on automatically and this is no longer something you can misconfigure. If you are still on an older version, run /gems settings, go to the Cvar Health tab, and click Fix if the row is not green; this solves the majority of pre-2.3.14 keybind problems. On 2.3.14 or later, if the sequence still does not fire, check that you have a target selected and that the sequence has a keybind assigned in the Keybinds tab inside the editor, not just in WoW's default keybind menu."
@@ -147,9 +148,9 @@ export default function InstallationPage() {
           problem="Sequence says a spell cannot be found, but it works fine once I am in the right form or proc"
           solution="This is expected behavior, not a bug. GRIP-EMS checks whether a spell is castable right now before it will queue it in a step. Some spells only exist, or only become the correct version, in a specific state, such as Void Volley replacing Void Bolt only while a Shadow Priest is in Voidform, or a spec-specific proc swapping what a button actually casts. Outside that state the addon correctly reports it cannot find the spell, then the step behaves normally the moment you are actually in the state where the spell exists. If the step is working in practice once the condition is met, there is nothing to fix. If you want the warning to stop appearing while testing outside the triggering state, an addon like ErrorMonster can redirect the message so it does not clutter your chat window."
         />
-      </Section>
+      </GuideSection>
 
-      <Section title="Commands worth knowing">
+      <GuideSection title="Commands worth knowing" layout="stack">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
             { cmd: '/gems', desc: 'Opens the GRIP-EMS sequence editor' },
@@ -173,7 +174,7 @@ export default function InstallationPage() {
             </div>
           ))}
         </div>
-      </Section>
+      </GuideSection>
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 48, paddingTop: 24, borderTop: '0.5px solid var(--border)' }}>
         <Link href="/guide/settings" style={{
@@ -182,19 +183,6 @@ export default function InstallationPage() {
         }}>
           Next: Settings →
         </Link>
-      </div>
-    </div>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: 48 }}>
-      <h2 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 20, color: 'var(--text-primary)' }}>
-        {title}
-      </h2>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {children}
       </div>
     </div>
   )
@@ -217,34 +205,6 @@ function Step({ number, label, children }: { number: number; label: string; chil
           {children}
         </div>
       </div>
-    </div>
-  )
-}
-
-function Code({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{
-      fontFamily: 'var(--font-mono)', fontSize: 'var(--text-sm)',
-      background: 'var(--bg-tertiary)', border: '0.5px solid var(--border)',
-      borderRadius: 'var(--radius-md)', padding: '10px 14px',
-      color: 'var(--accent)', marginTop: 8,
-    }}>
-      {children}
-    </div>
-  )
-}
-
-function Callout({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{
-      marginTop: 12, padding: '12px 14px',
-      background: 'rgba(29,158,117,0.07)',
-      border: '0.5px solid rgba(29,158,117,0.25)',
-      borderLeft: '3px solid var(--accent)',
-      borderRadius: 'var(--radius-md)',
-      fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6,
-    }}>
-      {children}
     </div>
   )
 }
