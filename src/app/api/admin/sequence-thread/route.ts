@@ -138,18 +138,21 @@ export async function POST(req: NextRequest) {
     // carries everything the embed, the tags, the import message and the relay
     // need.
     //
-    // WHAT IS NOT IN THIS LIST, AND MUST NOT BE ADDED YET: wow_build. There is
-    // no such column on public.sequences today -- it lands in PR 2 alongside
-    // the post-form capture fix -- and PostgREST rejects the WHOLE query on a
-    // single unknown column with a 42703. Adding it early would not degrade
-    // this route, it would break every call to it, including the repoint mode
-    // that never touches the build context at all. The build number reaches
-    // the card from the export envelope instead, which is the better source
-    // anyway; see the precedence note further down.
+    // wow_build IS IN THIS LIST AS OF MIGRATION 019. It was deliberately absent
+    // until then: the column did not exist, and PostgREST rejects the WHOLE
+    // query on a single unknown column with a 42703, so naming it early would
+    // not have degraded this route, it would have broken every call to it
+    // including the repoint mode that reads no build context at all. 019 adds
+    // the column to public.sequences and public.sequence_versions, teaches
+    // every write path to carry it, and backfills the 28 published rows whose
+    // exports carry a build.
+    //
+    // The column is the FALLBACK here, not the source; see the precedence note
+    // further down. It only answers for a row whose export has no envelope.
     const { data: sequence, error: lookupError } = await admin
       .from('sequences')
       .select(
-        'id, slug, title, author_id, class_name, spec_name, hero_talent, content_type, status, discord_thread_id, spec_id, talent_string, grip_string, grip_version, patch_version, created_at, updated_at',
+        'id, slug, title, author_id, class_name, spec_name, hero_talent, content_type, status, discord_thread_id, spec_id, talent_string, grip_string, grip_version, patch_version, wow_build, created_at, updated_at',
       )
       .eq('slug', slug)
       .single()
@@ -337,9 +340,13 @@ export async function POST(req: NextRequest) {
     const wowPatch =
       envelopeWowPatch || (typeof sequence.patch_version === 'string' ? sequence.patch_version : '')
 
-    // No column to fall back to. wow_build lands in PR 2; until it does, a
-    // build number only ever reaches the card from an export that carried one.
-    const wowBuild = envelopeWowBuild || ''
+    // wow_build now falls back exactly as the other two do, because migration
+    // 019 gave it a column to fall back to. Until 019 this line read
+    // `envelopeWowBuild || ''` with a comment saying there was nowhere else to
+    // look, and for the 31 rows whose export carries no envelope that meant no
+    // build on the card at all.
+    const wowBuild =
+      envelopeWowBuild || (typeof sequence.wow_build === 'string' ? sequence.wow_build : '')
 
     // THE TALENT STRING RUNS THE OTHER WAY ROUND, and the asymmetry is
     // deliberate rather than an oversight. The column is what the AUTHOR chose

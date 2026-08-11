@@ -21,6 +21,11 @@ const EMPTY_FORM = {
   hero_talent: '',
   patch_version: '12.1',
   grip_version: '',
+  // Derived from the export envelope on decode, never typed by a human, so
+  // there is no form control for it anywhere on this page. It lives in the
+  // form object only because that is how every other decoded value reaches
+  // the payload builder.
+  wow_build: '',
   step_function: 'Sequential',
   grip_string: '',
   raw_steps_text: '',
@@ -49,6 +54,65 @@ function notifyDiscord(payload: Record<string, unknown>) {
     keepalive: true,
     body: JSON.stringify(payload),
   }).catch(err => console.error('[notify-discord] fetch failed:', err))
+}
+
+// THE EXPORT ENVELOPE, WHICH IS WHERE THE ADDON VERSION ACTUALLY LIVES.
+//
+// Both decode branches used to write meta.version into grip_version. meta.version
+// is the WIRE FORMAT version of the envelope, currently 5. It is not the addon
+// version and it never was. Measured on 2026-08-11 by decoding all 65 published
+// exports: 29 rows hold a grip_version that disagrees with the addon version
+// inside their own export, and 8 of those literally read "5". Every post through
+// this form repeated it, which is why migration 019 ships a backfill beside this
+// fix.
+//
+// meta.version is left alone everywhere else on this page. It is a legitimate
+// format-handling value; storing it as if it were the addon version was the
+// defect, not reading it.
+//
+// patch_version IS DELIBERATELY NOT READ FROM THE ENVELOPE, and an earlier draft
+// of this function did read it. The envelope carries wowPatch, so a future
+// reader will see this function ignoring a value that is sitting right there and
+// helpfully wire it up. Do not.
+//
+// grip_version and wow_build are MACHINE FACTS: which addon version wrote the
+// export, and which client build it ran on. The envelope is authoritative for
+// both because the envelope is the only thing that was present when they were
+// true. patch_version answers a different question, which is which patch the
+// sequence IS FOR, and that is a claim the author makes about their own work. An
+// export produced on a 12.0.7 client can be intended for 12.1, and saying so is
+// the entire point of the field.
+//
+// This is measured, not argued. Between 19:54 and 20:17 on 2026-08-11, roughly
+// half a minute apart, seven published rows moved from patch_version 12.0.7 to
+// 12.1. Every one of those exports still says wowPatch 12.0.7, and the live
+// client is still 12.0.7.68974 in EU and 12.0.7.68887 in US. That is an author
+// walking their own sequences and relabelling them for the new patch. Reading
+// the envelope here would have overwritten that choice on the author's next
+// paste, and the backfill that shipped in the same draft would have reverted all
+// seven within minutes of the migration being applied.
+//
+// PATCH_VERSIONS stays above because the patch <select> still renders from it.
+// It is simply not this function's business.
+//
+// The decode API needs no change to support this. src/app/api/decode-grip/route.ts
+// returns meta: decoded.meta unmodified for !EMS1! and !GRIP1!, and that object
+// already carries envelope.addonVersion and envelope.wowBuild.
+//
+// A !GSE3! export has no GRIP envelope at all, so both come back empty, this
+// returns an empty object, and whatever the form already held stands. Each field
+// is applied ONLY when the envelope holds a non-empty string, so a legacy export
+// never blanks a value that was already there.
+function envelopeUpdates(meta: any): Partial<typeof EMPTY_FORM> {
+  const updates: Partial<typeof EMPTY_FORM> = {}
+  const envelope = meta?.envelope ?? {}
+  const addonVersion = typeof envelope.addonVersion === 'string' ? envelope.addonVersion.trim() : ''
+  const wowBuild = typeof envelope.wowBuild === 'string' ? envelope.wowBuild.trim() : ''
+
+  if (addonVersion) updates.grip_version = addonVersion
+  if (wowBuild) updates.wow_build = wowBuild
+
+  return updates
 }
 
 function PostForm() {
@@ -163,7 +227,7 @@ function PostForm() {
       if (draftIdParam) {
         const { data, error } = await supabase
           .from('sequences')
-          .select('id, title, class_name, content_type, updated_at, description, class_id, spec_name, hero_talent, patch_version, grip_version, step_function, grip_string, raw_steps, talent_string, warcraftlogs_url, performance_notes, collection_sequences')
+          .select('id, title, class_name, content_type, updated_at, description, class_id, spec_name, hero_talent, patch_version, grip_version, wow_build, step_function, grip_string, raw_steps, talent_string, warcraftlogs_url, performance_notes, collection_sequences')
           .eq('id', draftIdParam)
           .eq('author_id', user.id)
           .eq('status', 'draft')
@@ -183,7 +247,7 @@ function PostForm() {
 
       const { data, error } = await supabase
         .from('sequences')
-        .select('id, title, class_name, content_type, updated_at, description, class_id, spec_name, hero_talent, patch_version, grip_version, step_function, grip_string, raw_steps, talent_string, warcraftlogs_url, performance_notes, collection_sequences')
+        .select('id, title, class_name, content_type, updated_at, description, class_id, spec_name, hero_talent, patch_version, grip_version, wow_build, step_function, grip_string, raw_steps, talent_string, warcraftlogs_url, performance_notes, collection_sequences')
         .eq('author_id', user.id)
         .eq('status', 'draft')
         .order('updated_at', { ascending: false })
@@ -224,6 +288,7 @@ function PostForm() {
       hero_talent: data.hero_talent ?? '',
       patch_version: data.patch_version ?? '12.1',
       grip_version: data.grip_version ?? '',
+      wow_build: data.wow_build ?? '',
       step_function: data.step_function ?? 'Sequential',
       grip_string: data.grip_string ?? '',
       raw_steps_text,
@@ -306,6 +371,7 @@ function PostForm() {
         hero_talent: data.hero_talent ?? '',
         patch_version: data.patch_version ?? '12.1',
         grip_version: data.grip_version ?? '',
+        wow_build: data.wow_build ?? '',
         step_function: data.step_function ?? 'Sequential',
         grip_string: data.grip_string ?? '',
         raw_steps_text,
@@ -380,14 +446,14 @@ async function runDecode(exportString: string) {
       const declaredAuthor = (meta.exportMeta?.author ?? '').trim()
       setOriginalAuthor(declaredAuthor || null)
 
-      // meta.version comes straight off the decoded GRIP-EMS CBOR payload
-      // (see emsDecoder.ts) -- the actual version the addon used to produce
-      // this export, not a guess or a stale hardcoded default. Export-level,
-      // same scope as classId/specId above, so it applies to the whole
-      // collection rather than varying per sequence.
-      const gripVersionUpdate: Partial<typeof EMPTY_FORM> = meta.version ? { grip_version: meta.version } : {}
-      if (Object.keys(gripVersionUpdate).length) {
-        setForm(f => ({ ...f, ...gripVersionUpdate }))
+      // Envelope-level, the same scope as classId/specId above, so it applies
+      // to the whole collection rather than varying per sequence. See
+      // envelopeUpdates for why this reads envelope.addonVersion rather than
+      // meta.version, and why patch_version is not read from the envelope at
+      // all even though the envelope carries it.
+      const envelopeUpdate = envelopeUpdates(meta)
+      if (Object.keys(envelopeUpdate).length) {
+        setForm(f => ({ ...f, ...envelopeUpdate }))
       }
 
       if (anchor.classId) {
@@ -458,12 +524,15 @@ async function runDecode(exportString: string) {
       if (!current.title.trim() && meta.exportMeta?.collectionName) {
         updates.title = meta.exportMeta.collectionName
       }
-      // meta.version comes straight off the decoded GRIP-EMS CBOR payload
-      // (see emsDecoder.ts) -- the actual version the addon used to produce
-      // this export, not a guess or a stale hardcoded default.
-      if (meta.version) {
-        updates.grip_version = meta.version
-      }
+      // THE SECOND OF THE TWO DECODE BRANCHES, and the one that is easy to fix
+      // alone and call it done. grip_version and wow_build come off the export
+      // envelope here exactly as they do in the collection branch above, and
+      // patch_version is left to the author in both; see envelopeUpdates.
+      //
+      // Note what this does NOT touch: updates.title above it. The title is
+      // only filled from the export when the author has not typed one, which is
+      // the same editorial deference patch_version now gets.
+      Object.assign(updates, envelopeUpdates(meta))
       if (classId) {
         const cls = WOW_CLASSES.find(c => c.id === classId)
         if (cls) {
@@ -629,6 +698,7 @@ async function runDecode(exportString: string) {
           p_hero_talent: f.hero_talent || null,
           p_patch_version: f.patch_version || null,
           p_grip_version: f.grip_version || null,
+          p_wow_build: f.wow_build || null,
           p_step_function: f.step_function,
           p_step_count: raw_steps?.length ?? null,
           p_grip_string: f.grip_string.trim() || null,
@@ -654,6 +724,7 @@ async function runDecode(exportString: string) {
           p_hero_talent: f.hero_talent || null,
           p_patch_version: f.patch_version || null,
           p_grip_version: f.grip_version || null,
+          p_wow_build: f.wow_build || null,
           p_step_function: f.step_function,
           p_step_count: raw_steps?.length ?? null,
           p_grip_string: f.grip_string.trim() || null,
@@ -681,6 +752,7 @@ async function runDecode(exportString: string) {
           p_hero_talent: f.hero_talent || null,
           p_patch_version: f.patch_version || null,
           p_grip_version: f.grip_version || null,
+          p_wow_build: f.wow_build || null,
           p_step_function: f.step_function,
           p_step_count: raw_steps?.length ?? null,
           p_grip_string: f.grip_string.trim() || null,
@@ -796,6 +868,7 @@ async function runDecode(exportString: string) {
             p_hero_talent: form.hero_talent || null,
             p_patch_version: form.patch_version || null,
             p_grip_version: form.grip_version || null,
+            p_wow_build: form.wow_build || null,
             p_step_function: form.step_function,
             p_step_count: totalSteps,
             p_grip_string: form.grip_string.trim() || null,
@@ -834,6 +907,7 @@ async function runDecode(exportString: string) {
             p_hero_talent: form.hero_talent || null,
             p_patch_version: form.patch_version || null,
             p_grip_version: form.grip_version || null,
+            p_wow_build: form.wow_build || null,
             p_step_function: form.step_function,
             p_step_count: totalSteps,
             p_grip_string: form.grip_string.trim() || null,
@@ -889,6 +963,12 @@ async function runDecode(exportString: string) {
               hero_talent: form.hero_talent || null,
               patch_version: form.patch_version || null,
               grip_version: form.grip_version || null,
+              // The one write on this page that is a raw table insert rather
+              // than an RPC: the new-collection publish path. It bypasses
+              // create_sequence_with_version entirely, so the column has to be
+              // named here or a published collection is the only shape of
+              // sequence that never records a build.
+              wow_build: form.wow_build || null,
               step_function: form.step_function,
               step_count: totalSteps,
               grip_string: form.grip_string.trim() || null,
@@ -953,6 +1033,7 @@ async function runDecode(exportString: string) {
         hero_talent: form.hero_talent || null,
         patch_version: form.patch_version || null,
         grip_version: form.grip_version || null,
+        wow_build: form.wow_build || null,
         step_function: form.step_function,
         step_count: raw_steps?.length ?? null,
         grip_string: form.grip_string.trim() || null,
@@ -979,6 +1060,7 @@ async function runDecode(exportString: string) {
             p_hero_talent: payload.hero_talent,
             p_patch_version: payload.patch_version,
             p_grip_version: payload.grip_version,
+            p_wow_build: payload.wow_build,
             p_step_function: payload.step_function,
             p_step_count: payload.step_count,
             p_grip_string: payload.grip_string,
@@ -1002,6 +1084,7 @@ async function runDecode(exportString: string) {
             p_hero_talent: payload.hero_talent,
             p_patch_version: payload.patch_version,
             p_grip_version: payload.grip_version,
+            p_wow_build: payload.wow_build,
             p_step_function: payload.step_function,
             p_step_count: payload.step_count,
             p_grip_string: payload.grip_string,
@@ -1048,6 +1131,7 @@ async function runDecode(exportString: string) {
           p_hero_talent: payload.hero_talent,
           p_patch_version: payload.patch_version,
           p_grip_version: payload.grip_version,
+          p_wow_build: payload.wow_build,
           p_step_function: payload.step_function,
           p_step_count: payload.step_count,
           p_grip_string: payload.grip_string,
@@ -1120,6 +1204,7 @@ async function runDecode(exportString: string) {
           p_hero_talent: payload.hero_talent,
           p_patch_version: payload.patch_version,
           p_grip_version: payload.grip_version,
+          p_wow_build: payload.wow_build,
           p_step_function: payload.step_function,
           p_step_count: payload.step_count,
           p_grip_string: payload.grip_string,
