@@ -145,6 +145,11 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
 
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
+  // Guards the hash-scroll effect below to firing once. Comments re-render
+  // on every post/edit/delete (setComments), and without this the effect
+  // would re-run and yank the page back to the linked comment every time,
+  // which is not what "arrived via a link" means after the first arrival.
+  const hasScrolledToHash = useRef(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
@@ -164,6 +169,39 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
       fetchTagBreakdown(sequence.id)
     }
   }, [sequence, user])
+
+  // Scroll-to-comment for links like /sequences/[slug]#comment-<id>, e.g.
+  // from the "comments by this creator" list on a public profile page.
+  // Gated on comments.length rather than firing straight from the mount
+  // effect, since the target node doesn't exist in the DOM until comments
+  // have actually loaded and rendered -- scrolling before that would
+  // silently do nothing, the same class of bug as scrolling before a
+  // seeded/fetched state settles anywhere else in this file.
+  useEffect(() => {
+    if (hasScrolledToHash.current) return
+    if (comments.length === 0) return
+    const hash = window.location.hash
+    if (!hash.startsWith('#comment-')) return
+
+    hasScrolledToHash.current = true
+    // One tick so the browser has committed the layout for the comments
+    // that just rendered -- getElementById immediately after setComments
+    // resolves can still race the paint on some browsers.
+    requestAnimationFrame(() => {
+      const el = document.getElementById(hash.slice(1))
+      if (!el) return
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      const prevOutline = el.style.outline
+      const prevTransition = el.style.transition
+      el.style.transition = 'outline-color 0.3s ease'
+      el.style.outline = '2px solid var(--accent)'
+      el.style.borderRadius = 'var(--radius-md)'
+      setTimeout(() => {
+        el.style.outline = prevOutline
+        el.style.transition = prevTransition
+      }, 2200)
+    })
+  }, [comments])
 
   // supabase-js query builders are lazy thenables: the request is only issued when the builder
   // is awaited or .then()-ed. A bare `supabase.rpc(...)` statement builds the request and drops
@@ -1757,7 +1795,7 @@ function CommentThread({
   const canEdit = user && user.id === comment.author_id && comment.source === 'web'
 
   return (
-    <div style={{ marginLeft: depth > 0 ? 20 : 0 }}>
+    <div id={`comment-${comment.id}`} style={{ marginLeft: depth > 0 ? 20 : 0 }}>
       <div style={{ display: 'flex', gap: 10 }}>
         {depth > 0 && (
           <div style={{ paddingTop: 6, color: 'var(--text-muted)', flexShrink: 0 }}>
