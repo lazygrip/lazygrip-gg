@@ -224,7 +224,7 @@ export default async function UserProfilePage(props: Props) {
             background: 'var(--bg-primary)',
             border: '0.5px solid var(--border)',
             borderRadius: 'var(--radius-lg)',
-            padding: '24px 0',
+            padding: '32px 0',
             marginBottom: 24,
             display: 'flex',
           }}
@@ -240,6 +240,14 @@ export default async function UserProfilePage(props: Props) {
                 flex: 1,
                 textAlign: 'center',
                 borderLeft: i > 0 ? '0.5px solid var(--border)' : 'none',
+                // StatBlock's number div uses line-height: 1 at 36px/700,
+                // which leaves no room for the font's ascender overshoot
+                // and reads as clipped against a tight-fitting parent
+                // (flagged by Slowdog from a live screenshot, 2026-08-11).
+                // Not touching StatBlock itself since it's shared; instead
+                // giving its rendered output some vertical room here, local
+                // to this page's wrapper only.
+                lineHeight: 1.4,
               }}
             >
               <StatBlock stats={[stat]} />
