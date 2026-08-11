@@ -58,36 +58,28 @@ function truncateCommentBody(body: string, max = 140): string {
 
 export default function ProfileTabs({ seqs, comments, isOwnProfile }: ProfileTabsProps) {
   const [activeTab, setActiveTab] = useState<'sequences' | 'comments'>('sequences')
+  const [chatOpen, setChatOpen] = useState(false)
 
+  // REWORKED 2026-08-11: the first two attempts at "chat on the right side"
+  // put chat in its own full-height box next to the sequences list. Both
+  // times the actual result crowded the page (sequence titles wrapping mid-
+  // word once the left column lost width to a ~300px box that was mostly
+  // empty dashed border). The instruction was always right -- chat belongs
+  // on the right side of the tab row -- the execution was wrong. This
+  // version keeps chat on the right, in the same row as the tabs, as a
+  // small button that opens a panel on click rather than a box that's
+  // always fully expanded and competing for width whether anyone's using it
+  // or not.
   return (
-    <>
-      {/* Same class-based media query pattern as layout/Header.tsx (768px
-          breakpoint, matching that component). Deliberately not relying on
-          flexWrap's default wrapping behavior here -- the first version did,
-          and on a real viewport the chat panel wrapped below the (much
-          taller) sequences list instead of staying pinned at the top of its
-          own column, which is the opposite of what "pinned, always visible"
-          was supposed to mean. Below 768px the columns stack in DOM order
-          (tabs, then chat) rather than side by side. */}
-      <style>{`
-        .profile-columns { display: flex; gap: 20px; align-items: flex-start; }
-        .profile-columns-left { flex: 1 1 0%; min-width: 0; }
-        .profile-columns-right { flex: 0 0 300px; position: sticky; top: 20px; }
-        @media (max-width: 768px) {
-          .profile-columns { flex-direction: column; }
-          .profile-columns-right { flex-basis: auto; width: 100%; position: static; }
-        }
-      `}</style>
-      <div className="profile-columns">
-      {/* Left: tabbed Sequences / Comments, everything that existed on this
-          page before today just reorganized under tabs instead of stacked
-          as two always-visible sections. */}
-      <div className="profile-columns-left">
-        <div style={{
-          display: 'flex', gap: 0,
-          borderBottom: '0.5px solid var(--border)',
-          marginBottom: 16,
-        }}>
+    <div>
+      <div style={{
+        display: 'flex', gap: 0,
+        borderBottom: '0.5px solid var(--border)',
+        marginBottom: 16,
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
+        <div style={{ display: 'flex', gap: 0 }}>
           <TabButton
             label={`Sequences (${seqs.length})`}
             active={activeTab === 'sequences'}
@@ -99,6 +91,48 @@ export default function ProfileTabs({ seqs, comments, isOwnProfile }: ProfileTab
             onClick={() => setActiveTab('comments')}
           />
         </div>
+        {/* Deliberately styled unlike TabButton (pill, not underline) so it
+            doesn't read as a third piece of content to switch between --
+            clicking it opens a panel, it doesn't replace what's showing. */}
+        <button
+          onClick={() => setChatOpen(v => !v)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '6px 14px',
+            marginBottom: 6,
+            background: chatOpen ? 'var(--accent-subtle)' : 'var(--bg-primary)',
+            border: '0.5px solid var(--border-strong)',
+            borderRadius: 999,
+            color: chatOpen ? 'var(--accent-text)' : 'var(--text-secondary)',
+            fontSize: 'var(--text-sm)',
+            fontWeight: 500,
+            cursor: 'pointer',
+            fontFamily: 'var(--font-sans)',
+          }}
+        >
+          <MessageCircle size={13} />
+          Chat
+        </button>
+      </div>
+
+      {chatOpen && (
+        <div style={{
+          background: 'var(--bg-primary)',
+          border: '0.5px dashed var(--border-strong)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '16px 20px',
+          marginBottom: 16,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          color: 'var(--text-muted)',
+        }}>
+          <MessageCircle size={16} style={{ flexShrink: 0 }} />
+          <p style={{ fontSize: 'var(--text-sm)', margin: 0 }}>
+            Chat with {isOwnProfile ? 'creators' : 'this creator'} — coming soon.
+          </p>
+        </div>
+      )}
 
         {activeTab === 'sequences' ? (
           seqs.length === 0 ? (
@@ -189,40 +223,7 @@ export default function ProfileTabs({ seqs, comments, isOwnProfile }: ProfileTab
             </div>
           )
         )}
-      </div>
-
-      {/* Right: reserved space for creator chat. Deliberately a real,
-          honest "not built yet" placeholder rather than a fake mockup with
-          invented messages -- chat itself (schema, realtime vs. polling,
-          moderation/blocking) is unscoped as of 2026-08-11 and is its own
-          session's work. This exists so the layout is correct now and chat
-          slots in later without another restructure.
-
-          className="profile-columns-right" (not inline flex/width) is what
-          keeps this pinned at the top of its column rather than wrapping
-          below a tall sequences list -- see the <style> block above. */}
-      <div className="profile-columns-right" style={{
-        background: 'var(--bg-primary)',
-        border: '0.5px dashed var(--border-strong)',
-        borderRadius: 'var(--radius-lg)',
-        padding: '24px 20px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        textAlign: 'center',
-        gap: 8,
-        color: 'var(--text-muted)',
-      }}>
-        <MessageCircle size={20} />
-        <p style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-secondary)', margin: 0 }}>
-          Chat with {isOwnProfile ? 'creators' : 'this creator'}
-        </p>
-        <p style={{ fontSize: 'var(--text-xs)', margin: 0 }}>
-          Coming soon.
-        </p>
-      </div>
-      </div>
-    </>
+    </div>
   )
 }
 
