@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { formatDistanceToNow } from 'date-fns'
 import Link from 'next/link'
-import { MessageSquare, Star, Bell } from 'lucide-react'
+import { MessageSquare, Star, Bell, Reply } from 'lucide-react'
 
 export default function NotificationsPage() {
   const router = useRouter()
@@ -109,10 +109,24 @@ export default function NotificationsPage() {
 }
 
 function NotificationRow({ notification: n }: { notification: any }) {
-  const isComment = n.type === 'comment'
-  const icon = isComment
+  // Explicit three-way rather than isComment ? A : B: a binary here means
+  // any future notification type falls through to the rating icon by
+  // default, silently, the way 'reply' would have if this had stayed a
+  // boolean check. Falling through to Bell for anything unrecognized is
+  // the same reasoning: a visibly generic icon beats a wrong specific one.
+  const icon = n.type === 'comment'
     ? <MessageSquare size={15} color="var(--accent)" />
-    : <Star size={15} color="#c69b3a" />
+    : n.type === 'reply'
+    ? <Reply size={15} color="var(--accent)" />
+    : n.type === 'rating'
+    ? <Star size={15} color="#c69b3a" />
+    : <Bell size={15} color="var(--text-muted)" />
+
+  // rating gets its own gold-tinted background, everything else (comment,
+  // reply, and any future type) shares the accent tint. Matches the icon
+  // switch's grouping: rating is the odd one out visually, not the norm to
+  // special-case away from.
+  const iconBg = n.type === 'rating' ? 'rgba(198,155,58,0.12)' : 'rgba(29,158,117,0.12)'
 
   const inner = (
     <div style={{
@@ -129,7 +143,7 @@ function NotificationRow({ notification: n }: { notification: any }) {
     }}>
       <div style={{
         width: 32, height: 32, borderRadius: '50%',
-        background: isComment ? 'rgba(29,158,117,0.12)' : 'rgba(198,155,58,0.12)',
+        background: iconBg,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         flexShrink: 0,
       }}>

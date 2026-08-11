@@ -64,6 +64,11 @@ function ProfilePageInner() {
   const [displayName, setDisplayName] = useState('')
   const [bio, setBio] = useState('')
   const [battletag, setBattletag] = useState('')
+  // profiles.discord_bridge_opted_out (migration 017). Per-user, covering every
+  // sequence this account owns, in both directions of the comment bridge.
+  // Default false here matches the column default: the bridge is on unless the
+  // user turns it off.
+  const [bridgeOptedOut, setBridgeOptedOut] = useState(false)
   const [settingsSaving, setSettingsSaving] = useState(false)
   const [settingsSaved, setSettingsSaved] = useState(false)
   const [settingsError, setSettingsError] = useState<string | null>(null)
@@ -104,6 +109,11 @@ function ProfilePageInner() {
         setDisplayName(prof.display_name ?? '')
         setBio(prof.bio ?? '')
         setBattletag(prof.battletag ?? '')
+        // The select above is select('*'), so the column arrives with no query
+        // change. Defaulted to false rather than left undefined: the column is
+        // NOT NULL, so a missing value can only mean a row written before
+        // migration 017 landed, and the bridge is on in that case.
+        setBridgeOptedOut(prof.discord_bridge_opted_out === true)
       }
 
       const { data: posted } = await supabase
@@ -298,13 +308,14 @@ function ProfilePageInner() {
         display_name: displayName.trim(),
         bio: bio.trim(),
         battletag: battletag.trim(),
+        discord_bridge_opted_out: bridgeOptedOut,
       })
       .eq('id', user.id)
 
     if (error) {
       setSettingsError('Save failed. Please try again.')
     } else {
-      setProfile((p: any) => ({ ...p, username: username.trim(), display_name: displayName.trim(), bio: bio.trim(), battletag: battletag.trim() }))
+      setProfile((p: any) => ({ ...p, username: username.trim(), display_name: displayName.trim(), bio: bio.trim(), battletag: battletag.trim(), discord_bridge_opted_out: bridgeOptedOut }))
       setSettingsSaved(true)
       setTimeout(() => setSettingsSaved(false), 2500)
     }
@@ -429,6 +440,8 @@ function ProfilePageInner() {
           setBio={setBio}
           battletag={battletag}
           setBattletag={setBattletag}
+          bridgeOptedOut={bridgeOptedOut}
+          setBridgeOptedOut={setBridgeOptedOut}
           onSave={saveProfileSettings}
           saving={settingsSaving}
           saved={settingsSaved}
@@ -583,6 +596,7 @@ function SettingsTab({
   uploadingAvatar, avatarSaved, fileInputRef, onUpload, onColorSelect,
   username, setUsername, displayName, setDisplayName,
   bio, setBio, battletag, setBattletag,
+  bridgeOptedOut, setBridgeOptedOut,
   onSave, saving, saved, error,
   identities, identitiesLoading, linkingProvider, unlinkingId, identityError,
   onLinkProvider, onUnlinkProvider,
@@ -605,6 +619,8 @@ function SettingsTab({
   setBio: (v: string) => void
   battletag: string
   setBattletag: (v: string) => void
+  bridgeOptedOut: boolean
+  setBridgeOptedOut: (v: boolean) => void
   onSave: () => void
   saving: boolean
   saved: boolean
@@ -705,6 +721,39 @@ function SettingsTab({
               maxLength={20}
             />
             <p style={hintStyle}>Optional. Shown on your public profile.</p>
+          </div>
+
+          {/* THE CHECKBOX IS CHECKED WHEN OPTED OUT, and that is deliberate.
+              The column is named for the opt-out and the label says opt out, so
+              the UI, the state and the database all read the same direction and
+              there is no inversion anywhere between them. Labelling this as
+              "enable the bridge" would add a second inversion for no gain.
+
+              THE LABEL SAYS COMMENTS, NOT "the Discord bridge", and that is
+              also deliberate: comments are the whole reach of this flag.
+              fireSequencePublishedRelay has exactly two callers,
+              api/notify-discord/route.ts:325 and
+              api/admin/sequence-thread/route.ts:374, and
+              discord_bridge_opted_out is read in neither of them. An opted-out
+              author therefore still gets a forum thread per published sequence,
+              still gets the creator ping, and still gets publish, update and
+              edit cards posted into it. Whoever widens the flag to cover those
+              needs that list of call sites, so it lives here next to the claim
+              the label makes rather than waiting to be grepped for. */}
+          <div>
+            <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={bridgeOptedOut}
+                onChange={e => setBridgeOptedOut(e.target.checked)}
+                style={{ cursor: 'pointer' }}
+              />
+              Opt out of Discord comment syncing
+            </label>
+            <p style={hintStyle}>
+              With this on, comments on your sequences are not sent to the GRIP Discord,
+              and Discord replies in your sequence threads are not brought back to the site.
+            </p>
           </div>
 
         </div>
@@ -1076,7 +1125,18 @@ function SequenceRow({ seq, showAuthor, onUnsave }: { seq: any; showAuthor: bool
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {contentLabel}</span>
             {seq.hero_talent && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {seq.hero_talent}</span>}
             {showAuthor && seq.author?.username && (
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· by {seq.author.username}</span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                · by{' '}
+                <Link
+                  href={`/user/${seq.author.username}`}
+                  onClick={e => e.stopPropagation()}
+                  style={{ color: 'var(--text-muted)', textDecoration: 'none' }}
+                  onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+                  onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+                >
+                  {seq.author.username}
+                </Link>
+              </span>
             )}
           </div>
         </div>
