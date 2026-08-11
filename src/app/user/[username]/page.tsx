@@ -91,7 +91,7 @@ export default async function UserProfilePage(props: Props) {
 
   const { data: sequences } = await supabase
     .from('sequences')
-    .select('id, title, slug, class_name, class_id, spec_name, content_type, hero_talent, avg_score, rating_count, view_count, created_at')
+    .select('id, title, slug, class_name, class_id, spec_name, content_type, hero_talent, avg_score, rating_count, view_count, save_count, created_at')
     .eq('author_id', profile.id)
     .eq('status', 'published')
     .order('created_at', { ascending: false })
@@ -101,6 +101,23 @@ export default async function UserProfilePage(props: Props) {
   const displayColor = profile.avatar_color ?? '#1D9E75'
   const safeAvatarUrl = sanitizeAvatarUrl(profile.avatar_url)
   const joinDate = new Date(profile.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+
+  // Aggregate stats across this creator's published sequences. Summed here
+  // rather than tracked as a running total on profiles, since seqs is
+  // already fetched in full for the list below -- same reasoning as
+  // profile/page.tsx's per-tab counts, which sum client-side off the same
+  // fetch rather than maintaining a separate counter column.
+  const totalViews = seqs.reduce((sum, s) => sum + (s.view_count ?? 0), 0)
+  const totalSaves = seqs.reduce((sum, s) => sum + (s.save_count ?? 0), 0)
+  const ratedSeqs = seqs.filter(s => s.avg_score != null && s.rating_count > 0)
+  // Average of each sequence's already-computed avg_score, not a re-derived
+  // average from raw ratings -- this page has no access to the underlying
+  // ratings rows, only the per-sequence rollup, so this is an average of
+  // averages. Only sequences with at least one rating count toward it, so a
+  // freshly posted 0-rating sequence doesn't drag the number toward null/0.
+  const avgRating = ratedSeqs.length > 0
+    ? (ratedSeqs.reduce((sum, s) => sum + s.avg_score, 0) / ratedSeqs.length)
+    : null
 
   return (
     <div style={{ maxWidth: 860, margin: '0 auto', padding: '36px 24px' }}>
@@ -151,6 +168,27 @@ export default async function UserProfilePage(props: Props) {
         </div>
       </div>
 
+      {/* Aggregate stats. Only rendered when there's at least one published
+          sequence -- a brand new creator with zero posts gets no empty
+          "0 views / 0 saves / no rating" row to look sparse over, the
+          Sequences section's own "No sequences posted yet" message below
+          already covers that case. */}
+      {seqs.length > 0 && (
+        <div style={{
+          display: 'flex',
+          gap: 0,
+          background: 'var(--bg-primary)',
+          border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius-lg)',
+          marginBottom: 20,
+          overflow: 'hidden',
+        }}>
+          <StatBlock label="Total views" value={totalViews.toLocaleString()} />
+          <StatBlock label="Total saves" value={totalSaves.toLocaleString()} />
+          <StatBlock label="Avg rating" value={avgRating != null ? avgRating.toFixed(1) : '—'} last />
+        </div>
+      )}
+
       {/* Sequences */}
       <div style={{
         fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-muted)',
@@ -174,6 +212,24 @@ export default async function UserProfilePage(props: Props) {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function StatBlock({ label, value, last }: { label: string; value: string; last?: boolean }) {
+  return (
+    <div style={{
+      flex: 1,
+      padding: '18px 20px',
+      textAlign: 'center',
+      borderRight: last ? 'none' : '0.5px solid var(--border)',
+    }}>
+      <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+        {value}
+      </div>
+      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 4 }}>
+        {label}
+      </div>
     </div>
   )
 }
