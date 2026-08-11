@@ -250,7 +250,14 @@ export default async function UserProfilePage(props: Props) {
                 lineHeight: 1.4,
               }}
             >
-              <StatBlock stats={[stat]} />
+              {/* align="center" here specifically because StatBlock's number
+                  row is display:flex, and a flex container ignores the
+                  parent div's textAlign -- that's the actual reason the big
+                  numbers were rendering left-aligned inside a
+                  textAlign:'center' wrapper. The label text below it was
+                  fine, since it's a plain block element that respects
+                  textAlign; only the numeral row needed the fix. */}
+              <StatBlock stats={[stat]} align="center" />
             </div>
           ))}
         </div>
