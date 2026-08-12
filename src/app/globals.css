@@ -145,14 +145,26 @@ body {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
+/* Reverse direction, same duplicated-content trick — used to make the two homepage
+   ticker rows drift opposite ways (Modrinth's front page does the same: rows scroll
+   toward each other instead of both sliding the same direction), which reads as
+   "staggered" much more clearly than a speed difference alone. */
+@keyframes marquee-scroll-reverse {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
 .marquee-track {
   animation: marquee-scroll 42s linear infinite;
 }
-.marquee-track:hover {
+.marquee-track-reverse {
+  animation: marquee-scroll-reverse 50s linear infinite;
+}
+.marquee-track:hover,
+.marquee-track-reverse:hover {
   animation-play-state: paused;
 }
 @media (prefers-reduced-motion: reduce) {
-  .marquee-track { animation: none; }
+  .marquee-track, .marquee-track-reverse { animation: none; }
 }
 
 /* Class color utilities */

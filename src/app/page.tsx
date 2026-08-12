@@ -1,23 +1,26 @@
 import { ArrowRight, Wrench, Trophy, Eye, HelpCircle, PlusCircle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { WOW_CLASSES, CONTENT_TYPES, getClassColor } from '@/lib/wow-data'
-import { fetchHomeStats, fetchTrendingSequences, fetchRecentSequences } from '@/lib/home-stats'
+import { fetchHomeStats, fetchTrendingSequences, fetchRecentSequences, fetchCurrentPatchTicker } from '@/lib/home-stats'
 import Card from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
 import StatBlock from '@/components/ui/StatBlock'
 import SequenceMark from '@/components/ui/SequenceMark'
 
 // Homepage is otherwise static (no cookies/headers touched — see public.ts), so without this
-// it builds once and the stat block numbers freeze until the next deploy. 1h matches the
-// revalidate window changelog already uses elsewhere in the app.
-export const revalidate = 3600
+// it builds once and the stat block numbers freeze until the next deploy. 30m (shorter than
+// the 1h window changelog uses elsewhere) so the patch-12.1 ticker picks up new posts sooner.
+export const revalidate = 1800
 
 export default async function HomePage() {
-  const [stats, trending, recent] = await Promise.all([
+  const [stats, trending, currentPatchTicker] = await Promise.all([
     fetchHomeStats(),
     fetchTrendingSequences(6),
-    fetchRecentSequences(10),
+    fetchCurrentPatchTicker(10),
   ])
+  // Previous-patches row excludes whatever the current-patch row already shows, so the
+  // two tickers never surface the same sequence twice.
+  const recent = await fetchRecentSequences(14, currentPatchTicker.patch)
 
   return (
     <div>
@@ -360,34 +363,120 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Recent activity ticker — infinite CSS marquee, no client JS. Pattern borrowed from
-          ScaryLarryGames/GSE United and Modrinth, both of which run a scrolling strip of
-          recent community activity right under the hero as a "this place is alive" signal.
-          Omits itself entirely if there's nothing to show, rather than rendering an empty rail. */}
-      {recent.length > 0 && (
-        <section style={{ borderBottom: '0.5px solid var(--border)', padding: '14px 0', background: 'var(--bg-secondary)', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', width: 'max-content' }} className="marquee-track">
-            {[recent, recent].map((batch, batchIdx) => (
-              <div key={batchIdx} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                {batch.map((seq, i) => (
-                  <a
-                    key={`${batchIdx}-${seq.id}-${i}`}
-                    href={`/sequences/${seq.slug}`}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '0 20px', textDecoration: 'none', whiteSpace: 'nowrap',
-                      borderRight: '0.5px solid var(--border)',
-                    }}
-                  >
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: getClassColor(seq.class_id), flexShrink: 0 }} />
-                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', fontWeight: 500 }}>{seq.title}</span>
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {seq.class_name}</span>
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {formatDistanceToNow(new Date(seq.created_at), { addSuffix: true })}</span>
-                  </a>
-                ))}
+      {/* Activity tickers — two staggered infinite CSS marquees, no client JS. Pattern
+          borrowed from Modrinth's front page, which runs multiple rows of content
+          scrolling in opposite directions at different speeds rather than one flat strip.
+          Row 1 is current-patch sequences in bigger cards (the stuff most visitors actually
+          want right now); row 2 is everything else, in the original thin ticker style.
+          Each row omits itself independently if it has nothing to show. */}
+      {(currentPatchTicker.sequences.length > 0 || recent.length > 0) && (
+        <section style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-secondary)' }}>
+          {currentPatchTicker.sequences.length > 0 && (
+            <div style={{ position: 'relative', overflow: 'hidden', borderBottom: recent.length > 0 ? '0.5px solid var(--border)' : 'none' }}>
+              {/* Label floats centered over the track instead of sitting in a fixed side
+                  rail — cards scroll the full row width and pass underneath/behind it, so
+                  it reads as a "tunnel" the ticker runs through rather than a label bolted
+                  to one edge. Cards on either side stay clickable since the label only
+                  covers the middle sliver. */}
+              <div style={{
+                position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+                zIndex: 2, display: 'flex', alignItems: 'center', gap: 8,
+                padding: '9px 18px', borderRadius: 99, whiteSpace: 'nowrap',
+                background: 'var(--accent-subtle)', border: '0.5px solid rgba(29,158,117,0.35)',
+                boxShadow: 'var(--shadow-md)', pointerEvents: 'none',
+              }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
+                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--accent-text)' }}>
+                  Current Patch {currentPatchTicker.patch}
+                </span>
               </div>
-            ))}
-          </div>
+              <div style={{ overflow: 'hidden' }}>
+                <div style={{ display: 'flex', width: 'max-content', padding: '10px 0' }} className="marquee-track">
+                  {[currentPatchTicker.sequences, currentPatchTicker.sequences].map((batch, batchIdx) => (
+                    <div key={batchIdx} style={{ display: 'flex', flexShrink: 0 }}>
+                      {batch.map((seq, i) => {
+                        const classColor = getClassColor(seq.class_id)
+                        return (
+                          <a
+                            key={`cp-${batchIdx}-${seq.id}-${i}`}
+                            href={`/sequences/${seq.slug}`}
+                            style={{
+                              display: 'flex', flexDirection: 'column', gap: 5,
+                              padding: '8px 14px', margin: '0 6px', width: 230, flexShrink: 0,
+                              background: 'var(--bg-primary)', border: '0.5px solid var(--border-strong)',
+                              borderLeft: `3px solid ${classColor}`, borderRadius: 'var(--radius-sm)',
+                              textDecoration: 'none',
+                            }}
+                          >
+                            <span style={{
+                              fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)',
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            }}>
+                              {seq.title}
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                                <Badge color={classColor} style={{ color: 'var(--text-primary)' }}>{seq.class_name}</Badge>
+                                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {seq.author?.display_name || seq.author?.username || 'Unknown'}
+                                </span>
+                              </span>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0, color: 'var(--text-muted)' }}>
+                                <Eye size={11} />
+                                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600 }}>{seq.view_count?.toLocaleString() ?? 0}</span>
+                              </span>
+                            </span>
+                          </a>
+                        )
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {recent.length > 0 && (
+            <div style={{ position: 'relative', overflow: 'hidden' }}>
+              <div style={{
+                position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+                zIndex: 2, display: 'flex', alignItems: 'center', gap: 7,
+                padding: '7px 16px', borderRadius: 99, whiteSpace: 'nowrap',
+                background: 'var(--bg-tertiary)', border: '0.5px solid var(--border-strong)',
+                boxShadow: 'var(--shadow-md)', pointerEvents: 'none',
+              }}>
+                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                  Previous patches
+                </span>
+              </div>
+              <div style={{ overflow: 'hidden' }}>
+                <div style={{ display: 'flex', width: 'max-content', padding: '9px 0' }} className="marquee-track-reverse">
+                  {[recent, recent].map((batch, batchIdx) => (
+                    <div key={batchIdx} style={{ display: 'flex', flexShrink: 0 }}>
+                      {batch.map((seq, i) => (
+                        <a
+                          key={`pp-${batchIdx}-${seq.id}-${i}`}
+                          href={`/sequences/${seq.slug}`}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            padding: '8px 14px', margin: '0 6px', flexShrink: 0,
+                            background: 'var(--bg-primary)', border: '0.5px solid var(--border-strong)',
+                            borderRadius: 'var(--radius-sm)',
+                            textDecoration: 'none', whiteSpace: 'nowrap',
+                          }}
+                        >
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: getClassColor(seq.class_id), flexShrink: 0 }} />
+                          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', fontWeight: 500 }}>{seq.title}</span>
+                          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {seq.class_name}</span>
+                          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {formatDistanceToNow(new Date(seq.created_at), { addSuffix: true })}</span>
+                        </a>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </section>
       )}
 
