@@ -12,6 +12,25 @@ import SequenceMark from '@/components/ui/SequenceMark'
 // the 1h window changelog uses elsewhere) so the patch-12.1 ticker picks up new posts sooner.
 export const revalidate = 1800
 
+// Marks where a "what row is this" label card gets woven into a ticker. A symbol rather
+// than a string/object literal so it can never collide with real sequence data.
+const TICKER_LABEL = Symbol('ticker-label')
+
+// Inserts a TICKER_LABEL marker every `every` real items — a label card dropped into the
+// scroll periodically, like a radio station ID between songs, instead of pinned to one
+// fixed spot. Always ends on a marker so the loop seam (this array gets duplicated for the
+// seamless marquee trick) reads cleanly no matter how many items are in the list.
+function withLabelCards<T>(items: T[], every: number): (T | typeof TICKER_LABEL)[] {
+  if (items.length === 0) return []
+  const out: (T | typeof TICKER_LABEL)[] = []
+  items.forEach((item, i) => {
+    out.push(item)
+    if ((i + 1) % every === 0) out.push(TICKER_LABEL)
+  })
+  if (out[out.length - 1] !== TICKER_LABEL) out.push(TICKER_LABEL)
+  return out
+}
+
 export default async function HomePage() {
   const [stats, trending, currentPatchTicker] = await Promise.all([
     fetchHomeStats(),
@@ -367,93 +386,104 @@ export default async function HomePage() {
           borrowed from Modrinth's front page, which runs multiple rows of content
           scrolling in opposite directions at different speeds rather than one flat strip.
           Row 1 is current-patch sequences in bigger cards (the stuff most visitors actually
-          want right now); row 2 is everything else, in the original thin ticker style.
-          Each row omits itself independently if it has nothing to show. */}
+          want right now); row 2 is everything else, in the original thin ticker style. A
+          label card (built with withLabelCards, defined below the component) is woven into
+          the flow every 8-10 real cards to announce what the row is, instead of a fixed
+          floating label — that read as a "tunnel" the cards disappeared behind, which
+          didn't work. Each row omits itself independently if it has nothing to show. */}
       {(currentPatchTicker.sequences.length > 0 || recent.length > 0) && (
         <section style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-secondary)' }}>
           {currentPatchTicker.sequences.length > 0 && (
-            <div style={{ position: 'relative', overflow: 'hidden', borderBottom: recent.length > 0 ? '0.5px solid var(--border)' : 'none' }}>
-              {/* Label floats centered over the track instead of sitting in a fixed side
-                  rail — cards scroll the full row width and pass underneath/behind it, so
-                  it reads as a "tunnel" the ticker runs through rather than a label bolted
-                  to one edge. Cards on either side stay clickable since the label only
-                  covers the middle sliver. */}
-              <div style={{
-                position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
-                zIndex: 2, display: 'flex', alignItems: 'center', gap: 8,
-                padding: '9px 18px', borderRadius: 99, whiteSpace: 'nowrap',
-                background: 'var(--accent-subtle)', border: '0.5px solid rgba(29,158,117,0.35)',
-                boxShadow: 'var(--shadow-md)', pointerEvents: 'none',
-              }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
-                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--accent-text)' }}>
-                  Current Patch {currentPatchTicker.patch}
-                </span>
-              </div>
-              <div style={{ overflow: 'hidden' }}>
-                <div style={{ display: 'flex', width: 'max-content', padding: '10px 0' }} className="marquee-track">
-                  {[currentPatchTicker.sequences, currentPatchTicker.sequences].map((batch, batchIdx) => (
-                    <div key={batchIdx} style={{ display: 'flex', flexShrink: 0 }}>
-                      {batch.map((seq, i) => {
-                        const classColor = getClassColor(seq.class_id)
+            <div style={{ overflow: 'hidden', borderBottom: recent.length > 0 ? '0.5px solid var(--border)' : 'none' }}>
+              <div style={{ display: 'flex', width: 'max-content', padding: '10px 0' }} className="marquee-track">
+                {[withLabelCards(currentPatchTicker.sequences, 8), withLabelCards(currentPatchTicker.sequences, 8)].map((batch, batchIdx) => (
+                  <div key={batchIdx} style={{ display: 'flex', flexShrink: 0 }}>
+                    {batch.map((item, i) => {
+                      if (item === TICKER_LABEL) {
                         return (
-                          <a
-                            key={`cp-${batchIdx}-${seq.id}-${i}`}
-                            href={`/sequences/${seq.slug}`}
+                          <div
+                            key={`cp-label-${batchIdx}-${i}`}
                             style={{
-                              display: 'flex', flexDirection: 'column', gap: 5,
-                              padding: '8px 14px', margin: '0 6px', width: 230, flexShrink: 0,
-                              background: 'var(--bg-primary)', border: '0.5px solid var(--border-strong)',
-                              borderLeft: `3px solid ${classColor}`, borderRadius: 'var(--radius-sm)',
-                              textDecoration: 'none',
+                              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
+                              padding: '17px 14px', margin: '0 6px', width: 230, flexShrink: 0,
+                              background: 'var(--accent-subtle)', border: '0.5px solid rgba(29,158,117,0.35)',
+                              borderRadius: 'var(--radius-sm)',
                             }}
                           >
-                            <span style={{
-                              fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)',
-                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                            }}>
-                              {seq.title}
+                            <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
+                            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--accent-text)', whiteSpace: 'nowrap' }}>
+                              Current Patch {currentPatchTicker.patch} Sequences
                             </span>
-                            <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                              <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                                <Badge color={classColor} style={{ color: 'var(--text-primary)' }}>{seq.class_name}</Badge>
-                                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  {seq.author?.display_name || seq.author?.username || 'Unknown'}
-                                </span>
-                              </span>
-                              <span style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0, color: 'var(--text-muted)' }}>
-                                <Eye size={11} />
-                                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600 }}>{seq.view_count?.toLocaleString() ?? 0}</span>
-                              </span>
-                            </span>
-                          </a>
+                          </div>
                         )
-                      })}
-                    </div>
-                  ))}
-                </div>
+                      }
+                      const seq = item
+                      const classColor = getClassColor(seq.class_id)
+                      return (
+                        <a
+                          key={`cp-${batchIdx}-${seq.id}-${i}`}
+                          href={`/sequences/${seq.slug}`}
+                          style={{
+                            display: 'flex', flexDirection: 'column', gap: 5,
+                            padding: '8px 14px', margin: '0 6px', width: 230, flexShrink: 0,
+                            background: 'var(--bg-primary)', border: '0.5px solid var(--border-strong)',
+                            borderLeft: `3px solid ${classColor}`, borderRadius: 'var(--radius-sm)',
+                            textDecoration: 'none',
+                          }}
+                        >
+                          <span style={{
+                            fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>
+                            {seq.title}
+                          </span>
+                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                              <Badge color={classColor} style={{ color: 'var(--text-primary)' }}>{seq.class_name}</Badge>
+                              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {seq.author?.display_name || seq.author?.username || 'Unknown'}
+                              </span>
+                            </span>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0, color: 'var(--text-muted)' }}>
+                              <Eye size={11} />
+                              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600 }}>{seq.view_count?.toLocaleString() ?? 0}</span>
+                            </span>
+                          </span>
+                        </a>
+                      )
+                    })}
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
           {recent.length > 0 && (
-            <div style={{ position: 'relative', overflow: 'hidden' }}>
-              <div style={{
-                position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
-                zIndex: 2, display: 'flex', alignItems: 'center', gap: 7,
-                padding: '7px 16px', borderRadius: 99, whiteSpace: 'nowrap',
-                background: 'var(--bg-tertiary)', border: '0.5px solid var(--border-strong)',
-                boxShadow: 'var(--shadow-md)', pointerEvents: 'none',
-              }}>
-                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                  Previous patches
-                </span>
-              </div>
-              <div style={{ overflow: 'hidden' }}>
-                <div style={{ display: 'flex', width: 'max-content', padding: '9px 0' }} className="marquee-track-reverse">
-                  {[recent, recent].map((batch, batchIdx) => (
-                    <div key={batchIdx} style={{ display: 'flex', flexShrink: 0 }}>
-                      {batch.map((seq, i) => (
+            <div style={{ overflow: 'hidden' }}>
+              <div style={{ display: 'flex', width: 'max-content', padding: '9px 0' }} className="marquee-track-reverse">
+                {[withLabelCards(recent, 10), withLabelCards(recent, 10)].map((batch, batchIdx) => (
+                  <div key={batchIdx} style={{ display: 'flex', flexShrink: 0 }}>
+                    {batch.map((item, i) => {
+                      if (item === TICKER_LABEL) {
+                        return (
+                          <div
+                            key={`pp-label-${batchIdx}-${i}`}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 7,
+                              padding: '8px 14px', margin: '0 6px', flexShrink: 0,
+                              background: 'rgba(217,164,65,0.14)', border: '0.5px solid rgba(217,164,65,0.5)',
+                              borderRadius: 'var(--radius-sm)',
+                            }}
+                          >
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#D9A441', flexShrink: 0 }} />
+                            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#E8B85C', whiteSpace: 'nowrap' }}>
+                              Previous Patch Sequences
+                            </span>
+                          </div>
+                        )
+                      }
+                      const seq = item
+                      return (
                         <a
                           key={`pp-${batchIdx}-${seq.id}-${i}`}
                           href={`/sequences/${seq.slug}`}
@@ -470,10 +500,10 @@ export default async function HomePage() {
                           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {seq.class_name}</span>
                           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {formatDistanceToNow(new Date(seq.created_at), { addSuffix: true })}</span>
                         </a>
-                      ))}
-                    </div>
-                  ))}
-                </div>
+                      )
+                    })}
+                  </div>
+                ))}
               </div>
             </div>
           )}
