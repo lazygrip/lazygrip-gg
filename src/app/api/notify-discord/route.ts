@@ -131,14 +131,14 @@ export async function POST(req: NextRequest) {
     // ownership check directly beneath it, so widening the projection adds
     // columns to a round trip that was being made anyway.
     //
-    // wow_build is NOT in this list and must not be added yet. The column does
-    // not exist until PR 2, and PostgREST rejects the whole query on one
-    // unknown column -- which here would 500 every publish on the site, not
-    // just the Discord half of it.
+    // wow_build joined this list with migration 019, which created the column.
+    // It was held back until then because PostgREST rejects the whole query on
+    // one unknown column, and here that would have 500'd every publish on the
+    // site rather than only the Discord half of it.
     const { data: sequenceRow, error: lookupError } = await admin
       .from('sequences')
       .select(
-        'id, slug, title, author_id, class_name, spec_name, hero_talent, content_type, status, discord_thread_id, spec_id, talent_string, grip_string, grip_version, patch_version, created_at, updated_at',
+        'id, slug, title, author_id, class_name, spec_name, hero_talent, content_type, status, discord_thread_id, spec_id, talent_string, grip_string, grip_version, patch_version, wow_build, created_at, updated_at',
       )
       .eq('slug', slug)
       .single()
@@ -278,8 +278,10 @@ export async function POST(req: NextRequest) {
       envelopeWowPatch ||
       (typeof sequenceRow?.patch_version === 'string' ? sequenceRow.patch_version : '')
 
-    // No column to fall back to: wow_build lands in PR 2.
-    const wowBuild = envelopeWowBuild || ''
+    // Falls back to the column now that migration 019 has created one, the
+    // same envelope-first shape as emsVersion and wowPatch above.
+    const wowBuild =
+      envelopeWowBuild || (typeof sequenceRow?.wow_build === 'string' ? sequenceRow.wow_build : '')
 
     // The talent string runs the other way round -- column first, export as
     // the gap-filler -- for the reason spelled out at the same lines in the
