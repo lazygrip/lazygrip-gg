@@ -200,6 +200,20 @@ export function cleanText(value: unknown, max: number): string {
   return value.replace(/\s+/g, ' ').trim().slice(0, max)
 }
 
+// Discord's hard cap on a THREAD NAME. It is SMALLER than the 200 both callers
+// hand cleanText for the embed title, and neither number is a typo for the
+// other: they are two different limits on two different surfaces of the same
+// post. An embed title of 150 characters renders fine. A thread_name of 150 is
+// a 400 that fails the WHOLE webhook post, which on the publish path means the
+// card never lands, the thread is never created, and the publish itself fails
+// -- for a title that was merely long.
+//
+// Nothing is currently over it: the longest live title measured 2026-08-13 was
+// 83 characters, so applying this changes no existing thread name. It is here
+// so that the first 101-character title costs a truncation instead of a
+// publish.
+export const THREAD_NAME_MAX = 100
+
 // className, specName, heroTalent and contentType are typed `unknown` on
 // purpose. They reach the two callers from different places and neither place
 // can promise a string: notify-discord takes them off a JSON request body it
@@ -671,5 +685,144 @@ export async function postImportMessage(
   if (!res.ok) {
     const text = await res.text().catch(() => '')
     throw new Error(`Discord rejected the import-string message: ${res.status} ${text.slice(0, 200)}`)
+  }
+}
+
+// ===========================================================================
+// RENAMING AND RETAGGING A THREAD THAT ALREADY EXISTS
+// ===========================================================================
+//
+// thread_name and applied_tags are honoured ONLY on the webhook post that
+// CREATES a thread. Discord silently ignores both when the webhook targets an
+// existing thread -- notify-discord says exactly that at its own thread_name
+// assignment. So an author who renames a sequence, or changes its class or its
+// content type, leaves the forum thread permanently wrong and nothing anywhere
+// reports the divergence.
+//
+// MEASURED LIVE 2026-08-13: 65 published sequences, all 65 linked to a thread,
+// and 1 name had already drifted -- thread 1536904149231472641 read "12.0.7
+// MFDOOM - Protection Warrior" against a row reading "12.1.0 MFDOOM -
+// Protection Warrior". It was renamed by hand the same day. Tag drift was 0, so
+// the tag half is the same bug with no live instance yet.
+//
+// THIS NEEDS A BOT TOKEN AND THERE IS NO WORKAROUND. A webhook cannot rename
+// the thread it created. Only PATCH /channels/{id} carrying a bot Authorization
+// header can, and that is a different credential from DISCORD_WEBHOOK_URL.
+//
+// THIS IS NOT THE ONLY IMPLEMENTATION, AND THAT IS DELIBERATE. Jesper's bot
+// runs the identical comparison as an hourly reconcile over the whole published
+// catalogue. This one is the FAST PATH: it corrects a rename within seconds of
+// the publish that caused it. The sweep is the safety net that catches whatever
+// this drops. Do not add a retry ladder here on the grounds that a failure goes
+// unhandled -- it is handled, an hour later, somewhere else.
+//
+// NO RETRY, AND THE RATE LIMIT IS WHY. PATCH /channels/{id} that changes a name
+// or a topic is limited to 2 requests per 10 MINUTES PER CHANNEL, undocumented
+// but long established, and a 429 on it can carry a retry_after approaching 600
+// seconds. Retrying inside a serverless invocation would spend the function's
+// whole duration budget waiting on work the reconcile does for free.
+//
+// THE TOKEN IS NEVER LOGGED and never reaches an exception message. Every log
+// line below carries a status, a thread id or a caller-supplied string put
+// through logValue; none of them carries a header.
+export async function syncThreadMetadata(
+  threadId: string,
+  name: string,
+  appliedTags: string[],
+): Promise<'skipped' | 'match' | 'synced' | 'failed'> {
+  // WRAPPED WHOLE so this can never throw at its caller. It is scheduled with
+  // after() on a route whose actual job is publishing a sequence, and a
+  // cosmetic metadata failure must not be able to reach that route's error
+  // path however it fails -- a DNS error, a body that is not JSON, anything.
+  try {
+    const token = process.env.DISCORD_BOT_TOKEN
+    if (!token) {
+      // A CONFIGURATION FACT, NOT AN ERROR, which is why this is console.info
+      // and not warn. This is the state the change merges in and the state
+      // production stays in until the variable is set in Vercel, so anything
+      // louder would train a reader to scroll past the line that will one day
+      // actually mean something.
+      console.info(
+        '[discord-embed] DISCORD_BOT_TOKEN is not set, skipping the thread metadata sync',
+      )
+      return 'skipped'
+    }
+
+    // The same validation both routes already apply to a thread id before
+    // trusting it. Interpolating an unvalidated value into an API path is how
+    // a stored null or a stray slug turns into a request against some other
+    // channel, and there is no version of that worth attempting.
+    if (!SNOWFLAKE_RE.test(threadId)) {
+      console.error(
+        `[discord-embed] Refusing to sync a thread id that is not a snowflake: ${logValue(threadId)}`,
+      )
+      return 'failed'
+    }
+
+    const url = `https://discord.com/api/v10/channels/${threadId}`
+    const headers = {
+      Authorization: `Bot ${token}`,
+      'Content-Type': 'application/json',
+    }
+
+    // READ BEFORE WRITE, which is the whole reason this is affordable. The
+    // GET is an ordinary channel-read bucket; the PATCH is the 2-per-10-minutes
+    // one. Comparing first is what keeps an unchanged sequence at zero writes
+    // against the expensive bucket, and an unchanged sequence is nearly every
+    // publish.
+    const current = await fetch(url, { headers })
+    if (!current.ok) {
+      console.error(
+        `[discord-embed] Could not read thread ${threadId} for a metadata sync: ${current.status}`,
+      )
+      return 'failed'
+    }
+
+    const channel = (await current.json()) as { name?: unknown; applied_tags?: unknown }
+    const currentName = typeof channel.name === 'string' ? channel.name : ''
+    const currentTags = Array.isArray(channel.applied_tags)
+      ? channel.applied_tags.map((tag) => String(tag))
+      : []
+
+    // THE TAGS ARE COMPARED AS SETS. Discord promises nothing about the ORDER
+    // of applied_tags, and there is no reason it should come back in the order
+    // resolveAppliedTags builds -- class first, then content type. An array
+    // comparison would therefore read "different" for a thread that is already
+    // correctly tagged, and would fire a PATCH on every single publish: exactly
+    // the traffic the per-channel bucket punishes, in exchange for no change at
+    // all.
+    const desired = new Set(appliedTags)
+    const existing = new Set(currentTags)
+    const tagsMatch =
+      desired.size === existing.size && Array.from(desired).every((tag) => existing.has(tag))
+
+    // ONLY THE FIELDS THAT DIFFER. A PATCH that re-sends the name it already
+    // has still consumes the rename bucket, so sending nothing is not the same
+    // as sending the same thing.
+    const patch: Record<string, unknown> = {}
+    if (currentName !== name) patch.name = name
+    if (!tagsMatch) patch.applied_tags = appliedTags
+
+    if (Object.keys(patch).length === 0) return 'match'
+
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(patch),
+    })
+    if (!res.ok) {
+      // A 429 lands here like any other refusal, and is deliberately not slept
+      // off or retried. See the header: the hourly reconcile will make the
+      // identical comparison and the identical PATCH.
+      console.error(
+        `[discord-embed] Thread ${threadId} metadata PATCH failed: ${res.status}`,
+      )
+      return 'failed'
+    }
+
+    return 'synced'
+  } catch (err) {
+    console.error('[discord-embed] Thread metadata sync failed unexpectedly:', err)
+    return 'failed'
   }
 }
