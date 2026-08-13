@@ -11,6 +11,8 @@ import {
   resolveAppliedTags,
   SLUG_RE,
   SNOWFLAKE_RE,
+  syncThreadMetadata,
+  THREAD_NAME_MAX,
 } from '@/lib/discord-embed'
 import { decodeExport } from '@/lib/workshop'
 
@@ -237,6 +239,22 @@ export async function POST(req: NextRequest) {
     const rowTitle = sequenceRow ? cleanText(sequenceRow.title, 200) : ''
     const sequenceTitle = rowTitle || title
 
+    // A SECOND, SHORTER FORM OF THE SAME STRING, FOR ONE SURFACE ONLY. The
+    // embed title and the relay payload keep sequenceTitle at its 200 cap;
+    // only the Discord THREAD NAME takes this one. Those are two different
+    // surfaces with two different limits -- see THREAD_NAME_MAX for the
+    // numbers -- and collapsing them to one cap would either truncate the card
+    // for no reason or leave the thread name able to 400 the entire webhook
+    // post, which on this route means the publish fails outright.
+    //
+    // It is a plain slice rather than another cleanText call because
+    // sequenceTitle has already been through cleanText: the whitespace is
+    // collapsed and the ends are trimmed, so there is nothing left for a
+    // second normalisation to do and re-normalising would only invite the two
+    // strings to diverge. The cut can leave a trailing space when character
+    // 100 happens to be one, which Discord accepts and trims itself.
+    const threadName = sequenceTitle.slice(0, THREAD_NAME_MAX)
+
     // BUILD CONTEXT: THE EXPORT ENVELOPE WINS, THE COLUMN IS THE FALLBACK.
     // Identical rule and identical reasoning to the backfill route. The
     // envelope is what the addon stamped at export time; grip_version is a
@@ -355,7 +373,9 @@ export async function POST(req: NextRequest) {
     // ignores thread_name when the webhook targets an existing thread, and the
     // only reason we ever send it is to name the thread being created.
     if (!existingThreadId) {
-      body.thread_name = sequenceTitle
+      // threadName, not sequenceTitle: this is the 100-character surface. The
+      // embed above still carries the full 200-capped string.
+      body.thread_name = threadName
 
       // applied_tags rides along with thread_name and only with thread_name,
       // because this is the post that CREATES the thread and Discord accepts
@@ -389,7 +409,11 @@ export async function POST(req: NextRequest) {
       // that is easy to miss: it fires when a post into a recorded thread
       // fails, which means the thread it names is being created right now and
       // will keep this name permanently, exactly like the first one.
-      retryBody.thread_name = sequenceTitle
+      // threadName here too, and this is the assignment that is easy to leave
+      // behind: it also creates a thread, so it is also the 100-character
+      // surface, and a title between 101 and 200 characters would 400 here
+      // exactly as it would above.
+      retryBody.thread_name = threadName
       // THE SECOND OF THE TWO THREAD-CREATING SITES, and the one that is easy
       // to miss -- it fires when a post into a recorded thread fails, which
       // means a thread is being created right here and will keep whatever tags
@@ -502,6 +526,56 @@ export async function POST(req: NextRequest) {
           ? `${threadLinkWarning} ${importWarning}`
           : importWarning
       }
+    }
+
+    // ======================================================================
+    // RENAME AND RETAG A THREAD THAT ALREADY EXISTED
+    // ======================================================================
+    //
+    // ONLY when the thread already existed. If this call created it, the post
+    // above already carried thread_name and applied_tags and Discord honoured
+    // both, so a sync would be two wasted round trips on every single new
+    // sequence forever. isNewThread is exactly that distinction and it is
+    // already true for BOTH creation paths -- the ordinary one and the
+    // retry-as-new-thread one -- so this needs no second condition.
+    //
+    // THE VALUES ARE THE ONES RESOLVED ABOVE, deliberately not recomputed.
+    // appliedTags came from the same row-first className and contentType the
+    // card was built from, and threadName is the same string a creating post
+    // would have used. Resolving either again here would be a second place for
+    // the card and the thread to disagree, which is the drift the shared
+    // builder module was extracted to prevent.
+    //
+    // SCHEDULED WITH after(), for the reason written out at length at the
+    // relay call below: this response must not wait on a Discord round trip,
+    // and a floating promise on a serverless platform is torn down the moment
+    // the response returns. after() hands it to waitUntil without delaying
+    // anything. syncThreadMetadata makes at most two calls and never retries,
+    // so it cannot sit on the invocation the way a retry ladder would.
+    //
+    // A 'failed' VERDICT DOES NOT CHANGE THE RESPONSE, and it is deliberately
+    // NOT folded into threadLinkWarning the way the import-string failure just
+    // above is. That string is shown to the person publishing, and a forum
+    // thread carrying a stale name is neither something they did nor anything
+    // they can act on -- surfacing it would be an alarm with no action
+    // attached to it. The console line is for whoever maintains the forum, and
+    // the hourly reconcile on Sataana's bot is what actually repairs it.
+    if (!isNewThread && finalThreadId) {
+      after(() =>
+        syncThreadMetadata(finalThreadId, threadName, appliedTags)
+          .then((verdict) => {
+            // Three outcomes worth telling apart at a glance: 'skipped' means
+            // DISCORD_BOT_TOKEN is not set yet, 'match' means the thread was
+            // already correct, and 'failed' is the only one worth looking at.
+            console.info(`[notify-discord] Thread metadata sync for ${slug}: ${verdict}`)
+          })
+          .catch((err) => {
+            // syncThreadMetadata is wrapped whole and documents that it never
+            // throws. This guards the case where that stops being true, so an
+            // unhandled rejection can never surface from inside after().
+            console.error('[notify-discord] Unexpected error syncing thread metadata:', err)
+          }),
+      )
     }
 
     // Fire the relay to Sataana's gripbot now that we know the resolved
