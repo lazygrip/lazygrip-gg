@@ -56,6 +56,7 @@ Open http://localhost:3000
 3. Add environment variables:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `DISCORD_BOT_TOKEN` (optional) - renames and retags an existing Discord forum thread when a published sequence changes. Needs `MANAGE_THREADS` in the guild holding the sequence forum. Leaving it unset skips that sync and changes nothing else.
 4. Deploy — Vercel auto-detects Next.js
 
 ### Add your domain

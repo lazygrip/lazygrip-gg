@@ -11,6 +11,7 @@ import {
   resolveAppliedTags,
   SLUG_RE,
   SNOWFLAKE_RE,
+  THREAD_NAME_MAX,
 } from '@/lib/discord-embed'
 import { decodeExport } from '@/lib/workshop'
 
@@ -396,10 +397,22 @@ export async function POST(req: NextRequest) {
     // pre-existing threads were renamed to their bare titles the same day; a
     // backfill that reintroduced prefixes on 40 more would undo that on the
     // spot.
+    // CAPPED AT 100 FOR THE THREAD NAME ONLY, the same slice notify-discord
+    // applies at both of its own thread-creating sites. `title` above is
+    // cleanText(sequence.title, 200), which is the right cap for the embed
+    // title and for the relay payload and is TWICE what Discord accepts in a
+    // thread_name: over 100 it answers 400 and refuses the whole post, so this
+    // route would produce no thread at all for that sequence rather than a
+    // slightly shortened name. This route reads the same title column through
+    // the same helper as notify-discord, so it carries exactly the same
+    // exposure and takes exactly the same fix.
+    //
+    // No live title is near it -- the longest measured 2026-08-13 was 83
+    // characters -- so this changes nothing about the backfill as it stands.
     const createBody: Record<string, unknown> = {
       embeds: [embed],
       username: 'LazyGrip',
-      thread_name: title,
+      thread_name: title.slice(0, THREAD_NAME_MAX),
     }
 
     // FORUM TAGS, AND THE ONLY MOMENT THEY CAN BE SET FROM HERE. applied_tags
