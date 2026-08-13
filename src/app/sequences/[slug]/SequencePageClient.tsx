@@ -11,6 +11,7 @@ import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
 import type { SequencePageResult } from '@/lib/sequence-server'
 import { useUsernameGate } from '@/lib/useUsernameGate'
 import UsernameRequiredModal from '@/components/UsernameRequiredModal'
+import DiscordLinkPrompt from '@/components/sequence/DiscordLinkPrompt'
 
 const SITE_OWNER_ID = 'c2374192-e541-4636-9baf-84fc192cff52'
 
@@ -1030,6 +1031,11 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
           </div>
         </div>
       </div>
+
+      {/* Only the author sees this, and only when their account has no Discord
+          connected. The component decides the second half for itself against
+          the caller's own session; isAuthor is the half this page knows. */}
+      {isAuthor && <DiscordLinkPrompt />}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 16, alignItems: 'flex-start' }}>
 
