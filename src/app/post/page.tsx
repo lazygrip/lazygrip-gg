@@ -7,6 +7,7 @@ import { AlertCircle, Wand2 } from 'lucide-react'
 import TiptapEditor from '@/components/editor/TiptapEditor'
 import type { SequenceStep } from '@/types'
 import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
+import { notifyDiscord } from '@/lib/notify-discord'
 import { useUsernameGate } from '@/lib/useUsernameGate'
 import UsernameRequiredModal from '@/components/UsernameRequiredModal'
 
@@ -47,14 +48,11 @@ interface CollectionSequence {
   checked: boolean
 }
 
-function notifyDiscord(payload: Record<string, unknown>) {
-  fetch('/api/notify-discord', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    keepalive: true,
-    body: JSON.stringify(payload),
-  }).catch(err => console.error('[notify-discord] fetch failed:', err))
-}
+// MOVED TO src/lib/notify-discord.ts ON 2026-08-14, imported at the top of this
+// file. It was defined here, and a second caller arrived:
+// src/app/sequences/[slug]/update/page.tsx publishes a whole new version
+// through publish_sequence_version and never told Discord about any of them.
+// The module header records how that was found.
 
 // THE EXPORT ENVELOPE, WHICH IS WHERE THE ADDON VERSION ACTUALLY LIVES.
 //
