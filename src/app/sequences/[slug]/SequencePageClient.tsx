@@ -1165,7 +1165,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                 {selectedVersion.grip_string}
               </div>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 8 }}>
-                In-game: type /grip import and paste this string
+                In-game: type /gems import and paste this string
               </p>
             </div>
           )}
