@@ -15,9 +15,21 @@ import {
 } from '@/lib/discord-embed'
 import { decodeExport } from '@/lib/workshop'
 
-// Operator-only route that gives one published sequence a Discord forum
-// thread, posted as if its REAL AUTHOR had published it. Design doc section
-// 14.4 and 14.6. Added 2026-08-09.
+// Operator-only route that posts one published sequence into the Discord
+// forum, as if its REAL AUTHOR had done it. Design doc section 14.4 and 14.6.
+// Added 2026-08-09.
+//
+// THREE MODES, and the body says which:
+//
+//   create    no threadId, no mode (or mode 'create'). Creates the thread.
+//             The 2026-08-09 backfill. Refuses if the row already has one.
+//   repoint   threadId supplied. Writes the link and posts NOTHING, for a
+//             thread that already exists in the forum and holds real
+//             conversation the database does not know about.
+//   update    mode 'update'. Posts a fresh card and import string into the
+//             thread the row ALREADY names, and stamps
+//             last_discord_notified_at. Added 2026-08-14; see the block beside
+//             the mode parsing for why.
 //
 // WHY IT EXISTS. The bridge currently reaches 14 percent of the conversation
 // happening on lazygrip.net: 58 published sequences, 18 with a Discord thread,
@@ -132,6 +144,57 @@ export async function POST(req: NextRequest) {
     }
     const repointThreadId = threadIdProvided ? (threadIdRaw as string) : null
 
+    // ==================================================================
+    // UPDATE MODE, ADDED 2026-08-14. THE THIRD MODE AND THE ONLY ONE THAT
+    // POSTS INTO A THREAD THAT ALREADY EXISTS.
+    // ==================================================================
+    //
+    // WHY IT EXISTS. update_sequence_metadata writes grip_string, so the
+    // "Minor edit" checkbox on src/app/post/page.tsx can replace a published
+    // macro outright, and until 2026-08-14 that branch never called
+    // notify-discord. Nine live rows went through it between 2026-08-12 and
+    // 2026-08-14 with no card, no relay and a null last_discord_notified_at.
+    // The form is fixed in the same change, and this mode is the BACKSTOP for
+    // the case the form cannot cover: autosave writes the same RPC on an 800ms
+    // debounce, so an author who edits and closes the tab without pressing Save
+    // changes still mutates the published macro and still tells nobody.
+    // gripbot's hourly sweep detects that and calls this.
+    //
+    // AN EXPLICIT MODE STRING RATHER THAN INFERRING IT. The two existing modes
+    // are told apart by whether threadId is present, and a third mode cannot
+    // join that scheme: update also operates on a thread that already exists,
+    // so inferring from threadId would make the same body mean two opposite
+    // things depending on a column in the database. It is also a deliberately
+    // loud call to make. This mode posts publicly and cannot be undone, and
+    // 'update' in the body is a caller saying so on purpose.
+    //
+    // 'create' IS ACCEPTED AND IS THE DEFAULT, so every existing caller and
+    // every recorded backfill invocation keeps working byte for byte.
+    const modeRaw = raw?.mode
+    const mode = modeRaw === undefined || modeRaw === null ? 'create' : modeRaw
+    if (mode !== 'create' && mode !== 'update') {
+      return NextResponse.json(
+        { ok: false, error: 'Invalid mode, expected create or update' },
+        { status: 400 },
+      )
+    }
+    const isUpdateMode = mode === 'update'
+
+    // THE TWO CANNOT BE COMBINED, and refusing here rather than picking one is
+    // the point. A body carrying both a threadId and mode 'update' is a caller
+    // asking for a repoint and a post at the same time, and those disagree
+    // about what threadId means: to a repoint it is the thread to START
+    // pointing at, to an update it would be the thread to post into, which this
+    // route reads off the row instead. Guessing which was meant is how an
+    // operator repairing a link ends up posting a card into a stranger's
+    // thread.
+    if (isUpdateMode && repointThreadId) {
+      return NextResponse.json(
+        { ok: false, error: 'threadId cannot be combined with mode update' },
+        { status: 400 },
+      )
+    }
+
     const admin = createAdminClient()
 
     // One read serves both modes: it proves the sequence exists, it carries
@@ -176,9 +239,51 @@ export async function POST(req: NextRequest) {
         ? sequence.discord_thread_id.trim()
         : sequence.discord_thread_id ?? null
 
-    if (existingThreadId) {
+    // UPDATE MODE INVERTS THIS TEST RATHER THAN SKIPPING IT, which is why the
+    // condition is guarded instead of the block being moved. Create and repoint
+    // refuse when a thread ALREADY exists; update refuses when one does NOT.
+    // Both are the same rule stated once per mode: this route never guesses
+    // which thread a sequence belongs to, so a mode whose expectation about the
+    // column is not met stops and says so.
+    if (!isUpdateMode && existingThreadId) {
       return NextResponse.json(
         { ok: false, error: 'Sequence already has a Discord thread id' },
+        { status: 409 },
+      )
+    }
+
+    // UPDATE MODE IS THE FIRST PATH IN THIS ROUTE THAT POSTS INTO A THREAD THE
+    // COLUMN NAMES, so it is the first that has to trust the column's CONTENTS
+    // rather than only its emptiness. Create and repoint read it to decide
+    // whether to refuse and never build a URL out of it; this one does, and a
+    // column holding anything that is not a snowflake would produce a malformed
+    // thread_id and a Discord 400 that reads like a webhook problem.
+    //
+    // NOTE THIS IS STRICTER THAN notify-discord, deliberately and in the same
+    // direction the 409 above already is. That route treats an unusable stored
+    // value as "no thread" and posts a NEW one, which is right for a publish
+    // because the publish has to reach Discord somehow. Here it refuses:
+    // nothing about an operator sweep is urgent enough to justify creating a
+    // second thread for a sequence whose column already holds something
+    // unexpected, and a human should look at that row instead.
+    const updateThreadId =
+      typeof existingThreadId === 'string' && SNOWFLAKE_RE.test(existingThreadId)
+        ? existingThreadId
+        : null
+
+    // 409 and not 404, because the sequence was found. What is missing is a
+    // usable thread, and the fix is a call to this same route in CREATE mode,
+    // which is named in the message so an operator reading a failed sweep does
+    // not have to work that out. gripbot never reaches this: its sweep skips a
+    // row with no discord_thread_id exactly as threadsync and pingsync do.
+    if (isUpdateMode && !updateThreadId) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: existingThreadId
+            ? 'Sequence discord_thread_id is not a usable thread id'
+            : 'Sequence has no Discord thread to update, create one first',
+        },
         { status: 409 },
       )
     }
@@ -223,8 +328,22 @@ export async function POST(req: NextRequest) {
     }
 
     // ======================================================================
-    // CREATE MODE. No threadId supplied, so this route creates the thread.
+    // CREATE AND UPDATE MODE. Everything from here to the post is SHARED.
     // ======================================================================
+    //
+    // The two modes differ in exactly three places and nowhere else: where the
+    // webhook post goes, whether the card carries the edit glyph, and what is
+    // written back afterwards. Everything between here and there -- the status
+    // check, the author, the public name, the title, the build context, the
+    // talent string, the embed and the tags -- is one copy serving both.
+    //
+    // THAT IS THE WHOLE REASON THIS MODE LIVES IN THIS ROUTE rather than in a
+    // new one. A second route would have needed its own copy of the envelope
+    // precedence rule, its own publicName call and its own fallback ladder, and
+    // the first time one of them was corrected the two cards would have started
+    // disagreeing in the same forum with nothing failing to say so. That is the
+    // exact drift src/lib/discord-embed.ts was extracted to prevent, and
+    // reintroducing it one level up would have undone it.
 
     if (sequence.status !== 'published') {
       return NextResponse.json(
@@ -360,9 +479,19 @@ export async function POST(req: NextRequest) {
       typeof sequence.talent_string === 'string' ? sequence.talent_string.trim() : ''
     const talentString = columnTalentString || exportTalentString || ''
 
-    // isEdit and isUpdate are both false: a backfill is the publish that
-    // should have happened at the time, so the card carries no pencil and no
-    // cycle glyph.
+    // IN CREATE MODE both are false: a backfill is the publish that should have
+    // happened at the time, so the card carries no pencil and no cycle glyph.
+    //
+    // IN UPDATE MODE isEdit is true and isUpdate stays false, and the pairing
+    // is copied from the client path this mode backstops rather than chosen
+    // here. src/app/post/page.tsx sends exactly that pair from its minor-edit
+    // branch, because update_sequence_metadata creates no sequence_versions
+    // row: the macro moved, the version history did not. isUpdate would put a
+    // cycle glyph on a card announcing a version that does not exist, and a
+    // reader comparing it against the version list on the sequence page would
+    // find nothing there. A card posted by the sweep and a card posted by the
+    // form must be indistinguishable, because which of the two got there first
+    // is an implementation detail nobody in the forum can see.
     //
     // created_at and updated_at go in so the card is stamped with the
     // SEQUENCE's time rather than the backfill's. Without them every one of
@@ -384,9 +513,162 @@ export async function POST(req: NextRequest) {
       createdAt: sequence.created_at,
       updatedAt: sequence.updated_at,
       authorName,
-      isEdit: false,
+      isEdit: isUpdateMode,
       isUpdate: false,
     })
+
+    // ======================================================================
+    // UPDATE MODE. The card goes into the thread the row already names, and
+    // this branch returns before create mode's first line.
+    // ======================================================================
+    if (isUpdateMode && updateThreadId) {
+      // NO thread_name AND NO applied_tags, and their absence is the whole
+      // difference in this payload. Discord honours both only on the post that
+      // CREATES a thread and silently ignores them on a post targeting an
+      // existing one, so sending them would be a payload that looks like a
+      // rename and is not. Renaming and retagging a live thread is a bot-token
+      // PATCH, which this route does not hold; notify-discord's
+      // syncThreadMetadata and gripbot's hourly threadsync sweep own that, and
+      // both were already keeping this forum's names in step while these cards
+      // were going missing.
+      //
+      // ?wait=true is kept even though nothing here needs the response body.
+      // Without it Discord answers 204 on success and the failure branch below
+      // becomes the only thing that can tell an operator anything at all; with
+      // it, a rejected post carries a body worth logging.
+      const updateRes = await fetch(
+        `${webhookUrl}?thread_id=${encodeURIComponent(updateThreadId)}&wait=true`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ embeds: [embed], username: 'LazyGrip' }),
+        },
+      )
+
+      if (!updateRes.ok) {
+        const text = await updateRes.text().catch(() => '')
+        console.error(
+          '[admin/sequence-thread] Discord rejected the update post:',
+          slug,
+          updateRes.status,
+          text,
+        )
+        // NOTHING IS WRITTEN BACK ON A FAILURE, which is what makes a retry
+        // safe. The caller learns the card did not land, last_discord_notified_at
+        // still reads older than updated_at, and gripbot's sweep finds the same
+        // row on the next hour and tries again. A write-back here would suppress
+        // that retry forever for a card that never existed.
+        return NextResponse.json(
+          { ok: false, error: 'Discord rejected the webhook' },
+          { status: 502 },
+        )
+      }
+
+      // ==================================================================
+      // THE WRITE-BACK, WHICH IS THE POINT OF THIS MODE AS MUCH AS THE CARD IS
+      // ==================================================================
+      //
+      // CREATE MODE DELIBERATELY DOES NOT WRITE THIS COLUMN and update mode
+      // deliberately does, and the two are not inconsistent. A backfill is a
+      // retroactive bridge for a sequence published weeks ago, so stamping it
+      // "notified just now" would make the column lie. An update IS a
+      // notification about a change that just happened, which is exactly what
+      // the column records.
+      //
+      // IT IS ALSO THE CROSS-WRITER GUARD. Two things can now post a card for
+      // the same edit: the form, on an explicit save, and gripbot's sweep, for
+      // the autosave-and-leave case the form cannot see. The sweep only acts on
+      // a row whose last_discord_notified_at is absent or older than
+      // updated_at, so a card the site already posted moves this column past
+      // updated_at and the sweep leaves that row alone. Without this write the
+      // two would both post for every edit and every thread would carry the
+      // same card twice.
+      //
+      // ONE RETRY, then a warning rather than an error, copied from the
+      // write-back a hundred lines below. The card is in the forum by this
+      // line and cannot be recalled, so failing the response would tell the
+      // caller to retry a call whose only effect would be a second card. The
+      // caller is told what happened and the row is left for a human.
+      const notifiedAt = new Date().toISOString()
+      let updateWarning: string | null = null
+
+      const { error: notifiedError } = await admin
+        .from('sequences')
+        .update({ last_discord_notified_at: notifiedAt })
+        .eq('slug', slug)
+
+      if (notifiedError) {
+        console.error(
+          '[admin/sequence-thread] Failed to stamp last_discord_notified_at, retrying once:',
+          notifiedError,
+        )
+        const { error: retryNotifiedError } = await admin
+          .from('sequences')
+          .update({ last_discord_notified_at: notifiedAt })
+          .eq('slug', slug)
+
+        if (retryNotifiedError) {
+          console.error(
+            '[admin/sequence-thread] Retry also failed to stamp last_discord_notified_at:',
+            retryNotifiedError,
+          )
+          updateWarning =
+            `A card was posted into thread ${updateThreadId} but last_discord_notified_at ` +
+            'could not be written. A later sweep may post it a second time.'
+        }
+      }
+
+      // THE IMPORT STRING, PAIRED WITH THE CARD IT BELONGS TO. Same reasoning
+      // notify-discord writes out at its own copy of this: a thread
+      // accumulates cards, and a fresh card sitting above a stale import string
+      // is worse than no string at all, because somebody scrolls to the newest
+      // card and copies the wrong export. This mode exists precisely because
+      // the macro changed, so this is the message that carries the change.
+      //
+      // A FAILURE HERE MUST NOT FAIL THE ROUTE, for the reason create mode
+      // gives below: the card is posted and the column is stamped, so both
+      // things this mode is responsible for have happened.
+      const updateImportMessage = buildImportMessage(sequence.grip_string, slug)
+      if (updateImportMessage) {
+        try {
+          await postImportMessage(webhookUrl, updateThreadId, updateImportMessage)
+        } catch (err) {
+          console.error(
+            '[admin/sequence-thread] Could not post the import string into the thread:',
+            slug,
+            err,
+          )
+          const importWarning =
+            `The card was posted into thread ${updateThreadId} but the import string was not.`
+          updateWarning = updateWarning ? `${updateWarning} ${importWarning}` : importWarning
+        }
+      }
+
+      // NO RELAY, and this is the same call repoint mode makes for a related
+      // reason. fireSequencePublishedRelay tells gripbot a sequence event
+      // happened, and gripbot is the expected CALLER of this mode: firing it
+      // would hand the bot back an event the bot itself just caused, which is a
+      // round trip that grants a role its owner already holds and schedules a
+      // thread sync that the sweep making the call is already doing. An
+      // operator driving this mode by hand is repairing a card, not announcing
+      // a publish, so neither caller wants it.
+      if (updateWarning) {
+        return NextResponse.json({
+          ok: true,
+          mode: 'updated',
+          threadId: updateThreadId,
+          notifiedAt,
+          warning: updateWarning,
+        })
+      }
+
+      return NextResponse.json({
+        ok: true,
+        mode: 'updated',
+        threadId: updateThreadId,
+        notifiedAt,
+      })
+    }
 
     // ?wait=true so Discord returns the created message, which is the only way
     // to learn the new thread's id: for a forum webhook post, the message's
