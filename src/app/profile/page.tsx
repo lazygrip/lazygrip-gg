@@ -788,6 +788,8 @@ function SettingsTab({
         <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 6 }}>Connected accounts</h2>
         <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 20 }}>
           Connect Discord or Battle.net so you can sign in with either one and keep a single account.
+          Connecting Discord also lets the GRIP bot tag you in the Discord thread for each sequence
+          you publish, so you hear about it when someone asks a question there.
         </p>
 
         {identityError && (
