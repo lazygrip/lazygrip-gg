@@ -170,6 +170,34 @@ function PostForm() {
   useEffect(() => { collectionTitleRef.current = collectionTitle }, [collectionTitle])
   const [minorEdit, setMinorEdit] = useState(false)
 
+  // THE MACRO AS IT WAS WHEN THIS EDIT SESSION OPENED, captured in
+  // loadSequence below and compared against on submit.
+  //
+  // WHY IT EXISTS. A minor edit calls update_sequence_metadata, which writes
+  // grip_string and raw_steps along with the title and the notes, so an author
+  // can replace the entire published macro through that path. Until 2026-08-14
+  // the minorEdit branch did not call notifyDiscord at all, so those edits
+  // reached the site and never reached the forum: measured on the live
+  // database, nine of MFDOOM's ten edits between 2026-08-12 and 2026-08-14
+  // produced no version row, no card and a null last_discord_notified_at, while
+  // gripbot's hourly sweep renamed their threads and made it look as though the
+  // bridge had noticed.
+  //
+  // WHY A REF AND NOT STATE. Nothing renders from it. It is read once inside
+  // handleSubmit and written twice, and as state each write would re-render the
+  // whole form for no visible change.
+  //
+  // WHY THE LOADED VALUE RATHER THAN A DIRTY FLAG. An author who pastes a new
+  // export, changes their mind and pastes the original back has not changed the
+  // published macro, and a dirty flag would post a card saying they had. The
+  // comparison is against the string itself for that reason.
+  //
+  // IT IS NORMALISED THE SAME WAY THE PAYLOAD IS -- trimmed, empty becoming
+  // null -- because that is the value the RPC actually wrote. Comparing a
+  // trimmed payload against an untrimmed baseline would report a change for a
+  // trailing newline nobody typed and post a card for it.
+  const loadedGripStringRef = useRef<string | null>(null)
+
   // Draft autosave state. draftId is the sequences.id of a not-yet-published
   // draft row created by create_draft_sequence -- distinct from editSlug/editId,
   // which refer to an already-published sequence being edited via ?edit=.
@@ -354,6 +382,17 @@ function PostForm() {
       }
 
       setEditSlug(data.slug)
+
+      // THE BASELINE FOR THE MINOR-EDIT DISCORD DECISION. Captured here rather
+      // than derived from `form` later because this is the only moment the
+      // PUBLISHED value is known: every keystroke after this line moves
+      // form.grip_string, and in edit mode autosave writes those keystrokes
+      // through to the live row on an 800ms debounce, so by submit time neither
+      // the form nor the database still holds what was published.
+      //
+      // Normalised exactly as payload.grip_string is normalised on submit, so
+      // the two are comparable without either side re-deriving the rule.
+      loadedGripStringRef.current = (data.grip_string ?? '').trim() || null
 
       let raw_steps_text = ''
       if (Array.isArray(data.raw_steps)) {
@@ -1070,6 +1109,56 @@ async function runDecode(exportString: string) {
             p_performance_notes: payload.performance_notes,
           })
           if (rpcError) throw rpcError
+
+          // ==============================================================
+          // A MINOR EDIT THAT CHANGED THE MACRO STILL POSTS A CARD
+          // ==============================================================
+          //
+          // ONLY when the macro changed. update_sequence_metadata writes
+          // grip_string, so this branch can and does replace the published
+          // export, and a thread whose newest card carries a superseded import
+          // string is worse than one carrying none: somebody copies it and gets
+          // the old rotation with nothing saying so. A minor edit that only
+          // moved a title or a performance note has nothing new for the forum
+          // to say, and posting for it would bump every touched thread to the
+          // top of the channel for a typo fix.
+          //
+          // isEdit true, isUpdate false, and that pairing is not
+          // interchangeable. The two flags choose the glyph on the card and the
+          // relay event string -- notify-discord maps isEdit to 'edited' and
+          // isUpdate to 'updated' -- and this path deliberately creates no
+          // sequence_versions row, so calling it an update would announce a new
+          // version that does not exist.
+          //
+          // THE BASELINE MOVES ON A SUCCESSFUL SEND, so a second Save changes
+          // in the same mounted session cannot post a duplicate card for a
+          // macro that is already on the forum. In practice the router.push
+          // below unmounts this component, but that is a side effect of the
+          // navigation rather than a guarantee this decision should rest on.
+          //
+          // notifyDiscord IS FIRE AND FORGET and this call site does not change
+          // that. It cannot fail the save: the RPC has already committed by this
+          // line, and a publish that rolled back because Discord was unreachable
+          // would be a far worse failure than a missing card.
+          //
+          // AUTOSAVE IS DELIBERATELY NOT HOOKED. In edit mode autosave calls
+          // the same RPC on an 800ms debounce, so wiring it here would post a
+          // card for every pause in typing. The explicit save is the only
+          // moment an author has said they are finished.
+          const publishedGripString = loadedGripStringRef.current
+          if (payload.grip_string !== publishedGripString) {
+            loadedGripStringRef.current = payload.grip_string
+            notifyDiscord({
+              title: payload.title,
+              slug: editSlug,
+              className: selectedClass?.name ?? '',
+              specName: payload.spec_name,
+              contentType: payload.content_type,
+              heroTalent: payload.hero_talent,
+              isUpdate: false,
+              isEdit: true,
+            })
+          }
         } else {
           const { error: rpcError } = await supabase.rpc('update_sequence_with_version', {
             p_sequence_id: editId,
@@ -1808,7 +1897,26 @@ async function runDecode(exportString: string) {
                   htmlFor="minor-edit"
                   style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
                 >
-                  Minor edit — updates title, description, performance notes, and metadata without creating a new version
+                  {/*
+                    THE OLD LABEL NAMED FOUR THINGS AND THE BOX DOES MORE THAN
+                    FOUR. It read "updates title, description, performance notes,
+                    and metadata without creating a new version", which is an
+                    accurate list of what an author is likely to be changing and
+                    an inaccurate description of what the checkbox does:
+                    update_sequence_metadata also writes grip_string, raw_steps
+                    and talent_string. An author could therefore replace the
+                    entire published macro through a box whose label talks about
+                    titles and notes, leave no version history, and until
+                    2026-08-14 produce no Discord card either.
+
+                    Both halves of that are fixed here. The branch now posts a
+                    card when the export changed, and this line says the export
+                    is in scope. Naming the Discord behaviour in the label as
+                    well is deliberate: a card appearing in a public forum is a
+                    consequence an author should be able to predict from the
+                    control they are ticking, not discover afterwards.
+                  */}
+                  Minor edit: saves every field, including the GRIP export string, without adding to the version history. A changed export still posts a card to the Discord thread.
                 </label>
               </div>
             )}
