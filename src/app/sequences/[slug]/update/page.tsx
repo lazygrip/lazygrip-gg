@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Sequence, SequenceVersion, SequenceStep } from '@/types'
 import { Wand2, X } from 'lucide-react'
 import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
+import { notifyDiscord } from '@/lib/notify-discord'
 import { useUsernameGate } from '@/lib/useUsernameGate'
 import UsernameRequiredModal from '@/components/UsernameRequiredModal'
 
@@ -252,6 +253,47 @@ export default function UpdateSequencePage() {
       setSubmitting(false)
       return
     }
+
+    // ====================================================================
+    // THE FORUM IS TOLD ABOUT THIS, WHICH IT WAS NOT UNTIL 2026-08-14
+    // ====================================================================
+    //
+    // This page publishes a WHOLE NEW VERSION of a live sequence, with a new
+    // export and an author-written changelog, and it reached the Discord thread
+    // with nothing at all. Every other path that changes a published sequence
+    // calls this; this one was missed, and being a separate route from /post is
+    // the only reason.
+    //
+    // HOW IT WAS FOUND, because the trail is worth keeping. 1207-mfdoom-fury-
+    // warrior-mqpmd9gx published version v2.0 on 2026-08-14 at 00:55:31Z and no
+    // card appeared, no relay reached the bot, and last_discord_notified_at
+    // stayed null. That was investigated as a failure of the notify route, on
+    // the reasonable assumption that a versioned publish must have called it.
+    // The version row is what gave it away: version_number 2 carrying the label
+    // "v2.0", where update_sequence_with_version writes
+    // '1.' || (version_number - 1), so "1.1". Only this page can produce that
+    // label, because only this page takes it from a form field.
+    //
+    // isUpdate true and isEdit false, and the pair is not interchangeable. It
+    // puts the cycle glyph on the card and makes the relay event 'updated',
+    // which is exactly what this is: a new version row with its own label and
+    // its own changelog. isEdit would announce a correction to something that
+    // already existed.
+    //
+    // AFTER THE RPC AND BEFORE THE NAVIGATION, matching every call site in
+    // /post. The row has to be current before the route reads it, because the
+    // card is built from the row rather than from this payload; and keepalive
+    // in the helper is what carries the request through the router.push below.
+    notifyDiscord({
+      title: sequence.title,
+      slug,
+      className: sequence.class_name,
+      specName: sequence.spec_name,
+      contentType,
+      heroTalent: heroTalent || null,
+      isUpdate: true,
+      isEdit: false,
+    })
 
     router.push(`/sequences/${slug}`)
   }
