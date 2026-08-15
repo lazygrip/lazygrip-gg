@@ -7,13 +7,13 @@ import { guideCodeStyle } from '@/components/guide/GuideCode'
 
 export const metadata: Metadata = {
   title: 'Settings | GRIP-EMS Guide',
-  description: 'The GRIP-EMS settings that actually determine whether your sequences run smoothly. SQW, Key Down Casting, click rate, the Dynamic SQW Optimiser, the Tempo Advisor, and how they all connect.',
+  description: 'The GRIP-EMS settings that actually determine whether your sequences run smoothly. SQW, Key Down Casting, Hold While Channeling, click rate, the Dynamic SQW Optimiser, the Tempo Advisor, and how they all connect.',
   alternates: {
     canonical: 'https://lazygrip.net/guide/settings',
   },
   openGraph: {
     title: 'Settings | GRIP-EMS Guide',
-    description: 'The GRIP-EMS settings that actually determine whether your sequences run smoothly. SQW, Key Down Casting, click rate, the Dynamic SQW Optimiser, the Tempo Advisor, and how they all connect.',
+    description: 'The GRIP-EMS settings that actually determine whether your sequences run smoothly. SQW, Key Down Casting, Hold While Channeling, click rate, the Dynamic SQW Optimiser, the Tempo Advisor, and how they all connect.',
     url: 'https://lazygrip.net/guide/settings',
     siteName: 'LazyGrip.net',
     type: 'website',
@@ -48,6 +48,16 @@ export default function SettingsPage() {
         <GuideCallout>
           On a version older than 2.3.14, you will still need to fix this yourself. Run /gems settings, go to the CVar Health tab, and click Fix if the row is not green. Do it outside of combat; WoW locks some CVars while you are in a fight, which is why the Fix buttons grey out mid-pull. The Installation page covers this in more detail for older versions.
         </GuideCallout>
+      </GuideSection>
+
+      <GuideSection title="Hold While Channeling">
+        <p style={{ marginBottom: 4, fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Added in v2.4.0 · Set per sequence version</p>
+        <p>This setting decides what happens when your keypress lands in the middle of a channel. Without it, a press mid-channel casts nothing and still burns a step, which is the same dead-step problem covered elsewhere on this page, just triggered by a channel instead of a cooldown. With Hold cursor on, a press landing mid-channel casts nothing and leaves the step counter where it was, so the channel finishes and the next real press picks up from the same step instead of one further along.</p>
+        <p style={{ marginTop: 12 }}>There is a third option, Hold + release at max, that ends an empowered spell the moment it reaches maximum rank. This one only shows up if your spellbook actually has an empowered spell in it, which in practice means Evoker.</p>
+        <GuideCallout>
+          Known issue: on at least one tester's client, Hold + release at max ends the empower at the first rank instead of maximum, every press, with nothing on screen to say so. It has not reproduced for the addon author and is still being chased as of v2.4.3. If your empowered casts are ending early, set that version back to Hold cursor until this is resolved.
+        </GuideCallout>
+        <p style={{ marginTop: 12 }}>If you are sequencing a charged or empowered spell like Fire Breath or Upheaval, this setting works alongside the guard-step and separate-key approaches on the <Link href="/guide/building-sequences" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Building sequences</Link> page rather than replacing them. Hold While Channeling stops a mid-channel press from wasting a step; it does not by itself fix the automated-cancel hitch that page covers.</p>
       </GuideSection>
 
       <GuideSection title="Spell Queue Window">
@@ -115,6 +125,15 @@ export default function SettingsPage() {
         <p style={{ marginTop: 12 }}><strong style={{ color: 'var(--text-primary)' }}>Per-Character Click Rate</strong>, under the same menu, is a setting scoped to your current character only and overrides the global value while that character is active. Range is 0 to 1000ms in steps of 10. Set it to 0 to fall back to the shared global value. This is also the only way to go below the 100ms floor if you have an edge case that needs it, down to 10ms. GRIP-EMS will pop a warning on screen when you drop under 100.</p>
         <GuideCallout>
           Pressing faster than your spells can land does not make your rotation faster. The GCD is the real speed limit, around 1.5 seconds for most specs and shorter with haste. If you are pressing at 80ms and your GCD is 1.4 seconds, you are firing roughly 17 keypresses per GCD and advancing the sequence 17 steps before a single spell lands. That is not a faster rotation; it is a broken one. The sweet spot is pressing at roughly your cast pace, and the Tempo Advisor below is the most personalized way to find that number for your character in real time.
+        </GuideCallout>
+      </GuideSection>
+
+      <GuideSection title="Keybind Conflicts">
+        <p style={{ marginBottom: 4, fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Added in v2.4.0 · /gems keys or the Keybind tab</p>
+        <p>Run <code style={code}>/gems keys</code>, or click Check Conflicts on the Keybind tab, and GRIP-EMS checks every key your sequences use, plus vehicle and pet battle slots, against your saved bindings: what the keypress actually reaches, cast-redirect modifiers, and click bindings. Where it can identify the addon behind a conflicting binding, it names it directly, and it clears two known kinds of conflict for you automatically.</p>
+        <p style={{ marginTop: 12 }}>This is the tool for the recurring question of why a key works on one character and does nothing on another. Different characters can carry different addon-set or click bindings on the same physical key, and this check surfaces that instead of leaving you to hunt through every addon's keybind panel by hand.</p>
+        <GuideCallout>
+          If a fix does not stick, run <code style={code}>/gems keys</code> again and use Undo, which backs out the last change if something else grabbed the key in the meantime.
         </GuideCallout>
       </GuideSection>
 

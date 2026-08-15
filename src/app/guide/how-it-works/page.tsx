@@ -141,6 +141,7 @@ export default function HowItWorksPage() {
           ))}
         </div>
         <p style={{ marginTop: 12 }}>The Pause step is most commonly needed for specs with strict GCD relationships between abilities, for example preventing Steady Shot from firing too close to a proc window in Marksmanship Hunter. If you find a spell clipping something it should not, a one-GCD pause before that step is usually the fix to try first.</p>
+        <p style={{ marginTop: 12 }}>As of v2.4.0, GRIP-EMS also has a dedicated Hold While Channeling setting, covered on the <Link href="/guide/settings" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Settings</Link> page, which stops a mid-channel press from burning a step at all. It solves a related but different problem than the Pause step: Pause deliberately holds position for a set count or duration you choose, while Hold While Channeling reacts to an active channel and holds only for as long as that channel runs.</p>
       </GuideSection>
 
       <GuideSection title="Reset conditions">
@@ -159,6 +160,9 @@ export default function HowItWorksPage() {
             </div>
           ))}
         </div>
+        <GuideCallout>
+          Reset on target currently only takes effect out of combat. Switching targets mid-pull in Mythic+ will not reset the sequence to step 1 the way it will between pulls; the reset applies the next time you are out of combat and pick up a new target. If you were relying on a mid-combat target-change reset to replay a target-specific opener, it is not firing the way the setting name implies. Confirmed directly from the addon author; treat this as current behavior rather than an edge case, and design around Reset on combat for anything you need to trigger reliably inside a pull.
+        </GuideCallout>
       </GuideSection>
 
       <GuideSection title="Skyriding and mount behavior">
@@ -212,6 +216,14 @@ export default function HowItWorksPage() {
         <p style={{ marginTop: 12 }}>This is the kind of thing you will only ever notice if you run an addon that uses it. If a plugin adds a new export format, it shows up alongside the built-in one in the export window's format picker. If a plugin adds settings, they appear inside its own panel rather than scattered through GRIP-EMS's existing menus. None of this changes default behavior for anyone who is not running a plugin.</p>
         <p style={{ marginTop: 12 }}>As of v2.3.0, the API extends to action bars specifically. A plugin can put one of your sequences directly on an action button, reading per-step spell data, creating and picking up that sequence's macro, and registering its own <code style={code}>/gems</code> subcommand to go with it. Same rule applies: nothing changes unless you are running a plugin.</p>
         <p style={{ marginTop: 12 }}>If you build addons and want to extend GRIP-EMS yourself, the full API reference, including the security model and every method by access tier, lives at <a href="https://jesperlive.github.io/GRIP-EMS-PluginAPI/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>jesperlive.github.io/GRIP-EMS-PluginAPI</a>. That documentation is the authoritative source for plugin development, this guide is written for sequence builders rather than addon authors.</p>
+      </GuideSection>
+
+      <GuideSection title="Importing sequences and macro name collisions">
+        <p>Every sequence import can carry a named WoW macro alongside it, the way the MOONSPAM pattern on the <Link href="/guide/building-sequences" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Building sequences</Link> page depends on. As of v2.4.3, GRIP-EMS checks whether it created a macro before it touches it during an import. If an incoming macro shares a name with one already in your <code style={code}>/macro</code> list that GRIP-EMS did not create itself, your macro is left alone and you get a chat line naming which one was skipped, rather than having its body silently replaced.</p>
+        <p style={{ marginTop: 12 }}>Before v2.4.3, a name clash on the macro side was not handled the way sequence name clashes already were, and an import could overwrite a same-named macro you wrote yourself with no prompt and no undo. If you hit a skipped macro on import, rename either the incoming macro or your existing one and import again; the sequence itself still imports normally, only the colliding macro is held back.</p>
+        <GuideCallout>
+          One rough edge as of v2.4.3: if you import while in combat, the import summary is written before the skip logic finishes running, so the reported count can read one macro high until combat ends and the actual chat line naming the skipped macro appears.
+        </GuideCallout>
       </GuideSection>
 
       <GuideSection title="The visual display layer versus what actually executes">

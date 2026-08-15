@@ -114,7 +114,11 @@ export default function InstallationPage() {
       <GuideSection title="Troubleshooting common problems" layout="stack">
         <TroubleshootItem
           problem="Keybind is set but nothing fires"
-          solution="First, update GRIP-EMS through your addon manager. As of v2.3.14, Key Down Casting is forced on automatically and this is no longer something you can misconfigure. If you are still on an older version, run /gems settings, go to the Cvar Health tab, and click Fix if the row is not green; this solves the majority of pre-2.3.14 keybind problems. On 2.3.14 or later, if the sequence still does not fire, check that you have a target selected and that the sequence has a keybind assigned in the Keybinds tab inside the editor, not just in WoW's default keybind menu."
+          solution="First, update GRIP-EMS through your addon manager. As of v2.3.14, Key Down Casting is forced on automatically and this is no longer something you can misconfigure. If you are still on an older version, run /gems settings, go to the Cvar Health tab, and click Fix if the row is not green; this solves the majority of pre-2.3.14 keybind problems. On 2.3.14 or later, if the sequence still does not fire, check that you have a target selected and that the sequence has a keybind assigned in the Keybinds tab inside the editor, not just in WoW's default keybind menu. Run /gems keys to check whether another addon or click binding is quietly eating the key before GRIP-EMS ever sees it."
+        />
+        <TroubleshootItem
+          problem="Key still shows correctly in /gems but pressing it does nothing after a loading screen"
+          solution="This was a known bug through v2.4.0: GRIP-EMS re-applies sequence keybinds at runtime rather than parking them in WoW's own binding list, so a loading screen could silently drop the live binding while /gems still listed it as bound. Fixed in v2.4.1. Update GRIP-EMS through your addon manager. If you are already current and still see this, it is not the same bug; run /gems keys to check for a genuine conflict instead."
         />
         <TroubleshootItem
           problem="I put a sequence's macro on my action bar and pressing it does nothing"
@@ -142,7 +146,7 @@ export default function InstallationPage() {
         />
         <TroubleshootItem
           problem="Another addon keeps stealing my sequence keybinds"
-          solution="Some addons override-bind the same keys GRIP-EMS uses for vehicles and skyriding, and whoever loads last wins. The Keybinds tab inside the editor names the contending keys directly in the vehicle and pet battle sections so you can see exactly which addon is causing the conflict. GRIP-EMS does not fight for the bind, it just tells you who took it."
+          solution="Some addons override-bind the same keys GRIP-EMS uses, and whoever loads last wins. Run /gems keys, or click Check Conflicts on the Keybind tab, and GRIP-EMS checks every key your sequences use, including vehicle and pet battle slots, against your saved bindings and names the addon behind a conflicting binding where it can. It clears two known kinds of conflict for you directly; Undo backs out the last change if something else grabs the key again afterward. GRIP-EMS does not fight for the bind otherwise, it just tells you who took it."
         />
         <TroubleshootItem
           problem="Sequence says a spell cannot be found, but it works fine once I am in the right form or proc"
@@ -156,6 +160,7 @@ export default function InstallationPage() {
             { cmd: '/gems', desc: 'Opens the GRIP-EMS sequence editor' },
             { cmd: '/gems settings', desc: 'Opens settings including Cvar Health' },
             { cmd: '/gems binds', desc: 'Shows all currently bound sequences for your active spec' },
+            { cmd: '/gems keys', desc: 'Checks every sequence, vehicle, and pet battle key against your saved bindings and names conflicts' },
             { cmd: '/gems debug on', desc: 'Enables debug output to chat, useful when something is not firing' },
             { cmd: '/gems debugwindow', desc: 'Opens the debug window with additional diagnostic information' },
             { cmd: '/gems validate', desc: 'Runs spell validation across all your sequences and reports stale spells' },
