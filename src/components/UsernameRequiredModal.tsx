@@ -10,7 +10,7 @@ interface UsernameRequiredModalProps {
 }
 
 // Mirrors public.profiles_username_format CHECK constraint:
-//   username !~ '^user_[0-9a-f]{8}$' and username ~ '^[A-Za-z0-9_.-]{2,32}$'
+// username !~ '^user_[0-9a-f]{8}$' and username ~ '^[A-Za-z0-9_.-]{2,32}$'
 // Keep in sync -- this is a UX pre-check only, the DB constraint is the real
 // enforcement and will reject anything this regex missed.
 const USERNAME_PATTERN = /^[A-Za-z0-9_.-]{2,32}$/
@@ -38,13 +38,20 @@ export default function UsernameRequiredModal({ userId, onSuccess, onClose }: Us
     setError('')
 
     const supabase = createClient()
-    // Sets both fields has_completed_onboarding() checks, not just username.
-    // This modal is the backstop for someone who reaches a write action
-    // without having gone through /welcome (stale session, etc), so it needs
-    // to satisfy the full gate in one step, same as /welcome does.
+    // Sets every field has_completed_onboarding() AND is_verified_poster() check,
+    // not just username. This modal is the backstop for someone who reaches a
+    // write action without having gone through /welcome (stale session, etc), so
+    // it needs to satisfy both gates in one step, same as /welcome does.
+    //
+    // display_name is a separate, user-editable column (see src/lib/public-name.ts)
+    // that nothing in onboarding used to write -- is_verified_poster (migration
+    // 007) requires it non-empty, so an account that only ever passed through this
+    // modal previously came out the other side still permanently blocked from
+    // posting, with no indication why. Defaulting it to the username closes that;
+    // it's a starting value the user can still change later from /profile.
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ username: trimmed, terms_accepted_at: new Date().toISOString() })
+      .update({ username: trimmed, display_name: trimmed, terms_accepted_at: new Date().toISOString() })
       .eq('id', userId)
 
     setSubmitting(false)
