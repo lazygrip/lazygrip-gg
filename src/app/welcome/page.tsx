@@ -7,7 +7,7 @@ import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 
 // Mirrors public.profiles_username_format CHECK constraint:
-//   username !~ '^user_[0-9a-f]{8}$' and username ~ '^[A-Za-z0-9_.-]{2,32}$'
+// username !~ '^user_[0-9a-f]{8}$' and username ~ '^[A-Za-z0-9_.-]{2,32}$'
 const USERNAME_PATTERN = /^[A-Za-z0-9_.-]{2,32}$/
 const AUTO_GENERATED_PATTERN = /^user_[0-9a-f]{8}$/
 
@@ -29,7 +29,6 @@ function WelcomeForm() {
     async function load() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-
 
       if (!user) {
         // Not logged in at all -- nothing to onboard, send back to browse.
@@ -82,7 +81,18 @@ function WelcomeForm() {
 
     const supabase = createClient()
     const update: Record<string, string> = { terms_accepted_at: new Date().toISOString() }
-    if (needsUsername) update.username = username.trim()
+    // display_name is a SEPARATE column from username (see src/lib/public-name.ts --
+    // it's deliberately free text the account holder can customize later from
+    // /profile). But is_verified_poster (migration 007) requires display_name to
+    // be non-empty, and nothing else in onboarding ever wrote it, which meant
+    // every account that completed onboarding here still failed the posting
+    // eligibility check with no explanation. Defaulting it to the username at
+    // the same moment username is set closes that gap; it's a starting value,
+    // not a permanent tie -- the user can still change it independently later.
+    if (needsUsername) {
+      update.username = username.trim()
+      update.display_name = username.trim()
+    }
 
     const { error: updateError } = await supabase
       .from('profiles')
