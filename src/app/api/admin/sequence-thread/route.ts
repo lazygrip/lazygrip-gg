@@ -21,15 +21,15 @@ import { decodeExport } from '@/lib/workshop'
 //
 // THREE MODES, and the body says which:
 //
-//   create    no threadId, no mode (or mode 'create'). Creates the thread.
-//             The 2026-08-09 backfill. Refuses if the row already has one.
-//   repoint   threadId supplied. Writes the link and posts NOTHING, for a
-//             thread that already exists in the forum and holds real
-//             conversation the database does not know about.
-//   update    mode 'update'. Posts a fresh card and import string into the
-//             thread the row ALREADY names, and stamps
-//             last_discord_notified_at. Added 2026-08-14; see the block beside
-//             the mode parsing for why.
+// create   no threadId, no mode (or mode 'create'). Creates the thread.
+//          The 2026-08-09 backfill. Refuses if the row already has one.
+// repoint  threadId supplied. Writes the link and posts NOTHING, for a
+//          thread that already exists in the forum and holds real
+//          conversation the database does not know about.
+// update   mode 'update'. Posts a fresh card and import string into the
+//          thread the row ALREADY names, and stamps
+//          last_discord_notified_at. Added 2026-08-14; see the block beside
+//          the mode parsing for why.
 //
 // WHY IT EXISTS. The bridge currently reaches 14 percent of the conversation
 // happening on lazygrip.net: 58 published sequences, 18 with a Discord thread,
@@ -54,6 +54,18 @@ import { decodeExport } from '@/lib/workshop'
 // belongs to the caller, because only the caller can see what Discord's rate
 // limiter is doing to it; a server-side loop would guess.
 //
+// RATE LIMITED as of 2026-08-19. Every other route gated by a shared secret
+// (relay-identity, and all three relay/discord-comment* routes) already
+// carried this same in-memory limiter; this route did not, which was an
+// inconsistency rather than a deliberate exception -- nothing about posting
+// PUBLICLY to Discord under another user's identity argues for less caution
+// than the routes that only relay a single comment. The secret is this
+// route's only gate, so if it is ever compromised, a limiter is what stands
+// between that leak and a loop that spams a public forum thread for every
+// published sequence in a tight burst. Same shape, same window, same budget
+// as its siblings, with its own independent counter so a burst on one route
+// cannot starve another.
+//
 // The runtime is pinned to nodejs because the secret comparison below uses
 // node:crypto. It is the default for route handlers, but this route breaks
 // rather than degrades if that ever changes, so it says so out loud.
@@ -75,20 +87,43 @@ function secretMatches(provided: string, expected: string): boolean {
   return timingSafeEqual(a, b)
 }
 
+// Copied from src/app/api/relay-identity/route.ts and the three
+// relay/discord-comment* routes rather than reimplemented. Resets on cold
+// start / deploy, which is acceptable for a low-volume, secret-gated,
+// server-to-server/operator route -- not a public endpoint needing durable
+// cross-instance limiting. Its own budget, independent of the other routes'
+// counters, matching how those four each keep their own.
+const RATE_LIMIT_WINDOW_MS = 60_000
+const RATE_LIMIT_MAX = 60
+const requestLog: number[] = []
+
+function isRateLimited(): boolean {
+  const now = Date.now()
+  while (requestLog.length > 0 && now - requestLog[0] > RATE_LIMIT_WINDOW_MS) {
+    requestLog.shift()
+  }
+  if (requestLog.length >= RATE_LIMIT_MAX) return true
+  requestLog.push(now)
+  return false
+}
+
 export async function POST(req: NextRequest) {
   // GUARD ORDER BELOW IS THE SECURITY PROPERTY, NOT A STYLE CHOICE:
   //
-  //   1. secret configured
-  //   2. secret matches
-  //   3. webhook configured
-  //   4. read body
-  //   5. validate body
-  //   6. act
+  // 1. secret configured
+  // 2. secret matches
+  // 3. rate limit
+  // 4. webhook configured
+  // 5. read body
+  // 6. validate body
+  // 7. act
   //
   // The body is never parsed until the caller has proven it holds the secret.
   // An unauthenticated request must reach as little of this route as possible,
   // and JSON parsing of an attacker-supplied payload is real work done on an
-  // attacker's behalf.
+  // attacker's behalf. The rate limit sits after the secret check, matching
+  // every sibling route, so an unauthenticated caller cannot consume the
+  // budget and lock out the real operator/bot.
 
   // 1. A route whose secret is unset must not fall open. It answers 503 and
   // does nothing, the same shape relay.ts uses when DISCORD_RELAY_SECRET is
@@ -110,7 +145,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
   }
 
-  // 3. Checked here, before the body is read, to keep the guard order above
+  // 3.
+  if (isRateLimited()) {
+    return NextResponse.json({ ok: false, error: 'Rate limited' }, { status: 429 })
+  }
+
+  // 4. Checked here, before the body is read, to keep the guard order above
   // fixed. A repoint (see below) never posts to Discord and so does not
   // strictly need the webhook, but the mode is not known until the body is
   // parsed, and reordering these two to save a repoint from a 503 would mean
@@ -123,12 +163,12 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // 4. A body that is not JSON at all lands as null and falls straight into
+    // 5. A body that is not JSON at all lands as null and falls straight into
     // the slug check below, which answers 400. That is the honest answer: a
     // request with no parseable body has no valid slug in it.
     const raw = (await req.json().catch(() => null)) as Record<string, unknown> | null
 
-    // 5. Same SLUG_RE and SNOWFLAKE_RE notify-discord validates against, now
+    // 6. Same SLUG_RE and SNOWFLAKE_RE notify-discord validates against, now
     // imported from src/lib/discord-embed.ts by both routes rather than
     // declared twice.
     const slugRaw = raw?.slug
