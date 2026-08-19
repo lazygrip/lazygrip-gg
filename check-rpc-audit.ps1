@@ -3,18 +3,18 @@
 # can't see: authorization logic inside SQL functions and new API routes.
 #
 # What this DOES automatically:
-#   1. Scans every SECURITY DEFINER function defined in supabase/migrations/
-#      and flags any whose body contains no auth.uid() reference.
-#   2. Lists every API route file under src/app/api/ and compares against a
-#      known-audited list, flagging anything new since the last full audit.
+# 1. Scans every SECURITY DEFINER function defined in supabase/migrations/
+#    and flags any whose body contains no auth.uid() reference.
+# 2. Lists every API route file under src/app/api/ and compares against a
+#    known-audited list, flagging anything new since the last full audit.
 #
 # What this CANNOT do automatically (and says so):
-#   - Read the LIVE database. The repo's migrations can lag or drift from
-#     production (that exact drift caused real problems in July 2026), so a
-#     clean result here does NOT prove the live DB is clean. The script prints
-#     the SQL query to run in the Supabase SQL Editor for the real live check.
+# - Read the LIVE database. The repo's migrations can lag or drift from
+#   production (that exact drift caused real problems in July 2026), so a
+#   clean result here does NOT prove the live DB is clean. The script prints
+#   the SQL query to run in the Supabase SQL Editor for the real live check.
 #
-# Run from the repo root:  .\check-rpc-audit.ps1
+# Run from the repo root: .\check-rpc-audit.ps1
 
 $ErrorActionPreference = "Stop"
 
@@ -33,27 +33,55 @@ if (-not (Test-Path $migrationsPath)) {
     exit 1
 }
 
-# Trigger functions and counters that legitimately have no auth.uid():
-# they fire off row data that already passed RLS, or have no ownership concept.
-# If you add a NEW function to this list, that is a deliberate decision --
-# think about why it doesn't need the check before adding it.
+# Every name here needs a REASON, not just a category, because "known exempt"
+# is not one pattern -- three different ones live in this list and conflating
+# them is exactly what let check_post_rate_limit hide here incorrectly for
+# weeks (found and fixed 2026-08-19, see migration 022). It took an
+# author_id parameter and had NO auth.uid() check AND no grant restriction --
+# genuinely exploitable by anon, not a false positive. Removed from this list
+# entirely: it does not belong in "known exempt", it belongs in the audit
+# that scans grants, once that exists (see note in Part 3).
+#
+# Reason 1 -- TRIGGER: fires on INSERT/DELETE/UPDATE via Postgres itself,
+# takes no parameters, no caller-supplied id of any kind to check.
+# Reason 2 -- READ-ONLY ELIGIBILITY CHECK: takes an id, but only returns a
+# boolean/read, never writes, and is called from inside an RPC that has
+# ALREADY verified auth.uid() = p_author_id before calling it. The ownership
+# check happens one level up; re-checking inside the read-only helper would
+# be redundant, not protective.
+# Reason 3 -- SERVICE-ROLE-ONLY: confirmed via live grant check
+# (information_schema.routine_privileges) that EXECUTE is revoked from
+# anon/authenticated and granted only to service_role/postgres. There is no
+# auth.uid() to check because the only legitimate caller has no user session
+# at all -- it's the server's own service-role key (see migration 013).
+#
+# If you add a NEW function to this list, pick which of the three reasons
+# actually applies and say so -- "trigger/counter" was used as a catch-all
+# in the past and that imprecision is what let a real bug hide here.
 $knownExempt = @(
+    # Reason 1: trigger functions, no parameters, no caller-supplied id.
     "handle_new_user",
     "increment_view_count",
+    "increment_copy_count",
     "notify_on_comment",
     "notify_on_rating",
+    "notify_on_reply",
     "update_comment_count",
     "update_sequence_rating",
-    # Added 2026-07-31: these check ELIGIBILITY of a target account
-    # (is this author_id allowed to post at all), not OWNERSHIP of a row
-    # being written. They're called from inside create_draft_sequence /
-    # create_sequence_with_version / publish_draft_sequence /
-    # publish_draft_sequences_batch, which already do the auth.uid() =
-    # p_author_id check themselves before calling these. Different
-    # pattern, correctly exempt -- not a caller-supplied author_id being
-    # trusted without verification.
+    "update_sequence_save_count",
+
+    # Reason 2: read-only eligibility checks, ownership verified by the
+    # calling RPC before these are ever invoked. Added 2026-07-31
+    # (is_verified_poster) and 2026-08-19 (the rest, found misclassified
+    # during that day's false-positive review).
     "is_verified_poster",
-    "check_post_rate_limit"
+    "has_completed_onboarding",
+    "has_custom_username",
+
+    # Reason 3: service-role-only, confirmed via live grant check
+    # (migration 013). No anon/authenticated grant exists to exploit.
+    "lookup_discord_id_by_user_id",
+    "lookup_profile_by_discord_id"
 )
 
 $flagged = @()
@@ -70,7 +98,7 @@ Get-ChildItem $migrationsPath -Filter "*.sql" | Sort-Object Name | ForEach-Objec
 
     foreach ($m in $matches2) {
         $fnName = $m.Groups[1].Value
-        $body   = $m.Groups[3].Value
+        $body = $m.Groups[3].Value
 
         # CREATE OR REPLACE means a later file's definition supersedes an
         # earlier one -- e.g. 002_schema_sync.sql has the original (buggy)
@@ -88,7 +116,7 @@ foreach ($fnName in ($latestDefs.Keys | Sort-Object)) {
     $def = $latestDefs[$fnName]
 
     if ($knownExempt -contains $fnName) {
-        Write-Host "  SKIP  $fnName (known exempt: trigger/counter, no caller-supplied author_id)" -ForegroundColor DarkGray
+        Write-Host "  SKIP  $fnName (known exempt, see reason categories above knownExempt)" -ForegroundColor DarkGray
         continue
     }
 
@@ -106,7 +134,11 @@ if ($flagged.Count -gt 0) {
     Write-Host "  $($flagged.Count) function(s) flagged. This is the exact bug pattern found in" -ForegroundColor Red
     Write-Host "  delete_sequence_version, update_sequence_metadata, and" -ForegroundColor Red
     Write-Host "  update_sequence_with_version in July 2026. Read each flagged body" -ForegroundColor Red
-    Write-Host "  and either add the check or add the name to knownExempt with a reason." -ForegroundColor Red
+    Write-Host "  and either add the check, or determine which knownExempt reason" -ForegroundColor Red
+    Write-Host "  (trigger / read-only-eligibility-check / service-role-only) actually" -ForegroundColor Red
+    Write-Host "  applies and add it with that reason. If it takes a caller-suppliable" -ForegroundColor Red
+    Write-Host "  id AND writes data AND has no grant restriction, that is not exempt --" -ForegroundColor Red
+    Write-Host "  that is the check_post_rate_limit bug from 2026-08-19 (migration 022)." -ForegroundColor Red
 }
 else {
     Write-Host "  All $checkedCount SECURITY DEFINER function definitions in migrations pass." -ForegroundColor Green
@@ -127,6 +159,11 @@ Write-Host "[2/3] Checking for API routes added since the last full audit..." -F
 # added 2026-07-31 (src/lib/rate-limit.ts) -- this script only tracks route
 # existence, not content changes, so that's noted here rather than something
 # this script would catch on its own.
+# 2026-08-19: nine routes flagged NEW by this script's own Part 2 output
+# (admin/sequence-thread, comments + comments/delete + comments/edit,
+# relay/discord-comment + delete + edit, relay-identity, sequences/delete)
+# still need their hostile-caller read and addition to this list -- carried
+# forward as an open item from this session, not silently resolved.
 $auditedRoutes = @(
     "src\app\api\cron\patch-reminder\route.ts",
     "src\app\api\decode-grip\route.ts",
@@ -173,6 +210,18 @@ Write-Host ""
 Write-Host "  select p.proname, pg_get_function_identity_arguments(p.oid) as args, p.prosrc" -ForegroundColor White
 Write-Host "  from pg_proc p join pg_namespace n on p.pronamespace = n.oid" -ForegroundColor White
 Write-Host "  where n.nspname = 'public' and p.prosecdef = true order by p.proname;" -ForegroundColor White
+Write-Host ""
+Write-Host "  2026-08-19 addition: auth.uid() presence is not the only thing that" -ForegroundColor Yellow
+Write-Host "  matters -- check_post_rate_limit had no auth.uid() check AND was" -ForegroundColor Yellow
+Write-Host "  grantable to anon/PUBLIC, live in production, until fixed same day" -ForegroundColor Yellow
+Write-Host "  (migration 022). Also run this query and confirm no SECURITY DEFINER" -ForegroundColor Yellow
+Write-Host "  function that writes data is reachable by anon or PUBLIC unless it" -ForegroundColor Yellow
+Write-Host "  genuinely needs to be (e.g. signup-time triggers):" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "  select routine_name, grantee, privilege_type" -ForegroundColor White
+Write-Host "  from information_schema.routine_privileges" -ForegroundColor White
+Write-Host "  where routine_schema = 'public' and grantee in ('anon', 'PUBLIC')" -ForegroundColor White
+Write-Host "  order by routine_name;" -ForegroundColor White
 Write-Host ""
 Write-Host "  Re-run this whole audit after: any new RPC, any schema change, any new" -ForegroundColor Yellow
 Write-Host "  API route, or any merged PR touching supabase/ or src/app/api/." -ForegroundColor Yellow
