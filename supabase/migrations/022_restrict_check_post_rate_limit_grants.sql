@@ -1,0 +1,31 @@
+-- check_post_rate_limit was grantable to PUBLIC and anon: any unauthenticated
+-- caller could invoke supabase.rpc('check_post_rate_limit', { check_author_id: <any uuid> })
+-- directly, with no ownership check, and it unconditionally INSERTs a
+-- post_rate_throttle row and returns false once that account's quota is hit.
+-- Real caller-supplied-author_id-with-no-auth.uid()-check bug, found via
+-- check-rpc-audit.ps1's false-positive review on 2026-08-19 -- it had been
+-- filed under $knownExempt as "trigger/counter, no caller-supplied author_id",
+-- which is wrong on both counts (it's not a trigger, and check_author_id IS
+-- caller-supplied). The function itself doesn't need an auth.uid() check --
+-- every legitimate caller (create_sequence_with_version, publish_draft_sequence,
+-- publish_draft_sequences_batch) already checks p_author_id = auth.uid() before
+-- calling this. The actual bug was the grant surface being too wide, same
+-- enforcement pattern as lookup_discord_id_by_user_id / lookup_profile_by_discord_id
+-- in migration 013 (grant execute only to the roles that should call it directly).
+--
+-- Scoped to authenticated, matching is_verified_poster's grant exactly -- both
+-- are eligibility checks called from RPCs that already require a logged-in
+-- caller, neither should be callable by anon.
+--
+-- Residual risk not closed by this migration: any AUTHENTICATED account can
+-- still call this directly against another account's uuid and burn their post
+-- quota, since the function body itself has no ownership check. Revoking anon
+-- closes the unauthenticated/zero-cost version of the abuse; a full fix would
+-- add an auth.uid() = check_author_id check inside the function body, matching
+-- every other function in this audit lineage. Not done here because that
+-- would break the legitimate calling pattern (the calling RPC's own author_id
+-- has already been verified against auth.uid() by that point, and re-checking
+-- here would just duplicate that check under a different variable name with no
+-- added protection) -- flagged for a follow-up decision, not silently deferred.
+revoke all on function public.check_post_rate_limit(uuid) from public, anon;
+grant execute on function public.check_post_rate_limit(uuid) to authenticated;
