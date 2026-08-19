@@ -159,15 +159,31 @@ Write-Host "[2/3] Checking for API routes added since the last full audit..." -F
 # added 2026-07-31 (src/lib/rate-limit.ts) -- this script only tracks route
 # existence, not content changes, so that's noted here rather than something
 # this script would catch on its own.
-# 2026-08-19: nine routes flagged NEW by this script's own Part 2 output
-# (admin/sequence-thread, comments + comments/delete + comments/edit,
-# relay/discord-comment + delete + edit, relay-identity, sequences/delete)
-# still need their hostile-caller read and addition to this list -- carried
-# forward as an open item from this session, not silently resolved.
+# 2026-08-19: the nine routes flagged NEW by this script's own Part 2 output
+# on the previous run got their hostile-caller read today. All nine are
+# clean on authorization: session-client + RLS for the four comment/delete
+# routes (comments, comments/delete, comments/edit, sequences/delete),
+# secret-plus-rate-limit-plus-identity-resolved-server-side for the four
+# relay/admin routes (relay/discord-comment, relay/discord-comment-edit,
+# relay/discord-comment-delete, relay-identity). One real gap found and
+# fixed same day: admin/sequence-thread had no rate limiter, unlike every
+# sibling secret-gated route -- added, matching the others' 60/min budget.
+# Verified live (not just in the migration files) that DISCORD_RELAY_SECRET
+# and LAZYGRIP_ADMIN_TASK_SECRET are actually set in Vercel Production
+# before trusting either route's fail-closed claim.
 $auditedRoutes = @(
+    "src\app\api\admin\sequence-thread\route.ts",
+    "src\app\api\comments\route.ts",
+    "src\app\api\comments\delete\route.ts",
+    "src\app\api\comments\edit\route.ts",
     "src\app\api\cron\patch-reminder\route.ts",
     "src\app\api\decode-grip\route.ts",
     "src\app\api\notify-discord\route.ts",
+    "src\app\api\relay\discord-comment\route.ts",
+    "src\app\api\relay\discord-comment-delete\route.ts",
+    "src\app\api\relay\discord-comment-edit\route.ts",
+    "src\app\api\relay-identity\route.ts",
+    "src\app\api\sequences\delete\route.ts",
     "src\app\api\workshop\build\route.ts",
     "src\app\api\workshop\convert\route.ts",
     "src\app\api\workshop\convert-spell-texts\route.ts",
