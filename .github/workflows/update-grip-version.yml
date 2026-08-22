@@ -74,10 +74,13 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Found version: $VERSION"
 
-      - name: Read current version from layout.tsx
+      - name: Read current version from page.tsx
         id: current_version
         run: |
-          CURRENT=$(grep -o 'GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*' src/app/guide/layout.tsx | head -1)
+          # layout.tsx no longer contains a version string — it's just the nav sidebar now.
+          # The version reference lives in page.tsx's intro prose instead. Confirmed by
+          # reading both files directly on 2026-08-22 after this step was returning blank.
+          CURRENT=$(grep -o 'GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*' src/app/guide/page.tsx | head -1)
           echo "current=$CURRENT" >> $GITHUB_OUTPUT
           echo "Current version: $CURRENT"
 
