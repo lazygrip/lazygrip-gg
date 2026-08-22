@@ -17,42 +17,60 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Fetch latest GRIP-EMS version from CurseForge page
+      - name: Fetch latest GRIP-EMS version from Wago
         id: fetch_version
         run: |
           RESPONSE=$(curl -s -L \
             -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
-            "https://www.curseforge.com/wow/addons/grip-enhanced-macro-sequencer")
-          
+            "https://addons.wago.io/addons/grip-ems/versions?stability=stable")
+
           VERSION=$(echo "$RESPONSE" | python3 -c "
-          import sys, re
-          html = sys.stdin.read()
-          # Look for GRIP-EMS version strings like v2.1.12 - exclude WoW patch versions
-          # WoW versions look like 12.0.x, addon versions look like 2.x.x or 1.x.x
-          matches = re.findall(r'GRIP[^\"<>]{0,30}(v?[12]\.\d+\.\d+)', html)
-          addon_versions = []
-          for m in matches:
-              # Skip WoW game versions (12.x.x) and keep addon versions (1.x.x or 2.x.x)
-              parts = m.lstrip('v').split('.')
-              if int(parts[0]) <= 9:
-                  v = m if m.startswith('v') else 'v' + m
-                  addon_versions.append(v)
-          
-          if addon_versions:
-              print(addon_versions[0])
-          else:
-              # Fallback: find any version that looks like an addon version
-              matches = re.findall(r'\"displayName\":\"GRIP[^\"]*?(v?[12]\.\d+\.\d+)', html)
-              if matches:
-                  v = matches[0]
-                  if not v.startswith('v'):
-                      v = 'v' + v
-                  print(v)
-              else:
-                  print('Could not find addon version', file=sys.stderr)
-                  sys.exit(1)
+          import sys, re, json, html
+
+          page_html = sys.stdin.read()
+
+          match = re.search(r'data-page=\"([^\"]+)\"', page_html)
+          if not match:
+              print('Could not find data-page attribute on Wago releases page', file=sys.stderr)
+              sys.exit(1)
+
+          decoded = html.unescape(match.group(1))
+          try:
+              data = json.loads(decoded)
+          except json.JSONDecodeError as e:
+              print(f'Could not parse Wago page-data JSON: {e}', file=sys.stderr)
+              sys.exit(1)
+
+          try:
+              releases = data['props']['releases']['data']
+          except (KeyError, TypeError):
+              print('Wago page-data JSON did not have the expected releases.data shape', file=sys.stderr)
+              sys.exit(1)
+
+          stable_releases = [r for r in releases if r.get('stability') == 'stable']
+          if not stable_releases:
+              print('No stable releases found in Wago page data', file=sys.stderr)
+              sys.exit(1)
+
+          # Releases are date-descending on the page, but the stability filter above is
+          # what actually matters here, so pick the newest stable one explicitly rather
+          # than trusting list order alone.
+          newest = max(stable_releases, key=lambda r: r.get('created_at', ''))
+          label = newest.get('label', '')
+
+          if not re.match(r'^v?[12]\.\d+\.\d+\$', label):
+              print(f'Wago release label \"{label}\" did not look like an addon version, refusing to proceed', file=sys.stderr)
+              sys.exit(1)
+
+          version = label if label.startswith('v') else f'v{label}'
+          print(version)
           ")
-          
+
+          if [ -z "$VERSION" ]; then
+            echo "Could not find addon version" >&2
+            exit 1
+          fi
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Found version: $VERSION"
 
@@ -102,6 +120,7 @@ jobs:
 
             - Detected version: `${{ steps.fetch_version.outputs.version }}`
             - Previous version: `${{ steps.current_version.outputs.current }}`
+            - Source: Wago Addons (addons.wago.io/addons/grip-ems)
 
             This PR was opened because `main` is a protected branch and no longer accepts direct pushes.
           branch: "auto/grip-ems-version-update"
