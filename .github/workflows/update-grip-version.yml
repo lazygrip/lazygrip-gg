@@ -74,15 +74,48 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Found version: $VERSION"
 
-      - name: Read current version from page.tsx
+      - name: Read current versions from tracked files
         id: current_version
         run: |
-          # layout.tsx no longer contains a version string — it's just the nav sidebar now.
-          # The version reference lives in page.tsx's intro prose instead. Confirmed by
-          # reading both files directly on 2026-08-22 after this step was returning blank.
-          CURRENT=$(grep -o 'GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*' src/app/guide/page.tsx | head -1)
-          echo "current=$CURRENT" >> $GITHUB_OUTPUT
-          echo "Current version: $CURRENT"
+          # Three files reference the GRIP-EMS version, and they can drift independently
+          # since site edits touch them one at a time (this is exactly how src/app/page.tsx
+          # ended up frozen at v2.3.19 while guide/page.tsx had already moved to v2.4.6 —
+          # confirmed 2026-08-22). guide/layout.tsx currently has no version string at all
+          # (it's just nav now) so it's read defensively and simply won't force an update
+          # on its own while empty.
+          #
+          # To make sure a stale file can never hide behind an already-current one, this
+          # step reports the OLDEST version found across all tracked files, and the update
+          # step below unconditionally rewrites all three whenever any one of them is behind.
+          LAYOUT=$(grep -o 'GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*' src/app/guide/layout.tsx | head -1)
+          GUIDE=$(grep -o 'GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*' src/app/guide/page.tsx | head -1)
+          HOME=$(grep -o 'GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*' src/app/page.tsx | head -1)
+
+          echo "guide/layout.tsx: ${LAYOUT:-<none>}"
+          echo "guide/page.tsx: ${GUIDE:-<none>}"
+          echo "src/app/page.tsx: ${HOME:-<none>}"
+
+          OLDEST=$(python3 -c "
+          import re
+
+          candidates = ['$LAYOUT', '$GUIDE', '$HOME']
+
+          def version_tuple(s):
+              m = re.search(r'v(\d+)\.(\d+)\.(\d+)', s)
+              if not m:
+                  return None
+              return tuple(int(g) for g in m.groups())
+
+          parsed = [(c, version_tuple(c)) for c in candidates if version_tuple(c)]
+          if not parsed:
+              print('')
+          else:
+              oldest = min(parsed, key=lambda p: p[1])
+              print(oldest[0])
+          ")
+
+          echo "current=$OLDEST" >> $GITHUB_OUTPUT
+          echo "Oldest tracked version: ${OLDEST:-<none found>}"
 
       - name: Check if update is needed
         id: check
@@ -108,6 +141,7 @@ jobs:
           NEW_VERSION="${FETCHED_VERSION}"
           sed -i "s/GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*/GRIP-EMS ${NEW_VERSION}/g" src/app/guide/layout.tsx
           sed -i "s/GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*/GRIP-EMS ${NEW_VERSION}/g" src/app/guide/page.tsx
+          sed -i "s/GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*/GRIP-EMS ${NEW_VERSION}/g" src/app/page.tsx
           echo "Updated files to $NEW_VERSION"
 
       - name: Create pull request
@@ -131,6 +165,7 @@ jobs:
           add-paths: |
             src/app/guide/layout.tsx
             src/app/guide/page.tsx
+            src/app/page.tsx
 
       - name: Enable auto-merge
         if: steps.check.outputs.needed == 'true' && steps.cpr.outputs.pull-request-number
