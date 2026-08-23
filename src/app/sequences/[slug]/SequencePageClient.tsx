@@ -131,6 +131,11 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
   // whatever was typed in place -- commentText/replyText/selectedScore are
   // untouched -- so nothing typed is lost, only the submit is blocked.
   const [showUsernameModal, setShowUsernameModal] = useState(false)
+  // Which action was blocked and should be retried once the checklist
+  // reports every condition satisfied. 'reply' carries its own parentId
+  // separately (replyingTo, already tracked elsewhere) rather than needing
+  // a second field here, since only one reply box can be open at a time.
+  const [pendingGatedAction, setPendingGatedAction] = useState<'comment' | 'reply' | 'rating' | null>(null)
   const { checkGate } = useUsernameGate()
 
   // ST/MT linking state
@@ -345,13 +350,22 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
     setTagsSubmitted(false)
   }
 
-  async function confirmRating() {
+  async function confirmRating(skipGate = false) {
     if (!user || !sequence || selectedScore === null) return
 
-    const gate = await checkGate(user.id)
-    if (!gate.ok) {
-      setShowUsernameModal(true)
-      return
+    // skipGate=true is passed only from the checklist's onEligible callback,
+    // which fires after get_posting_eligibility() has just confirmed every
+    // condition passes -- re-running checkGate here would be a redundant
+    // round trip against a state we already know is true, not a safety
+    // check being skipped. The RLS policy on the ratings insert is still
+    // the real enforcement either way, gate or no gate.
+    if (!skipGate) {
+      const gate = await checkGate(user.id)
+      if (!gate.ok) {
+        setPendingGatedAction('rating')
+        setShowUsernameModal(true)
+        return
+      }
     }
 
     setConfirming(true)
@@ -405,13 +419,19 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
     )
   }
 
-  async function submitComment() {
+  async function submitComment(skipGate = false) {
     if (!user || !sequence || !commentText.trim()) return
 
-    const gate = await checkGate(user.id)
-    if (!gate.ok) {
-      setShowUsernameModal(true)
-      return
+    // skipGate=true is passed only from the checklist's onEligible callback,
+    // see confirmRating's comment above for why this is safe to skip rather
+    // than a real safety bypass.
+    if (!skipGate) {
+      const gate = await checkGate(user.id)
+      if (!gate.ok) {
+        setPendingGatedAction('comment')
+        setShowUsernameModal(true)
+        return
+      }
     }
 
     const data = await insertComment({
@@ -422,13 +442,19 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
     setCommentText('')
   }
 
-  async function submitReply(parentId: string) {
+  async function submitReply(parentId: string, skipGate = false) {
     if (!user || !sequence || !replyText.trim()) return
 
-    const gate = await checkGate(user.id)
-    if (!gate.ok) {
-      setShowUsernameModal(true)
-      return
+    // skipGate=true is passed only from the checklist's onEligible callback,
+    // see confirmRating's comment above for why this is safe to skip rather
+    // than a real safety bypass.
+    if (!skipGate) {
+      const gate = await checkGate(user.id)
+      if (!gate.ok) {
+        setPendingGatedAction('reply')
+        setShowUsernameModal(true)
+        return
+      }
     }
 
     // parent_id is stored and shown as a nested reply on the site. The relay
@@ -833,8 +859,19 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
       {showUsernameModal && user && (
         <PostingEligibilityChecklist
           userId={user.id}
-          onEligible={() => setShowUsernameModal(false)}
-          onClose={() => setShowUsernameModal(false)}
+          onEligible={() => {
+            setShowUsernameModal(false)
+            // Finish whatever the person was doing instead of leaving them
+            // to notice the panel closed and click submit a second time.
+            // skipGate=true because the checklist itself just confirmed
+            // every condition passes -- re-running checkGate would be a
+            // redundant round trip against a state already known true.
+            if (pendingGatedAction === 'comment') submitComment(true)
+            else if (pendingGatedAction === 'reply' && replyingTo) submitReply(replyingTo, true)
+            else if (pendingGatedAction === 'rating') confirmRating(true)
+            setPendingGatedAction(null)
+          }}
+          onClose={() => { setShowUsernameModal(false); setPendingGatedAction(null) }}
         />
       )}
 
@@ -1356,7 +1393,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                     marginBottom: 8,
                   }}
                 />
-                <button onClick={submitComment} disabled={!commentText.trim()} style={{
+                <button onClick={() => submitComment()} disabled={!commentText.trim()} style={{
                   padding: '7px 16px', background: 'var(--accent)', color: 'white',
                   border: 'none', borderRadius: 'var(--radius-md)',
                   cursor: 'pointer', fontSize: 'var(--text-sm)', fontWeight: 500,
@@ -1490,7 +1527,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                     />
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button
-                        onClick={confirmRating}
+                        onClick={() => confirmRating()}
                         disabled={confirming}
                         style={{
                           padding: '5px 12px', background: 'var(--accent)', color: 'white',

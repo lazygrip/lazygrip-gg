@@ -834,8 +834,8 @@ async function runDecode(exportString: string) {
     }
   }, [])
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleSubmit(e?: React.FormEvent, skipGate = false) {
+    e?.preventDefault()
     setError('')
 
     if (!form.class_id || !form.content_type) {
@@ -848,13 +848,21 @@ async function runDecode(exportString: string) {
     // reaching /post at all, so this is a backstop for a stale session or
     // a race between the middleware check and this submit, not the primary
     // defense. The DB-side RLS/RPC checks remain the real enforcement either way.
-    const { data: { user: gateUser } } = await supabase.auth.getUser()
-    if (gateUser) {
-      const gate = await checkGate(gateUser.id)
-      if (!gate.ok) {
-        setGatedUserId(gateUser.id)
-        setShowUsernameModal(true)
-        return
+    //
+    // skipGate=true is passed only from the checklist's onEligible callback,
+    // which fires after get_posting_eligibility() has just confirmed every
+    // condition passes -- re-running checkGate here would be a redundant
+    // round trip against a state already known true, not a safety check
+    // being skipped.
+    if (!skipGate) {
+      const { data: { user: gateUser } } = await supabase.auth.getUser()
+      if (gateUser) {
+        const gate = await checkGate(gateUser.id)
+        if (!gate.ok) {
+          setGatedUserId(gateUser.id)
+          setShowUsernameModal(true)
+          return
+        }
       }
     }
 
@@ -1401,7 +1409,14 @@ async function runDecode(exportString: string) {
       {showUsernameModal && gatedUserId && (
         <PostingEligibilityChecklist
           userId={gatedUserId}
-          onEligible={() => setShowUsernameModal(false)}
+          onEligible={() => {
+            setShowUsernameModal(false)
+            // Finish the post instead of leaving the person to notice the
+            // panel closed and click Publish a second time. skipGate=true
+            // because the checklist itself just confirmed every condition
+            // passes.
+            handleSubmit(undefined, true)
+          }}
           onClose={() => setShowUsernameModal(false)}
         />
       )}
