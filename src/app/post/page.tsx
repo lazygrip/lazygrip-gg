@@ -9,7 +9,7 @@ import type { SequenceStep } from '@/types'
 import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
 import { notifyDiscord } from '@/lib/notify-discord'
 import { useUsernameGate } from '@/lib/useUsernameGate'
-import UsernameRequiredModal from '@/components/UsernameRequiredModal'
+import PostingEligibilityChecklist from '@/components/PostingEligibilityChecklist'
 
 const PATCH_VERSIONS = ['12.0', '12.0.5', '12.0.7', '12.1']
 
@@ -1399,10 +1399,10 @@ async function runDecode(exportString: string) {
           a backstop for a stale session, not the primary defense. Form state
           is untouched if dismissed -- nothing typed is lost. */}
       {showUsernameModal && gatedUserId && (
-        <UsernameRequiredModal
+        <PostingEligibilityChecklist
           userId={gatedUserId}
+          onEligible={() => setShowUsernameModal(false)}
           onClose={() => setShowUsernameModal(false)}
-          onSuccess={() => setShowUsernameModal(false)}
         />
       )}
 

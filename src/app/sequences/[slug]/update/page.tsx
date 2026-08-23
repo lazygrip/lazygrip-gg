@@ -7,7 +7,7 @@ import { Wand2, X } from 'lucide-react'
 import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
 import { notifyDiscord } from '@/lib/notify-discord'
 import { useUsernameGate } from '@/lib/useUsernameGate'
-import UsernameRequiredModal from '@/components/UsernameRequiredModal'
+import PostingEligibilityChecklist from '@/components/PostingEligibilityChecklist'
 
 interface SequenceOption {
   name: string
@@ -321,10 +321,10 @@ export default function UpdateSequencePage() {
       {/* Username required modal: shown when publishing a version is attempted
           without a custom username set. Form fields stay filled in if dismissed. */}
       {showUsernameModal && user && (
-        <UsernameRequiredModal
+        <PostingEligibilityChecklist
           userId={user.id}
+          onEligible={() => setShowUsernameModal(false)}
           onClose={() => setShowUsernameModal(false)}
-          onSuccess={() => setShowUsernameModal(false)}
         />
       )}
 
