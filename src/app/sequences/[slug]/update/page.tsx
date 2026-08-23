@@ -190,7 +190,7 @@ export default function UpdateSequencePage() {
       .finally(() => setDecoding(false))
   }
 
-  async function handlePublish() {
+  async function handlePublish(skipGate: boolean = false) {
     if (!sequence || !currentVersion || !user) return
     if (!gripString.trim()) {
       setError('GRIP export string is required')
@@ -205,10 +205,17 @@ export default function UpdateSequencePage() {
       return
     }
 
-    const gate = await checkGate(user.id)
-    if (!gate.ok) {
-      setShowUsernameModal(true)
-      return
+    // skipGate=true is passed only from the checklist's onEligible callback,
+    // which fires after get_posting_eligibility() has just confirmed every
+    // condition passes -- re-running checkGate here would be a redundant
+    // round trip against a state already known true. The onClick call site
+    // below passes no arguments, so skipGate is always false there.
+    if (!skipGate) {
+      const gate = await checkGate(user.id)
+      if (!gate.ok) {
+        setShowUsernameModal(true)
+        return
+      }
     }
 
     setSubmitting(true)
@@ -323,7 +330,14 @@ export default function UpdateSequencePage() {
       {showUsernameModal && user && (
         <PostingEligibilityChecklist
           userId={user.id}
-          onEligible={() => setShowUsernameModal(false)}
+          onEligible={() => {
+            setShowUsernameModal(false)
+            // Finish publishing instead of leaving the person to notice the
+            // panel closed and click Publish a second time. skipGate=true
+            // because the checklist itself just confirmed every condition
+            // passes.
+            handlePublish(true)
+          }}
           onClose={() => setShowUsernameModal(false)}
         />
       )}
@@ -790,7 +804,7 @@ export default function UpdateSequencePage() {
         {/* Actions */}
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <button
-            onClick={handlePublish}
+            onClick={() => handlePublish()}
             disabled={submitting}
             style={{
               padding: '10px 24px',
