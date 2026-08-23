@@ -10,7 +10,7 @@ import RenderedContent from '@/components/editor/RenderedContent'
 import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
 import type { SequencePageResult } from '@/lib/sequence-server'
 import { useUsernameGate } from '@/lib/useUsernameGate'
-import UsernameRequiredModal from '@/components/UsernameRequiredModal'
+import PostingEligibilityChecklist from '@/components/PostingEligibilityChecklist'
 import DiscordLinkPrompt from '@/components/sequence/DiscordLinkPrompt'
 
 const SITE_OWNER_ID = 'c2374192-e541-4636-9baf-84fc192cff52'
@@ -831,10 +831,10 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
           replyText) or selected (selectedScore) stays untouched if dismissed,
           so nothing is lost -- just re-run the same action after setting one. */}
       {showUsernameModal && user && (
-        <UsernameRequiredModal
+        <PostingEligibilityChecklist
           userId={user.id}
+          onEligible={() => setShowUsernameModal(false)}
           onClose={() => setShowUsernameModal(false)}
-          onSuccess={() => setShowUsernameModal(false)}
         />
       )}
 
