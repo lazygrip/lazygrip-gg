@@ -166,6 +166,7 @@ export type SequenceFilters = {
   spec_name?: string
   content_type?: ContentType
   grip_version?: string
+  patch_version?: string
   search?: string
   sort?: 'recent' | 'top_rated' | 'most_viewed' | 'most_saved'
   page?: number

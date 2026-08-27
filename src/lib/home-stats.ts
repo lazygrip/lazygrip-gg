@@ -47,12 +47,23 @@ export async function fetchHomeStats(): Promise<HomeStats | null> {
 
 // Powers the homepage "Top Sequences" leaderboard — same query builder the browse page
 // uses (buildBrowseQuery), so this can never drift from what "most viewed" actually
-// means there. Returns [] rather than null on failure: the leaderboard section just
-// omits itself, same fallback shape as fetchHomeStats.
+// means there. Scoped to the current patch (site_config.current_patch, same source of
+// truth fetchCurrentPatchTicker reads below) so the leaderboard reflects the present
+// season instead of surfacing view counts sequences racked up on patches players have
+// since moved past. Falls back to an unscoped most-viewed query if no current patch is
+// configured, so the section never goes empty over a missing config row. Returns []
+// rather than null on failure: the leaderboard section just omits itself, same fallback
+// shape as fetchHomeStats.
 export async function fetchTrendingSequences(limit = 6): Promise<Sequence[]> {
   try {
     const supabase = createPublicClient()
-    const { data, error } = await buildBrowseQuery(supabase, { sort: 'most_viewed', limit })
+    const { data: config } = await supabase.from('site_config').select('current_patch').eq('id', true).single()
+    const patch = config?.current_patch ?? null
+
+    const { data, error } = await buildBrowseQuery(
+      supabase,
+      patch ? { sort: 'most_viewed', limit, patch_version: patch } : { sort: 'most_viewed', limit }
+    )
     if (error) return []
     return (data ?? []) as Sequence[]
   } catch {
