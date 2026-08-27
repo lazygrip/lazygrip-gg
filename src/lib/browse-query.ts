@@ -27,6 +27,7 @@ export function buildBrowseQuery(supabase: SupabaseClient, filters: SequenceFilt
   if (filters.class_id) query = query.eq('class_id', filters.class_id)
   if (filters.spec_id) query = query.eq('spec_id', filters.spec_id)
   if (filters.content_type) query = query.eq('content_type', filters.content_type)
+  if (filters.patch_version) query = query.eq('patch_version', filters.patch_version)
   if (filters.search) {
     const pattern = searchPattern(filters.search)
     query = query.or(`title.ilike.${pattern},description.ilike.${pattern}`)
@@ -61,6 +62,7 @@ export function browseFilterKey(filters: SequenceFilters): string {
     filters.class_id ?? null,
     filters.spec_id ?? null,
     filters.content_type ?? null,
+    filters.patch_version ?? null,
     filters.search ?? null,
   ])
 }
