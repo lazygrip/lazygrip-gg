@@ -745,7 +745,19 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
   const steps = selectedVersion?.raw_steps || sequence.raw_steps || []
   const actionsTree = selectedVersion?.actions ?? sequence.actions ?? null
   const visibleSteps = showAllSteps ? steps : steps.slice(0, 8)
-  const stepCountForBadge = actionsTree ? countActionSteps(actionsTree) : steps.length
+  // Whether there's a real, non-empty actions tree to render through
+  // ActionTreeView. Deliberately NOT just `Boolean(actionsTree)` -- actions
+  // can be a real, persisted, but EMPTY array (normalizeGripActions()
+  // returns [] for an empty/all-filtered input, and that's what gets stored,
+  // not null), and `!actionsTree` is false for `[]`. Using this single
+  // derived flag everywhere the tree-vs-flat-list choice is made keeps the
+  // two render branches genuine complements of each other; the earlier
+  // version of this fix checked `actionsTree && ...` on one branch and
+  // `!actionsTree` on the other, which both evaluate false for `[]` --
+  // neither branch would render, silently hiding the step list even with
+  // real raw_steps data underneath. Caught in self-audit, not a real report.
+  const hasActionsTree = Boolean(actionsTree && actionsTree.length > 0)
+  const stepCountForBadge = hasActionsTree ? countActionSteps(actionsTree!) : steps.length
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px' }}>
@@ -1277,12 +1289,20 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                 {activeEntry.stepFunction && (
                   <Badge color="#888">{activeEntry.stepFunction}</Badge>
                 )}
-                {/* Was always activeEntry.steps.length. When this entry has an
-                    actions tree, count real steps through loop repeats
-                    instead of the flat pass-through count -- see
-                    countActionSteps in ActionTree.tsx. */}
+                {/* Was always activeEntry.steps.length. When this entry has a
+                    real, non-empty actions tree, count real steps through
+                    loop repeats instead of the flat pass-through count -- see
+                    countActionSteps in ActionTree.tsx. Checks .length > 0,
+                    not just truthiness: activeEntry.actions can be a real,
+                    persisted, but empty array, and the render ternary below
+                    already treats that as "no tree" and falls back to
+                    activeEntry.steps -- this badge needs to agree with that
+                    or it shows "0 steps" next to a list that's actually
+                    rendering N real steps from the flat fallback. */}
                 <Badge color="#888">
-                  {activeEntry.actions ? countActionSteps(activeEntry.actions) : activeEntry.steps.length} steps
+                  {activeEntry.actions && activeEntry.actions.length > 0
+                    ? countActionSteps(activeEntry.actions)
+                    : activeEntry.steps.length} steps
                 </Badge>
               </div>
 
@@ -1359,15 +1379,10 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
             </div>
           )}
 
-          {/* Single sequence steps display.
-              Renders via ActionTreeView (Loop/If-aware, shows real repeat
-              counts) whenever the selected version has an `actions` tree.
-              Falls back to the old flat numbered list for versions saved
-              before migration 025, which have raw_steps but no actions --
-              those still won't show loop grouping, since that information
-              was never captured for them, but they're no worse off than
-              before this fix. */}
-          {!isCollection && actionsTree && actionsTree.length > 0 && (
+          {/* Single sequence steps display. See hasActionsTree above for why
+              this uses that flag on both branches rather than checking
+              actionsTree truthiness on one and !actionsTree on the other. */}
+          {!isCollection && hasActionsTree && (
             <div style={{
               background: 'var(--bg-primary)',
               border: '0.5px solid var(--border)',
@@ -1378,12 +1393,12 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                 Steps ({stepCountForBadge})
               </h2>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
-                <ActionTreeView nodes={actionsTree} counter={{ n: 0 }} />
+                <ActionTreeView nodes={actionsTree!} counter={{ n: 0 }} />
               </div>
             </div>
           )}
 
-          {!isCollection && !actionsTree && steps.length > 0 && (
+          {!isCollection && !hasActionsTree && steps.length > 0 && (
             <div style={{
               background: 'var(--bg-primary)',
               border: '0.5px solid var(--border)',

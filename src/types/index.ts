@@ -28,7 +28,13 @@ export type StepFunction = 'Sequential' | 'Priority' | 'Rev. Priority' | 'Random
 // repeated at all.
 export type ActionNode = {
   index: number
-  kind: 'Loop' | 'Action' | 'Repeat' | 'If' | 'Pause' | 'Embed'
+  // 'Step' is emsDecoder.ts's (native EMS/GRIP decode) name for a leaf
+  // action node. 'Action'/'Repeat' are gseDecoder.ts's (legacy-program
+  // conversion) names for the same role. Both are real and both appear in
+  // live data depending on which decoder produced the tree -- see the
+  // kind-naming note in src/components/sequence/ActionTree.tsx for the full
+  // story of a bug this caused when only 'Action'/'Repeat' were listed here.
+  kind: 'Loop' | 'Action' | 'Step' | 'Repeat' | 'If' | 'Pause' | 'Embed'
   depth: number
   label: string
   text?: string
