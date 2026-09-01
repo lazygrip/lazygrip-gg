@@ -16,6 +16,29 @@ export type WowSpec = {
 export type ContentType = 'raid' | 'mythic_plus' | 'pvp' | 'solo'
 export type StepFunction = 'Sequential' | 'Priority' | 'Rev. Priority' | 'Random'
 
+// Hierarchical decoded action tree -- mirrors the shape
+// src/lib/workshop/emsDecoder.ts's normalizeGripActions() produces and
+// src/components/sequence/ActionTree.tsx renders. Stored verbatim in the
+// `actions` jsonb column added by migration 025, alongside the older flat
+// `raw_steps` array. Nullable everywhere it appears: older rows saved before
+// this column existed have no actions data, and every consumer falls back to
+// rendering the flat SequenceStep[] for those rows. See migration 025 for why
+// this exists -- raw_steps alone can't represent Loop/Repeat/If structure, so
+// a sequence built from a repeating loop displayed with no indication it
+// repeated at all.
+export type ActionNode = {
+  index: number
+  kind: 'Loop' | 'Action' | 'Repeat' | 'If' | 'Pause' | 'Embed'
+  depth: number
+  label: string
+  text?: string
+  stepFunction?: string
+  repeat?: number
+  interval?: number
+  variable?: string
+  children?: ActionNode[]
+}
+
 export type Profile = {
   id: string
   username: string
@@ -43,6 +66,10 @@ export type LinkedSequence = {
 export type CollectionSequenceEntry = {
   name: string
   steps: SequenceStep[]
+  // See ActionNode above. Optional -- collections published before migration
+  // 025 (or any client that hasn't been updated to send it) simply omit this,
+  // and the display falls back to `steps`.
+  actions?: ActionNode[]
   stepFunction: string | null
   talent_string: string | null
 }
@@ -65,6 +92,10 @@ export type Sequence = {
   step_count: number | null
   grip_string: string | null
   raw_steps: SequenceStep[] | null
+  // See ActionNode above. Mirrors the CURRENT version's actions tree (kept in
+  // sync by the write RPCs as of migration 025). Null for rows saved before
+  // that migration until their author re-saves.
+  actions: ActionNode[] | null
   keybind_info: KeybindInfo | null
   talent_string: string | null
   warcraftlogs_url: string | null
@@ -147,6 +178,9 @@ export type SequenceVersion = {
   version_label: string
   grip_string: string
   raw_steps: SequenceStep[] | null
+  // See ActionNode above and Sequence.actions. This version's own tree,
+  // independent of whichever version happens to be `current`.
+  actions: ActionNode[] | null
   changelog: string | null
   author_id: string
   hero_talent: string | null

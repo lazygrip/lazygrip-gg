@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Sequence, SequenceVersion, SequenceStep } from '@/types'
+import { Sequence, SequenceVersion, SequenceStep, ActionNode } from '@/types'
 import { Wand2, X } from 'lucide-react'
 import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
 import { notifyDiscord } from '@/lib/notify-discord'
@@ -50,6 +50,13 @@ export default function UpdateSequencePage() {
   // Stores the structured steps from the decoder so submit uses them directly
   // rather than re-parsing the textarea text, which would split multiline steps.
   const [decodedSteps, setDecodedSteps] = useState<SequenceStep[] | null>(null)
+  // Mirrors decodedSteps -- the hierarchical Loop/If/Action tree for whichever
+  // decode populated decodedSteps. Was missing entirely before this fix: this
+  // page (the "publish a new version" flow) decoded .actions from the API
+  // response along with everything else but never stored it, so every new
+  // version published through here lost loop structure the same way the
+  // original /post flow did. See migration 025.
+  const [decodedActions, setDecodedActions] = useState<ActionNode[] | null>(null)
   const decodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -125,6 +132,8 @@ export default function UpdateSequencePage() {
       const steps: SequenceStep[] = data.sequences?.[0]?.steps ?? data.steps ?? []
       // Store the structured steps for use at submit time.
       setDecodedSteps(steps)
+      const firstVersionActions = data.sequences?.[0]?.versions?.[0]?.actions
+      setDecodedActions(Array.isArray(firstVersionActions) ? firstVersionActions : null)
       // Display in textarea with step separators so multiline steps are readable.
       const stepsText = steps.map(s => s.text).join('\n---\n')
       setRawSteps(stepsText)
@@ -143,6 +152,7 @@ export default function UpdateSequencePage() {
     setDecodeError(null)
     setStepsAutoPopulated(false)
     setDecodedSteps(null)
+    setDecodedActions(null)
 
     if (decodeTimeoutRef.current) clearTimeout(decodeTimeoutRef.current)
 
@@ -161,6 +171,7 @@ export default function UpdateSequencePage() {
     if (stepsAutoPopulated) {
       setStepsAutoPopulated(false)
       setDecodedSteps(null)
+      setDecodedActions(null)
     }
   }
 
@@ -180,6 +191,8 @@ export default function UpdateSequencePage() {
         const steps: SequenceStep[] = seq.steps ?? []
         // Preview steps from selected sequence but keep the full bundle string
         setDecodedSteps(steps)
+        const firstVersionActions = seq.versions?.[0]?.actions
+        setDecodedActions(Array.isArray(firstVersionActions) ? firstVersionActions : null)
         setRawSteps(steps.map((s: SequenceStep) => s.text).join('\n---\n'))
         setStepsAutoPopulated(true)
         // Keep the full export string so the complete bundle is stored
@@ -232,6 +245,13 @@ export default function UpdateSequencePage() {
           }))
         : null
     )
+    // Paired with parsedSteps the same way resolveStepsAndActions pairs them
+    // in /post: the actions tree is only trustworthy alongside decodedSteps.
+    // If parsedSteps fell back to the hand-typed textarea parse instead, any
+    // previously-decoded tree no longer corresponds to what's being
+    // submitted (handleRawStepsChange already clears decodedActions when
+    // this happens; this is the second half of that guarantee).
+    const parsedActions = decodedSteps ? decodedActions : null
 
     const { error: rpcError } = await supabase.rpc('publish_sequence_version', {
       p_sequence_id: sequence.id,
@@ -239,6 +259,7 @@ export default function UpdateSequencePage() {
       p_version_label: versionLabel.trim(),
       p_grip_string: gripString.trim(),
       p_raw_steps: parsedSteps,
+      p_actions: parsedActions,
       p_changelog: changelog.trim(),
       p_author_id: user.id,
       p_hero_talent: heroTalent || null,

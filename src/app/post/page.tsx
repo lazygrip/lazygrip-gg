@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { WOW_CLASSES, CONTENT_TYPES, STEP_FUNCTIONS, slugify } from '@/lib/wow-data'
 import { AlertCircle, Wand2 } from 'lucide-react'
 import TiptapEditor from '@/components/editor/TiptapEditor'
-import type { SequenceStep } from '@/types'
+import type { SequenceStep, ActionNode } from '@/types'
 import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
 import { notifyDiscord } from '@/lib/notify-discord'
 import { useUsernameGate } from '@/lib/useUsernameGate'
@@ -42,6 +42,12 @@ interface CollectionSequence {
   title: string           // editable label stored inside collection_sequences
   talent_string: string   // per-sequence, may differ between ST/MT
   steps: SequenceStep[]
+  // Hierarchical Loop/If/Action tree for this entry, when the decoder
+  // produced one (see ActionNode in src/types). Optional/nullable --
+  // populated from the decode response's per-sequence `.actions`, carried
+  // straight through to collection_sequences on publish. See the "steps
+  // discarded .actions" note below runDecode for why this exists.
+  actions: ActionNode[] | null
   stepFunction: string
   classID: number | null
   specID: number | null
@@ -150,6 +156,12 @@ function PostForm() {
   const [decodeError, setDecodeError] = useState<string | null>(null)
   const [stepsAutoPopulated, setStepsAutoPopulated] = useState(false)
   const [decodedSteps, setDecodedSteps] = useState<SequenceStep[] | null>(null)
+  // The hierarchical actions tree for the decoded single sequence, kept
+  // alongside decodedSteps for the same lifetime (set together, cleared
+  // together). Previously there was no equivalent of this at all -- the
+  // decode response's `.actions` was read into nothing and the flat `.steps`
+  // was the only thing that survived past runDecode. See migration 025.
+  const [decodedActions, setDecodedActions] = useState<ActionNode[] | null>(null)
   // Original author as declared in the export's exportMeta.author field, single-sequence
   // imports only. Not user-editable; flows straight through to create_sequence_with_version.
   const [originalAuthor, setOriginalAuthor] = useState<string | null>(null)
@@ -253,7 +265,7 @@ function PostForm() {
       if (draftIdParam) {
         const { data, error } = await supabase
           .from('sequences')
-          .select('id, title, class_name, content_type, updated_at, description, class_id, spec_name, hero_talent, patch_version, grip_version, wow_build, step_function, grip_string, raw_steps, talent_string, warcraftlogs_url, performance_notes, collection_sequences')
+          .select('id, title, class_name, content_type, updated_at, description, class_id, spec_name, hero_talent, patch_version, grip_version, wow_build, step_function, grip_string, raw_steps, actions, talent_string, warcraftlogs_url, performance_notes, collection_sequences')
           .eq('id', draftIdParam)
           .eq('author_id', user.id)
           .eq('status', 'draft')
@@ -273,7 +285,7 @@ function PostForm() {
 
       const { data, error } = await supabase
         .from('sequences')
-        .select('id, title, class_name, content_type, updated_at, description, class_id, spec_name, hero_talent, patch_version, grip_version, wow_build, step_function, grip_string, raw_steps, talent_string, warcraftlogs_url, performance_notes, collection_sequences')
+        .select('id, title, class_name, content_type, updated_at, description, class_id, spec_name, hero_talent, patch_version, grip_version, wow_build, step_function, grip_string, raw_steps, actions, talent_string, warcraftlogs_url, performance_notes, collection_sequences')
         .eq('author_id', user.id)
         .eq('status', 'draft')
         .order('updated_at', { ascending: false })
@@ -303,6 +315,7 @@ function PostForm() {
         typeof s === 'string' ? s : s.text || ''
       ).join('\n')
       setDecodedSteps(data.raw_steps)
+      setDecodedActions(Array.isArray(data.actions) ? data.actions : null)
     }
 
     setForm({
@@ -338,6 +351,7 @@ function PostForm() {
           title: s.name,
           talent_string: s.talent_string ?? '',
           steps: s.steps ?? [],
+          actions: Array.isArray(s.actions) ? s.actions : null,
           stepFunction: s.stepFunction ?? 'Sequential',
           classID: null,
           specID: null,
@@ -427,6 +441,7 @@ function PostForm() {
             title: s.name,
             talent_string: s.talent_string ?? '',
             steps: s.steps ?? [],
+            actions: Array.isArray(s.actions) ? s.actions : null,
             stepFunction: s.stepFunction ?? 'Sequential',
             classID: null,
             specID: null,
@@ -446,6 +461,13 @@ function PostForm() {
     if (stepsAutoPopulated) {
       setStepsAutoPopulated(false)
       setDecodedSteps(null)
+      // The actions tree describes the ORIGINAL decoded structure. Once the
+      // person hand-edits the flat text, that structure no longer matches
+      // what they typed -- publishing the stale tree alongside edited text
+      // would show loop grouping that doesn't correspond to the real steps.
+      // Safer to drop it and fall back to the flat renderer, same as any
+      // other row with no actions data.
+      setDecodedActions(null)
     }
   }
 
@@ -524,6 +546,15 @@ async function runDecode(exportString: string) {
             title: s.name,
             talent_string: '',
             steps: s.steps ?? [],
+            // Previously never read here at all -- version.actions carries
+            // the same hierarchical Loop/If/Action tree as the single-
+            // sequence path below, and was being discarded on the collection
+            // path exactly the same way. This is the root cause of Beard3d's
+            // report: a Loop with Repeat > 1 inside a collection entry
+            // displayed as one flat, unlabeled pass through its steps,
+            // because nothing between here and the database ever carried the
+            // repeat count through.
+            actions: Array.isArray(version?.actions) ? version.actions : null,
             stepFunction: version?.stepFunction ?? 'Sequential',
             classID: s.classId ?? null,
             specID: s.specId ?? null,
@@ -542,6 +573,11 @@ async function runDecode(exportString: string) {
       char_count: s.chars,
     }))
     setDecodedSteps(steps)
+    // Same fix as the collection path above, for the single-sequence branch.
+    // seq.versions[0].actions is the hierarchical tree; previously only
+    // seq.steps (flat) was ever read here.
+    const firstVersionActions = seq?.versions?.[0]?.actions
+    setDecodedActions(Array.isArray(firstVersionActions) ? firstVersionActions : null)
     const stepsText = steps.map(s => s.text).join('\n---\n')
     setField('raw_steps_text', stepsText)
     setStepsAutoPopulated(true)
@@ -641,6 +677,21 @@ async function runDecode(exportString: string) {
     }))
   }
 
+  // Pairs raw_steps with its matching actions tree, or null. The tree is
+  // only trustworthy alongside decodedSteps -- it describes THAT exact
+  // decode's structure. The moment raw_steps instead comes from
+  // parseSteps(freeform textarea text), any previously-decoded tree no
+  // longer corresponds to what's actually being submitted (handleStepsChange
+  // already clears decodedActions when this happens, but resolving both
+  // together here means a future call site can't reintroduce the mismatch by
+  // reading decodedSteps and decodedActions independently).
+  function resolveStepsAndActions(rawStepsText: string) {
+    if (decodedSteps) {
+      return { raw_steps: decodedSteps, actions: decodedActions }
+    }
+    return { raw_steps: parseSteps(rawStepsText), actions: null as ActionNode[] | null }
+  }
+
   function descriptionIsEmpty(html: string) {
     if (!html) return true
     const stripped = html.replace(/<p><\/p>/g, '').replace(/<p>\s*<\/p>/g, '').trim()
@@ -698,7 +749,7 @@ async function runDecode(exportString: string) {
         return
       }
 
-      const raw_steps = decodedSteps ?? parseSteps(f.raw_steps_text)
+      const { raw_steps, actions } = resolveStepsAndActions(f.raw_steps_text)
       const cls = WOW_CLASSES.find(c => c.id === Number(f.class_id))
       const spec = cls?.specs.find(s => s.name === f.spec_name)
 
@@ -711,6 +762,11 @@ async function runDecode(exportString: string) {
         ? collectionSequencesRef.current.map(seq => ({
             name: seq.title.trim() || seq.name,
             steps: seq.steps,
+            // Same as collectionData in the publish path below -- carry each
+            // entry's decoded actions tree through the draft autosave too, so
+            // a draft that's never explicitly published still preserves loop
+            // structure if the person resumes and publishes later.
+            actions: seq.actions ?? null,
             stepFunction: seq.stepFunction || f.step_function,
             talent_string: seq.talent_string.trim() || null,
             checked: seq.checked,
@@ -740,6 +796,7 @@ async function runDecode(exportString: string) {
           p_step_count: raw_steps?.length ?? null,
           p_grip_string: f.grip_string.trim() || null,
           p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
+          p_actions: actions ? JSON.stringify(actions) : null,
           p_talent_string: f.talent_string.trim() || null,
           p_warcraftlogs_url: f.warcraftlogs_url.trim() || null,
           p_performance_notes: f.performance_notes.trim() || null,
@@ -766,6 +823,7 @@ async function runDecode(exportString: string) {
           p_step_count: raw_steps?.length ?? null,
           p_grip_string: f.grip_string.trim() || null,
           p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
+          p_actions: actions ? JSON.stringify(actions) : null,
           p_talent_string: f.talent_string.trim() || null,
           p_warcraftlogs_url: f.warcraftlogs_url.trim() || null,
           p_performance_notes: f.performance_notes.trim() || null,
@@ -794,6 +852,7 @@ async function runDecode(exportString: string) {
           p_step_count: raw_steps?.length ?? null,
           p_grip_string: f.grip_string.trim() || null,
           p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
+          p_actions: actions ? JSON.stringify(actions) : null,
           p_talent_string: f.talent_string.trim() || null,
           p_warcraftlogs_url: f.warcraftlogs_url.trim() || null,
           p_performance_notes: f.performance_notes.trim() || null,
@@ -890,6 +949,13 @@ async function runDecode(exportString: string) {
         const collectionData = checked.map(seq => ({
           name: seq.title.trim() || seq.name,
           steps: seq.steps,
+          // Threaded through from CollectionSequence.actions (set in
+          // runDecode above, cleared nowhere on this path since collection
+          // entries don't have an equivalent of handleStepsChange's
+          // freeform-text-edit escape hatch -- each entry's steps come from
+          // decode only, never hand-typed). Null for entries decoded before
+          // this fix or from a format that produced no tree.
+          actions: seq.actions ?? null,
           stepFunction: seq.stepFunction || form.step_function,
           talent_string: seq.talent_string.trim() || null,
         }))
@@ -1066,7 +1132,7 @@ async function runDecode(exportString: string) {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/auth/login'); return }
 
-      const raw_steps = decodedSteps ?? parseSteps(form.raw_steps_text)
+      const { raw_steps, actions } = resolveStepsAndActions(form.raw_steps_text)
 
       const payload = {
         title: form.title.trim(),
@@ -1083,6 +1149,7 @@ async function runDecode(exportString: string) {
         step_count: raw_steps?.length ?? null,
         grip_string: form.grip_string.trim() || null,
         raw_steps,
+        actions,
         talent_string: form.talent_string.trim() || null,
         warcraftlogs_url: sanitizeWarcraftLogsUrl(form.warcraftlogs_url),
         performance_notes: form.performance_notes.trim() || null,
@@ -1110,6 +1177,7 @@ async function runDecode(exportString: string) {
             p_step_count: payload.step_count,
             p_grip_string: payload.grip_string,
             p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
+            p_actions: actions ? JSON.stringify(actions) : null,
             p_talent_string: payload.talent_string,
             p_warcraftlogs_url: payload.warcraftlogs_url,
             p_performance_notes: payload.performance_notes,
@@ -1184,6 +1252,7 @@ async function runDecode(exportString: string) {
             p_step_count: payload.step_count,
             p_grip_string: payload.grip_string,
             p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
+            p_actions: actions ? JSON.stringify(actions) : null,
             p_talent_string: payload.talent_string,
             p_warcraftlogs_url: payload.warcraftlogs_url,
             p_performance_notes: payload.performance_notes,
@@ -1231,6 +1300,7 @@ async function runDecode(exportString: string) {
           p_step_count: payload.step_count,
           p_grip_string: payload.grip_string,
           p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
+          p_actions: actions ? JSON.stringify(actions) : null,
           p_talent_string: payload.talent_string,
           p_warcraftlogs_url: payload.warcraftlogs_url,
           p_performance_notes: payload.performance_notes,
@@ -1304,6 +1374,7 @@ async function runDecode(exportString: string) {
           p_step_count: payload.step_count,
           p_grip_string: payload.grip_string,
           p_raw_steps: raw_steps ? JSON.stringify(raw_steps) : null,
+          p_actions: actions ? JSON.stringify(actions) : null,
           p_talent_string: payload.talent_string,
           p_warcraftlogs_url: payload.warcraftlogs_url,
           p_performance_notes: payload.performance_notes,

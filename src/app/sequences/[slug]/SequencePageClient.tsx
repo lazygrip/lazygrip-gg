@@ -12,6 +12,7 @@ import type { SequencePageResult } from '@/lib/sequence-server'
 import { useUsernameGate } from '@/lib/useUsernameGate'
 import PostingEligibilityChecklist from '@/components/PostingEligibilityChecklist'
 import DiscordLinkPrompt from '@/components/sequence/DiscordLinkPrompt'
+import ActionTreeView, { countActionSteps } from '@/components/sequence/ActionTree'
 
 const SITE_OWNER_ID = 'c2374192-e541-4636-9baf-84fc192cff52'
 
@@ -78,6 +79,7 @@ function deriveSelectedVersion(seq: Sequence, versionData: SequenceVersion[]): S
     version_label: 'v1.0',
     grip_string: seq.grip_string ?? '',
     raw_steps: seq.raw_steps ?? null,
+    actions: seq.actions ?? null,
     changelog: null,
     author_id: seq.author_id,
     hero_talent: seq.hero_talent ?? null,
@@ -726,8 +728,24 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
   const isCollection = collectionEntries.length > 0
   const activeEntry = collectionEntries[activeCollectionTab] ?? null
 
-  const steps = sequence.raw_steps || []
+  // Bug fix (2026-09-01): this used to read sequence.raw_steps unconditionally,
+  // ignoring whichever version tab was selected. Clicking an older version
+  // correctly swapped the GRIP string, changelog, and badges (all of which
+  // read `selectedVersion` directly) but the step list underneath stayed
+  // frozen on the sequence row's data -- which migration 025's backfill
+  // confirmed was, for every published row, whatever the CURRENT version
+  // held. A reader clicking an older version tab was shown the current
+  // version's steps with no indication anything was wrong. Confirmed against
+  // a real 8-version published sequence where step counts genuinely differ
+  // per version (4 to 10 steps).
+  //
+  // actionsSteps carries the hierarchical Loop/If/Action tree (see
+  // ActionNode in src/types/index.ts) when the selected version has it;
+  // falls back to the flat array for versions saved before migration 025.
+  const steps = selectedVersion?.raw_steps || sequence.raw_steps || []
+  const actionsTree = selectedVersion?.actions ?? sequence.actions ?? null
   const visibleSteps = showAllSteps ? steps : steps.slice(0, 8)
+  const stepCountForBadge = actionsTree ? countActionSteps(actionsTree) : steps.length
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px' }}>
@@ -920,7 +938,15 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
               {selectedVersion?.hero_talent && <Badge color="#a330c9">{selectedVersion.hero_talent}</Badge>}
               {selectedVersion?.grip_version && <Badge color="#888">GRIP {selectedVersion.grip_version}</Badge>}
               {selectedVersion?.step_function && <Badge color="#888">{selectedVersion.step_function}</Badge>}
-              {sequence.step_count && <Badge color="#888">{sequence.step_count} steps</Badge>}
+              {/* Was sequence.step_count -- a single count stored on the parent
+                  row, same version-blindness bug as the step list itself (see
+                  the `steps` derivation above). Derived from the selected
+                  version's own data instead, so it changes correctly when the
+                  version tab changes. actionsTree, when present, is the
+                  accurate count (a Loop counts as N steps for N repeats via
+                  countActionSteps rather than 1 flat pass); steps.length is
+                  the fallback for versions without an actions tree. */}
+              {stepCountForBadge > 0 && <Badge color="#888">{stepCountForBadge} steps</Badge>}
               {isStale && <Badge color="#e0a020">Needs revalidation</Badge>}
             </div>
 
@@ -1251,7 +1277,13 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                 {activeEntry.stepFunction && (
                   <Badge color="#888">{activeEntry.stepFunction}</Badge>
                 )}
-                <Badge color="#888">{activeEntry.steps.length} steps</Badge>
+                {/* Was always activeEntry.steps.length. When this entry has an
+                    actions tree, count real steps through loop repeats
+                    instead of the flat pass-through count -- see
+                    countActionSteps in ActionTree.tsx. */}
+                <Badge color="#888">
+                  {activeEntry.actions ? countActionSteps(activeEntry.actions) : activeEntry.steps.length} steps
+                </Badge>
               </div>
 
               {activeEntry.talent_string && (
@@ -1272,46 +1304,86 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                 </div>
               )}
 
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
-                {(showAllSteps ? activeEntry.steps : activeEntry.steps.slice(0, 8)).map((step: any, i: number) => (
-                  <div key={i} style={{
-                    display: 'flex', gap: 10, padding: '6px 0',
-                    borderBottom: '0.5px solid var(--border)',
-                  }}>
-                    <span style={{ color: 'var(--text-muted)', minWidth: 24, textAlign: 'right' }}>
-                      {i + 1}
-                    </span>
-                    <div style={{ flex: 1 }}>
-                      {(typeof step === 'string' ? step : step.text || '').split('\n').map((line: string, j: number) => (
-                        <div key={j} style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                          <StepLine text={line} />
+              {/* Same fix as the single-sequence display below: render the
+                  Loop/If-aware tree when this collection entry has one
+                  (populated for entries published or edited after migration
+                  025), fall back to the flat list otherwise. This is exactly
+                  the path Beard3d's report was about -- collection entries
+                  carried preMarkers/postMarkers text like
+                  "(/Loop-Sequential-Start)" that this flat renderer never
+                  read, so a repeating loop displayed as one unlabeled pass
+                  through its steps. */}
+              {activeEntry.actions && activeEntry.actions.length > 0 ? (
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
+                  <ActionTreeView nodes={activeEntry.actions} counter={{ n: 0 }} />
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
+                    {(showAllSteps ? activeEntry.steps : activeEntry.steps.slice(0, 8)).map((step: any, i: number) => (
+                      <div key={i} style={{
+                        display: 'flex', gap: 10, padding: '6px 0',
+                        borderBottom: '0.5px solid var(--border)',
+                      }}>
+                        <span style={{ color: 'var(--text-muted)', minWidth: 24, textAlign: 'right' }}>
+                          {i + 1}
+                        </span>
+                        <div style={{ flex: 1 }}>
+                          {(typeof step === 'string' ? step : step.text || '').split('\n').map((line: string, j: number) => (
+                            <div key={j} style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                              <StepLine text={line} />
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', alignSelf: 'flex-start', paddingTop: 2 }}>
-                      {typeof step === 'object' && step.char_count ? `${step.char_count}/255` : ''}
-                    </span>
+                        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', alignSelf: 'flex-start', paddingTop: 2 }}>
+                          {typeof step === 'object' && step.char_count ? `${step.char_count}/255` : ''}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              {activeEntry.steps.length > 8 && (
-                <button onClick={() => setShowAllSteps(s => !s)} style={{
-                  display: 'flex', alignItems: 'center', gap: 4,
-                  marginTop: 12, background: 'none', border: 'none',
-                  cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--accent)',
-                  fontFamily: 'var(--font-sans)',
-                }}>
-                  {showAllSteps
-                    ? <><ChevronUp size={13} /> Show fewer steps</>
-                    : <><ChevronDown size={13} /> Show all {activeEntry.steps.length} steps</>
-                  }
-                </button>
+                  {activeEntry.steps.length > 8 && (
+                    <button onClick={() => setShowAllSteps(s => !s)} style={{
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      marginTop: 12, background: 'none', border: 'none',
+                      cursor: 'pointer', fontSize: 'var(--text-xs)', color: 'var(--accent)',
+                      fontFamily: 'var(--font-sans)',
+                    }}>
+                      {showAllSteps
+                        ? <><ChevronUp size={13} /> Show fewer steps</>
+                        : <><ChevronDown size={13} /> Show all {activeEntry.steps.length} steps</>
+                      }
+                    </button>
+                  )}
+                </>
               )}
             </div>
           )}
 
-          {/* Single sequence steps display */}
-          {!isCollection && steps.length > 0 && (
+          {/* Single sequence steps display.
+              Renders via ActionTreeView (Loop/If-aware, shows real repeat
+              counts) whenever the selected version has an `actions` tree.
+              Falls back to the old flat numbered list for versions saved
+              before migration 025, which have raw_steps but no actions --
+              those still won't show loop grouping, since that information
+              was never captured for them, but they're no worse off than
+              before this fix. */}
+          {!isCollection && actionsTree && actionsTree.length > 0 && (
+            <div style={{
+              background: 'var(--bg-primary)',
+              border: '0.5px solid var(--border)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '18px',
+            }}>
+              <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 500, marginBottom: 12 }}>
+                Steps ({stepCountForBadge})
+              </h2>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
+                <ActionTreeView nodes={actionsTree} counter={{ n: 0 }} />
+              </div>
+            </div>
+          )}
+
+          {!isCollection && !actionsTree && steps.length > 0 && (
             <div style={{
               background: 'var(--bg-primary)',
               border: '0.5px solid var(--border)',
@@ -1611,7 +1683,11 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                   ['Hero talent', selectedVersion?.hero_talent],
                   ['Content', CONTENT_TYPES.find(c => c.value === (selectedVersion?.content_type ?? sequence.content_type))?.label],
                   ['Step function', selectedVersion?.step_function],
-                  ['Steps', sequence.step_count],
+                  // Was sequence.step_count -- same version-blindness bug as
+                  // the badge above (see stepCountForBadge), fixed the same
+                  // way: this sidebar table already reads selectedVersion for
+                  // every other row here, this one just hadn't been.
+                  ['Steps', stepCountForBadge || null],
                   ['GRIP version', selectedVersion?.grip_version],
                   ['Patch', sequence.patch_version],
                   ['Views', sequence.view_count?.toLocaleString()],
