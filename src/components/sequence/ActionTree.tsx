@@ -1,4 +1,4 @@
-// Renders a decoded GRIP action tree (Loop / If / Action / Repeat / Pause / Embed
+// Renders a decoded GRIP action tree (Loop / Step / If / Repeat / Pause / Embed
 // nodes) as nested, labeled blocks instead of a flat numbered list.
 //
 // Previously this rendering logic lived only inline in
@@ -9,21 +9,33 @@
 // unlabeled pass through its children. Extracted here so both places share
 // one implementation instead of drifting.
 //
-// `counter` is a shared mutable ref threaded through recursive calls so
-// Action/Repeat leaf nodes get a single running step number across the whole
-// tree, matching the numbering a reader would see in-game.
-export interface ActionNode {
-  index: number
-  kind: 'Loop' | 'Action' | 'Repeat' | 'If' | 'Pause' | 'Embed'
-  depth: number
-  label: string
-  text?: string
-  stepFunction?: string
-  repeat?: number
-  interval?: number
-  variable?: string
-  children?: ActionNode[]
-}
+// ActionNode itself lives in src/types/index.ts, not here. It used to be
+// redeclared in this file as a second, separately-maintained copy -- which is
+// exactly the kind of duplication that let the kind-naming bug below happen
+// silently in one copy and not the other. Import it, don't redeclare it.
+//
+// KIND NAMING, CORRECTED 2026-09-02. The two decoders that produce this tree
+// don't agree on what to call a leaf action node: src/lib/workshop/
+// emsDecoder.ts (native !EMS1!/!GRIP1! format, the one src/app/post/page.tsx
+// and src/app/sequences/[slug]/update/page.tsx actually decode through via
+// /api/decode-grip) emits kind: "Step". src/lib/workshop/gseDecoder.ts
+// (legacy-program !GSE3! conversions) emits kind: "Action" or "Repeat" for
+// the same role. This component originally only matched 'Action' | 'Repeat'
+// -- copied from /workshop/decode/page.tsx, which only worked because ITS
+// data comes through /api/workshop/decode, a separate route with its own
+// normalizeEmsActionKind() that silently renames "Step" to "Action" before
+// the browser ever sees it. The public sequence page has no such adapter, so
+// every Step node fell through to the generic "unknown kind" branch below:
+// no step number, no macro text, just the literal word "Step" as a label.
+// Caught in a post-deploy self-audit before any real sequence had actually
+// been published through the fixed pipeline (0 of 93 sequences had `actions`
+// populated at the time this was found), so no live data was ever exposed
+// broken -- but it would have hit the very next real publish. Fixed here by
+// matching both conventions directly, which also makes the redundant adapter
+// in /api/workshop/decode/route.ts no longer load-bearing (left in place,
+// harmless, not worth a second migration-adjacent change to remove).
+import type { ActionNode } from '@/types'
+export type { ActionNode }
 
 function ActionLine({ text }: { text: string }) {
   const parts = text.split(/(\[[^\]]+\]|\/\w+)/g)
@@ -112,7 +124,7 @@ export default function ActionTree({ nodes, counter }: { nodes: ActionNode[]; co
           )
         }
 
-        if (node.kind === 'Action' || node.kind === 'Repeat') {
+        if (node.kind === 'Action' || node.kind === 'Step' || node.kind === 'Repeat') {
           const n = ++counter.n
           const lines = (node.text || '').split('\n').filter(Boolean)
           return (
@@ -128,6 +140,18 @@ export default function ActionTree({ nodes, counter }: { nodes: ActionNode[]; co
                     background: 'var(--bg-tertiary)', color: 'var(--text-muted)',
                     border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)',
                   }}>Repeat · every {node.interval}</span>
+                )}
+                {/* EMS/GRIP's equivalent of GSE's Repeat weave: a Step node
+                    carries its own `interval` when it's an Interleave node
+                    (see emsDecoder.ts's isWeave/[IL:N] label). Same concept,
+                    different decoder's naming -- shown the same way here so
+                    neither convention silently loses the indicator. */}
+                {node.kind === 'Step' && node.interval && node.interval >= 2 && (
+                  <span style={{
+                    fontSize: 'var(--text-xs)', fontWeight: 600, padding: '1px 5px', marginBottom: 3, display: 'inline-block',
+                    background: 'var(--bg-tertiary)', color: 'var(--text-muted)',
+                    border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)',
+                  }}>Interleave · every {node.interval}</span>
                 )}
                 <div style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)' }}>
                   {lines.map((line, j) => (
@@ -158,13 +182,14 @@ export default function ActionTree({ nodes, counter }: { nodes: ActionNode[]; co
   )
 }
 
-// Counts only real, clickable steps (Action/Repeat leaves) in a tree, the way
-// a reader thinks of "step count" -- Loop/If wrapper nodes are structure, not
-// steps, and shouldn't inflate the number.
+// Counts only real, clickable steps (Action/Step/Repeat leaves) in a tree,
+// the way a reader thinks of "step count" -- Loop/If wrapper nodes are
+// structure, not steps, and shouldn't inflate the number. Matches both
+// decoder conventions (see the kind-naming note above ActionNode).
 export function countActionSteps(nodes: ActionNode[]): number {
   let n = 0
   for (const node of nodes) {
-    if (node.kind === 'Action' || node.kind === 'Repeat') n += 1
+    if (node.kind === 'Action' || node.kind === 'Step' || node.kind === 'Repeat') n += 1
     if (node.children && node.children.length) n += countActionSteps(node.children)
   }
   return n

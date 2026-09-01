@@ -477,6 +477,21 @@ async function runDecode(exportString: string) {
   setCollectionSequences(null)
   setCollectionTitle('')
   setOriginalAuthor(null)
+  // Clear any single-sequence decode state left over from an earlier attempt
+  // in this session. Without this, decoding a single sequence and then
+  // decoding a COLLECTION export afterward (without navigating away) would
+  // leave decodedSteps/decodedActions holding the discarded single-sequence
+  // data. The collection branch below never touches these two, so
+  // resolveStepsAndActions would keep returning that stale data on every
+  // autosave -- and unlike the explicit collection publish path (which
+  // intentionally sends p_raw_steps: null), autosave's update_sequence_metadata
+  // call sends whatever resolveStepsAndActions returns unconditionally,
+  // writing a leftover single sequence's steps/actions onto a collection row
+  // where they don't belong. Pre-existing gap for raw_steps/decodedSteps
+  // found in self-audit while adding decodedActions alongside it; fixed here
+  // for both rather than only closing it for the field just added.
+  setDecodedSteps(null)
+  setDecodedActions(null)
 
   try {
     const res = await fetch('/api/decode-grip', {
