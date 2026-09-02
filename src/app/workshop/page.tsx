@@ -70,8 +70,11 @@ export default function WorkshopPage() {
 
       {/* In-game addons section */}
       <div>
-        <p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 16 }}>
+        <p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>
           In-Game Addons
+        </p>
+        <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 540, marginBottom: 16 }}>
+          Optional companion addons built by the GRIP-EMS community. GRIP-EMS works fully without any of these.
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
           <AddonCard
@@ -83,7 +86,45 @@ export default function WorkshopPage() {
             icon={<ExternalLink size={20} />}
             cta="View on CurseForge"
           />
+          <AddonCard
+            href="https://www.curseforge.com/wow/addons/grip-ems-wow-default-ui"
+            eyebrow="UI Shell"
+            title="GRIP-EMS Wow Default UI"
+            description="A standalone shell that gives the sequence editor a cleaner, native Blizzard-style look with improved layout behavior. Fully optional, GRIP-EMS works without it."
+            requires="Requires GRIP-EMS"
+            icon={<ExternalLink size={20} />}
+            cta="View on CurseForge"
+          />
+          <AddonCard
+            href="https://www.curseforge.com/wow/addons/grip-ems-dynamic-theme"
+            eyebrow="Theme"
+            title="GRIP-EMS Dynamic Theme"
+            description="Recolors the GRIP-EMS window to match your UI without changing how the addon works. Fully optional, GRIP-EMS works without it."
+            requires="Requires GRIP-EMS"
+            icon={<ExternalLink size={20} />}
+            cta="View on CurseForge"
+          />
+          <AddonCard
+            href="https://www.curseforge.com/wow/addons/grip-ems-actionbutton-override"
+            eyebrow="Action Bars"
+            title="GRIP-EMS Actionbutton Override"
+            description="Adds action bar override and drag-and-drop keybinding for GRIP-EMS sequences. Fully optional, GRIP-EMS works without it."
+            requires="Requires GRIP-EMS"
+            icon={<ExternalLink size={20} />}
+            cta="View on CurseForge"
+          />
         </div>
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 16 }}>
+          New community addons show up here as they're built. See the full, live list on{' '}
+          <a
+            href="https://www.curseforge.com/wow/addons/grip-enhanced-macro-sequencer/relations/dependents?pageSize=20&page=1"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: 'var(--accent)' }}
+          >
+            CurseForge
+          </a>.
+        </p>
       </div>
 
     </div>
