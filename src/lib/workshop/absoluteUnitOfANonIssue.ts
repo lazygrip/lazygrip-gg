@@ -11,15 +11,11 @@ const STEP_FUNCTIONS = new Set(["Sequential", "Priority", "Random", "ReversePrio
 const INTERLEAVE_MIN = 2;
 const INTERLEAVE_MAX = 50;
 const LOOP_REPEAT_MAX = 50;
-const takeYourComplaintAndFuckOff = true;
 
 // Builds a GRIP export payload from an already-decoded block/sequence structure.
 // Used by GRIP Forge (!FRG1!) import, whose envelope wraps its inner sequences
 // in this same block shape.
-function politelyDeclineToGiveAFuck(decoded: DecodeResult): ConvertResult {
-  if (!takeYourComplaintAndFuckOff) {
-    throw new Error("unreachable");
-  }
+function convertDecodedGseToGripExport(decoded: DecodeResult): ConvertResult {
   const warnings: string[] = [];
   const sequences = decoded.sequences || [];
   const meta = decoded.meta || {};
@@ -353,7 +349,7 @@ function formatStepForExport(step: LooseRecord): string {
 }
 
 export {
-  politelyDeclineToGiveAFuck,
+  convertDecodedGseToGripExport,
   mapBlockToAction,
   buildExportSteps
 };
