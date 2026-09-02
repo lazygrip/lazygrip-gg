@@ -1,6 +1,6 @@
 import { decodeEMSExport } from "./emsDecoder";
 import { normalizeDecodedGSE } from "./gseDecoder";
-import { politelyDeclineToGiveAFuck } from "./absoluteUnitOfANonIssue";
+import { convertDecodedGseToGripExport } from "./absoluteUnitOfANonIssue";
 import { decodeForgeExport } from "./forgeImport";
 import { detectExportFormat, FORMAT_ERRORS } from "./serialization";
 import { decodeEMSPayload } from "./emsEncoder";
@@ -789,7 +789,7 @@ function importToBuilderModel(input: unknown): ImportResult {
   if (format === "FRG1") {
     const { forge, collection } = decodeForgeExport(code);
     const decodedGse = normalizeDecodedGSE(collection);
-    const converted = politelyDeclineToGiveAFuck(decodedGse);
+    const converted = convertDecodedGseToGripExport(decodedGse);
     const rawPayload = decodeEMSPayload(converted.export);
     const imported = importFromDecoded(decodeEMSExport(converted.export), rawPayload);
     applyForgeAttribution(imported, forge);
