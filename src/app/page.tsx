@@ -377,7 +377,7 @@ export default async function HomePage() {
             border: '0.5px solid var(--border-strong)',
           }}>
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Current version</span>
-            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>GRIP-EMS v2.4.11</span>
+            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>GRIP-EMS v2.4.12</span>
           </div>
         </div>
       </section>
