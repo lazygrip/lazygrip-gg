@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowRight, BookOpen, Wrench, Layers, GitBranch, BarChart2, SlidersHorizontal } from 'lucide-react'
+import { ArrowRight, BookOpen, Wrench, Layers, GitBranch, BarChart2, SlidersHorizontal, Sparkles } from 'lucide-react'
 import GuideSection from '@/components/guide/GuideSection'
 import Card from '@/components/ui/Card'
 
@@ -38,9 +38,16 @@ const sections = [
   {
     href: '/guide/how-it-works',
     icon: Layers,
-    time: '8 min',
+    time: '6 min',
     title: 'How it works',
     desc: "What GRIP-EMS actually does under the hood, why WoW's secure execution environment matters for sequence design, and the mental model you need before you build anything. Getting this wrong is what produces sequences that feel fine on dummies and fall apart in real content.",
+  },
+  {
+    href: '/guide/features-and-behavior',
+    icon: Sparkles,
+    time: '9 min',
+    title: 'Features and behavior',
+    desc: 'A reference for the rest of what GRIP-EMS does: Pause, reset conditions, skyriding, context versions and per-loadout keybinds, keybind recovery, Interleave, the plugin API for building your own addon against GRIP-EMS, imports, the display layer, and sharing sequences.',
   },
   {
     href: '/guide/building-sequences',

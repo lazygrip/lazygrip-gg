@@ -7,6 +7,7 @@ const NAV = [
   { href: '/guide/installation', label: 'Installation' },
   { href: '/guide/settings', label: 'Settings' },
   { href: '/guide/how-it-works', label: 'How it works' },
+  { href: '/guide/features-and-behavior', label: 'Features and behavior' },
   { href: '/guide/building-sequences', label: 'Building sequences' },
   { href: '/guide/from-legacy-program', label: 'Coming from the legacy program' },
   { href: '/guide/validating', label: 'Validating your work' },

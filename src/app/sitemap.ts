@@ -90,6 +90,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     },
     {
+      url: 'https://lazygrip.net/guide/features-and-behavior',
+      lastModified: CONTENT_UPDATED,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
       url: 'https://lazygrip.net/guide/building-sequences',
       lastModified: CONTENT_UPDATED,
       changeFrequency: 'weekly',
