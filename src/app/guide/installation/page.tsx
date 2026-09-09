@@ -142,7 +142,7 @@ export default function InstallationPage() {
         />
         <TroubleshootItem
           problem="Sequence key fires mid-air or vehicle keys are dead on first flight of the session"
-          solution="This has been reported as a first-takeoff issue where ground binds stay live while airborne or vehicle keys never activate. It has not been independently confirmed as fixed in a specific release the way the other keybind issues on this page have been. If you hit this, update GRIP-EMS to the latest version first, and if it persists, report it in the Discord with your GRIP-EMS version and whether it happens on every login or only occasionally."
+          solution="This was a real first-takeoff bug: ground binds could stay live mid-air, or vehicle keys never woke up at all, on the first flight of a session specifically. It is fixed. An out-of-combat watchdog now heals the swap the moment you take off and restores it on landing, so the first flight of a session behaves the same as every other one. If you are current and still hitting this, it is not the same bug; report it in the Discord with your GRIP-EMS version and whether it happens on every login or only occasionally."
         />
         <TroubleshootItem
           problem="Another addon keeps stealing my sequence keybinds"

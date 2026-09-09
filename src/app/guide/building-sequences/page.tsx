@@ -192,7 +192,7 @@ export default function BuildingSequencesPage() {
       <GuideSection title="The decisions that matter">
         <DecisionBlock
           question="Why Sequential and not Priority"
-          answer="Priority would always try Thrash first on every keypress, which sounds efficient but produces a different problem. Mangle, Ironfur, and Lunar Beam would only fire when Thrash is on cooldown, which means your Ironfur uptime becomes dependent on Thrash cooldown math rather than the structured cycling the sequence enforces. Sequential gives you predictable step positions and predictable uptime."
+          answer="Priority does not try Thrash and fall through to something else if it can't fire, that is not what the step function does; it just gives Thrash more of the fixed slots in a pre-expanded cycle, so it lands in front of the keypress more often. It has no idea whether Thrash is actually castable when it hands you that slot. Weight the cycle toward Thrash and the presses that land on a Thrash slot while Thrash is on cooldown produce nothing, and Ironfur, Mangle, and Lunar Beam only ever get the presses left over from however that cycle happened to fall, which is not the same thing as firing when Thrash is on cooldown. Ironfur uptime built on that is accidental, not structured. Sequential gives you predictable step positions and predictable uptime instead."
         />
         <DecisionBlock
           question="Why [combat] on every spell"
