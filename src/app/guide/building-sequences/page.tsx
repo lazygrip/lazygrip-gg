@@ -209,8 +209,8 @@ export default function BuildingSequencesPage() {
       </GuideSection>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 48, paddingTop: 24, borderTop: '0.5px solid var(--border)' }}>
-        <Link href="/guide/how-it-works" style={{ fontSize: 'var(--text-sm)', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
-          ← Back: How it works
+        <Link href="/guide/features-and-behavior" style={{ fontSize: 'var(--text-sm)', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
+          ← Back: Features and behavior
         </Link>
         <Link href="/guide/from-legacy-program" style={{ fontSize: 'var(--text-sm)', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
           Next: Coming from the legacy program →
