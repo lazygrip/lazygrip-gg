@@ -141,3 +141,12 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Security audit docs: findings, checks, and open items are tracked
+# privately (Claude Project), not in this public repo. See the stub
+# SECURITY_AUDIT_2026-07-22.md / 2026-07-31.md for why. Any new dated
+# audit file should not be committed here either.
+SECURITY_AUDIT_2026-09-09.md
+SECURITY_AUDIT_[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].md
+!SECURITY_AUDIT_2026-07-22.md
+!SECURITY_AUDIT_2026-07-31.md
