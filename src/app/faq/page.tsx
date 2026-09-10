@@ -75,6 +75,14 @@ const GROUPS = [
         q: 'How do I save a sequence?',
         a: 'Hit the Save button on any sequence page. Your saved sequences show up on your profile.',
       },
+      {
+        q: 'If a sequence was imported from another macro tool, does it still show who originally made it?',
+        a: 'Yes. When the Workshop imports a sequence from another macro tool, it locks in the original author’s name at import time. That name carries through to the published page as "Originally created by," and the Workshop does not let it be edited away, no matter who posts the sequence here.',
+      },
+      {
+        q: 'Should I worry about other addons interfering with GRIP-EMS?',
+        a: 'LazyGrip.net does not control what other addons on your machine do, and this site has no visibility into your WoW installation beyond whatever export string you paste in. As general good practice with any addon, it is worth keeping an occasional backup of your WTF folder’s SavedVariables, so nothing you have built is ever one bad update away from gone.',
+      },
     ],
   },
   {
