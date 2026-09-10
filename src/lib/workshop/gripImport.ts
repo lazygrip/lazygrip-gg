@@ -1,5 +1,5 @@
 import { decodeEMSExport } from "./emsDecoder";
-import { normalizeDecodedGSE } from "./gseDecoder";
+import { normalizeDecodedGSE, decodeGSEExport } from "./gseDecoder";
 import { convertDecodedGseToGripExport } from "./absoluteUnitOfANonIssue";
 import { decodeForgeExport } from "./forgeImport";
 import { detectExportFormat, FORMAT_ERRORS } from "./serialization";
@@ -783,7 +783,13 @@ function importToBuilderModel(input: unknown): ImportResult {
   }
 
   if (format === "GSE3") {
-    throw new Error(FORMAT_ERRORS.LEGACY_IMPORT_UNAVAILABLE);
+    const decodedGse = decodeGSEExport(code);
+    const converted = convertDecodedGseToGripExport(decodedGse);
+    const rawPayload = decodeEMSPayload(converted.export);
+    const imported = importFromDecoded(decodeEMSExport(converted.export), rawPayload);
+    imported.warnings = [...(converted.warnings || []), ...(imported.warnings || [])];
+    enforceSpellNamesDefault(imported.model);
+    return imported;
   }
 
   if (format === "FRG1") {

@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>
-      <PageHeader title="Terms of Service" description={<span style={{ color: 'var(--text-muted)' }}>Last updated: July 31, 2026</span>} />
+      <PageHeader title="Terms of Service" description={<span style={{ color: 'var(--text-muted)' }}>Last updated: September 10, 2026</span>} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
 
@@ -59,7 +59,7 @@ export default function TermsPage() {
 
         <Card style={{ padding: '20px 24px' }}>
           <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Your Content</h2>
-          <p>You own what you post and you keep owning it. By posting you confirm that you wrote the sequence, or that its author has given you permission to share it. Posting someone else&apos;s sequence without permission is not allowed and we will remove it. By posting you give us a licence to store, display, and distribute your content to other users. That licence ends when you delete the content or close your account, after any backup retention period clears.</p>
+          <p>You own what you post and you keep owning it. By posting you confirm that you wrote the sequence, or that its author has given you permission to share it. Posting someone else&apos;s sequence without permission is not allowed and we will remove it. If a sequence started life in another macro tool and came into LazyGrip.net through the Workshop&apos;s import feature, the original author&apos;s name is locked in at import time and carries through to the published page. The Workshop does not let that name be edited away, whoever posts it. By posting you give us a licence to store, display, and distribute your content to other users. That licence ends when you delete the content or close your account, after any backup retention period clears.</p>
         </Card>
 
         <Card style={{ padding: '20px 24px' }}>
@@ -109,7 +109,7 @@ export default function TermsPage() {
 
         <Card style={{ padding: '20px 24px' }}>
           <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Disclaimers</h2>
-          <p>LazyGrip.net is provided as-is. We do not guarantee the site is always available, that sequences will perform as described, or that any content is error-free. You use sequences from this site at your own risk. LazyGrip.net is a community site, independently owned and operated, with no affiliation with or endorsement from Blizzard Entertainment. It is not an official GRIP-EMS site.</p>
+          <p>LazyGrip.net is provided as-is. We do not guarantee the site is always available, that sequences will perform as described, or that any content is error-free. You use sequences from this site at your own risk. LazyGrip.net is a community site, independently owned and operated, with no affiliation with or endorsement from Blizzard Entertainment, or from any other macro or sequence-building addon, including any addon the Workshop happens to be able to import from. It is not an official GRIP-EMS site.</p>
         </Card>
 
         <Card style={{ padding: '20px 24px' }}>
