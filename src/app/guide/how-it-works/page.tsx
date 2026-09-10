@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import GuideHeader from '@/components/guide/GuideHeader'
 import GuideSection from '@/components/guide/GuideSection'
 import GuideCallout from '@/components/guide/GuideCallout'
+import GuideImage from '@/components/guide/GuideImage'
 import { guideCodeStyle } from '@/components/guide/GuideCode'
 
 export const metadata: Metadata = {
@@ -37,6 +38,7 @@ export default function HowItWorksPage() {
         <p style={{ marginTop: 12 }}>This catches many new users who come from programming backgrounds and assume they can write logic into their sequences. The most common example is trying to check a resource value like combo points or holy power with <code style={code}>UnitPower("player")</code> or timing logic with <code style={code}>GetTime()</code>. Both of those calls return nil inside a secure handler because they are part of the restricted API. The sequence does not error gracefully, it crashes.</p>
         <p style={{ marginTop: 12 }}>What you can use inside sequence steps is the standard macro conditional system that Blizzard has explicitly allowed: <code style={code}>[combat]</code>, <code style={code}>[mod:shift]</code>, <code style={code}>[known:SpellName]</code>, <code style={code}>[noform:1]</code>, <code style={code}>[nochanneling]</code>, and the rest of the documented macro conditional set. These are not API calls. They are tokens the macro engine parses directly and they are permitted because they do not read arbitrary game state.</p>
         <p style={{ marginTop: 12 }}>GRIP-EMS's Variables system exists partly to work around this limitation. Variables are resolved outside the secure environment before the macro compiles, which means you can use them to make conditional decisions that would be impossible inside a step directly.</p>
+        <SecureEnvironmentDiagram />
         <p style={{ marginTop: 12 }}>Buffs and debuffs are readable through that Variables system, and it is worth knowing exactly what is safe to check and what is not. <code style={code}>HasBuff</code>, <code style={code}>HasDebuff</code>, <code style={code}>SpellReady</code>, and <code style={code}>SpellOnCooldown</code> all hand back clean booleans you can build a variable around. What stays out of reach is anything numeric tied to the secret value system: Holy Power amount, combo point count, how many stacks of a buff you are holding, time remaining on anything. Those come back tagged in a way that throws the moment you compare or do arithmetic on them, and there is no trick around it, the CurveUtil approach some WeakAuras use gets tested against the same tag and fails the same way. If the number you actually want has an aura that only exists at that count, checking for the aura's presence instead of the number underneath it is usually the workaround.</p>
         <p style={{ marginTop: 12 }}>There is a second catch worth knowing before you build around any of this. A variable's value gets baked into your macro text once, at compile time, not read live on every press. Put <code style={code}>UNIT_AURA</code> in a variable's Events field and it re-evaluates when your auras change and queues a recompile, but that recompile writes to a secure button, which makes it combat locked, so it sits in the out-of-combat queue until you actually drop combat. A buff check built this way settles correctly at the start of a pull and then stays frozen for the rest of it. It does not chase a proc that comes and goes mid-fight. That makes Variables genuinely useful for anything that holds steady across a pull, a talent build, your spec, a raid buff, and not useful for gating a step on a short proc window.</p>
       </GuideSection>
@@ -101,6 +103,7 @@ export default function HowItWorksPage() {
         <GuideCallout>
           Priority is not a retry mechanism and it does not check whether a step is actually castable before choosing it, worth being precise about since the name invites the wrong mental model. It is a fixed pre-expansion computed once at compile time: for N steps you get N times (N plus 1) divided by 2 total slots in the cycle, arranged as step 1, then steps 1 and 2, then steps 1 through 3, and so on out to all N. A 4-step sequence compiles to 10 slots, step 1 taking 4 of them, step 2 taking 3, step 3 taking 2, step 4 taking 1. The engine then runs the exact same unconditional advance-on-every-press logic as Sequential over that expanded array. If step 1 is on cooldown, that press still does nothing, and the next press still takes whatever slot comes next in the array regardless of whether it is castable. Real fallthrough, where WoW tries one spell and only moves to a second if the first cannot fire, only exists inside a single step written as stacked <code style={code}>/cast</code> lines. Priority is a weighting tool for press frequency, not that.
         </GuideCallout>
+        <PriorityWeightDiagram />
         <p style={{ marginTop: 12 }}>A Loop nested inside a Priority sequence does not count as one slot in the outer triangle. The compiler flattens the whole tree first, so a Loop unrolls into plain steps that land in the step list right alongside everything else, and Priority runs afterward over that flat list, it never sees the Loop as a unit. Two actions followed by a Loop of three actions repeating twice flattens to 8 steps, so Priority expands to 8 times 9 divided by 2, 36 slots, with the loop&apos;s own three actions graded against each other the same way any other steps would be, not as one weighted band. Set the Loop&apos;s own step function to Priority as well and it triangles its children first, feeding those already-weighted steps into the outer triangle on top, which compounds fast and is rarely what anyone actually wants.</p>
       </GuideSection>
 
@@ -113,6 +116,12 @@ export default function HowItWorksPage() {
         </GuideCallout>
 
         <p style={{ marginTop: 16 }}>The guard pattern that makes this work correctly is <code style={code}>[nomod:shift, nomod:ctrl]</code> on your normal rotation steps. Without it, holding SHIFT for an emergency heal would also attempt to fire whatever spell is on that step, since the step has no way to know you only wanted the modifier action. Every regular rotation step should carry this guard if the sequence uses modifiers anywhere. The worked example on the <Link href="/guide/building-sequences" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Building sequences</Link> page shows this pattern applied consistently across a real 30-step sequence.</p>
+
+        <GuideImage
+          src="/guide/modifier-guard-steps.png"
+          alt="A GRIP-EMS step with the [nomod:shift, nomod:ctrl] guard written on its rotation line"
+          caption="A rotation step carrying the [nomod:shift, nomod:ctrl] guard, so a modifier press doesn't also fire this step's spell."
+        />
 
         <p style={{ marginTop: 16 }}>If your keybind fires normally but a modifier does not, work through these in order before assuming something is broken in the sequence itself:</p>
 
@@ -142,6 +151,72 @@ export default function HowItWorksPage() {
           Next: Features and behavior
         </Link>
       </div>
+    </div>
+  )
+}
+
+/** Two zones either side of the secure execution boundary: what a step can call
+ * directly (blocked) versus what's actually permitted (macro conditionals, plus
+ * Variables-resolved buff checks). Referenced from "The secure execution environment". */
+function SecureEnvironmentDiagram() {
+  const blocked = ['UnitPower("player")', 'GetTime()', 'combo point count', 'holy power amount', 'buff stack count']
+  const allowed = ['[combat]', '[mod:shift]', '[known:SpellName]', 'HasBuff / SpellReady', '(both via Variables)']
+  return (
+    <div style={{ marginTop: 16, marginBottom: 4 }}>
+      <svg viewBox="0 0 640 230" style={{ width: '100%', maxWidth: 640, height: 'auto', display: 'block' }} role="img" aria-label="Diagram: inside the secure execution environment, direct API calls like UnitPower and GetTime are blocked. Macro conditionals and Variables-resolved buff checks are allowed.">
+        <rect x="8" y="28" width="290" height="186" rx="10" fill="var(--bg-primary)" stroke="var(--border)" strokeWidth="1" />
+        <rect x="342" y="28" width="290" height="186" rx="10" fill="var(--bg-primary)" stroke="var(--border)" strokeWidth="1" />
+        <line x1="320" y1="10" x2="320" y2="222" stroke="var(--border-strong)" strokeWidth="1" strokeDasharray="4 4" />
+        <text x="320" y="18" textAnchor="middle" style={{ fontSize: 9, fill: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>secure execution boundary</text>
+
+        <text x="24" y="54" style={{ fontSize: 13, fontWeight: 700, fill: 'var(--text-primary)' }}>Blocked inside a step</text>
+        {blocked.map((t, i) => (
+          <text key={t} x="24" y={82 + i * 24} style={{ fontSize: 11, fill: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+            <tspan fill="var(--text-muted)">✕ </tspan>{t}
+          </text>
+        ))}
+
+        <text x="358" y="54" style={{ fontSize: 13, fontWeight: 700, fill: 'var(--accent)' }}>Allowed inside a step</text>
+        {allowed.map((t, i) => (
+          <text key={t} x="358" y={82 + i * 24} style={{ fontSize: 11, fill: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+            <tspan fill="var(--accent)">✓ </tspan>{t}
+          </text>
+        ))}
+      </svg>
+      <p style={{ marginTop: 8, fontSize: 'var(--text-xs)', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+        The left side crashes a step outright. The right side is either a documented macro conditional or a Variables-resolved value baked in at compile time.
+      </p>
+    </div>
+  )
+}
+
+/** Priority's pre-expansion for a 4-step sequence: step 1 fills 4 of the 10 total
+ * slots, step 2 fills 3, step 3 fills 2, step 4 fills 1 — the exact example the
+ * preceding GuideCallout walks through in prose. */
+function PriorityWeightDiagram() {
+  const rows = [4, 3, 2, 1]
+  return (
+    <div style={{ marginTop: 16, marginBottom: 4 }}>
+      <svg viewBox="0 0 420 190" style={{ width: '100%', maxWidth: 420, height: 'auto', display: 'block' }} role="img" aria-label="Diagram: Priority pre-expansion for a 4-step sequence. Step 1 fills 4 of 10 total slots, step 2 fills 3, step 3 fills 2, step 4 fills 1.">
+        {rows.map((count, rowIdx) => (
+          <g key={rowIdx}>
+            <text x="0" y={28 + rowIdx * 36 + 14} style={{ fontSize: 11, fill: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>{`Step ${rowIdx + 1}`}</text>
+            {Array.from({ length: count }).map((_, i) => (
+              <rect
+                key={i}
+                x={70 + i * 26}
+                y={28 + rowIdx * 36}
+                width="20"
+                height="20"
+                rx="4"
+                fill="var(--accent)"
+                opacity={1 - rowIdx * 0.2}
+              />
+            ))}
+          </g>
+        ))}
+        <text x="70" y="178" style={{ fontSize: 10, fill: 'var(--text-muted)' }}>10 total slots in the expanded cycle</text>
+      </svg>
     </div>
   )
 }

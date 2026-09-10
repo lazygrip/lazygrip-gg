@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import GuideHeader from '@/components/guide/GuideHeader'
 import GuideSection from '@/components/guide/GuideSection'
 import GuideCallout from '@/components/guide/GuideCallout'
+import GuideImage from '@/components/guide/GuideImage'
 import { guideCodeStyle } from '@/components/guide/GuideCode'
 
 export const metadata: Metadata = {
@@ -61,6 +62,18 @@ export default function BuildingSequencesPage() {
 
       <GuideSection title="Step by step breakdown">
         <p>The sequence has a clear internal structure once you see it: an opener block, then a repeating loop built around Thrash and Mangle with Ironfur cycling at fixed intervals, Lunar Beam weaved at positions 5, 12, 19, and 26, and MOONSPAM at positions 8 and 22 handling Moonfire delivery and Barkskin as a reset gate.</p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16, marginBottom: 8 }}>
+          {['elune-chosen-steps1.png', 'elune-chosen-steps2.png', 'elune-chosen-steps3.png', 'elune-chosen-steps4.png'].map((file, i) => (
+            <GuideImage
+              key={file}
+              src={`/guide/${file}`}
+              alt={`Slowdog's Elune's Chosen M+ V7.1, Steps tab, part ${i + 1} of 4`}
+              caption={i === 0 ? "The actual sequence in the GRIP-EMS Steps tab, scrolled through in four parts." : undefined}
+              style={{ marginTop: 0 }}
+            />
+          ))}
+        </div>
 
         {[
           {
