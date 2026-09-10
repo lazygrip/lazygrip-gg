@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { slugifyGuideTitle } from '@/lib/guide-slug'
 
 type GuideSectionProps = {
   title: string
@@ -15,7 +16,11 @@ type GuideSectionProps = {
 export default function GuideSection({ title, children, layout = 'prose' }: GuideSectionProps) {
   return (
     <div style={{ marginBottom: 48 }}>
-      <h2 style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 16, color: 'var(--text-primary)' }}>
+      {/* id derives from the title via the same slugify guide-search-index.ts uses to
+          build result links, so every section is a real jump target without having to
+          hand-maintain anchors on 55 sections across 8 pages. scrollMarginTop keeps the
+          sticky header from covering the heading when a search result lands here. */}
+      <h2 id={slugifyGuideTitle(title)} style={{ fontSize: 20, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 16, color: 'var(--text-primary)', scrollMarginTop: 96 }}>
         {title}
       </h2>
       {layout === 'stack' ? (
