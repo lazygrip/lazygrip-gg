@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import GuideHeader from '@/components/guide/GuideHeader'
 import GuideSection from '@/components/guide/GuideSection'
 import GuideCallout from '@/components/guide/GuideCallout'
+import GuideImage from '@/components/guide/GuideImage'
 import { guideCodeStyle } from '@/components/guide/GuideCode'
 
 export const metadata: Metadata = {
@@ -66,6 +67,11 @@ export default function FeaturesAndBehaviorPage() {
             </div>
           ))}
         </div>
+        <GuideImage
+          src="/guide/reset-conditions-panel.png"
+          alt="The reset conditions panel in the GRIP-EMS editor with combat and target reset options"
+          caption="The reset conditions panel. These can be combined — most tank and DPS sequences run with Reset on combat enabled."
+        />
         <GuideCallout>
           Reset on target currently only takes effect out of combat. Switching targets mid-pull in Mythic+ will not reset the sequence to step 1 the way it will between pulls; the reset applies the next time you are out of combat and pick up a new target. If you were relying on a mid-combat target-change reset to replay a target-specific opener, it is not firing the way the setting name implies. Confirmed directly from the addon author; treat this as current behavior rather than an edge case, and design around Reset on combat for anything you need to trigger reliably inside a pull.
         </GuideCallout>
@@ -91,6 +97,11 @@ export default function FeaturesAndBehaviorPage() {
 
       <GuideSection title="Context switching and multi-version sequences">
         <p>A single sequence in GRIP-EMS can hold more than one version, and the addon picks which one is live based on what content you are in. GRIP-EMS recognizes dozens of distinct context types across raid difficulty, dungeon difficulty, Mythic+ key ranges, delve tiers, rated PvP, and more, and it checks on zone change, difficulty change, and group roster update. If you have built a separate version of a sequence for, say, Mythic+ versus raid, walking into a dungeon swaps you to that version automatically with no manual intervention.</p>
+        <GuideImage
+          src="/guide/context-tab-tiers.png"
+          alt="The Conditions tab on a sequence version, with content-type checkboxes for raids, dungeons, and Mythic+ tiers"
+          caption="The Conditions tab, which only shows content once a sequence has a second version — add one from the small + next to &quot;Version N of N&quot; to unlock it."
+        />
         <p style={{ marginTop: 12 }}>This used to have a real failure mode. Swapping versions by zoning into a dungeon or arena could drop a sequence's loop and branch grouping, and it would stay broken until you ran a manual <code style={code}>/reload</code>. That is fixed. The self-heal that rebuilds loop and branch structure now runs on the context switch itself, not just on a reload, so grouping survives the swap the moment it happens.</p>
         <p style={{ marginTop: 12 }}>If you want to override the automatic pick, you can pin a specific version as the live one regardless of what your current content or talents would otherwise select. The pin holds until you clear it, and the version list shows a badge next to whichever version is actually firing. Useful if you are deliberately running an off-spec version of a sequence, or testing a version before letting it take over automatically for its intended content.</p>
         <p style={{ marginTop: 12 }}>There is a second, separate way to make one key do different things depending on your setup, and it solves a different problem than context versions do. Per-loadout keybinds, found in Settings under General, lets a single keybind attach to whichever talent loadout was active when you set it, off by default and per character. Turn it on and any bind you make from then on belongs to that loadout specifically; binds you made before stay in place as the fallback for any loadout that does not have its own. The slash form is <code style={code}>/gems bind &lt;sequence&gt; &lt;key&gt; --loadout &lt;name or id&gt;</code>.</p>
@@ -122,6 +133,11 @@ export default function FeaturesAndBehaviorPage() {
         <p style={{ marginTop: 12 }}>Interleave does not require a Loop block. It works fine sitting at the top level of a sequence, and it works inside a Loop too, but the interval counts against a different population of steps depending on where it lives. At the top level it spaces against every compiled base step in the whole sequence. Inside a Loop, it spaces against that loop&apos;s own steps after its Repeat count has been unrolled, and only that loop&apos;s steps. The same interval number produces different real-world spacing depending on which of those two scopes it is sitting in, which is worth checking if an interleaved action seems to fire more or less often than you expected.</p>
         <p style={{ marginTop: 12 }}>There is a hard budget of 200 interleave copies across a sequence. Past that, later interleaves quietly get fewer copies inserted than you asked for rather than erroring, and it is easy to hit once a Repeat count on a loop duplicates the underlying list. If an interleaved action seems to be firing less often than its interval implies on a sequence with several other interleaves already running, that budget is worth checking before anything else.</p>
         <p style={{ marginTop: 12 }}>The editor marks any interleaved row with an <code style={code}>[IL:N]</code> indicator so you can see at a glance which steps are woven in versus part of your authored rotation.</p>
+        <GuideImage
+          src="/guide/interleave-node.png"
+          alt="An Interleave action node in a sequence's step list, set to fire every 3 steps"
+          caption="A real Interleave node — Red Moon set to Every: 3, woven into the loop without being manually placed at every third step."
+        />
         <GuideCallout>
           If your interval is larger than the block it lives in, the action never gets a chance to fire and compiles to nothing. GRIP-EMS now warns you when this happens, names the action, tells you the block's actual step count, and suggests an interval or Repeat count that would make it fit. If a trinket or buff you set up on interleave never seems to go off, check for this warning first before assuming the trinket itself is broken.
         </GuideCallout>

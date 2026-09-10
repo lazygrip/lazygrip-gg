@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import GuideHeader from '@/components/guide/GuideHeader'
 import GuideSection from '@/components/guide/GuideSection'
 import GuideCallout from '@/components/guide/GuideCallout'
+import GuideImage from '@/components/guide/GuideImage'
 import { guideCodeStyle } from '@/components/guide/GuideCode'
 
 export const metadata: Metadata = {
@@ -74,6 +75,11 @@ export default function InstallationPage() {
 
         <Step number={2} label="Verify your SpellQueueWindow">
           <p>The SpellQueueWindow controls how many milliseconds before a GCD ends WoW will accept your next cast input. The CVar Health tab shows your current value and flags it if it looks off. The default of 400ms is fine to leave alone for now. The full explanation of what SQW does, why it matters, and how to tune it for your connection is on the <Link href="/guide/settings" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Settings</Link> page.</p>
+          <GuideImage
+            src="/guide/cvar-health-tab.png"
+            alt="The CVar Health tab in GRIP-EMS settings, showing Macro Sequencing rows"
+            caption="CVar Health, open on the Macro Sequencing row group. Green means correctly set; a Fix button appears next to anything that isn't."
+          />
         </Step>
 
         <Step number={3} label="Set your click rate">
@@ -89,6 +95,11 @@ export default function InstallationPage() {
         <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 12 }}>
           To bind a key to a sequence, open the sequence in the GRIP-EMS editor, go to the Keybinds tab, and assign a key there. The bind is stored per-spec, so switching specs gives you a clean slate for a different rotation on the same key.
         </p>
+        <GuideImage
+          src="/guide/keybind-tab-bound.png"
+          alt="The Keybinds tab in the GRIP-EMS editor with a key bound to a sequence"
+          caption="The Keybinds tab with a key already bound. This is the only place a sequence gets its key — there is no separate WoW keybind menu entry to hunt for."
+        />
         <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 12 }}>
           If you specifically want a button on your action bar that you can drag and drop the way you would with the legacy program, that workflow still exists as an optional add-on rather than a built-in GRIP-EMS feature. Daxomault's <a href="https://www.curseforge.com/wow/addons/grip-ems-actionbutton-override" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>GRIP-EMS Actionbutton Override</a> plugin adds action bar override and drag-and-drop keybinding on top of GRIP-EMS. It is not required and the keybind-only approach above is still the default and the one most players end up using, but it is there if you prefer to keep sequences on your bars.
         </p>

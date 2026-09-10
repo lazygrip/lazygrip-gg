@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import GuideHeader from '@/components/guide/GuideHeader'
 import GuideSection from '@/components/guide/GuideSection'
 import GuideCallout from '@/components/guide/GuideCallout'
+import GuideImage from '@/components/guide/GuideImage'
 import { guideCodeStyle } from '@/components/guide/GuideCode'
 
 export const metadata: Metadata = {
@@ -95,6 +96,11 @@ export default function SettingsPage() {
         </div>
 
         <p style={{ marginTop: 16 }}>While the Optimiser is running, it has exclusive control over the SQW value. You will see "Managed by SQW Optimiser" in the manual control and the slider locks. If you want to set SQW by hand, turn the Optimiser off first.</p>
+        <GuideImage
+          src="/guide/sqw-optimiser.png"
+          alt="The Dynamic SQW Optimiser panel showing the Safety Buffer slider and managed SQW value"
+          caption="The Optimiser managing SQW automatically. The slider locks and shows &quot;Managed by SQW Optimiser&quot; while it's running."
+        />
         <GuideCallout>
           The SQW Optimiser tunes one thing: the SpellQueueWindow CVar, based on your latency. It does not look at your sequence, your spells, or your click rate. For a recommendation on how fast you should actually be pressing your keybind, that is the Tempo Advisor below, a separate system entirely.
         </GuideCallout>
@@ -133,6 +139,11 @@ export default function SettingsPage() {
         <p style={{ marginBottom: 4, fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Added in v2.4.0 · /gems keys or the Keybind tab</p>
         <p>Run <code style={code}>/gems keys</code>, or click Check Conflicts on the Keybind tab, and GRIP-EMS checks every key your sequences use, plus vehicle and pet battle slots, against your saved bindings: what the keypress actually reaches, cast-redirect modifiers, and click bindings. Where it can identify the addon behind a conflicting binding, it names it directly, and it clears two known kinds of conflict for you automatically.</p>
         <p style={{ marginTop: 12 }}>This is the tool for the recurring question of why a key works on one character and does nothing on another. Different characters can carry different addon-set or click bindings on the same physical key, and this check surfaces that instead of leaving you to hunt through every addon's keybind panel by hand.</p>
+        <GuideImage
+          src="/guide/keybind-conflicts.png"
+          alt="The keybind conflict checker listing a key and what owns it"
+          caption="Check Conflicts run against a sequence's key. It names whatever else has claimed the bind, including the modifier combinations."
+        />
         <GuideCallout>
           If a fix does not stick, run <code style={code}>/gems keys</code> again and use Undo, which backs out the last change if something else grabbed the key in the meantime.
         </GuideCallout>
@@ -179,6 +190,11 @@ export default function SettingsPage() {
           ))}
         </div>
 
+        <GuideImage
+          src="/guide/tempo-advisor.png"
+          alt="Tempo Advisor chat output recommending a click rate for the current sequence"
+          caption="A Tempo Advisor readout in chat, showing the recommended click rate for the sequence actually being played."
+        />
         <GuideCallout>
           Run /gems fs reset after a major rework of a sequence, not just a small tweak. The Advisor is learning the timing of that specific step structure, and feeding it 30 samples from the old version before you swap to the new one will skew the recommendation until enough fresh data overwrites it.
         </GuideCallout>
@@ -186,7 +202,12 @@ export default function SettingsPage() {
 
       <GuideSection title="Spell Cache Viewer">
         <p style={{ marginBottom: 4, fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>/gems spellcache</p>
-        <p>The cached spell data GRIP-EMS uses for icon resolution, autocomplete, and the Tempo Advisor's spell classification all lives in one place you can inspect directly. Run <code style={code}>/gems spellcache</code>, search by spell name or spell ID, and see exactly what the addon has stored: icon texture, cast time, cooldown, GCD category, and spell school.</p>
+        <p>The cached spell data GRIP-EMS uses for icon resolution, autocomplete, and the Tempo Advisor's spell classification all lives in one place you can inspect directly. Run <code style={code}>/gems spellcache</code>, search by spell name or spell ID, and see exactly what the addon has resolved it to: the icon and the spell ID behind that name.</p>
+        <GuideImage
+          src="/guide/spell-cache-viewer.png"
+          alt="The Spell Cache Viewer listing spell names, icons, and spell IDs"
+          caption="The Spell Cache Viewer. It's a lookup of name-to-icon-and-ID, not a tooltip — there's no cast time, cooldown, or spell school breakdown here."
+        />
         <p style={{ marginTop: 12 }}>This is the tool to reach for when a spell icon is not resolving on your tracker or action bar, or when the Tempo Advisor is classifying a spell as unknown instead of one of its real timing categories. A stale or missing cache entry, usually from a spell getting renamed or reworked in a patch, is the most common cause of both. Search for the spell here first before assuming something is broken in your sequence itself.</p>
         <p style={{ marginTop: 12 }}>The cache populates on login and updates automatically when you change spec or talents. If a spell is genuinely missing rather than just stale, <code style={code}>/gems revalidate</code> forces a fresh re-tag of every sequence with current spell IDs, which usually resolves it.</p>
       </GuideSection>

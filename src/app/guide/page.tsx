@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowRight, BookOpen, Wrench, Layers, GitBranch, BarChart2, SlidersHorizontal, Sparkles } from 'lucide-react'
 import GuideSection from '@/components/guide/GuideSection'
+import GuideImage from '@/components/guide/GuideImage'
 import Card from '@/components/ui/Card'
 
 export const metadata: Metadata = {
@@ -101,6 +102,13 @@ export default function GuidePage() {
           <Link href="/guide/installation" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Installation</Link>. On GRIP-EMS v2.3.14 and later this is rarely the cause since Key Down Casting is now forced on automatically, but on older versions the Cvar Health fix takes thirty seconds and solves that problem the majority of the time. If you are coming from an older macro sequencing addon and want to know whether switching is worth it, start with{' '}
           <Link href="/guide/from-legacy-program" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Coming from the legacy program</Link>.
         </p>
+
+        <GuideImage
+          src="/guide/hero-editor.png"
+          alt="The GRIP-EMS sequence editor open on a real sequence in the game"
+          caption="The GRIP-EMS editor, mid-sequence. Every screenshot in this guide is pulled from a real character, not a mockup."
+          maxWidth={620}
+        />
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 48 }}>
