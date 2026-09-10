@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import GuideSearch from '@/components/guide/GuideSearch'
 
 const NAV = [
   { href: '/guide', label: 'Overview' },
@@ -50,6 +51,12 @@ function GuideSidebar() {
           </Link>
         )
       })}
+      {/* Placed after the nav list, not the header above it -- this is the site-wide
+          search icon's blind spot (it only reaches /browse, i.e. sequences, and people
+          don't reliably notice it up there anyway). This one is scoped to the guide's
+          own 55 sections and sits right where you're already looking once you're in
+          the guide. */}
+      <GuideSearch />
     </aside>
   )
 }
