@@ -93,7 +93,13 @@ export default function WorkshopDecodePage() {
     if (timerRef.current) clearTimeout(timerRef.current)
     const code = input.trim()
     if (!code) { setResult(null); setError(null); return }
-    if (!/^!(EMS1|GRIP1|GSE3)!/i.test(code)) { setError('Paste an !EMS1!, !GRIP1!, or legacy program export code.'); setResult(null); return }
+    // No prefix pre-check here -- the server already accepts !EMS1!, !GRIP1!,
+    // !GSE3!, !FRG1!, !GEMSCP1!, and now bare macro lines with no envelope at
+    // all, and returns its own clear error for anything it truly can't read.
+    // A client-side allowlist here used to flash a wrong "paste a real
+    // export" error on valid FRG1/GEMSCP1 input, and would have done the same
+    // to valid plain text, before the Decode button even got a chance to
+    // prove it actually works.
     setError(null)
     timerRef.current = setTimeout(() => decode(code), 350)
     return () => { if (timerRef.current) clearTimeout(timerRef.current) }
@@ -140,7 +146,7 @@ export default function WorkshopDecodePage() {
           <div>
             <p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 4 }}>Inspect</p>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: 6 }}>Decode Export</h1>
-            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>View loops, actions, and steps from !EMS1!, !GRIP1!, or legacy program export strings.</p>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>View loops, actions, and steps from !EMS1!, !GRIP1!, or legacy program export strings, or just paste bare macro lines with no envelope at all.</p>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -148,7 +154,7 @@ export default function WorkshopDecodePage() {
             <textarea
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Paste !EMS1!, !GRIP1!, or a legacy program export..."
+              placeholder="Paste !EMS1!, !GRIP1!, a legacy program export, or bare macro lines..."
               rows={8}
               spellCheck={false}
               style={{

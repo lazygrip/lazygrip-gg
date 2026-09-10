@@ -38,12 +38,19 @@ export async function POST(req: NextRequest) {
   const { code } = body
   if (!code || typeof code !== 'string') return NextResponse.json({ error: 'code is required.' }, { status: 400 })
 
-  const cleaned = code.trim().replace(/\s+/g, '')
+  // Trim only -- do not collapse internal whitespace here. Every real export
+  // format's own decoder already strips whitespace itself before decoding
+  // (they each re-clean on entry), so that was always redundant for them,
+  // but it would silently destroy line breaks for the plain-macro-text
+  // fallback below, which needs them to tell one step from the next.
+  const cleaned = code.trim()
 
-  if (!/^!(EMS1|GRIP1|GSE3|FRG1|GEMSCP1)!/i.test(cleaned)) {
-    return NextResponse.json({ error: 'Paste an !EMS1!, !GRIP1!, !FRG1!, !GEMSCP1!, or legacy program export code.' }, { status: 422 })
-  }
-
+  // No prefix gate here -- decodeExport routes !EMS1!/!GRIP1!/!GSE3!/!FRG1!/
+  // !GEMSCP1! to their real decoders and falls through to a bounded,
+  // line-capped reading of bare macro text for anything else (see
+  // exportDecode.ts), matching what the builder's import already accepts.
+  // It throws its own clear error for empty, oversized, or otherwise
+  // unreadable input, so there's nothing left to gate before calling it.
   let data: any
   try {
     data = decodeExport(cleaned)
