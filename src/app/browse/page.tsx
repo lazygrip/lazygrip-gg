@@ -29,6 +29,7 @@ interface Props {
     spec_id?: string
     content_type?: string
     search?: string
+    patch_version?: string
   }>
 }
 
@@ -42,6 +43,7 @@ export default async function BrowsePage(props: Props) {
     spec_id: searchParams.spec_id ? Number(searchParams.spec_id) : undefined,
     content_type: searchParams.content_type as SequenceFilters['content_type'],
     search: searchParams.search || undefined,
+    patch_version: searchParams.patch_version || undefined,
   }
   const page = await fetchBrowsePage(filters)
 
@@ -63,6 +65,7 @@ export default async function BrowsePage(props: Props) {
       initialSequences={page.sequences ?? undefined}
       initialCount={page.count}
       initialCurrentPatch={page.sequences ? page.currentPatch : undefined}
+      initialAvailablePatches={page.availablePatches}
       initialFilterKey={page.sequences ? browseFilterKey(filters) : undefined}
     />
   )

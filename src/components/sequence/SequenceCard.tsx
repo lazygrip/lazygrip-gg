@@ -27,6 +27,16 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
   const timeAgo = formatDistanceToNow(new Date(sequence.created_at), { addSuffix: true })
   const plainDescription = sequence.description ? stripHtml(sequence.description) : null
 
+  // Surface a real revision separately from the original post date -- a sequence edited well
+  // after it went up should say so plainly in the footer, not just imply it through the default
+  // "Recent" sort (which already orders by updated_at) or the hover-only stale tooltip below.
+  // A same-day edit (autosave, a typo fix right after posting) is not worth calling out on its
+  // own, so this only kicks in once there's a full day of daylight between the two timestamps.
+  const wasEditedAfterPosting = differenceInDays(new Date(sequence.updated_at), new Date(sequence.created_at)) >= 1
+  const updatedAgo = wasEditedAfterPosting
+    ? formatDistanceToNow(new Date(sequence.updated_at), { addSuffix: true })
+    : null
+
   const avgScore = sequence.avg_score != null ? sequence.avg_score : null
   const ratingCount = sequence.rating_count != null ? sequence.rating_count : 0
   const hasRating = avgScore !== null && ratingCount > 0
@@ -186,7 +196,9 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
               </Link>
             </span>
           )}
-          <span suppressHydrationWarning>{timeAgo}</span>
+          <span suppressHydrationWarning>
+            {updatedAgo ? `Posted ${timeAgo} · Updated ${updatedAgo}` : timeAgo}
+          </span>
         </div>
       </div>
     </article>

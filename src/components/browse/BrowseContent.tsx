@@ -22,6 +22,7 @@ interface Props {
   initialSequences?: Sequence[]
   initialCount?: number
   initialCurrentPatch?: string | null
+  initialAvailablePatches?: string[]
   initialFilterKey?: string
 }
 
@@ -31,6 +32,7 @@ export default function BrowseContent({
   initialSequences,
   initialCount,
   initialCurrentPatch,
+  initialAvailablePatches,
   initialFilterKey,
 }: Props) {
   const searchParams = useSearchParams()
@@ -43,6 +45,7 @@ export default function BrowseContent({
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [showMobileFilters, setShowMobileFilters] = useState(false)
   const [currentPatch, setCurrentPatch] = useState<string | null>(initialCurrentPatch ?? null)
+  const [availablePatches, setAvailablePatches] = useState<string[]>(initialAvailablePatches ?? [])
 
   // The filter key the sequences currently on screen were fetched with. Seeded with the server's
   // key when the server delivered data, undefined when it did not (then the client must fetch).
@@ -95,6 +98,7 @@ export default function BrowseContent({
     class_id: searchParams.get('class_id') ? Number(searchParams.get('class_id')) : initialFilters.class_id,
     spec_id: searchParams.get('spec_id') ? Number(searchParams.get('spec_id')) : undefined,
     search: searchParams.get('search') || undefined,
+    patch_version: searchParams.get('patch_version') || undefined,
   }
 
   function updateUrl(updates: Record<string, string | undefined>) {
@@ -136,6 +140,13 @@ export default function BrowseContent({
     fetchCurrentPatch()
   }, [])
 
+  // Same one-shot pattern for the list of patches that have at least one published sequence —
+  // it only grows when new sequences post on a new patch, not per filter change.
+  useEffect(() => {
+    if (initialAvailablePatches !== undefined) return
+    fetchAvailablePatches()
+  }, [])
+
   async function fetchCurrentPatch() {
     try {
       const { data, error } = await supabase
@@ -147,6 +158,29 @@ export default function BrowseContent({
         return
       }
       setCurrentPatch(data?.current_patch ?? null)
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  async function fetchAvailablePatches() {
+    try {
+      const { data, error } = await supabase
+        .from('sequences')
+        .select('patch_version')
+        .eq('status', 'published')
+        .not('patch_version', 'is', null)
+      if (error || !data) {
+        if (error) console.error('Failed to fetch available patches:', error)
+        return
+      }
+      const values = new Set<string>()
+      for (const row of data as { patch_version: string | null }[]) {
+        const value = (row.patch_version || '').trim()
+        if (value) values.add(value)
+      }
+      const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
+      setAvailablePatches(Array.from(values).sort((a, b) => collator.compare(a, b)))
     } catch (e) {
       console.error(e)
     }
@@ -196,6 +230,12 @@ export default function BrowseContent({
     setShowMobileFilters(false)
   }
 
+  function selectPatch(value: string | undefined) {
+    setShowMobileFilters(false)
+    const newValue = filters.patch_version === value ? undefined : value
+    updateUrl({ patch_version: newValue })
+  }
+
   function selectContentType(value: string | undefined) {
     setShowMobileFilters(false)
     // On a content-type hub the slug carries the filter, so changing or clearing it has to move
@@ -231,7 +271,7 @@ export default function BrowseContent({
     router.push(`/browse${query ? `?${query}` : ''}`, { scroll: false })
   }
 
-  const hasActiveFilters = filters.class_id || filters.content_type || filters.search || filters.spec_id
+  const hasActiveFilters = filters.class_id || filters.content_type || filters.search || filters.spec_id || filters.patch_version
 
   const filterPanel = (
     <div>
@@ -277,6 +317,19 @@ export default function BrowseContent({
           </div>
         ))}
       </FilterSection>
+      {availablePatches.length > 0 && (
+        <FilterSection title="Patch">
+          <FilterItem label="All patches" active={!filters.patch_version} onClick={() => selectPatch(undefined)} />
+          {availablePatches.map(patch => (
+            <FilterItem
+              key={patch}
+              label={patch === currentPatch ? `${patch} (current)` : patch}
+              active={filters.patch_version === patch}
+              onClick={() => selectPatch(patch)}
+            />
+          ))}
+        </FilterSection>
+      )}
     </div>
   )
 
