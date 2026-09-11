@@ -187,6 +187,13 @@ export type SequenceVersion = {
   // See ActionNode above and Sequence.actions. This version's own tree,
   // independent of whichever version happens to be `current`.
   actions: ActionNode[] | null
+  // Added by migration 028, alongside sequences.collection_sequences (see
+  // CollectionSequenceEntry above). Null on every version row published
+  // before that migration and on any non-collection version -- a version
+  // is one or the other, never both, mirroring how sequences.raw_steps and
+  // sequences.collection_sequences are mutually exclusive on the parent
+  // row today.
+  collection_sequences: CollectionSequenceEntry[] | null
   changelog: string | null
   author_id: string
   hero_talent: string | null
