@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Sequence, SequenceVersion, SequenceStep, ActionNode } from '@/types'
+import { Sequence, SequenceVersion, SequenceStep, ActionNode, CollectionSequenceEntry } from '@/types'
 import { Wand2, X } from 'lucide-react'
 import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
 import { notifyDiscord } from '@/lib/notify-discord'
@@ -12,6 +12,23 @@ import PostingEligibilityChecklist from '@/components/PostingEligibilityChecklis
 interface SequenceOption {
   name: string
   index: number
+}
+
+// Editable per-entry state for a collection version, mirrors
+// CollectionSequenceEntry plus the `checked` inclusion toggle /post's
+// collection UI uses (see src/app/post/page.tsx's CollectionSequence).
+// `name` doubles as both the decoded identifier and the editable tab label
+// -- CollectionSequenceEntry has no separate field for the two, unlike
+// /post's creation-time CollectionSequence, which needs to remember what
+// the export originally called something distinctly from what the author
+// renames it to.
+interface EditableCollectionEntry {
+  name: string
+  steps: SequenceStep[]
+  actions: ActionNode[] | null
+  stepFunction: string
+  talent_string: string
+  checked: boolean
 }
 
 export default function UpdateSequencePage() {
@@ -59,6 +76,13 @@ export default function UpdateSequencePage() {
   const [decodedActions, setDecodedActions] = useState<ActionNode[] | null>(null)
   const decodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Collection version state (migration 028). isCollection is set once
+  // fetchSequence loads the sequence and finds collection_sequences on it --
+  // every collection is a collection permanently, so this never toggles
+  // mid-session the way single-vs-multi decode results do below.
+  const [isCollection, setIsCollection] = useState(false)
+  const [collectionEntries, setCollectionEntries] = useState<EditableCollectionEntry[] | null>(null)
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
     fetchSequence()
@@ -67,12 +91,22 @@ export default function UpdateSequencePage() {
   async function fetchSequence() {
     setLoading(true)
 
-    const { data: seq } = await supabase
+    const { data: seq, error: seqError } = await supabase
       .from('sequences')
       .select('*, author:profiles(*)')
       .eq('slug', slug)
       .eq('status', 'published')
       .single()
+
+    if (seqError) {
+      // Previously swallowed: only `data` was destructured, so a real
+      // Postgrest error (RLS denial, network hiccup, a bad query) rendered
+      // as the exact same "Sequence not found" as a genuinely missing row,
+      // with nothing in the console to tell them apart. Logging it doesn't
+      // fix the underlying failure but at least makes the next one
+      // diagnosable instead of a guess.
+      console.error('fetchSequence: sequences select failed', seqError)
+    }
 
     if (!seq) {
       setError('Sequence not found')
@@ -82,12 +116,106 @@ export default function UpdateSequencePage() {
 
     setSequence(seq)
 
-    const { data: versionData } = await supabase
+    // Collections never got a sequence_versions row before migration 028:
+    // publish_draft_sequence() returned version_id: null for them by design
+    // (see 016_publish_reslug.sql), so current_version_id is permanently
+    // null on every collection published before an author uses this flow
+    // for the first time. That means the ordinary "look up the version by
+    // current_version_id" path below (`.eq('id', seq.current_version_id)`)
+    // can't be reused here -- for a never-versioned collection that always
+    // compiles to `id = null`, which SQL treats as always-false, so it
+    // would silently return nothing exactly the way the original bug did.
+    // Collections get their own lookup instead: by sequence_id, newest
+    // first, so a collection that HAS since been versioned through this
+    // same page finds its real history, and one that hasn't gets an honest
+    // "no history yet" state rather than a false "not found".
+    if (seq.collection_sequences) {
+      setIsCollection(true)
+      setCollectionEntries(
+        (seq.collection_sequences as CollectionSequenceEntry[]).map(entry => ({
+          name: entry.name,
+          steps: entry.steps ?? [],
+          actions: entry.actions ?? null,
+          stepFunction: entry.stepFunction ?? seq.step_function,
+          talent_string: entry.talent_string ?? '',
+          checked: true,
+        }))
+      )
+      setGripString(seq.grip_string ?? '')
+
+      const { data: latestVersion, error: latestVersionError } = await supabase
+        .from('sequence_versions')
+        .select('*')
+        .eq('sequence_id', seq.id)
+        .order('version_number', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (latestVersionError) {
+        console.error('fetchSequence: collection sequence_versions lookup failed', latestVersionError)
+      }
+
+      if (latestVersion) {
+        setCurrentVersion(latestVersion)
+        const nextNumber = latestVersion.version_number + 1
+        setVersionLabel(`v${nextNumber}.0`)
+        setHeroTalent(latestVersion.hero_talent ?? '')
+        setContentType(latestVersion.content_type ?? seq.content_type)
+        setStepFunction(latestVersion.step_function ?? seq.step_function)
+        setGripVersion(latestVersion.grip_version ?? seq.grip_version ?? '')
+        setWarcraftlogsUrl(latestVersion.warcraftlogs_url ?? '')
+        setPerformanceNotes(latestVersion.performance_notes ?? '')
+      } else {
+        // No version has ever been published for this collection -- this
+        // publish will be the first row sequence_versions has ever seen for
+        // it. See 028_collection_sequence_versioning.sql: that's the
+        // documented, intentional lack of a backfill, not a data gap.
+        // version_number: 0 is a synthetic stand-in (mirrors
+        // deriveSelectedVersion's fallback in SequencePageClient.tsx) so
+        // "current + 1" below still resolves to a sane v1.0 default.
+        setCurrentVersion({
+          id: seq.id,
+          sequence_id: seq.id,
+          version_number: 0,
+          version_label: seq.current_version_label ?? 'unversioned',
+          grip_string: seq.grip_string ?? '',
+          raw_steps: null,
+          actions: null,
+          collection_sequences: seq.collection_sequences,
+          changelog: null,
+          author_id: seq.author_id,
+          hero_talent: seq.hero_talent,
+          content_type: seq.content_type,
+          step_function: seq.step_function,
+          grip_version: seq.grip_version,
+          talent_string: null,
+          warcraftlogs_url: seq.warcraftlogs_url,
+          performance_notes: seq.performance_notes,
+          created_at: seq.created_at,
+        })
+        setVersionLabel('v1.0')
+        setHeroTalent(seq.hero_talent ?? '')
+        setContentType(seq.content_type)
+        setStepFunction(seq.step_function)
+        setGripVersion(seq.grip_version ?? '')
+        setWarcraftlogsUrl(seq.warcraftlogs_url ?? '')
+        setPerformanceNotes(seq.performance_notes ?? '')
+      }
+
+      setLoading(false)
+      return
+    }
+
+    const { data: versionData, error: versionError } = await supabase
       .from('sequence_versions')
       .select('*')
       .eq('sequence_id', seq.id)
       .eq('id', seq.current_version_id)
       .single()
+
+    if (versionError) {
+      console.error('fetchSequence: sequence_versions select failed', versionError)
+    }
 
     if (versionData) {
       setCurrentVersion(versionData)
@@ -103,6 +231,62 @@ export default function UpdateSequencePage() {
     }
 
     setLoading(false)
+  }
+
+  // Decodes a fresh export into a full replacement bundle for a collection
+  // version. Unlike runDecode below (which picks ONE sequence out of a
+  // multi-sequence export, the /update page's original single-sequence-only
+  // behavior), this keeps every sequence the export contains, matching how
+  // /post's collection branch treats a multi-sequence decode: the whole
+  // export is the unit, not a menu to choose one item from.
+  async function runCollectionDecode(exportString: string) {
+    setDecoding(true)
+    setDecodeError(null)
+
+    try {
+      const res = await fetch('/api/decode-grip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: exportString }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setDecodeError(data.error || 'Decode failed.')
+        return
+      }
+
+      const sequences = data.sequences ?? []
+
+      if (sequences.length < 2) {
+        setDecodeError('This export only has one sequence in it. This page is a collection with multiple tabs -- paste an export containing all of them.')
+        return
+      }
+
+      setCollectionEntries(
+        sequences.map((s: { name: string; steps?: SequenceStep[]; versions?: { stepFunction?: string; actions?: ActionNode[] }[] }) => {
+          const version = s.versions?.[0]
+          return {
+            name: s.name,
+            steps: s.steps ?? [],
+            actions: Array.isArray(version?.actions) ? version.actions : null,
+            stepFunction: version?.stepFunction ?? stepFunction,
+            talent_string: '',
+            checked: true,
+          }
+        })
+      )
+      setGripString(exportString)
+    } catch {
+      setDecodeError('Could not reach the decode API. Check your connection.')
+    } finally {
+      setDecoding(false)
+    }
+  }
+
+  function updateCollectionEntry(index: number, patch: Partial<EditableCollectionEntry>) {
+    setCollectionEntries(prev => prev ? prev.map((e, i) => i === index ? { ...e, ...patch } : e) : prev)
   }
 
   async function runDecode(exportString: string, sequenceIndex?: number) {
@@ -162,7 +346,11 @@ export default function UpdateSequencePage() {
     }
 
     decodeTimeoutRef.current = setTimeout(() => {
-      runDecode(trimmed)
+      if (isCollection) {
+        runCollectionDecode(trimmed)
+      } else {
+        runDecode(trimmed)
+      }
     }, 800)
   }
 
@@ -217,6 +405,10 @@ export default function UpdateSequencePage() {
       setError('Version label is required')
       return
     }
+    if (isCollection && (!collectionEntries || collectionEntries.filter(e => e.checked).length === 0)) {
+      setError('Select at least one sequence to include in this version')
+      return
+    }
 
     // skipGate=true is passed only from the checklist's onEligible callback,
     // which fires after get_posting_eligibility() has just confirmed every
@@ -235,8 +427,10 @@ export default function UpdateSequencePage() {
     setError(null)
 
     // Use the structured decoded steps if available, otherwise fall back to
-    // parsing the textarea text line by line.
-    const parsedSteps = decodedSteps ?? (
+    // parsing the textarea text line by line. Collections never use this --
+    // their steps only ever come from a decoded export, same as /post's
+    // collection branch (see CollectionSequence's comment in that file).
+    const parsedSteps = isCollection ? null : (decodedSteps ?? (
       rawSteps.trim()
         ? rawSteps.trim().split('\n').map((line, i) => ({
             index: i,
@@ -244,14 +438,30 @@ export default function UpdateSequencePage() {
             char_count: line.length,
           }))
         : null
-    )
+    ))
     // Paired with parsedSteps the same way resolveStepsAndActions pairs them
     // in /post: the actions tree is only trustworthy alongside decodedSteps.
     // If parsedSteps fell back to the hand-typed textarea parse instead, any
     // previously-decoded tree no longer corresponds to what's being
     // submitted (handleRawStepsChange already clears decodedActions when
     // this happens; this is the second half of that guarantee).
-    const parsedActions = decodedSteps ? decodedActions : null
+    const parsedActions = isCollection ? null : (decodedSteps ? decodedActions : null)
+
+    // Collection payload: only the checked entries survive into the new
+    // version, same as /post's publish-time filter -- unchecking a
+    // sequence here is the one point where it's meant to actually drop out,
+    // same reasoning as /post's own comment on this.
+    const collectionPayload = isCollection
+      ? (collectionEntries ?? [])
+          .filter(e => e.checked)
+          .map(e => ({
+            name: e.name,
+            steps: e.steps,
+            actions: e.actions ?? null,
+            stepFunction: e.stepFunction || stepFunction,
+            talent_string: e.talent_string.trim() || null,
+          }))
+      : null
 
     const { error: rpcError } = await supabase.rpc('publish_sequence_version', {
       p_sequence_id: sequence.id,
@@ -266,9 +476,13 @@ export default function UpdateSequencePage() {
       p_content_type: contentType,
       p_step_function: stepFunction,
       p_grip_version: gripVersion || null,
-      p_talent_string: talentString || null,
+      // Collections carry talent strings per-entry (see collectionPayload
+      // above), same split /post uses -- the page-level field is only
+      // meaningful for a single sequence.
+      p_talent_string: isCollection ? null : (talentString || null),
       p_warcraftlogs_url: sanitizeWarcraftLogsUrl(warcraftlogsUrl),
       p_performance_notes: performanceNotes || null,
+      p_collection_sequences: collectionPayload ? JSON.stringify(collectionPayload) : null,
     })
 
     if (rpcError) {
@@ -566,7 +780,7 @@ export default function UpdateSequencePage() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => gripString.trim() && runDecode(gripString.trim())}
+                  onClick={() => gripString.trim() && (isCollection ? runCollectionDecode(gripString.trim()) : runDecode(gripString.trim()))}
                   disabled={decoding || !gripString.trim()}
                   style={{
                     display: 'flex',
@@ -594,49 +808,140 @@ export default function UpdateSequencePage() {
               )}
             </div>
 
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                <label style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)' }}>
-                  Steps (plain text)
-                </label>
-                {stepsAutoPopulated && (
-                  <span style={{
+            {!isCollection && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <label style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)' }}>
+                    Steps (plain text)
+                  </label>
+                  {stepsAutoPopulated && (
+                    <span style={{
+                      fontSize: 'var(--text-xs)',
+                      color: 'var(--accent)',
+                      fontFamily: 'var(--font-sans)',
+                      padding: '2px 7px',
+                      background: 'rgba(29,158,117,0.1)',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '0.5px solid rgba(29,158,117,0.3)',
+                    }}>
+                      Auto-decoded
+                    </span>
+                  )}
+                </div>
+                <textarea
+                  value={rawSteps}
+                  onChange={e => handleRawStepsChange(e.target.value)}
+                  placeholder={`/targetenemy [noharm][dead]\n/cast [noform:1] Bear Form\n/cast Mangle`}
+                  rows={6}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '0.5px solid var(--border-strong)',
+                    borderRadius: 'var(--radius-md)',
                     fontSize: 'var(--text-xs)',
-                    color: 'var(--accent)',
-                    fontFamily: 'var(--font-sans)',
-                    padding: '2px 7px',
-                    background: 'rgba(29,158,117,0.1)',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '0.5px solid rgba(29,158,117,0.3)',
-                  }}>
-                    Auto-decoded
-                  </span>
-                )}
+                    background: 'var(--bg-secondary)',
+                    color: 'var(--text-primary)',
+                    resize: 'vertical',
+                    fontFamily: 'var(--font-mono)',
+                    boxSizing: 'border-box',
+                  }}
+                />
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginTop: 6 }}>
+                  Paste steps one per line, or decode from your export string above. Users can read these without importing.
+                </p>
               </div>
-              <textarea
-                value={rawSteps}
-                onChange={e => handleRawStepsChange(e.target.value)}
-                placeholder={`/targetenemy [noharm][dead]\n/cast [noform:1] Bear Form\n/cast Mangle`}
-                rows={6}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '0.5px solid var(--border-strong)',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: 'var(--text-xs)',
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-primary)',
-                  resize: 'vertical',
-                  fontFamily: 'var(--font-mono)',
-                  boxSizing: 'border-box',
-                }}
-              />
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginTop: 6 }}>
-                Paste steps one per line, or decode from your export string above. Users can read these without importing.
-              </p>
-            </div>
+            )}
           </div>
         </div>
+
+        {/* Collection sequences -- only shown for a collection version
+            (migration 028). Each entry's steps/actions come from decoding a
+            fresh export above (runCollectionDecode), never hand-typed, same
+            constraint /post's collection creation flow has. Editable here:
+            which entries are included (checked), each one's tab label
+            (name), and its own talent string. */}
+        {isCollection && (
+          <div style={{
+            background: 'var(--bg-primary)',
+            border: '0.5px solid var(--border)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '20px 24px',
+          }}>
+            <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
+              Collection sequences
+            </h2>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)', marginBottom: 16 }}>
+              This is a collection page with multiple tabs. Pasting a new export above replaces every entry below with what that export contains -- label each one and give it its own talent string if needed.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {(collectionEntries ?? []).map((entry, i) => (
+                <div
+                  key={i}
+                  style={{
+                    border: `0.5px solid ${entry.checked ? 'var(--accent)' : 'var(--border)'}`,
+                    borderRadius: 'var(--radius-md)',
+                    padding: '16px',
+                    background: entry.checked ? 'rgba(29,158,117,0.04)' : 'var(--bg-secondary)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                    <input
+                      type="checkbox"
+                      checked={entry.checked}
+                      onChange={e => updateCollectionEntry(i, { checked: e.target.checked })}
+                      style={{ width: 16, height: 16, marginTop: 2, accentColor: 'var(--accent)', cursor: 'pointer', flexShrink: 0 }}
+                    />
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-sans)' }}>
+                        {entry.steps.length} steps
+                      </span>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 4, fontFamily: 'var(--font-sans)' }}>
+                          Tab label
+                        </label>
+                        <input
+                          type="text"
+                          value={entry.name}
+                          onChange={e => updateCollectionEntry(i, { name: e.target.value })}
+                          placeholder="e.g. Single Target"
+                          disabled={!entry.checked}
+                          style={{
+                            width: '100%', padding: '8px 12px',
+                            border: '0.5px solid var(--border-strong)',
+                            borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)',
+                            background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                            fontFamily: 'var(--font-sans)', boxSizing: 'border-box',
+                            opacity: entry.checked ? 1 : 0.5,
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: 4, fontFamily: 'var(--font-sans)' }}>
+                          Talent string <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optional, per-sequence)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={entry.talent_string}
+                          onChange={e => updateCollectionEntry(i, { talent_string: e.target.value })}
+                          placeholder="Paste talent import string if different from the other sequence..."
+                          disabled={!entry.checked}
+                          style={{
+                            width: '100%', padding: '8px 12px',
+                            border: '0.5px solid var(--border-strong)',
+                            borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)',
+                            background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                            fontFamily: 'var(--font-mono)', boxSizing: 'border-box',
+                            opacity: entry.checked ? 1 : 0.5,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Metadata */}
         <div style={{
@@ -747,24 +1052,30 @@ export default function UpdateSequencePage() {
             These are specific to this version and will update when visitors switch between versions.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
-                Talent string
-              </label>
-              <input
-                type="text"
-                value={talentString}
-                onChange={e => setTalentString(e.target.value)}
-                placeholder="Paste talent import string..."
-                style={{
-                  width: '100%', padding: '8px 12px',
-                  border: '0.5px solid var(--border-strong)',
-                  borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)',
-                  background: 'var(--bg-secondary)', color: 'var(--text-primary)',
-                  fontFamily: 'var(--font-mono)', boxSizing: 'border-box',
-                }}
-              />
-            </div>
+            {/* Collections carry a talent string per entry instead (see the
+                Collection sequences section above) -- this page-level field
+                is only meaningful for a single sequence, same split /post
+                uses at publish time (p_talent_string: null for collections). */}
+            {!isCollection && (
+              <div>
+                <label style={{ display: 'block', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
+                  Talent string
+                </label>
+                <input
+                  type="text"
+                  value={talentString}
+                  onChange={e => setTalentString(e.target.value)}
+                  placeholder="Paste talent import string..."
+                  style={{
+                    width: '100%', padding: '8px 12px',
+                    border: '0.5px solid var(--border-strong)',
+                    borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)',
+                    background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                    fontFamily: 'var(--font-mono)', boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+            )}
 
             <div>
               <label style={{ display: 'block', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>

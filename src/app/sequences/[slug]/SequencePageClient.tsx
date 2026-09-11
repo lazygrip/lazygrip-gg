@@ -80,6 +80,13 @@ function deriveSelectedVersion(seq: Sequence, versionData: SequenceVersion[]): S
     grip_string: seq.grip_string ?? '',
     raw_steps: seq.raw_steps ?? null,
     actions: seq.actions ?? null,
+    // Same reasoning as raw_steps/actions just above: no real version row
+    // exists yet, so the synthetic stand-in mirrors whatever the live
+    // sequences row currently holds. See CollectionSequenceEntry and
+    // migration 028 -- collections published before that migration have no
+    // sequence_versions row at all, so this is the only place their bundle
+    // content is available from until an author publishes a real version.
+    collection_sequences: seq.collection_sequences ?? null,
     changelog: null,
     author_id: seq.author_id,
     hero_talent: seq.hero_talent ?? null,
@@ -724,7 +731,13 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
   const patchMismatch = !!currentPatch && (sequence.patch_version == null || sequence.patch_version !== currentPatch)
   const isStale = patchMismatch && daysSinceUpdate > STALE_DAYS_THRESHOLD
 
-  const collectionEntries: CollectionSequenceEntry[] = sequence.collection_sequences ?? []
+  // Version-aware as of migration 028: a collection version now carries its
+  // own collection_sequences, so switching version tabs must show THAT
+  // version's bundle, not always whatever's live on the parent row. Falls
+  // back to the parent row for the common case (no version history, or the
+  // selected version predates 028 and has nothing of its own).
+  const collectionEntries: CollectionSequenceEntry[] =
+    selectedVersion?.collection_sequences ?? sequence.collection_sequences ?? []
   const isCollection = collectionEntries.length > 0
   const activeEntry = collectionEntries[activeCollectionTab] ?? null
 
@@ -1047,6 +1060,20 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                   <Pencil size={14} />
                   Edit
                 </button>
+                {/* Publishing a new version used to only work for single
+                    sequences: publish_draft_sequence() never created a
+                    sequence_versions row for a collection (it returned
+                    version_id: null by design -- see 016_publish_reslug.sql),
+                    so current_version_id stayed null forever on every
+                    collection post, and the /update page's fetchSequence()
+                    looked up a version by that id and, finding none, fell
+                    through to a generic "Sequence not found" message. This
+                    button was hidden here for collections as the interim fix.
+                    Migration 028 closed the underlying gap -- collections can
+                    now publish a real version through the same page, which
+                    looks up its history by sequence_id instead of by
+                    current_version_id -- so the button is unconditional
+                    again. */}
                 <button
                   onClick={() => router.push(`/sequences/${sequence.slug}/update`)}
                   style={{
