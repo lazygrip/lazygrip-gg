@@ -28,6 +28,7 @@ export default function Footer() {
           <div style={{ display: 'flex', gap: 20, fontSize: 'var(--text-base)', flexWrap: 'wrap', justifyContent: 'center' }}>
             {[
               { href: '/guide', label: 'Guide' },
+              { href: '/creators', label: 'Creators' },
               { href: '/changelog', label: 'Changelog' },
               { href: '/about', label: 'About' },
               { href: '/faq', label: 'FAQ' },

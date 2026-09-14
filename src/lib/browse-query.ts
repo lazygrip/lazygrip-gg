@@ -21,7 +21,16 @@ export function searchPattern(search: string): string {
 export function buildBrowseQuery(supabase: SupabaseClient, filters: SequenceFilters) {
   let query = supabase
     .from('sequences')
-    .select('*, author:profiles(username, display_name, avatar_url)', { count: 'exact' })
+    // !sequences_author_id_fkey pins the embed to the author_id relationship.
+    // Migration 030 added profiles.featured_sequence_id, a SECOND foreign key
+    // between sequences and profiles (pointing the other way). PostgREST can no
+    // longer infer which relationship an unqualified profiles(...) embed means
+    // once two exist between the same two tables -- it returns HTTP 300 with a
+    // "more than one relationship was found" body instead of data. Confirmed
+    // live 2026-09-14: this exact query was silently returning that 300 (Ed's
+    // Death Knight browse page showing "0 sequences" with real published rows
+    // in the table) until this hint was added.
+    .select('*, author:profiles!sequences_author_id_fkey(username, display_name, avatar_url)', { count: 'exact' })
     .eq('status', 'published')
 
   if (filters.class_id) query = query.eq('class_id', filters.class_id)

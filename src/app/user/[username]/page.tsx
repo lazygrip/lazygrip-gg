@@ -1,9 +1,14 @@
 import { Metadata } from 'next'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import { sanitizeAvatarUrl } from '@/lib/url-safety'
+import { sanitizeAvatarUrl, sanitizeBannerUrl } from '@/lib/url-safety'
+import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import StatBlock from '@/components/ui/StatBlock'
 import ProfileTabs from './ProfileTabs'
+import SocialLinksRow from './SocialLinksRow'
+import { fetchCreatorViewTrend, fetchCreatorActivity } from '@/lib/creator-dashboard'
+import type { SocialLinks } from '@/types'
 
 interface Props {
   params: Promise<{ username: string }>
@@ -82,7 +87,7 @@ export default async function UserProfilePage(props: Props) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, username, display_name, avatar_url, avatar_color, bio, battletag, created_at')
+    .select('id, username, display_name, avatar_url, avatar_color, bio, battletag, created_at, banner_url, social_links, featured_sequence_id')
     .eq('username', params.username)
     .single()
 
@@ -101,7 +106,7 @@ export default async function UserProfilePage(props: Props) {
 
   const { data: sequences } = await supabase
     .from('sequences')
-    .select('id, title, slug, class_name, class_id, spec_name, content_type, hero_talent, avg_score, rating_count, view_count, save_count, created_at')
+    .select('id, title, slug, class_name, class_id, spec_name, content_type, hero_talent, avg_score, rating_count, view_count, save_count, comment_count, created_at')
     .eq('author_id', profile.id)
     .eq('status', 'published')
     .order('created_at', { ascending: false })
@@ -110,7 +115,26 @@ export default async function UserProfilePage(props: Props) {
   const initial = profile.username?.[0]?.toUpperCase() ?? '?'
   const displayColor = profile.avatar_color ?? '#1D9E75'
   const safeAvatarUrl = sanitizeAvatarUrl(profile.avatar_url)
+  const safeBannerUrl = sanitizeBannerUrl(profile.banner_url)
   const joinDate = new Date(profile.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
+
+  // Owner's own dashboard data -- both reads are RLS-gated to "the
+  // authenticated owner" (see migration 030), so there is no reason to even
+  // attempt them for a visitor viewing someone else's profile; skipping the
+  // query entirely for that case rather than fetching and getting an empty
+  // result back is both faster and avoids two RLS-denied queries per page
+  // view on every profile that isn't the viewer's own.
+  const viewTrend = isOwnProfile ? await fetchCreatorViewTrend(supabase, seqs.map(s => s.id)) : []
+  const activity = isOwnProfile ? await fetchCreatorActivity(supabase, profile.id) : []
+
+  // Featured sequence: profile.featured_sequence_id is a bare FK with no DB
+  // constraint tying it to "one of this profile's own published sequences"
+  // (see migration 030's comment on why that's application-enforced, not a
+  // DB constraint). This membership check against the already-published-
+  // filtered `seqs` array IS that enforcement on the read side -- a stale or
+  // tampered id that doesn't match a currently published sequence of this
+  // profile's simply renders nothing, never a broken link.
+  const featuredSeq = seqs.find(s => s.id === profile.featured_sequence_id) ?? null
 
   // Recent comments this creator has left across the site, kohtas's "offer
   // support for our sequences" request read as: a visitor lands on a
@@ -158,51 +182,109 @@ export default async function UserProfilePage(props: Props) {
   return (
     <div style={{ maxWidth: 860, margin: '0 auto', padding: '36px 24px' }}>
 
-      {/* Profile header */}
+      {/* Profile header. Banner + overlapping avatar is the "fuller
+          redesign" Slowdog picked (2026-09-14) over a light-polish pass --
+          the banner renders a flat gradient fallback rather than the
+          avatar's solid-color fallback, deliberately: a banner is a big
+          enough area that a flat brand color there would read as "broken
+          image", where the avatar's small solid circle reads as a normal
+          initial-avatar. */}
       <div style={{
         background: 'var(--bg-primary)',
         border: '0.5px solid var(--border)',
         borderRadius: 'var(--radius-lg)',
-        padding: '28px',
         marginBottom: 20,
-        display: 'flex',
-        gap: 20,
-        alignItems: 'center',
+        overflow: 'hidden',
       }}>
         <div style={{
-          width: 64, height: 64, borderRadius: '50%',
-          background: safeAvatarUrl ? 'transparent' : displayColor,
-          overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 26, fontWeight: 700, color: 'white',
-          border: '2px solid var(--border)', flexShrink: 0,
-        }}>
-          {safeAvatarUrl
-            ? <img src={safeAvatarUrl} alt={profile.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            : initial
-          }
-        </div>
+          height: 150,
+          background: safeBannerUrl
+            ? `url(${safeBannerUrl}) center/cover no-repeat`
+            : 'linear-gradient(135deg, var(--accent-subtle), var(--bg-secondary))',
+        }} />
 
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
-            {profile.display_name || profile.username}
-          </h1>
-          {profile.display_name && (
-            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)', margin: '2px 0 0' }}>@{profile.username}</p>
-          )}
-          <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Joined {joinDate}</span>
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{seqs.length} sequence{seqs.length !== 1 ? 's' : ''}</span>
-            {profile.battletag && (
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{profile.battletag}</span>
-            )}
+        <div style={{ padding: '0 28px 28px', display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+          <div style={{
+            width: 84, height: 84, borderRadius: '50%',
+            background: safeAvatarUrl ? 'transparent' : displayColor,
+            overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 32, fontWeight: 700, color: 'white',
+            border: '3px solid var(--bg-primary)', flexShrink: 0,
+            marginTop: -42,
+            boxShadow: '0 0 0 0.5px var(--border)',
+          }}>
+            {safeAvatarUrl
+              ? <img src={safeAvatarUrl} alt={profile.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : initial
+            }
           </div>
-          {profile.bio && (
-            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', marginTop: 10, lineHeight: 1.6 }}>
-              {profile.bio}
-            </p>
-          )}
+
+          <div style={{ flex: 1, minWidth: 0, paddingTop: 14 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
+              {profile.display_name || profile.username}
+            </h1>
+            {profile.display_name && (
+              <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)', margin: '2px 0 0' }}>@{profile.username}</p>
+            )}
+            <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Joined {joinDate}</span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{seqs.length} sequence{seqs.length !== 1 ? 's' : ''}</span>
+              {profile.battletag && (
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{profile.battletag}</span>
+              )}
+            </div>
+            {profile.bio && (
+              <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', marginTop: 10, lineHeight: 1.6 }}>
+                {profile.bio}
+              </p>
+            )}
+            <SocialLinksRow links={profile.social_links as SocialLinks} />
+          </div>
         </div>
       </div>
+
+      {/* Featured sequence -- only when featured_sequence_id resolves to a
+          currently published sequence of this creator's own (see the
+          featuredSeq computation above for why that membership check is the
+          actual enforcement, not just a display nicety). */}
+      {featuredSeq && (
+        <Link href={`/sequences/${featuredSeq.slug}`} style={{ textDecoration: 'none' }}>
+          <div style={{
+            background: 'var(--bg-primary)',
+            border: '0.5px solid var(--border)',
+            borderLeft: `3px solid ${getClassColor(featuredSeq.class_id)}`,
+            borderRadius: 'var(--radius-lg)',
+            padding: '16px 20px',
+            marginBottom: 20,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+            cursor: 'pointer',
+          }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <span style={{
+                fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent)',
+                textTransform: 'uppercase', letterSpacing: '0.04em',
+              }}>
+                Featured sequence
+              </span>
+              <div style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--text-primary)', marginTop: 4 }}>
+                {featuredSeq.title}
+              </div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 'var(--text-xs)', color: getClassColor(featuredSeq.class_id) }}>{featuredSeq.class_name}</span>
+                {featuredSeq.spec_name && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {featuredSeq.spec_name}</span>}
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                  · {CONTENT_TYPES.find(c => c.value === featuredSeq.content_type)?.label ?? featuredSeq.content_type}
+                </span>
+              </div>
+            </div>
+            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', flexShrink: 0 }}>
+              {featuredSeq.view_count?.toLocaleString() ?? 0} views
+            </div>
+          </div>
+        </Link>
+      )}
 
       {/* Aggregate stats. Only rendered when there's at least one published
           sequence -- a brand new creator with zero posts gets no empty
@@ -267,6 +349,8 @@ export default async function UserProfilePage(props: Props) {
         seqs={seqs}
         comments={comments}
         isOwnProfile={isOwnProfile}
+        viewTrend={viewTrend}
+        activity={activity}
       />
     </div>
   )

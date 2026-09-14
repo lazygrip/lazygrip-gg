@@ -1,0 +1,38 @@
+-- 029_private_sequence_status.sql
+--
+-- WHY THIS EXISTS
+--
+-- sequences.status has only ever had two states a creator can actually put
+-- a finished sequence in: 'draft' (still being worked on, only ever shown
+-- in the author's own Drafts tab) and 'published' (public). There was no
+-- way to mark a sequence as done but deliberately kept off the public site
+-- -- personal-use builds, a work-in-progress you're comfortable calling
+-- finished but not ready to share, that sort of thing -- without either
+-- publishing it or leaving it sitting in Drafts, which reads as "still
+-- being built" and isn't. This migration adds that third state.
+--
+-- WHY THIS IS SAFE
+--
+-- sequence_status is a real Postgres enum (created in 002_schema_sync.sql),
+-- so this is purely additive: ALTER TYPE ... ADD VALUE. No existing row
+-- changes status, no existing query that filters on a specific status
+-- value (draft/published/archived) changes behavior, and nothing needs to
+-- explicitly list every enum value to keep working.
+--
+-- The privacy boundary needs zero changes here. The sequences SELECT policy
+-- ("Sequences viewable by author or if published") already reads:
+--   (auth.uid() = author_id) OR (status = 'published')
+-- That's a positive check for 'published', not a negated check against
+-- 'draft' -- so a 'private' row falls through to the same "author only"
+-- branch a 'draft' row already does, for free, at the database level,
+-- before any application code runs. Same story for every other place in
+-- the app that already gates on `status = 'published'` (the sequence
+-- detail page, /sequences/[slug]/update, generateStaticParams, the browse
+-- query, home-stats.ts): a private row simply keeps failing that check,
+-- exactly like a draft row already does.
+--
+-- ADD VALUE cannot be used in the same transaction as a statement that
+-- references the new value, so this migration does nothing else -- no
+-- other migration in this repo references 'private' in the same file.
+
+alter type public.sequence_status add value if not exists 'private';

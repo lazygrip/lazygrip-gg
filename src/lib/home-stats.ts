@@ -9,6 +9,16 @@ export type HomeStats = {
   viewCount: number
 }
 
+export type TopCreator = {
+  id: string
+  username: string
+  display_name: string | null
+  avatar_url: string | null
+  avatar_color: string | null
+  sequenceCount: number
+  totalViews: number
+}
+
 // Real numbers for the homepage stat block, not placeholder copy. Same cookie-free
 // public client pattern as browse-server.ts, so this stays cacheable rather than
 // opting the homepage into dynamic rendering. Returns null on any failure so the
@@ -71,6 +81,75 @@ export async function fetchTrendingSequences(limit = 6): Promise<Sequence[]> {
   }
 }
 
+// Powers the homepage "Top Creators" leaderboard and the /creators directory page
+// (which calls this with a much higher limit and no slice, effectively "everyone").
+// Ranked by summed view_count across a creator's published sequences -- same metric
+// "Top sequences" already ranks by, so the two leaderboards on the homepage tell one
+// consistent story instead of two different definitions of "top."
+//
+// Aggregated in JS off a single fetch of (author_id, view_count) rather than a SQL
+// GROUP BY, matching fetchHomeStats' existing pattern above for the same reason: this
+// runs through the public/cacheable client and Supabase's JS query builder has no
+// clean way to express "sum grouped by author, joined to profiles, ordered by the
+// sum" in one call. At this site's scale that's one lightweight query plus one
+// profiles lookup, not a real cost.
+//
+// Creators with zero published sequences never appear -- there's nothing to group,
+// since the source query itself is scoped to status='published'. That's correct: a
+// private or draft-only account has nothing to rank on a public leaderboard.
+export async function fetchTopCreators(limit = 15): Promise<TopCreator[]> {
+  try {
+    const supabase = createPublicClient()
+
+    const { data: sequences, error: seqError } = await supabase
+      .from('sequences')
+      .select('author_id, view_count')
+      .eq('status', 'published')
+    if (seqError || !sequences) return []
+
+    const byAuthor = new Map<string, { sequenceCount: number; totalViews: number }>()
+    for (const row of sequences) {
+      if (!row.author_id) continue
+      const entry = byAuthor.get(row.author_id) ?? { sequenceCount: 0, totalViews: 0 }
+      entry.sequenceCount += 1
+      entry.totalViews += row.view_count ?? 0
+      byAuthor.set(row.author_id, entry)
+    }
+
+    const ranked = Array.from(byAuthor.entries())
+      .sort((a, b) => b[1].totalViews - a[1].totalViews)
+      .slice(0, limit)
+    if (ranked.length === 0) return []
+
+    const { data: profiles, error: profError } = await supabase
+      .from('profiles')
+      .select('id, username, display_name, avatar_url, avatar_color')
+      .in('id', ranked.map(([authorId]) => authorId))
+    if (profError || !profiles) return []
+
+    // .in() doesn't preserve order, so the final ordering comes from `ranked`
+    // (already sorted by views), not from whatever order profiles came back in.
+    const profileById = new Map(profiles.map(p => [p.id, p]))
+    return ranked
+      .map(([authorId, stats]) => {
+        const profile = profileById.get(authorId)
+        if (!profile || !profile.username) return null
+        return {
+          id: authorId,
+          username: profile.username,
+          display_name: profile.display_name ?? null,
+          avatar_url: profile.avatar_url ?? null,
+          avatar_color: profile.avatar_color ?? null,
+          sequenceCount: stats.sequenceCount,
+          totalViews: stats.totalViews,
+        }
+      })
+      .filter((c): c is TopCreator => c !== null)
+  } catch {
+    return []
+  }
+}
+
 // Powers the homepage activity ticker — most recently posted sequences, oldest-first
 // within the batch so the scroll reads left-to-right as "newest arrives from the right."
 // excludePatch lets the "previous patches" row skip whatever the "current patch" row is
@@ -107,7 +186,10 @@ export async function fetchCurrentPatchTicker(limit = 10): Promise<{ patch: stri
 
     const { data, error } = await supabase
       .from('sequences')
-      .select('id, title, slug, class_id, class_name, view_count, created_at, author:profiles(username, display_name)')
+      // !sequences_author_id_fkey: see browse-query.ts's buildBrowseQuery for why this
+      // hint is required as of migration 030 (two FKs now exist between sequences and
+      // profiles, so an unqualified embed is ambiguous to PostgREST).
+      .select('id, title, slug, class_id, class_name, view_count, created_at, author:profiles!sequences_author_id_fkey(username, display_name)')
       .eq('status', 'published')
       .eq('patch_version', patch)
       .order('created_at', { ascending: false })

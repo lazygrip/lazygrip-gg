@@ -50,7 +50,9 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
   const { data: sequence } = await supabase
     .from('sequences')
-    .select('title, description, class_name, spec_name, hero_talent, content_type, patch_version, author:profiles(username)')
+    // !sequences_author_id_fkey: required as of migration 030 -- see
+    // sequence-server.ts's fetchSequencePage for the full explanation.
+    .select('title, description, class_name, spec_name, hero_talent, content_type, patch_version, author:profiles!sequences_author_id_fkey(username)')
     .eq('slug', params.slug)
     .eq('status', 'published')
     .single()
