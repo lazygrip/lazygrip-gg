@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation'
 import { sanitizeAvatarUrl, sanitizeBannerUrl } from '@/lib/url-safety'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import StatBlock from '@/components/ui/StatBlock'
-import ProfileTabs from './ProfileTabs'
+import ProfileTabs, { type SequenceRowData } from './ProfileTabs'
 import SocialLinksRow from './SocialLinksRow'
 import { fetchCreatorViewTrend, fetchCreatorActivity } from '@/lib/creator-dashboard'
 import type { SocialLinks } from '@/types'
@@ -87,7 +87,7 @@ export default async function UserProfilePage(props: Props) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, username, display_name, avatar_url, avatar_color, bio, battletag, created_at, banner_url, social_links, featured_sequence_id')
+    .select('id, username, display_name, avatar_url, avatar_color, bio, battletag, created_at, banner_url, social_links, featured_sequence_id, discord_bridge_opted_out')
     .eq('username', params.username)
     .single()
 
@@ -126,6 +126,47 @@ export default async function UserProfilePage(props: Props) {
   // view on every profile that isn't the viewer's own.
   const viewTrend = isOwnProfile ? await fetchCreatorViewTrend(supabase, seqs.map(s => s.id)) : []
   const activity = isOwnProfile ? await fetchCreatorActivity(supabase, profile.id) : []
+
+  // Owner-only tabs folded in from the old /profile page (2026-09-14
+  // consolidation) -- Drafts, Saved, and private sequences (merged inline
+  // into the Sequences tab by ProfileTabs itself, tagged with status there).
+  // Same isOwnProfile gate as viewTrend/activity above and the same reason:
+  // these are either RLS-denied for a visitor or simply meaningless to fetch
+  // for anyone but the profile's own owner.
+  const { data: privateData } = isOwnProfile
+    ? await supabase
+        .from('sequences')
+        .select('id, title, slug, class_name, class_id, spec_name, content_type, hero_talent, avg_score, rating_count, view_count, created_at')
+        .eq('author_id', profile.id)
+        .eq('status', 'private')
+        .order('created_at', { ascending: false })
+    : { data: [] as never[] }
+  const privateSeqs = privateData ?? []
+
+  const { data: draftsData } = isOwnProfile
+    ? await supabase
+        .from('sequences')
+        .select('id, title, class_name, class_id, spec_name, content_type, hero_talent, grip_string, collection_sequences, updated_at')
+        .eq('author_id', profile.id)
+        .eq('status', 'draft')
+        .order('updated_at', { ascending: false })
+    : { data: [] as never[] }
+  const drafts = draftsData ?? []
+
+  // The inner author:profiles(...) needs !sequences_author_id_fkey to
+  // disambiguate as of migration 030 -- see sequence-server.ts's
+  // fetchSequencePage for the full explanation. sequence:sequences(...)
+  // itself doesn't need a hint; saves has only one FK to sequences.
+  const { data: savesData } = isOwnProfile
+    ? await supabase
+        .from('saves')
+        .select('sequence:sequences(id, title, slug, class_name, class_id, spec_name, content_type, hero_talent, avg_score, rating_count, view_count, created_at, author:profiles!sequences_author_id_fkey(username))')
+        .eq('user_id', profile.id)
+        .order('created_at', { ascending: false })
+    : { data: [] as never[] }
+  const savedSeqs = ((savesData ?? []) as unknown as { sequence: SequenceRowData | null }[])
+    .map(s => s.sequence)
+    .filter((s): s is SequenceRowData => s !== null)
 
   // Featured sequence: profile.featured_sequence_id is a bare FK with no DB
   // constraint tying it to "one of this profile's own published sequences"
@@ -351,6 +392,23 @@ export default async function UserProfilePage(props: Props) {
         isOwnProfile={isOwnProfile}
         viewTrend={viewTrend}
         activity={activity}
+        privateSeqs={privateSeqs}
+        drafts={drafts}
+        savedSeqs={savedSeqs}
+        viewerId={viewer?.id ?? null}
+        settingsProfile={isOwnProfile ? {
+          id: profile.id,
+          username: profile.username,
+          display_name: profile.display_name,
+          avatar_url: profile.avatar_url,
+          avatar_color: profile.avatar_color,
+          bio: profile.bio,
+          battletag: profile.battletag,
+          banner_url: profile.banner_url,
+          social_links: profile.social_links,
+          featured_sequence_id: profile.featured_sequence_id,
+          discord_bridge_opted_out: profile.discord_bridge_opted_out === true,
+        } : null}
       />
     </div>
   )
