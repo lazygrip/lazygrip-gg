@@ -37,7 +37,7 @@ export default async function HomePage() {
     fetchHomeStats(),
     fetchTrendingSequences(6),
     fetchCurrentPatchTicker(10),
-    fetchTopCreators(10),
+    fetchTopCreators(5),
   ])
   // Previous-patches row excludes whatever the current-patch row already shows, so the
   // two tickers never surface the same sequence twice.
@@ -387,7 +387,7 @@ export default async function HomePage() {
             border: '0.5px solid var(--border-strong)',
           }}>
             <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Current version</span>
-            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>GRIP-EMS v2.4.16</span>
+            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>GRIP-EMS v2.4.15</span>
           </div>
         </div>
       </section>
