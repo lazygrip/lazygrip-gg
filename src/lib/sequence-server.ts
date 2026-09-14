@@ -33,7 +33,17 @@ export async function fetchSequencePage(slug: string): Promise<SequencePageResul
 
     const { data: seq, error } = await supabase
       .from('sequences')
-      .select('*, author:profiles(*)')
+      // !sequences_author_id_fkey: required as of migration 030 -- see
+      // browse-query.ts's buildBrowseQuery comment for the full explanation.
+      // This is THE root cause of the "Sequence not found" bug Ed hit
+      // 2026-09-14 clicking into a real published sequence: without the
+      // hint, PostgREST returned an ambiguous-relationship error here, this
+      // function treated it as `error.code !== 'PGRST116'` and returned
+      // 'unavailable', and the client-side fetch this page falls back to
+      // (SequencePageClient.tsx) ran the exact same unqualified embed and
+      // got the exact same failure, so the page had nothing left to render
+      // but "not found."
+      .select('*, author:profiles!sequences_author_id_fkey(*)')
       .eq('slug', slug)
       .eq('status', 'published')
       .single()

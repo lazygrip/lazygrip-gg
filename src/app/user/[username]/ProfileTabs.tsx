@@ -1,9 +1,10 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { MessageSquare, MessageCircle } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
+import { MessageSquare, MessageCircle, Reply, Star, Bell } from 'lucide-react'
+import { formatDistanceToNow, format } from 'date-fns'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
+import type { ViewTrendPoint, ActivityItem } from '@/lib/creator-dashboard'
 
 // Client component: the page itself (page.tsx) stays a server component so
 // generateMetadata and the initial Supabase reads keep running server-side
@@ -25,6 +26,8 @@ type SequenceRowData = {
   avg_score: number | null
   rating_count: number | null
   view_count: number | null
+  save_count?: number | null
+  comment_count?: number | null
   created_at: string
 }
 
@@ -39,6 +42,12 @@ interface ProfileTabsProps {
   seqs: SequenceRowData[]
   comments: CommentRowData[]
   isOwnProfile: boolean
+  // Both empty arrays for a visitor viewing someone else's profile -- see
+  // page.tsx's isOwnProfile gate on the fetch calls. Optional so nothing
+  // else calling this component (there is no other caller today, but this
+  // keeps the props additive rather than a breaking change) needs updating.
+  viewTrend?: ViewTrendPoint[]
+  activity?: ActivityItem[]
 }
 
 // Moved here from page.tsx: functions cannot cross the server/client prop
@@ -56,8 +65,8 @@ function truncateCommentBody(body: string, max = 140): string {
   return truncated.replace(/[\s,.;:!?-]+$/, '') + '…'
 }
 
-export default function ProfileTabs({ seqs, comments, isOwnProfile }: ProfileTabsProps) {
-  const [activeTab, setActiveTab] = useState<'sequences' | 'comments'>('sequences')
+export default function ProfileTabs({ seqs, comments, isOwnProfile, viewTrend = [], activity = [] }: ProfileTabsProps) {
+  const [activeTab, setActiveTab] = useState<'sequences' | 'comments' | 'dashboard'>('sequences')
   const [chatOpen, setChatOpen] = useState(false)
 
   // REWORKED 2026-08-11: the first two attempts at "chat on the right side"
@@ -90,6 +99,18 @@ export default function ProfileTabs({ seqs, comments, isOwnProfile }: ProfileTab
             active={activeTab === 'comments'}
             onClick={() => setActiveTab('comments')}
           />
+          {/* Owner-only -- the underlying data (viewTrend, activity) is
+              RLS-gated to the authenticated owner anyway (page.tsx never
+              even queries it for a visitor), but the tab itself is hidden
+              rather than shown-empty so a visitor never sees a "Dashboard"
+              tab that would just 404-shaped-empty for them. */}
+          {isOwnProfile && (
+            <TabButton
+              label="Dashboard"
+              active={activeTab === 'dashboard'}
+              onClick={() => setActiveTab('dashboard')}
+            />
+          )}
         </div>
         {/* Deliberately styled unlike TabButton (pill, not underline) so it
             doesn't read as a third piece of content to switch between --
@@ -134,7 +155,9 @@ export default function ProfileTabs({ seqs, comments, isOwnProfile }: ProfileTab
         </div>
       )}
 
-        {activeTab === 'sequences' ? (
+        {activeTab === 'dashboard' ? (
+          <DashboardTab seqs={seqs} viewTrend={viewTrend} activity={activity} />
+        ) : activeTab === 'sequences' ? (
           seqs.length === 0 ? (
             <div style={{
               background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
@@ -312,5 +335,242 @@ function SequenceRow({ seq }: { seq: SequenceRowData }) {
         </div>
       </div>
     </Link>
+  )
+}
+
+// --- Owner-only dashboard tab (2026-09-14, Slowdog's stats request) -----
+
+function DashboardTab({
+  seqs,
+  viewTrend,
+  activity,
+}: {
+  seqs: SequenceRowData[]
+  viewTrend: ViewTrendPoint[]
+  activity: ActivityItem[]
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <section>
+        <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 12px' }}>
+          Views, last 30 days
+        </h2>
+        <div style={{
+          background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius-lg)', padding: '20px 20px 12px',
+        }}>
+          <ViewTrendChart data={viewTrend} />
+        </div>
+      </section>
+
+      <section>
+        <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 12px' }}>
+          Per-sequence breakdown
+        </h2>
+        <BreakdownTable seqs={seqs} />
+      </section>
+
+      <section>
+        <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 12px' }}>
+          Recent activity
+        </h2>
+        <ActivityFeed activity={activity} />
+      </section>
+    </div>
+  )
+}
+
+// Single-series magnitude chart (dataviz skill: sequential = one hue,
+// light->dark isn't needed at n=1 -- this is just the one accent hue).
+// Thin bars, 4px rounded top corners anchored to the baseline, 2px gaps,
+// selective axis labels (first/third-points/last, never one per bar), and a
+// per-bar hover tooltip. No legend -- a single series needs none, the
+// section heading above already names it.
+function ViewTrendChart({ data }: { data: ViewTrendPoint[] }) {
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null)
+
+  if (data.length === 0) return null
+
+  const max = Math.max(1, ...data.map(d => d.views))
+  const allZero = data.every(d => d.views === 0)
+  // Guards against duplicate label indices when data is short -- a Set
+  // naturally collapses those rather than rendering the same label twice.
+  const labelIdx = new Set([
+    0,
+    Math.floor((data.length - 1) / 3),
+    Math.floor(((data.length - 1) * 2) / 3),
+    data.length - 1,
+  ])
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 120 }}>
+        {data.map((d, i) => (
+          <div
+            key={d.day}
+            onMouseEnter={() => setHoverIdx(i)}
+            onMouseLeave={() => setHoverIdx(null)}
+            style={{ flex: 1, position: 'relative', height: '100%', display: 'flex', alignItems: 'flex-end' }}
+          >
+            {hoverIdx === i && (
+              <div style={{
+                position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
+                marginBottom: 4, background: 'var(--text-primary)', color: 'var(--bg-primary)',
+                fontSize: 'var(--text-xs)', padding: '3px 7px', borderRadius: 4, whiteSpace: 'nowrap',
+                zIndex: 1, pointerEvents: 'none',
+              }}>
+                {d.views} on {format(new Date(`${d.day}T00:00:00`), 'MMM d')}
+              </div>
+            )}
+            <div style={{
+              width: '100%',
+              // Math.max(2, ...) keeps a visible baseline sliver even at 0
+              // views, rather than an invisible bar a viewer might read as a
+              // missing day instead of a real zero.
+              height: `${Math.max(2, (d.views / max) * 100)}%`,
+              background: hoverIdx === i ? 'var(--accent)' : 'var(--accent-subtle)',
+              borderRadius: '4px 4px 0 0',
+              transition: 'background 0.1s',
+            }} />
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 2, marginTop: 6 }}>
+        {data.map((d, i) => (
+          <div key={d.day} style={{ flex: 1, textAlign: 'center' }}>
+            {labelIdx.has(i) && (
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                {format(new Date(`${d.day}T00:00:00`), 'MMM d')}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+      {/* Real data limitation, not a bug -- see creator-dashboard.ts's
+          comment on fetchCreatorViewTrend: there's no historical backfill,
+          so this is genuinely empty for any creator until the rollup has
+          had time to accumulate from today forward. */}
+      {allZero && (
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', textAlign: 'center', marginTop: 10 }}>
+          No view history yet — this chart starts filling in from today forward.
+        </p>
+      )}
+    </div>
+  )
+}
+
+function BreakdownTable({ seqs }: { seqs: SequenceRowData[] }) {
+  if (seqs.length === 0) {
+    return (
+      <div style={{
+        background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
+        borderRadius: 'var(--radius-lg)', padding: '32px 24px', textAlign: 'center',
+      }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
+          Post a sequence and its stats will show up here.
+        </p>
+      </div>
+    )
+  }
+
+  const sorted = [...seqs].sort((a, b) => (b.view_count ?? 0) - (a.view_count ?? 0))
+  const cols = '1fr 64px 64px 64px 84px'
+
+  return (
+    <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+      <div style={{
+        display: 'grid', gridTemplateColumns: cols, gap: 8,
+        padding: '10px 16px', borderBottom: '0.5px solid var(--border)',
+        fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 600,
+      }}>
+        <span>Sequence</span>
+        <span style={{ textAlign: 'right' }}>Views</span>
+        <span style={{ textAlign: 'right' }}>Saves</span>
+        <span style={{ textAlign: 'right' }}>Rating</span>
+        <span style={{ textAlign: 'right' }}>Comments</span>
+      </div>
+      {sorted.map((seq, i) => (
+        <Link key={seq.id} href={`/sequences/${seq.slug}`} style={{ textDecoration: 'none' }}>
+          <div style={{
+            display: 'grid', gridTemplateColumns: cols, gap: 8,
+            padding: '10px 16px',
+            borderBottom: i < sorted.length - 1 ? '0.5px solid var(--border)' : 'none',
+            fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', alignItems: 'center',
+          }}>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>
+              {seq.title}
+            </span>
+            <span style={{ textAlign: 'right' }}>{(seq.view_count ?? 0).toLocaleString()}</span>
+            <span style={{ textAlign: 'right' }}>{(seq.save_count ?? 0).toLocaleString()}</span>
+            <span style={{ textAlign: 'right' }}>
+              {seq.avg_score != null && (seq.rating_count ?? 0) > 0 ? seq.avg_score : '—'}
+            </span>
+            <span style={{ textAlign: 'right' }}>{(seq.comment_count ?? 0).toLocaleString()}</span>
+          </div>
+        </Link>
+      ))}
+    </div>
+  )
+}
+
+function ActivityIcon({ type }: { type: string }) {
+  switch (type) {
+    case 'comment': return <MessageSquare size={14} />
+    case 'reply': return <Reply size={14} />
+    // Gold tint matches /notifications page's own rating-icon treatment --
+    // kept consistent rather than reusing the generic muted icon color the
+    // other types get here.
+    case 'rating': return <Star size={14} style={{ color: '#c69b3a' }} />
+    default: return <Bell size={14} />
+  }
+}
+
+function ActivityFeed({ activity }: { activity: ActivityItem[] }) {
+  if (activity.length === 0) {
+    return (
+      <div style={{
+        background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
+        borderRadius: 'var(--radius-lg)', padding: '32px 24px', textAlign: 'center',
+      }}>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
+          No activity yet — comments, replies, and ratings on your sequences will show up here.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {activity.map(item => {
+        const body = (
+          <div style={{
+            background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
+            borderRadius: 'var(--radius-lg)', padding: '12px 16px',
+            display: 'flex', gap: 10, alignItems: 'flex-start',
+          }}>
+            <div style={{ color: item.type === 'rating' ? undefined : 'var(--text-muted)', flexShrink: 0, marginTop: 2 }}>
+              <ActivityIcon type={item.type} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                {item.message}
+              </p>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+                {item.sequence ? ` · ${item.sequence.title}` : ''}
+              </span>
+            </div>
+          </div>
+        )
+
+        return item.sequence ? (
+          <Link key={item.id} href={`/sequences/${item.sequence.slug}`} style={{ textDecoration: 'none' }}>
+            {body}
+          </Link>
+        ) : (
+          <div key={item.id}>{body}</div>
+        )
+      })}
+    </div>
   )
 }

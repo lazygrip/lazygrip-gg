@@ -93,7 +93,9 @@ export default function UpdateSequencePage() {
 
     const { data: seq, error: seqError } = await supabase
       .from('sequences')
-      .select('*, author:profiles(*)')
+      // !sequences_author_id_fkey: required as of migration 030 -- see
+      // sequence-server.ts's fetchSequencePage for the full explanation.
+      .select('*, author:profiles!sequences_author_id_fkey(*)')
       .eq('slug', slug)
       .eq('status', 'published')
       .single()

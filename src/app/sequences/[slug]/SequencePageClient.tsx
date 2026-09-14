@@ -297,7 +297,10 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
     if (!opts.silent) setLoading(true)
     const { data: seq } = await supabase
       .from('sequences')
-      .select('*, author:profiles(*)')
+      // !sequences_author_id_fkey: required as of migration 030 -- see
+      // sequence-server.ts's fetchSequencePage for the full explanation of
+      // why an unqualified profiles(...) embed off sequences now fails.
+      .select('*, author:profiles!sequences_author_id_fkey(*)')
       .eq('slug', slug)
       .eq('status', 'published')
       .single()

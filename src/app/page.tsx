@@ -1,7 +1,8 @@
-import { ArrowRight, Wrench, Trophy, Eye, HelpCircle, PlusCircle } from 'lucide-react'
+import { ArrowRight, Wrench, Trophy, Crown, Eye, HelpCircle, PlusCircle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { WOW_CLASSES, CONTENT_TYPES, getClassColor } from '@/lib/wow-data'
-import { fetchHomeStats, fetchTrendingSequences, fetchRecentSequences, fetchCurrentPatchTicker } from '@/lib/home-stats'
+import { fetchHomeStats, fetchTrendingSequences, fetchRecentSequences, fetchCurrentPatchTicker, fetchTopCreators } from '@/lib/home-stats'
+import { sanitizeAvatarUrl } from '@/lib/url-safety'
 import Card from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
 import StatBlock from '@/components/ui/StatBlock'
@@ -32,10 +33,11 @@ function withLabelCards<T>(items: T[], every: number): (T | typeof TICKER_LABEL)
 }
 
 export default async function HomePage() {
-  const [stats, trending, currentPatchTicker] = await Promise.all([
+  const [stats, trending, currentPatchTicker, topCreators] = await Promise.all([
     fetchHomeStats(),
     fetchTrendingSequences(6),
     fetchCurrentPatchTicker(10),
+    fetchTopCreators(10),
   ])
   // Previous-patches row excludes whatever the current-patch row already shows, so the
   // two tickers never surface the same sequence twice.
@@ -89,8 +91,16 @@ export default async function HomePage() {
         .info-trigger-center:hover .info-tooltip,
         .info-trigger-center:focus-within .info-tooltip { transform: translateX(-50%) translateY(0); }
         .info-trigger-link:hover { border-color: var(--accent) !important; background: var(--bg-secondary) !important; }
-        .explore-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 32px; }
+        .explore-grid { display: grid; grid-template-columns: 0.9fr 1.3fr 1fr; gap: 28px; }
         .browse-chip-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        /* Three columns get cramped before the general 640px mobile stack kicks in --
+           collapse a step earlier than the rest of the hero/utility-bar rules below so
+           Top Creators, Top sequences and Browse Sequences each keep readable width
+           instead of all three squeezing side by side on a tablet-width screen. */
+        @media (max-width: 900px) {
+          .explore-grid { grid-template-columns: 1fr !important; gap: 36px !important; }
+          .browse-divider { border-left: none !important; padding-left: 0 !important; border-top: 0.5px solid var(--border); padding-top: 32px !important; }
+        }
 
         /* Spec tooltip — hover a class chip, see its specs, click one straight to that
            filtered browse view. Flies out to the side of the chip (vertically centered)
@@ -516,6 +526,81 @@ export default async function HomePage() {
           visible at once, side by side, rather than a long stack you scroll through in order. */}
       <section style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 24px' }}>
         <div className="explore-grid">
+          {/* Top Creators -- ranked by fetchTopCreators (summed view_count across a
+              creator's published sequences, same metric "Top sequences" ranks by).
+              Sits to the left of Top sequences per Slowdog's annotated screenshot
+              (2026-09-10) marking that spot for it. Links to the /creators directory
+              and each row links straight to that creator's public /user/[username]
+              page. */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Crown size={16} color="var(--accent)" />
+                <h2 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em' }}>Top Creators</h2>
+              </div>
+              <a href="/creators" style={{ fontSize: 'var(--text-sm)', color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                View all <ArrowRight size={13} />
+              </a>
+            </div>
+
+            {topCreators.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {topCreators.map((creator, i) => {
+                  const safeAvatarUrl = sanitizeAvatarUrl(creator.avatar_url)
+                  const displayColor = creator.avatar_color ?? '#1D9E75'
+                  const initial = creator.username[0]?.toUpperCase() ?? '?'
+                  return (
+                    <a key={creator.id} href={`/user/${creator.username}`} style={{ textDecoration: 'none' }}>
+                      <Card padding="sm" style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                        <span style={{
+                          width: 18, fontSize: 'var(--text-sm)', fontWeight: 700,
+                          color: i < 3 ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0, textAlign: 'center',
+                        }}>
+                          {i + 1}
+                        </span>
+
+                        <div style={{
+                          width: 26, height: 26, borderRadius: '50%',
+                          background: safeAvatarUrl ? 'transparent' : displayColor,
+                          overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 12, fontWeight: 700, color: 'white', flexShrink: 0,
+                        }}>
+                          {safeAvatarUrl
+                            ? <img src={safeAvatarUrl} alt={creator.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            : initial
+                          }
+                        </div>
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)',
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          }}>
+                            {creator.display_name || creator.username}
+                          </div>
+                          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                            {creator.sequenceCount} sequence{creator.sequenceCount !== 1 ? 's' : ''}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, color: 'var(--text-muted)' }}>
+                          <Eye size={12} />
+                          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                            {creator.totalViews.toLocaleString()}
+                          </span>
+                        </div>
+                      </Card>
+                    </a>
+                  )
+                })}
+              </div>
+            ) : (
+              <Card padding="sm" style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>No creators yet — be the first to post a sequence.</p>
+              </Card>
+            )}
+          </div>
+
           {/* Top sequences */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>

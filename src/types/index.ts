@@ -45,6 +45,18 @@ export type ActionNode = {
   children?: ActionNode[]
 }
 
+// profiles.social_links (migration 030). All keys optional -- a creator may
+// fill in none, one, or all of them. Unknown/extra keys are tolerated by the
+// UI (just not rendered) rather than rejected, so a new platform can be
+// added later without a migration touching stored rows.
+export type SocialLinks = {
+  discord?: string
+  twitch?: string
+  youtube?: string
+  twitter?: string
+  website?: string
+}
+
 export type Profile = {
   id: string
   username: string
@@ -57,6 +69,17 @@ export type Profile = {
   // username + guidelines acknowledgment). Null until then. Added alongside
   // the has_completed_onboarding() DB function and the username-deadline policy.
   terms_accepted_at?: string | null
+  // Added by migration 030 (creator profile redesign). banner_url mirrors
+  // avatar_url's shape (a Supabase Storage public URL, nullable); social_links
+  // defaults to '{}' at the DB level so it's always an object, never null, for
+  // any row read after that migration. featured_sequence_id is a plain FK
+  // with ON DELETE SET NULL -- "must be one of this profile's own published
+  // sequences" is enforced in application code (profile Settings tab), not by
+  // the database, since Postgres has no clean way to constrain a FK against a
+  // sibling column's ownership.
+  banner_url?: string | null
+  social_links?: SocialLinks
+  featured_sequence_id?: string | null
 }
 
 export type LinkedSequence = {
@@ -109,7 +132,11 @@ export type Sequence = {
   view_count: number
   save_count: number
   comment_count: number
-  status: 'draft' | 'published' | 'archived'
+  // 'private' added by migration 029: finished but deliberately kept off the
+  // public site, distinct from 'draft' (still being worked on). The
+  // sequences SELECT RLS policy already treats anything non-'published' as
+  // author-only, so this needed no security change, only the new value.
+  status: 'draft' | 'published' | 'archived' | 'private'
   is_featured: boolean
   set_id: string | null
   collection_sequences: CollectionSequenceEntry[] | null

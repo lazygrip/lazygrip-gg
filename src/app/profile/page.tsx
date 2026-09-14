@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { formatDistanceToNow } from 'date-fns'
 import Link from 'next/link'
-import { Upload, Check, Save, BookmarkX, Link2, Unlink, AlertCircle, Trash2 } from 'lucide-react'
+import { Upload, Check, Save, BookmarkX, Link2, Unlink, AlertCircle, Trash2, Lock, Globe, X, MessageCircle, Twitch, Youtube, Twitter } from 'lucide-react'
 import { sanitizeAvatarUrl } from '@/lib/url-safety'
 
 const AVATAR_COLORS = [
@@ -23,6 +23,18 @@ const CONNECTABLE_PROVIDERS = [
   { id: 'discord', label: 'Discord', color: '#5865F2' },
   { id: 'custom:battlenet', label: 'Battle.net', color: '#148EFF' },
 ]
+
+// Backs both the Settings-tab inputs below and the public profile's icon row
+// (see /user/[username]/page.tsx). lucide-react has no literal Discord glyph,
+// so it gets the same generic-icon-plus-brand-color treatment
+// CONNECTABLE_PROVIDERS above already uses for the same platform.
+const SOCIAL_PLATFORMS = [
+  { key: 'discord', label: 'Discord', color: '#5865F2', icon: MessageCircle, placeholder: 'discord.gg/your-invite' },
+  { key: 'twitch', label: 'Twitch', color: '#9146FF', icon: Twitch, placeholder: 'twitch.tv/yourchannel' },
+  { key: 'youtube', label: 'YouTube', color: '#FF0000', icon: Youtube, placeholder: 'youtube.com/@yourchannel' },
+  { key: 'twitter', label: 'Twitter / X', color: '#1DA1F2', icon: Twitter, placeholder: 'x.com/yourhandle' },
+  { key: 'website', label: 'Website', color: 'var(--text-muted)', icon: Globe, placeholder: 'yoursite.com' },
+] as const
 
 export default function ProfilePage() {
   return (
@@ -43,8 +55,9 @@ function ProfilePageInner() {
   const [postedSequences, setPostedSequences] = useState<any[]>([])
   const [savedSequences, setSavedSequences] = useState<any[]>([])
   const [draftSequences, setDraftSequences] = useState<any[]>([])
+  const [privateSequences, setPrivateSequences] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'posted' | 'saved' | 'drafts' | 'settings'>('posted')
+  const [activeTab, setActiveTab] = useState<'posted' | 'saved' | 'drafts' | 'private' | 'settings'>('posted')
 
   // Batch publish state -- selection lives on the profile page since that's
   // where the multi-select UI is, but the actual publish call is a single
@@ -58,6 +71,24 @@ function ProfilePageInner() {
   const [selectedColor, setSelectedColor] = useState<string | null>(null)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarSaved, setAvatarSaved] = useState(false)
+
+  // Banner (migration 030). Separate storage bucket ('banners') and separate
+  // upload/saved state from the avatar, since the two are independent images
+  // with no shared "color instead of a photo" fallback the way avatars have.
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null)
+  const safeBannerUrl = sanitizeAvatarUrl(bannerUrl)
+  const [uploadingBanner, setUploadingBanner] = useState(false)
+  const [bannerSaved, setBannerSaved] = useState(false)
+  const bannerInputRef = useRef<HTMLInputElement>(null)
+
+  // Social links + featured sequence (migration 030). Both save through the
+  // main "Save changes" button alongside bio/battletag, not on their own
+  // like the avatar/banner uploads -- there's no upload step to trigger an
+  // immediate write for either of these.
+  const [socialLinks, setSocialLinks] = useState<{ discord: string; twitch: string; youtube: string; twitter: string; website: string }>({
+    discord: '', twitch: '', youtube: '', twitter: '', website: '',
+  })
+  const [featuredSequenceId, setFeaturedSequenceId] = useState<string>('')
 
   // Settings form state
   const [username, setUsername] = useState('')
@@ -85,6 +116,7 @@ function ProfilePageInner() {
     const tab = searchParams.get('tab')
     if (tab === 'saved') setActiveTab('saved')
     else if (tab === 'drafts') setActiveTab('drafts')
+    else if (tab === 'private') setActiveTab('private')
     else if (tab === 'settings') setActiveTab('settings')
     else setActiveTab('posted')
   }, [searchParams])
@@ -114,6 +146,19 @@ function ProfilePageInner() {
         // NOT NULL, so a missing value can only mean a row written before
         // migration 017 landed, and the bridge is on in that case.
         setBridgeOptedOut(prof.discord_bridge_opted_out === true)
+        setBannerUrl(prof.banner_url ?? null)
+        // social_links defaults to '{}' at the DB level (migration 030), so
+        // this is never null for a row read after that migration -- the ??
+        // here only covers a row somehow read before the default applied.
+        const links = prof.social_links ?? {}
+        setSocialLinks({
+          discord: links.discord ?? '',
+          twitch: links.twitch ?? '',
+          youtube: links.youtube ?? '',
+          twitter: links.twitter ?? '',
+          website: links.website ?? '',
+        })
+        setFeaturedSequenceId(prof.featured_sequence_id ?? '')
       }
 
       const { data: posted } = await supabase
@@ -134,9 +179,22 @@ function ProfilePageInner() {
 
       setDraftSequences(drafts ?? [])
 
+      const { data: privates } = await supabase
+        .from('sequences')
+        .select('id, title, slug, class_name, class_id, spec_name, content_type, hero_talent, patch_version, avg_score, rating_count, view_count, created_at')
+        .eq('author_id', user.id)
+        .eq('status', 'private')
+        .order('created_at', { ascending: false })
+
+      setPrivateSequences(privates ?? [])
+
       const { data: saves } = await supabase
         .from('saves')
-        .select('sequence:sequences(id, title, slug, class_name, class_id, spec_name, content_type, hero_talent, patch_version, avg_score, rating_count, view_count, created_at, author:profiles(username))')
+        // The inner author:profiles(...) needs !sequences_author_id_fkey to
+        // disambiguate as of migration 030 -- see sequence-server.ts's
+        // fetchSequencePage for the full explanation. sequence:sequences(...)
+        // itself doesn't need a hint; saves has only one FK to sequences.
+        .select('sequence:sequences(id, title, slug, class_name, class_id, spec_name, content_type, hero_talent, patch_version, avg_score, rating_count, view_count, created_at, author:profiles!sequences_author_id_fkey(username))')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
@@ -196,6 +254,29 @@ function ProfilePageInner() {
     if (!user) return
     await supabase.from('saves').delete().eq('user_id', user.id).eq('sequence_id', seqId)
     setSavedSequences(prev => prev.filter((s: any) => s.id !== seqId))
+  }
+
+  // Moves a sequence between 'published' and 'private'. Protected by the
+  // existing "Authors can update their own sequences" RLS policy (author_id =
+  // auth.uid()) -- the .eq('author_id', user.id) below is belt-and-suspenders,
+  // not the actual security boundary. Updates local state directly rather than
+  // refetching both lists, since the row itself (minus status) doesn't change.
+  async function handleSetStatus(seq: any, newStatus: 'published' | 'private') {
+    if (!user) return
+    const { error } = await supabase
+      .from('sequences')
+      .update({ status: newStatus })
+      .eq('id', seq.id)
+      .eq('author_id', user.id)
+    if (error) return
+
+    if (newStatus === 'private') {
+      setPostedSequences(prev => prev.filter((s: any) => s.id !== seq.id))
+      setPrivateSequences(prev => [seq, ...prev])
+    } else {
+      setPrivateSequences(prev => prev.filter((s: any) => s.id !== seq.id))
+      setPostedSequences(prev => [seq, ...prev])
+    }
   }
 
   function toggleDraftSelection(id: string) {
@@ -282,6 +363,44 @@ function ProfilePageInner() {
     setUploadingAvatar(false)
   }
 
+  // Mirrors handleAvatarUpload exactly except for the bucket name -- 'banners'
+  // is a separate bucket (migration 030) with its own "own file only" RLS
+  // policy, same {auth.uid()}.{ext} filename convention as avatars, so a
+  // banner upload can never collide with or overwrite a user's avatar file.
+  async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+    setUploadingBanner(true)
+
+    const ext = file.name.split('.').pop()
+    const path = `${user.id}.${ext}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('banners')
+      .upload(path, file, { upsert: true })
+
+    if (uploadError) {
+      console.error('Banner upload error:', JSON.stringify(uploadError))
+      alert('Upload failed: ' + uploadError.message)
+      setUploadingBanner(false)
+      return
+    }
+
+    const { data: { publicUrl } } = supabase.storage.from('banners').getPublicUrl(path)
+    const bustUrl = `${publicUrl}?t=${Date.now()}`
+    setBannerUrl(bustUrl)
+    await supabase.from('profiles').update({ banner_url: bustUrl }).eq('id', user.id)
+    setBannerSaved(true)
+    setTimeout(() => setBannerSaved(false), 2000)
+    setUploadingBanner(false)
+  }
+
+  async function handleRemoveBanner() {
+    if (!user) return
+    setBannerUrl(null)
+    await supabase.from('profiles').update({ banner_url: null }).eq('id', user.id)
+  }
+
   async function saveProfileSettings() {
     if (!user) return
     setSettingsSaving(true)
@@ -301,6 +420,16 @@ function ProfilePageInner() {
       }
     }
 
+    // Empty-string fields are dropped rather than saved as '' -- keeps
+    // social_links holding only platforms the creator actually filled in, so
+    // the public profile's "only render icons for keys that are set" check
+    // (see /user/[username]/page.tsx) doesn't need to also treat '' as unset.
+    const trimmedLinks = Object.fromEntries(
+      Object.entries(socialLinks)
+        .map(([k, v]) => [k, v.trim()])
+        .filter(([, v]) => v.length > 0)
+    )
+
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -309,13 +438,24 @@ function ProfilePageInner() {
         bio: bio.trim(),
         battletag: battletag.trim(),
         discord_bridge_opted_out: bridgeOptedOut,
+        social_links: trimmedLinks,
+        featured_sequence_id: featuredSequenceId || null,
       })
       .eq('id', user.id)
 
     if (error) {
       setSettingsError('Save failed. Please try again.')
     } else {
-      setProfile((p: any) => ({ ...p, username: username.trim(), display_name: displayName.trim(), bio: bio.trim(), battletag: battletag.trim(), discord_bridge_opted_out: bridgeOptedOut }))
+      setProfile((p: any) => ({
+        ...p,
+        username: username.trim(),
+        display_name: displayName.trim(),
+        bio: bio.trim(),
+        battletag: battletag.trim(),
+        discord_bridge_opted_out: bridgeOptedOut,
+        social_links: trimmedLinks,
+        featured_sequence_id: featuredSequenceId || null,
+      }))
       setSettingsSaved(true)
       setTimeout(() => setSettingsSaved(false), 2500)
     }
@@ -324,6 +464,10 @@ function ProfilePageInner() {
 
   const initial = profile?.username?.[0]?.toUpperCase() ?? user?.email?.[0]?.toUpperCase() ?? '?'
   const displayColor = selectedColor ?? AVATAR_COLORS[0].bg
+  // Feeds the shared posted/saved/private render block below -- one list swap
+  // point instead of a three-way ternary repeated at both the empty-state
+  // check and the .map() call.
+  const currentList = activeTab === 'posted' ? postedSequences : activeTab === 'private' ? privateSequences : savedSequences
 
   if (loading) return (
     <div style={{ maxWidth: 900, margin: '80px auto', padding: '0 24px', textAlign: 'center' }}>
@@ -396,6 +540,7 @@ function ProfilePageInner() {
           { key: 'posted', label: `My Sequences (${postedSequences.length})` },
           { key: 'saved', label: `Saved (${savedSequences.length})` },
           { key: 'drafts', label: `Drafts (${draftSequences.length})` },
+          { key: 'private', label: `Private (${privateSequences.length})` },
           { key: 'settings', label: 'Settings' },
         ] as const).map(tab => (
           <button
@@ -432,6 +577,17 @@ function ProfilePageInner() {
           fileInputRef={fileInputRef}
           onUpload={handleAvatarUpload}
           onColorSelect={saveAvatarColor}
+          bannerUrl={bannerUrl}
+          uploadingBanner={uploadingBanner}
+          bannerSaved={bannerSaved}
+          bannerInputRef={bannerInputRef}
+          onBannerUpload={handleBannerUpload}
+          onBannerRemove={handleRemoveBanner}
+          socialLinks={socialLinks}
+          setSocialLinks={setSocialLinks}
+          featuredSequenceId={featuredSequenceId}
+          setFeaturedSequenceId={setFeaturedSequenceId}
+          publishedSequences={postedSequences}
           username={username}
           setUsername={setUsername}
           displayName={displayName}
@@ -551,7 +707,7 @@ function ProfilePageInner() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {(activeTab === 'posted' ? postedSequences : savedSequences).length === 0 ? (
+          {currentList.length === 0 ? (
             <div style={{
               background: 'var(--bg-primary)',
               border: '0.5px solid var(--border)',
@@ -562,6 +718,8 @@ function ProfilePageInner() {
               <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)' }}>
                 {activeTab === 'posted'
                   ? "You haven't posted any sequences yet."
+                  : activeTab === 'private'
+                  ? "You don't have any private sequences. Finished a sequence but not ready to share it? Mark it private from My Sequences."
                   : "You haven't saved any sequences yet."}
               </p>
               {activeTab === 'posted' && (
@@ -581,8 +739,22 @@ function ProfilePageInner() {
               )}
             </div>
           ) : (
-            (activeTab === 'posted' ? postedSequences : savedSequences).map((seq: any) => (
-              <SequenceRow key={seq.id} seq={seq} showAuthor={activeTab === 'saved'} onUnsave={activeTab === 'saved' ? handleUnsave : undefined} />
+            currentList.map((seq: any) => (
+              <SequenceRow
+                key={seq.id}
+                seq={seq}
+                showAuthor={activeTab === 'saved'}
+                onUnsave={activeTab === 'saved' ? handleUnsave : undefined}
+                onSetStatus={
+                  activeTab === 'posted'
+                    ? (s: any) => handleSetStatus(s, 'private')
+                    : activeTab === 'private'
+                    ? (s: any) => handleSetStatus(s, 'published')
+                    : undefined
+                }
+                statusActionLabel={activeTab === 'posted' ? 'Make private' : activeTab === 'private' ? 'Publish' : undefined}
+                href={activeTab === 'private' ? `/post?edit=${seq.id}&mode=edit` : undefined}
+              />
             ))
           )}
         </div>
@@ -594,6 +766,8 @@ function ProfilePageInner() {
 function SettingsTab({
   user, avatarUrl, selectedColor, displayColor, initial,
   uploadingAvatar, avatarSaved, fileInputRef, onUpload, onColorSelect,
+  bannerUrl, uploadingBanner, bannerSaved, bannerInputRef, onBannerUpload, onBannerRemove,
+  socialLinks, setSocialLinks, featuredSequenceId, setFeaturedSequenceId, publishedSequences,
   username, setUsername, displayName, setDisplayName,
   bio, setBio, battletag, setBattletag,
   bridgeOptedOut, setBridgeOptedOut,
@@ -611,6 +785,17 @@ function SettingsTab({
   fileInputRef: React.RefObject<HTMLInputElement | null>
   onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onColorSelect: (color: string) => void
+  bannerUrl: string | null
+  uploadingBanner: boolean
+  bannerSaved: boolean
+  bannerInputRef: React.RefObject<HTMLInputElement | null>
+  onBannerUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onBannerRemove: () => void
+  socialLinks: { discord: string; twitch: string; youtube: string; twitter: string; website: string }
+  setSocialLinks: React.Dispatch<React.SetStateAction<{ discord: string; twitch: string; youtube: string; twitter: string; website: string }>>
+  featuredSequenceId: string
+  setFeaturedSequenceId: (v: string) => void
+  publishedSequences: any[]
   username: string
   setUsername: (v: string) => void
   displayName: string
@@ -634,6 +819,7 @@ function SettingsTab({
   onUnlinkProvider: (identity: any) => void
 }) {
   const safeAvatarUrl = sanitizeAvatarUrl(avatarUrl)
+  const safeBannerUrl = sanitizeAvatarUrl(bannerUrl)
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
@@ -721,6 +907,24 @@ function SettingsTab({
               maxLength={20}
             />
             <p style={hintStyle}>Optional. Shown on your public profile.</p>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Featured sequence</label>
+            <select
+              style={{ ...inputStyle, cursor: 'pointer' }}
+              value={featuredSequenceId}
+              onChange={e => setFeaturedSequenceId(e.target.value)}
+            >
+              <option value="">None</option>
+              {publishedSequences.map((seq: any) => (
+                <option key={seq.id} value={seq.id}>{seq.title}</option>
+              ))}
+            </select>
+            <p style={hintStyle}>
+              Pinned at the top of your public profile. Only your published sequences can be
+              featured -- this list won't show drafts or private ones.
+            </p>
           </div>
 
           {/* THE CHECKBOX IS CHECKED WHEN OPTED OUT, and that is deliberate.
@@ -952,6 +1156,119 @@ function SettingsTab({
         </div>
       </div>
 
+      {/* Banner -- the wide image behind the avatar on the public profile
+          header. No color fallback the way Avatar has, since a banner with
+          nothing set just isn't shown at all on the public page rather than
+          rendering an empty colored strip. */}
+      <div style={{
+        background: 'var(--bg-primary)',
+        border: '0.5px solid var(--border)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '24px',
+      }}>
+        <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 6 }}>Banner</h2>
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 16 }}>
+          Shown across the top of your public profile page, behind your avatar.
+        </p>
+        <div style={{
+          width: '100%',
+          height: 120,
+          borderRadius: 'var(--radius-md)',
+          background: safeBannerUrl ? `center / cover no-repeat url(${safeBannerUrl})` : 'var(--bg-tertiary)',
+          border: '0.5px solid var(--border-strong)',
+          marginBottom: 14,
+          display: safeBannerUrl ? 'block' : 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          {!safeBannerUrl && (
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>No banner uploaded</span>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            onClick={() => bannerInputRef.current?.click()}
+            disabled={uploadingBanner}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px',
+              border: '0.5px solid var(--border-strong)',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--bg-secondary)',
+              color: 'var(--text-secondary)',
+              fontSize: 'var(--text-xs)', cursor: 'pointer',
+              fontFamily: 'var(--font-sans)',
+            }}
+          >
+            <Upload size={12} />
+            {uploadingBanner ? 'Uploading...' : safeBannerUrl ? 'Replace banner' : 'Upload banner'}
+          </button>
+          {safeBannerUrl && (
+            <button
+              onClick={onBannerRemove}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '6px 12px',
+                border: '0.5px solid var(--border-strong)',
+                borderRadius: 'var(--radius-md)',
+                background: 'none',
+                color: 'var(--text-secondary)',
+                fontSize: 'var(--text-xs)', cursor: 'pointer',
+                fontFamily: 'var(--font-sans)',
+              }}
+            >
+              <X size={12} />
+              Remove
+            </button>
+          )}
+          <input ref={bannerInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onBannerUpload} />
+          {bannerSaved && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-xs)', color: 'var(--accent)' }}>
+              <Check size={12} /> Saved
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Social links -- rendered as an icon row on the public profile header
+          (see /user/[username]/page.tsx) whenever a value is set. All optional,
+          all plain text (not validated as URLs) so a Discord invite code or a
+          bare handle works exactly as well as a full link. */}
+      <div style={{
+        background: 'var(--bg-primary)',
+        border: '0.5px solid var(--border)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '24px',
+      }}>
+        <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 6 }}>Social links</h2>
+        <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 16 }}>
+          Shown as icons on your public profile. Leave any blank to hide them.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {SOCIAL_PLATFORMS.map(platform => {
+            const Icon = platform.icon
+            return (
+              <div key={platform.key} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{
+                  width: 28, height: 28, borderRadius: 6, flexShrink: 0,
+                  background: platform.color,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Icon size={14} color="white" />
+                </div>
+                <input
+                  style={inputStyle}
+                  value={socialLinks[platform.key]}
+                  onChange={e => setSocialLinks(prev => ({ ...prev, [platform.key]: e.target.value }))}
+                  placeholder={platform.placeholder}
+                  maxLength={200}
+                />
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
       {/* Save button */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <button
@@ -1096,12 +1413,26 @@ function DraftRow({
   )
 }
 
-function SequenceRow({ seq, showAuthor, onUnsave }: { seq: any; showAuthor: boolean; onUnsave?: (id: string) => void }) {
+function SequenceRow({ seq, showAuthor, onUnsave, onSetStatus, statusActionLabel, href }: {
+  seq: any
+  showAuthor: boolean
+  onUnsave?: (id: string) => void
+  onSetStatus?: (seq: any) => void
+  statusActionLabel?: string
+  // Private sequences have no reachable /sequences/[slug] page -- that route
+  // (and its generateStaticParams/fetchSequencePage backing) only ever
+  // fetches status='published' rows through the cookie-free public client,
+  // for anyone including the author, exactly like a draft row already can't
+  // be viewed there. So the Private tab passes the author's own /post?edit=
+  // link instead -- the same "view/edit this sequence" entry point the
+  // sequence detail page's own Edit button uses.
+  href?: string
+}) {
   const classColor = getClassColor(seq.class_id)
   const contentLabel = CONTENT_TYPES.find(c => c.value === seq.content_type)?.label ?? seq.content_type
 
   return (
-    <Link href={`/sequences/${seq.slug}`} style={{ textDecoration: 'none' }}>
+    <Link href={href ?? `/sequences/${seq.slug}`} style={{ textDecoration: 'none' }}>
       <div
         style={{
           background: 'var(--bg-primary)',
@@ -1153,6 +1484,29 @@ function SequenceRow({ seq, showAuthor, onUnsave }: { seq: any; showAuthor: bool
             <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{seq.view_count?.toLocaleString() ?? 0} views</div>
             <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{formatDistanceToNow(new Date(seq.created_at), { addSuffix: true })}</div>
           </div>
+          {onSetStatus && statusActionLabel && (
+            <button
+              onClick={e => { e.preventDefault(); e.stopPropagation(); onSetStatus(seq) }}
+              title={statusActionLabel === 'Publish' ? 'Publish this sequence' : 'Make this sequence private -- only visible to you'}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                background: 'none',
+                border: '0.5px solid var(--border-strong)',
+                borderRadius: 'var(--radius-md)',
+                cursor: 'pointer',
+                padding: '5px 10px',
+                color: 'var(--text-secondary)',
+                fontSize: 'var(--text-xs)',
+                fontFamily: 'var(--font-sans)',
+                flexShrink: 0,
+              }}
+            >
+              {statusActionLabel === 'Publish' ? <Globe size={12} /> : <Lock size={12} />}
+              {statusActionLabel}
+            </button>
+          )}
           {onUnsave && (
             <button
               onClick={e => { e.preventDefault(); e.stopPropagation(); onUnsave(seq.id) }}

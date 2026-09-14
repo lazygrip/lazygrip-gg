@@ -46,3 +46,45 @@ export function sanitizeAvatarUrl(raw: string | null | undefined): string | null
   if (!AVATAR_HOST || parsed.host.toLowerCase() !== AVATAR_HOST) return null
   return parsed.toString()
 }
+
+// banner_url (migration 030): written the same way avatar_url is (Supabase
+// Storage public URL, just a different bucket) -- same allowlist rule
+// applies unchanged.
+export const sanitizeBannerUrl = sanitizeAvatarUrl
+
+// social_links values (migration 030): unlike every other sanitized field on
+// this page, these are free-text creator input with no fixed host to check
+// against -- a creator can link any platform. The Settings tab's own
+// placeholders ("twitch.tv/yourchannel") show bare host+path with no scheme,
+// so that's the expected shape, not an edge case.
+const SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i
+
+export function sanitizeSocialLinkUrl(raw: string | null | undefined): string | null {
+  if (typeof raw !== 'string') return null
+  const trimmed = raw.trim()
+  if (!trimmed) return null
+
+  const schemeMatch = trimmed.match(SCHEME_RE)
+  let candidate: string
+  if (schemeMatch) {
+    // An explicit scheme is present -- javascript:, data:, mailto: and so on
+    // are all rejected outright rather than stripped or upgraded. Only a
+    // literal https: scheme is let through as typed.
+    if (!/^https:$/i.test(schemeMatch[0])) return null
+    candidate = trimmed
+  } else {
+    // No scheme at all, e.g. "twitch.tv/yourchannel" -- this is the shape
+    // every placeholder on the Settings tab shows, so assume https.
+    candidate = `https://${trimmed}`
+  }
+
+  let parsed: URL
+  try {
+    parsed = new URL(candidate)
+  } catch {
+    return null
+  }
+  if (parsed.protocol !== 'https:') return null
+  if (!parsed.hostname) return null
+  return parsed.toString()
+}
