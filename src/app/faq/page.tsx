@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
+import type { ReactNode } from 'react'
 import PageHeader from '@/components/ui/PageHeader'
 import Card from '@/components/ui/Card'
+import { jsonLdString } from '@/lib/json-ld'
 
 export const metadata: Metadata = {
   title: 'GRIP-EMS FAQ',
@@ -18,7 +20,16 @@ export const metadata: Metadata = {
   },
 }
 
-const GROUPS = [
+type FaqItem = {
+  q: string
+  a: ReactNode
+  // Set only on items whose visual `a` is JSX (an embedded link) rather than
+  // plain text -- see the FAQPage JSON-LD below, which needs a plain string
+  // and can't stringify JSX into anything a search engine would want.
+  aPlain?: string
+}
+
+const GROUPS: { heading: string; items: FaqItem[] }[] = [
   {
     heading: 'About GRIP-EMS',
     items: [
@@ -38,6 +49,10 @@ const GROUPS = [
             <a href="/guide" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>lazygrip.net/guide</a>
           </>
         ),
+        // Plain-text stand-in for the FAQPage JSON-LD below -- Google's rich-
+        // result guidelines want a plain-text answer, and JSX with an <a>
+        // inside doesn't stringify into anything readable on its own.
+        aPlain: 'The LazyGrip guide covers installation, settings, how the step engine works, building sequences from scratch, and validating your work against logs. See https://lazygrip.net/guide.',
       },
       {
         q: 'I need help with the addon itself.',
@@ -53,6 +68,7 @@ const GROUPS = [
             </p>
           </>
         ),
+        aPlain: 'The GRIP-EMS Discord is the fastest place to get help: https://discord.gg/UUdmCNUv. The community also has a subreddit for discussion and sharing sequences: https://www.reddit.com/r/GRIPEMS/.',
       },
     ],
   },
@@ -101,6 +117,7 @@ const GROUPS = [
             {' '}with your username and we will remove your account and data within 30 days.
           </>
         ),
+        aPlain: 'Email admin@lazygrip.net with your username and we will remove your account and data within 30 days.',
       },
       {
         q: 'Who runs LazyGrip.net?',
@@ -110,9 +127,33 @@ const GROUPS = [
   },
 ]
 
+// Every item's answer is either already plain text (a: string) or carries an
+// aPlain override for the JSX ones -- see FaqItem above. typeof item.a ===
+// 'string' is the fallback rather than String(item.a), which would stringify
+// a JSX element into '[object Object]' for any item someone adds later
+// without remembering to set aPlain.
+function faqPageJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: GROUPS.flatMap(group => group.items).map(item => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.aPlain ?? (typeof item.a === 'string' ? item.a : ''),
+      },
+    })).filter(q => q.acceptedAnswer.text.length > 0),
+  }
+}
+
 export default function FAQPage() {
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdString(faqPageJsonLd()) }}
+      />
       <PageHeader title="Frequently Asked Questions" description="About LazyGrip.net and GRIP-EMS." />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
