@@ -8,6 +8,7 @@ import TiptapEditor from '@/components/editor/TiptapEditor'
 import type { SequenceStep, ActionNode } from '@/types'
 import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
 import { notifyDiscord } from '@/lib/notify-discord'
+import { trackEvent } from '@/lib/analytics'
 import { useUsernameGate } from '@/lib/useUsernameGate'
 import PostingEligibilityChecklist from '@/components/PostingEligibilityChecklist'
 
@@ -1067,6 +1068,7 @@ async function runDecode(exportString: string) {
             contentType: form.content_type,
             heroTalent: form.hero_talent,
           })
+          trackEvent('sequence_published', { class_name: cls?.name ?? '', content_type: form.content_type, is_collection: true })
 
           router.push(`/sequences/${slug}`)
         } else {
@@ -1117,6 +1119,7 @@ async function runDecode(exportString: string) {
             contentType: form.content_type,
             heroTalent: form.hero_talent,
           })
+          trackEvent('sequence_published', { class_name: cls?.name ?? '', content_type: form.content_type, is_collection: true })
 
           router.push(`/sequences/${slug}`)
         }
@@ -1363,6 +1366,7 @@ async function runDecode(exportString: string) {
           contentType: payload.content_type,
           heroTalent: payload.hero_talent,
         })
+        trackEvent('sequence_published', { class_name: selectedClass?.name ?? '', content_type: payload.content_type, is_collection: false })
 
         router.push(`/sequences/${slug}`)
       } else {
@@ -1410,6 +1414,7 @@ async function runDecode(exportString: string) {
           contentType: payload.content_type,
           heroTalent: payload.hero_talent,
         })
+        trackEvent('sequence_published', { class_name: selectedClass?.name ?? '', content_type: payload.content_type, is_collection: false })
 
         router.push(`/sequences/${slug}`)
       }

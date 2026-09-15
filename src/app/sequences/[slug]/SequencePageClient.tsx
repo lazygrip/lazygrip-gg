@@ -10,6 +10,7 @@ import RenderedContent from '@/components/editor/RenderedContent'
 import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
 import type { SequencePageResult } from '@/lib/sequence-server'
 import { useUsernameGate } from '@/lib/useUsernameGate'
+import { trackEvent } from '@/lib/analytics'
 import PostingEligibilityChecklist from '@/components/PostingEligibilityChecklist'
 import DiscordLinkPrompt from '@/components/sequence/DiscordLinkPrompt'
 import ActionTreeView, { countActionSteps } from '@/components/sequence/ActionTree'
@@ -47,6 +48,10 @@ async function insertComment(args: {
       console.error('Comment insert error:', json?.error ?? res.status)
       return null
     }
+    // Only fires once the insert actually landed (json.ok, past the res.ok
+    // check above) -- a validation failure or a network error never reaches
+    // this line, so this event means a real comment exists, not an attempt.
+    trackEvent('comment_posted', { is_reply: !!args.parentId })
     return json.comment as Comment
   } catch (err) {
     console.error('Comment insert error:', err)
@@ -348,6 +353,16 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
     await navigator.clipboard.writeText(selectedVersion.grip_string)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+    // This is the site's real activation moment -- a visitor got far enough
+    // to actually take a sequence's import string, not just view the page.
+    // Fires only after writeText resolves, so a clipboard permission failure
+    // never counts as a copy.
+    if (sequence) {
+      trackEvent('grip_import_copied', {
+        class_name: sequence.class_name,
+        content_type: sequence.content_type,
+      })
+    }
   }
 
   function selectScore(score: number) {
@@ -569,7 +584,17 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
       await supabase.from('saves').delete()
         .eq('sequence_id', sequence.id).eq('user_id', user.id)
     } else {
-      await supabase.from('saves').insert({ sequence_id: sequence.id, user_id: user.id })
+      const { error } = await supabase.from('saves').insert({ sequence_id: sequence.id, user_id: user.id })
+      // Tracked only on the save direction, not unsave -- a Key event should
+      // read as "gained interest," and only fires when the insert actually
+      // went through (no error), matching the copy/comment events' bar for
+      // counting a real success rather than an attempt.
+      if (!error) {
+        trackEvent('sequence_saved', {
+          class_name: sequence.class_name,
+          content_type: sequence.content_type,
+        })
+      }
     }
     setSaved(s => !s)
   }
