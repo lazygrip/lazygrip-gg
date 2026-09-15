@@ -5,6 +5,7 @@ import { AlertCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
+import { trackEvent } from '@/lib/analytics'
 
 // Mirrors public.profiles_username_format CHECK constraint:
 // username !~ '^user_[0-9a-f]{8}$' and username ~ '^[A-Za-z0-9_.-]{2,32}$'
@@ -110,6 +111,17 @@ function WelcomeForm() {
         setError('Something went wrong. Please try again.')
       }
       return
+    }
+
+    // Fires only when this account just set a real username for the first
+    // time (needsUsername was true going in), not when a returning user is
+    // merely re-accepting the guidelines. Middleware routes every auth
+    // method here the same way (email/password, Discord, Battle.net) before
+    // it lets a new account do anything else, so this is the one place a
+    // "signup completed" event can honestly cover all three at once, rather
+    // than picking off just the email-confirmation path.
+    if (needsUsername) {
+      trackEvent('signup_completed')
     }
 
     router.replace(returnTo)
