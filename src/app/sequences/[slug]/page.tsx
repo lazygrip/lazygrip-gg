@@ -6,6 +6,8 @@ import { createPublicClient } from '@/lib/supabase/public'
 import SequencePageClient from './SequencePageClient'
 import { fetchSequencePage } from '@/lib/sequence-server'
 import { stripHtml } from '@/lib/html-text'
+import { getClassById, CONTENT_TYPES } from '@/lib/wow-data'
+import { jsonLdString } from '@/lib/json-ld'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -129,6 +131,67 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   }
 }
 
+// Builds this sequence's JSON-LD: a BreadcrumbList (Home > Browse > class >
+// title, so search results show that trail instead of the raw URL) and a
+// SoftwareApplication block carrying an aggregateRating when the sequence
+// actually has one. SoftwareApplication is the type Google's own structured-
+// data documentation lists as eligible for review/rating rich results, and
+// it's the honest fit here: a GRIP-EMS sequence is literally an importable
+// piece of macro configuration, not an article about one. aggregateRating is
+// omitted entirely rather than sent as zeros when rating_count is 0 --
+// Google's guidelines require a rating to reflect real submitted reviews,
+// and this site's own ratings are exactly that, so there's nothing to fake
+// and nothing to hide either.
+function buildSequenceJsonLd(seq: import('@/types').Sequence, canonicalUrl: string) {
+  const classInfo = getClassById(seq.class_id)
+  const contentLabel = CONTENT_TYPES.find(c => c.value === seq.content_type)?.label ?? seq.content_type
+  const authorName = seq.author?.display_name || seq.author?.username
+
+  const breadcrumb = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://lazygrip.net' },
+      { '@type': 'ListItem', position: 2, name: 'Browse', item: 'https://lazygrip.net/browse' },
+      ...(classInfo
+        ? [{ '@type': 'ListItem', position: 3, name: classInfo.name, item: `https://lazygrip.net/browse/${classInfo.slug}` }]
+        : []),
+      { '@type': 'ListItem', position: classInfo ? 4 : 3, name: seq.title, item: canonicalUrl },
+    ],
+  }
+
+  const description = seq.description
+    ? stripHtml(seq.description).slice(0, 500)
+    : `${seq.spec_name ? `${seq.spec_name} ` : ''}${seq.class_name} GRIP-EMS sequence for ${contentLabel}${authorName ? ` by ${authorName}` : ''}. Free to import.`
+
+  const softwareApplication: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: seq.title,
+    description,
+    url: canonicalUrl,
+    applicationCategory: 'GameApplication',
+    operatingSystem: 'World of Warcraft',
+    ...(authorName ? { author: { '@type': 'Person', name: authorName } } : {}),
+    datePublished: seq.created_at,
+    dateModified: seq.updated_at,
+    isAccessibleForFree: true,
+    offers: { '@type': 'Offer', price: 0, priceCurrency: 'USD' },
+  }
+
+  if (seq.rating_count && seq.rating_count > 0 && seq.avg_score != null) {
+    softwareApplication.aggregateRating = {
+      '@type': 'AggregateRating',
+      ratingValue: seq.avg_score,
+      ratingCount: seq.rating_count,
+      bestRating: 10,
+      worstRating: 1,
+    }
+  }
+
+  return [breadcrumb, softwareApplication]
+}
+
 export default async function SequencePage(props: Props) {
   const params = await props.params
   const initial = await fetchSequencePage(params.slug)
@@ -141,5 +204,20 @@ export default async function SequencePage(props: Props) {
     redirect(`/sequences/${initial.slug}`)
   }
 
-  return <SequencePageClient key={params.slug} initial={initial} />
+  const jsonLdBlocks = initial.status === 'ok'
+    ? buildSequenceJsonLd(initial.data.sequence, `https://lazygrip.net/sequences/${params.slug}`)
+    : []
+
+  return (
+    <>
+      {jsonLdBlocks.map((block, i) => (
+        <script
+          key={i}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLdString(block) }}
+        />
+      ))}
+      <SequencePageClient key={params.slug} initial={initial} />
+    </>
+  )
 }
