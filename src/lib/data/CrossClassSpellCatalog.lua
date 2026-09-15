@@ -1876,6 +1876,7 @@ local CATALOG = {
     { id = 280373, n = "Redoubt", c = "paladin" },
     { id = 315924, n = "Hand of the Protector", c = "paladin" },
     { id = 321136, n = "Shining Light", c = "paladin" },
+    { id = 326730, n = "Hammer of Wrath", c = "paladin" },
     { id = 326732, n = "Empyrean Power", c = "paladin" },
     { id = 326734, n = "Healing Hands", c = "paladin" },
     { id = 343527, n = "Execution Sentence", c = "paladin" },
