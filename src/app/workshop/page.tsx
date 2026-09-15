@@ -113,6 +113,15 @@ export default function WorkshopPage() {
             icon={<ExternalLink size={20} />}
             cta="View on CurseForge"
           />
+          <AddonCard
+            href="https://www.curseforge.com/wow/addons/grip-ems-k-i-s-s"
+            eyebrow="Onboarding"
+            title="GRIP-EMS K.I.S.S."
+            description="A guided three-step wizard for newcomers: pick a sequence, bind a key, test it. Fully optional, GRIP-EMS works without it."
+            requires="Requires GRIP-EMS, WoW Retail 12.1+"
+            icon={<ExternalLink size={20} />}
+            cta="View on CurseForge"
+          />
         </div>
         <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 16 }}>
           New community addons show up here as they're built. See the full, live list on{' '}
