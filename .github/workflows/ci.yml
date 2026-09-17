@@ -43,3 +43,41 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  # Applies every migration, in order, to an EMPTY database. Separate from
+  # `build` on purpose: it needs no Node and no secrets, and it answers a
+  # question nothing else here asks -- can supabase/migrations/ actually
+  # reconstruct the schema, or does it only work against a database that
+  # already has the objects? On 2026-09-17 the answer was measured for the
+  # first time and 8 of 30 failed. See scripts/schema-check/known-failures.txt
+  # and issue #78.
+  schema-from-scratch:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Report the psql and server versions
+        run: |
+          psql --version
+          psql -tAc 'select version();'
+
+      - name: Apply every migration to an empty database
+        run: ./scripts/schema-check/apply-from-scratch.sh
