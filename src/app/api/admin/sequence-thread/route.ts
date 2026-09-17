@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse, after } from 'next/server'
-import { timingSafeEqual } from 'node:crypto'
+import { secretsMatch } from '@/lib/secret-compare'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { fireSequencePublishedRelay } from '@/lib/relay'
 import { isUnsafePublicUsername, publicName } from '@/lib/public-name'
@@ -71,21 +71,10 @@ import { decodeExport } from '@/lib/workshop'
 // rather than degrades if that ever changes, so it says so out loud.
 export const runtime = 'nodejs'
 
-// Timing-safe comparison, not ===. A shared secret in a header is compared on
-// every call, and === bails at the first differing byte, which leaks the
-// length of the matching prefix to anyone willing to measure. timingSafeEqual
-// takes constant time for equal-length inputs.
-//
-// It THROWS on inputs of different length, so the length check has to come
-// first, and that check is inherently not constant time. That is fine and
-// unavoidable: the only thing it leaks is the length of the configured secret,
-// which is not the secret.
-function secretMatches(provided: string, expected: string): boolean {
-  const a = Buffer.from(provided, 'utf8')
-  const b = Buffer.from(expected, 'utf8')
-  if (a.length !== b.length) return false
-  return timingSafeEqual(a, b)
-}
+// The timing-safe comparison this route used to define itself now lives in
+// src/lib/secret-compare.ts, along with the reasoning for it. It moved on
+// 2026-09-17 because the cron patch-reminder route needed the same function and
+// would have been its sixth copy.
 
 // Copied from src/app/api/relay-identity/route.ts and the three
 // relay/discord-comment* routes rather than reimplemented. Resets on cold
@@ -141,7 +130,7 @@ export async function POST(req: NextRequest) {
   // operator account whose identity would then be tempting to use for
   // attribution -- the exact bug this route exists to avoid.
   const providedSecret = req.headers.get('X-Admin-Task-Secret')
-  if (!providedSecret || !secretMatches(providedSecret, expectedSecret)) {
+  if (!providedSecret || !secretsMatch(providedSecret, expectedSecret)) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
   }
 

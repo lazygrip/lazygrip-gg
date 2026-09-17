@@ -12,14 +12,50 @@
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { secretsMatch } from '@/lib/secret-compare'
 
 const STALE_REMINDER_DAYS = 14
 
+// The runtime is pinned to nodejs because the secret comparison below uses
+// node:crypto, the same reason admin/sequence-thread and the three
+// relay/discord-comment* routes pin it. It is the default for route handlers,
+// but this route breaks rather than degrades if that ever changes.
+export const runtime = 'nodejs'
+
 export async function GET(request: Request) {
+  // A ROUTE WHOSE SECRET IS UNSET MUST NOT FALL OPEN, and until 2026-09-17
+  // this one did. The check was a single comparison against the template
+  // `Bearer ${process.env.CRON_SECRET}`, which when CRON_SECRET is absent
+  // evaluates to the literal string "Bearer undefined" -- so anyone sending
+  // that exact header passed the guard and reached the Discord webhook below.
+  //
+  // Vercel does not auto-generate CRON_SECRET; it has to be set by hand, and it
+  // is absent from .env.example, so "unset" is a reachable deployment state
+  // rather than a theoretical one. Whether it is in fact set in the Vercel
+  // project was never resolved, because the only request that distinguishes set
+  // from unset is the exploit itself, and firing it would have posted a real
+  // reminder into Discord (the staleness threshold has been crossed since
+  // 2026-08-25). Failing closed removes the question instead of answering it.
+  //
+  // 503 and not 401: the caller is not unauthorized, the route is
+  // unconfigured. Same shape and same status as
+  // admin/sequence-thread:133-137 and relay/discord-comment:126-130, which
+  // have always refused this way. This route was the only secret-gated one
+  // that did not.
+  const cronSecret = process.env.CRON_SECRET
+  if (!cronSecret) {
+    console.error('[cron/patch-reminder] CRON_SECRET not configured, refusing all calls')
+    return NextResponse.json({ error: 'route not configured' }, { status: 503 })
+  }
+
   // Vercel Cron sends a bearer token matching CRON_SECRET — verify it so this
   // route can't be triggered by anyone who finds the URL.
+  //
+  // Constant-time, via the shared helper, for the reason set out in
+  // src/lib/secret-compare.ts. The `!==` this replaced was the one remaining
+  // secret gate in the app comparing with a short-circuiting operator.
   const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!authHeader || !secretsMatch(authHeader, `Bearer ${cronSecret}`)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
