@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { timingSafeEqual } from 'crypto'
+import { secretsMatch } from '@/lib/secret-compare'
 
 // This endpoint is not for browsers. It is called server-to-server by the
 // GRIP Discord bot (gripbot, on Jesper's box) to resolve the mapping between
@@ -35,20 +35,21 @@ function getValidSecrets(): string[] {
   return secrets.filter((s): s is string => typeof s === 'string' && s.length > 0)
 }
 
-function timingSafeEqualStrings(a: string, b: string): boolean {
-  const aBuf = Buffer.from(a)
-  const bBuf = Buffer.from(b)
-  // timingSafeEqual throws on length mismatch rather than returning false,
-  // and comparing lengths first is not itself a timing leak worth avoiding
-  // here since secret length is not sensitive, only its value is.
-  if (aBuf.length !== bBuf.length) return false
-  return timingSafeEqual(aBuf, bBuf)
-}
+// The runtime is pinned to nodejs because the secret comparison below uses
+// node:crypto, the same reason admin/sequence-thread and the three
+// relay/discord-comment* routes pin it. This route was the one secret-gated
+// route relying on nodejs merely being the DEFAULT for route handlers; the pin
+// was added 2026-09-17 when the comparison moved to a shared module whose
+// contract is that every caller says this out loud.
+export const runtime = 'nodejs'
 
+// timingSafeEqualStrings, which every other secret-gated route said it had
+// copied from this file, now lives in src/lib/secret-compare.ts as
+// secretsMatch. The reasoning moved with it.
 function isAuthorized(req: NextRequest): boolean {
   const provided = req.headers.get('x-relay-secret')
   if (!provided) return false
-  return getValidSecrets().some((valid) => timingSafeEqualStrings(provided, valid))
+  return getValidSecrets().some((valid) => secretsMatch(provided, valid))
 }
 
 // Minimal in-memory rate limit. Resets on cold start / deploy, which is

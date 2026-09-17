@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
-import { timingSafeEqual } from 'node:crypto'
+import { secretsMatch } from '@/lib/secret-compare'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SNOWFLAKE_RE } from '@/lib/discord-embed'
 
@@ -32,16 +32,10 @@ import { SNOWFLAKE_RE } from '@/lib/discord-embed'
 // node:crypto, the same reason admin/sequence-thread pins it.
 export const runtime = 'nodejs'
 
-// Copied from src/app/api/relay-identity/route.ts rather than reimplemented.
-// timingSafeEqual throws on length mismatch rather than returning false, and
-// comparing lengths first is not itself a timing leak worth avoiding here
-// since secret length is not sensitive, only its value is.
-function timingSafeEqualStrings(a: string, b: string): boolean {
-  const aBuf = Buffer.from(a)
-  const bBuf = Buffer.from(b)
-  if (aBuf.length !== bBuf.length) return false
-  return timingSafeEqual(aBuf, bBuf)
-}
+// timingSafeEqualStrings moved to src/lib/secret-compare.ts as secretsMatch on
+// 2026-09-17, and the reasoning moved with it. Five routes held a copy of it,
+// four of them describing themselves as copies, which is what made the sixth
+// caller a module instead.
 
 // Same in-memory limiter as the insert route, with its own budget so a burst
 // of edits cannot starve new comments. Resets on cold start / deploy, which is
@@ -73,7 +67,7 @@ export async function POST(req: NextRequest) {
   }
 
   const providedSecret = req.headers.get('x-relay-secret')
-  if (!providedSecret || !timingSafeEqualStrings(providedSecret, expectedSecret)) {
+  if (!providedSecret || !secretsMatch(providedSecret, expectedSecret)) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
   }
 
