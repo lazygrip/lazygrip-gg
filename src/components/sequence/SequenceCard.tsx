@@ -5,7 +5,8 @@ import { Eye, MessageSquare, Bookmark, Star, AlertTriangle } from 'lucide-react'
 import { Sequence } from '@/types'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { stripHtml } from '@/lib/html-text'
-import { formatDistanceToNow, differenceInDays } from 'date-fns'
+import { useState } from 'react'
+import { formatDistance, differenceInDays } from 'date-fns'
 
 type Props = {
   sequence: Sequence
@@ -24,7 +25,20 @@ const STALE_DAYS_THRESHOLD = 60
 export default function SequenceCard({ sequence, currentPatch }: Props) {
   const classColor = getClassColor(sequence.class_id)
   const contentLabel = CONTENT_LABELS[sequence.content_type] ?? sequence.content_type
-  const timeAgo = formatDistanceToNow(new Date(sequence.created_at), { addSuffix: true })
+  // One clock reading per mount, used by all three time calculations below.
+  //
+  // Each of them used to read the clock in the render body -- two
+  // formatDistanceToNow calls and a differenceInDays(new Date(), ...) -- which
+  // makes the render non-idempotent the same way SequencePageClient's Date.now()
+  // did. react-hooks/purity flagged that one and none of these, because it knows
+  // `Date.now` and does not know `new Date` or date-fns's *ToNow helpers. The
+  // rule's silence here was a gap in the rule, not a difference in the code.
+  //
+  // formatDistance(d, base) is what formatDistanceToNow(d) expands to, so the
+  // rendered strings are unchanged.
+  const [renderedAt] = useState(() => new Date())
+
+  const timeAgo = formatDistance(new Date(sequence.created_at), renderedAt, { addSuffix: true })
   const plainDescription = sequence.description ? stripHtml(sequence.description) : null
 
   // Surface a real revision separately from the original post date -- a sequence edited well
@@ -34,7 +48,7 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
   // own, so this only kicks in once there's a full day of daylight between the two timestamps.
   const wasEditedAfterPosting = differenceInDays(new Date(sequence.updated_at), new Date(sequence.created_at)) >= 1
   const updatedAgo = wasEditedAfterPosting
-    ? formatDistanceToNow(new Date(sequence.updated_at), { addSuffix: true })
+    ? formatDistance(new Date(sequence.updated_at), renderedAt, { addSuffix: true })
     : null
 
   const avgScore = sequence.avg_score != null ? sequence.avg_score : null
@@ -48,7 +62,7 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
 
   // Staleness: patch mismatch (or no patch_version recorded) AND not updated in the last 60 days.
   // Both conditions required — purely informational, does not affect sort/ranking.
-  const daysSinceUpdate = differenceInDays(new Date(), new Date(sequence.updated_at))
+  const daysSinceUpdate = differenceInDays(renderedAt, new Date(sequence.updated_at))
   const patchMismatch = !!currentPatch && (sequence.patch_version == null || sequence.patch_version !== currentPatch)
   const isStale = patchMismatch && daysSinceUpdate > STALE_DAYS_THRESHOLD
 

@@ -119,34 +119,12 @@ export default function BrowseContent({
 
   const filterKey = browseFilterKey(filters)
 
-  // Fetch only when the live filters differ from the filters the DISPLAYED data came from. The
-  // previous one-shot fetch-latch ref could not tell "the server already has this" from "the
-  // server has something else" after the first render, so it returned early forever.
-  useEffect(() => {
-    if (filterKey === displayedKey) {
-      // What is on screen already matches the live filters, so any client fetch still in flight
-      // is stale by definition. This is the path a server adoption lands on, and bumping here is
-      // what stops a slow pre-adoption fetch from overwriting the server's newer data.
-      fetchSeqRef.current++
-      return
-    }
-    fetchSequences(filterKey, filters)
-  }, [filterKey, displayedKey])
-
-  // Fetch the site-wide current patch once on mount. Not re-fetched per filter change —
-  // this value changes rarely (only when admin updates it) so one fetch per page load is enough.
-  useEffect(() => {
-    if (initialCurrentPatch !== undefined) return
-    fetchCurrentPatch()
-  }, [])
-
-  // Same one-shot pattern for the list of patches that have at least one published sequence —
-  // it only grows when new sequences post on a new patch, not per filter change.
-  useEffect(() => {
-    if (initialAvailablePatches !== undefined) return
-    fetchAvailablePatches()
-  }, [])
-
+  // The three fetchers sit ABOVE the effects that call them, which is not a style
+  // choice. A function declaration is hoisted, so calling one from an effect above
+  // it runs correctly, but the effect then closes over whatever the binding is at
+  // that lexical point rather than over this render's function -- which is what
+  // react-hooks/immutability reports as "accessed before it is declared". Declaring
+  // first removes the report and the class of bug behind it. Bodies unchanged.
   async function fetchCurrentPatch() {
     try {
       const { data, error } = await supabase
@@ -204,6 +182,34 @@ export default function BrowseContent({
       if (fetchId === fetchSeqRef.current) setLoading(false)
     }
   }
+
+  // Fetch only when the live filters differ from the filters the DISPLAYED data came from. The
+  // previous one-shot fetch-latch ref could not tell "the server already has this" from "the
+  // server has something else" after the first render, so it returned early forever.
+  useEffect(() => {
+    if (filterKey === displayedKey) {
+      // What is on screen already matches the live filters, so any client fetch still in flight
+      // is stale by definition. This is the path a server adoption lands on, and bumping here is
+      // what stops a slow pre-adoption fetch from overwriting the server's newer data.
+      fetchSeqRef.current++
+      return
+    }
+    fetchSequences(filterKey, filters)
+  }, [filterKey, displayedKey])
+
+  // Fetch the site-wide current patch once on mount. Not re-fetched per filter change —
+  // this value changes rarely (only when admin updates it) so one fetch per page load is enough.
+  useEffect(() => {
+    if (initialCurrentPatch !== undefined) return
+    fetchCurrentPatch()
+  }, [])
+
+  // Same one-shot pattern for the list of patches that have at least one published sequence —
+  // it only grows when new sequences post on a new patch, not per filter change.
+  useEffect(() => {
+    if (initialAvailablePatches !== undefined) return
+    fetchAvailablePatches()
+  }, [])
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()

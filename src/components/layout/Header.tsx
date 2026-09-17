@@ -15,11 +15,46 @@ export default function Header() {
   const [avatarColor, setAvatarColor] = useState<string | null>(null)
   const [unreadCount, setUnreadCount] = useState(0)
   const [dropdownOpen, setDropdownOpen] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  // The mobile menu is open FOR A PATHNAME, not open or closed on its own.
+  //
+  // Header renders from the layout, so an App Router navigation does not remount
+  // it and the menu would otherwise stay open on top of the page just navigated
+  // to. That was a `useEffect(() => setMobileMenuOpen(false), [pathname])` until
+  // 2026-09-17. Deriving it closes the menu in the same render as the navigation
+  // rather than in a second render afterwards, and there is no longer a window in
+  // which the two can disagree.
+  const [menuOpenFor, setMenuOpenFor] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
   const { theme, toggle } = useTheme()
   const pathname = usePathname()
+  const mobileMenuOpen = menuOpenFor === pathname
+
+  function closeMobileMenu() {
+    setMenuOpenFor(null)
+  }
+
+  async function loadProfile(userId: string) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('username, avatar_url, avatar_color')
+      .eq('id', userId)
+      .single()
+    if (data) {
+      setUsername(data.username)
+      setAvatarUrl(data.avatar_url ?? null)
+      setAvatarColor(data.avatar_color ?? null)
+    }
+  }
+
+  async function loadUnread(userId: string) {
+    const { count } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('is_read', false)
+    setUnreadCount(count ?? 0)
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -54,39 +89,9 @@ export default function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [dropdownOpen])
 
-  // Close mobile menu on route change. `pathname` has to be in the dep array:
-  // Header renders from the layout, so an App Router navigation does not remount
-  // it. With an empty array this ran once on mount and never again, leaving the
-  // menu open on top of the page the user had just navigated to.
-  useEffect(() => {
-    setMobileMenuOpen(false)
-  }, [pathname])
-
-  async function loadProfile(userId: string) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('username, avatar_url, avatar_color')
-      .eq('id', userId)
-      .single()
-    if (data) {
-      setUsername(data.username)
-      setAvatarUrl(data.avatar_url ?? null)
-      setAvatarColor(data.avatar_color ?? null)
-    }
-  }
-
-  async function loadUnread(userId: string) {
-    const { count } = await supabase
-      .from('notifications')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('is_read', false)
-    setUnreadCount(count ?? 0)
-  }
-
   const signOut = async () => {
     setDropdownOpen(false)
-    setMobileMenuOpen(false)
+    closeMobileMenu()
     await supabase.auth.signOut()
     window.location.href = '/'
   }
@@ -353,7 +358,7 @@ export default function Header() {
             {/* Hamburger -- mobile only */}
             <button
               className="mobile-menu-btn"
-              onClick={() => setMobileMenuOpen(prev => !prev)}
+              onClick={() => setMenuOpenFor(prev => (prev === pathname ? null : pathname))}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 display: 'none',
@@ -378,7 +383,7 @@ export default function Header() {
           bottom: 0,
           zIndex: 99,
           background: 'rgba(0,0,0,0.4)',
-        }} onClick={() => setMobileMenuOpen(false)}>
+        }} onClick={closeMobileMenu}>
           <div style={{
             background: 'var(--bg-primary)',
             borderBottom: '0.5px solid var(--border)',
@@ -390,7 +395,7 @@ export default function Header() {
               <Link
                 key={link.href}
                 href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
+                onClick={closeMobileMenu}
                 style={{
                   display: 'block',
                   padding: '12px 20px',
@@ -411,7 +416,7 @@ export default function Header() {
                 <>
                   <Link
                     href="/post?new=1"
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={closeMobileMenu}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                       background: 'var(--accent)', color: 'white',
@@ -424,7 +429,7 @@ export default function Header() {
                   </Link>
                   <Link
                     href="/profile?tab=posted"
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={closeMobileMenu}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
                       padding: '10px 4px', fontSize: 'var(--text-sm)',
@@ -435,7 +440,7 @@ export default function Header() {
                   </Link>
                   <Link
                     href="/profile?tab=drafts"
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={closeMobileMenu}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
                       padding: '10px 4px', fontSize: 'var(--text-sm)',
@@ -446,7 +451,7 @@ export default function Header() {
                   </Link>
                   <Link
                     href="/profile?tab=private"
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={closeMobileMenu}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
                       padding: '10px 4px', fontSize: 'var(--text-sm)',
@@ -457,7 +462,7 @@ export default function Header() {
                   </Link>
                   <Link
                     href="/profile?tab=saved"
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={closeMobileMenu}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
                       padding: '10px 4px', fontSize: 'var(--text-sm)',
@@ -468,7 +473,7 @@ export default function Header() {
                   </Link>
                   <Link
                     href="/profile?tab=settings"
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={closeMobileMenu}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,
                       padding: '10px 4px', fontSize: 'var(--text-sm)',
@@ -493,7 +498,7 @@ export default function Header() {
                 <>
                   <Link
                     href="/auth/signup"
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={closeMobileMenu}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       background: 'var(--accent)', color: 'white',
@@ -505,7 +510,7 @@ export default function Header() {
                   </Link>
                   <Link
                     href="/auth/login"
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={closeMobileMenu}
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       color: 'var(--text-secondary)',
