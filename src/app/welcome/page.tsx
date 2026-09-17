@@ -81,7 +81,17 @@ function WelcomeForm() {
     setError('')
 
     const supabase = createClient()
-    const update: Record<string, string> = { terms_accepted_at: new Date().toISOString() }
+    // terms_accepted_at is no longer written from here. Migration 032 takes the
+    // column off the `authenticated` UPDATE grant and replaces it with
+    // accept_terms(), which stamps now() server-side from auth.uid() -- a
+    // client-supplied timestamp could be backdated or rewritten later, and the
+    // record of when someone accepted is the whole point of the column.
+    //
+    // The username/display_name write stays a column update and runs FIRST, so
+    // a duplicate or malformed username fails before anything is stamped. The
+    // reverse order would leave an account marked as having accepted the
+    // guidelines while still carrying its auto-generated username.
+    const update: Record<string, string> = {}
     // display_name is a SEPARATE column from username (see src/lib/public-name.ts --
     // it's deliberately free text the account holder can customize later from
     // /profile). But is_verified_poster (migration 007) requires display_name to
@@ -95,21 +105,33 @@ function WelcomeForm() {
       update.display_name = username.trim()
     }
 
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update(update)
-      .eq('id', userId)
+    if (Object.keys(update).length > 0) {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update(update)
+        .eq('id', userId)
+
+      if (updateError) {
+        setSubmitting(false)
+        if (updateError.code === '23505') {
+          setError('That username is already taken.')
+        } else if (updateError.code === '23514') {
+          setError('That username isn\'t allowed. Try letters, numbers, underscores, hyphens, or periods.')
+        } else {
+          setError('Something went wrong. Please try again.')
+        }
+        return
+      }
+    }
+
+    // Idempotent by design: a returning user who lands here again through a
+    // stale link gets their ORIGINAL timestamp back rather than a new one.
+    const { error: termsError } = await supabase.rpc('accept_terms')
 
     setSubmitting(false)
 
-    if (updateError) {
-      if (updateError.code === '23505') {
-        setError('That username is already taken.')
-      } else if (updateError.code === '23514') {
-        setError('That username isn\'t allowed. Try letters, numbers, underscores, hyphens, or periods.')
-      } else {
-        setError('Something went wrong. Please try again.')
-      }
+    if (termsError) {
+      setError('Something went wrong. Please try again.')
       return
     }
 
