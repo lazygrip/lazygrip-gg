@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
-import { timingSafeEqual } from 'node:crypto'
+import { secretsMatch } from '@/lib/secret-compare'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { SLUG_RE, SNOWFLAKE_RE } from '@/lib/discord-embed'
 
@@ -68,16 +68,10 @@ import { SLUG_RE, SNOWFLAKE_RE } from '@/lib/discord-embed'
 // that ever changes, so it says so out loud.
 export const runtime = 'nodejs'
 
-// Copied from src/app/api/relay-identity/route.ts rather than reimplemented.
-// timingSafeEqual throws on length mismatch rather than returning false, and
-// comparing lengths first is not itself a timing leak worth avoiding here
-// since secret length is not sensitive, only its value is.
-function timingSafeEqualStrings(a: string, b: string): boolean {
-  const aBuf = Buffer.from(a)
-  const bBuf = Buffer.from(b)
-  if (aBuf.length !== bBuf.length) return false
-  return timingSafeEqual(aBuf, bBuf)
-}
+// timingSafeEqualStrings moved to src/lib/secret-compare.ts as secretsMatch on
+// 2026-09-17, and the reasoning moved with it. Five routes held a copy of it,
+// four of them describing themselves as copies, which is what made the sixth
+// caller a module instead.
 
 // Minimal in-memory rate limit, same shape and same reasoning as
 // relay-identity: this is a low-volume server-to-server route (one bot,
@@ -133,7 +127,7 @@ export async function POST(req: NextRequest) {
   // malformed, or simply wrong -- do not distinguish, so a caller cannot use
   // response differences to probe for a near-correct secret.
   const providedSecret = req.headers.get('x-relay-secret')
-  if (!providedSecret || !timingSafeEqualStrings(providedSecret, expectedSecret)) {
+  if (!providedSecret || !secretsMatch(providedSecret, expectedSecret)) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 })
   }
 

@@ -145,9 +145,11 @@ export async function POST(req: NextRequest) {
       .eq('slug', slug)
       .single()
 
-    if (lookupError) {
-      console.error('[notify-discord] Failed to look up sequence:', lookupError)
-    }
+    // The log that used to sit here, which noted a lookup failure and then
+    // carried on regardless, has moved into the refusal below. `.single()`
+    // reports PGRST116 for zero rows, so a failed lookup and a missing row are
+    // one condition and are now logged once, at the point where they stop the
+    // request.
 
     // OWNERSHIP. Everything above this point authenticates the CALLER; nothing
     // above it ties the caller to the sequence they named. The row is fetched
@@ -165,10 +167,47 @@ export async function POST(req: NextRequest) {
     // operates on a sequence the signed-in user owns, so this refuses nothing
     // legitimate.
     //
-    // A row that was NOT found keeps the tolerant behaviour it already had. A
-    // missing row is a separate pre-existing question and deliberately not
-    // answered here.
-    if (sequenceRow && sequenceRow.author_id !== user.id) {
+    // A MISSING ROW NOW REFUSES, AND THE COMMENT THAT USED TO STAND HERE SAID
+    // IT WOULD NOT. Its words were that a row that was not found "keeps the
+    // tolerant behaviour it already had", being "a separate pre-existing
+    // question and deliberately not answered here". That reading is withdrawn
+    // on 2026-09-17, because the missing-row case is not a separate question
+    // from the check directly below it -- it is that check failing open.
+    //
+    // WHAT THE TOLERANCE ACTUALLY PERMITTED. `sequenceRow && ...` short-
+    // circuits to false when the row is null, so a slug that names NO sequence
+    // fell straight through the ownership guard to the webhook post. Every
+    // field on the resulting card then came from the request body, because the
+    // fallbacks below key on the row's ABSENCE (:209-212, :239-240, :256). So
+    // any authenticated onboarded account could send a slug matching SLUG_RE
+    // that resolves to nothing, plus a chosen title, specName and heroTalent,
+    // and land a new thread in #lazygrip-ems-sequence-sharing under the
+    // LazyGrip webhook identity, with markdown rendering in the embed and a
+    // "published" relay event attributed to that account -- the same relay that
+    // feeds the Forgemaster role grant. There is no rate limit on this route,
+    // so it loops.
+    //
+    // WHY REFUSING BREAKS NOTHING. The tolerance was never load-bearing. All
+    // five notifyDiscord call sites in src/app/post/page.tsx fire after their
+    // insert or RPC has resolved, on a sequence the signed-in user owns, so the
+    // row is present and current by the time this route reads it -- the note at
+    // :235-238 already relies on exactly that ordering for the title. A slug
+    // that resolves to nothing is therefore not a publish this route should
+    // rescue from the body; it is a caller naming a sequence that does not
+    // exist.
+    //
+    // 404 and the same message as admin/sequence-thread:264-267, which has
+    // always refused this way and is the model the audit named. The
+    // row-absence fallbacks further down are left in place: they are now
+    // unreachable, but they are also what makes the code below total, and
+    // removing them would widen this change into the embed-building block for
+    // no security gain.
+    if (lookupError || !sequenceRow) {
+      console.error('[notify-discord] No sequence for slug:', slug, lookupError)
+      return NextResponse.json({ ok: false, error: 'No such sequence' }, { status: 404 })
+    }
+
+    if (sequenceRow.author_id !== user.id) {
       console.warn(`[notify-discord] Refused a notification for a sequence owned by another user: ${slug}`)
       return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 })
     }
