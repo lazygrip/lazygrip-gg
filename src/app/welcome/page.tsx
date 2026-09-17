@@ -39,22 +39,27 @@ function WelcomeForm() {
 
       setUserId(user.id)
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('username, terms_accepted_at')
-        .eq('id', user.id)
-        .single()
+      // Both of these are functions migration 008 already defines, and they
+      // are the same tests this page used to run in JS after reading the two
+      // columns: has_custom_username() is username present, non-blank and not
+      // matching '^user_[0-9a-f]{8}$'; has_completed_onboarding() is that plus
+      // terms_accepted_at. Asking the database means `authenticated` does not
+      // need SELECT on terms_accepted_at for this page to render.
+      // In parallel: neither depends on the other's answer.
+      const [{ data: onboardingComplete }, { data: hasRealUsername }] = await Promise.all([
+        supabase.rpc('has_completed_onboarding', { check_user_id: user.id }),
+        supabase.rpc('has_custom_username', { check_user_id: user.id }),
+      ])
 
       // Already fully done -- shouldn't normally land here (middleware should
       // have skipped the redirect), but guard against a stale link or back-button.
-      if (profile?.terms_accepted_at && profile?.username && !AUTO_GENERATED_PATTERN.test(profile.username)) {
+      if (onboardingComplete) {
         router.replace(returnTo)
         return
       }
 
       // Returning user with a real username already, just missing the
       // guidelines acknowledgment -- short form, no username field.
-      const hasRealUsername = !!profile?.username && !AUTO_GENERATED_PATTERN.test(profile.username)
       setNeedsUsername(!hasRealUsername)
       setChecking(false)
     }
