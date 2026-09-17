@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache'
 import { createPublicClient } from '@/lib/supabase/public'
 import { buildBrowseQuery, BROWSE_PAGE_SIZE } from '@/lib/browse-query'
 import type { Sequence, SequenceFilters } from '@/types'
@@ -11,7 +12,8 @@ export type BrowsePageData = {
 
 // Distinct patch_version values across published sequences, for the Browse patch filter.
 // Sorted numerically (11.2 before 12.1) rather than lexically.
-async function fetchAvailablePatches(supabase: ReturnType<typeof createPublicClient>): Promise<string[]> {
+async function fetchAvailablePatchesUncached(): Promise<string[]> {
+  const supabase = createPublicClient()
   const { data, error } = await supabase
     .from('sequences')
     .select('patch_version')
@@ -30,16 +32,40 @@ async function fetchAvailablePatches(supabase: ReturnType<typeof createPublicCli
   return Array.from(values).sort((a, b) => collator.compare(a, b))
 }
 
+async function fetchCurrentPatchUncached(): Promise<string | null> {
+  const supabase = createPublicClient()
+  const { data } = await supabase.from('site_config').select('current_patch').single()
+  return data?.current_patch ?? null
+}
+
+// Both of these produce the same answer for every request regardless of filters -- patches list
+// only grows when a sequence posts on a new patch, current_patch only changes when an admin sets
+// it -- but /browse and /browse/[slug] (#24) were re-running them, full-table scan and all, on
+// every single hit alongside the actual filtered listing query. Wrapped with unstable_cache so
+// they run at most once per revalidate window and every request in between reuses that result,
+// instead of asking Postgres and re-deriving the same Set/sort over again per request.
+const getCachedAvailablePatches = unstable_cache(
+  fetchAvailablePatchesUncached,
+  ['browse-available-patches'],
+  { revalidate: 300, tags: ['browse-available-patches'] }
+)
+
+const getCachedCurrentPatch = unstable_cache(
+  fetchCurrentPatchUncached,
+  ['browse-current-patch'],
+  { revalidate: 300, tags: ['browse-current-patch'] }
+)
+
 // sequences: null means "the server could not fetch this", which makes the page omit every
 // initial-* prop so BrowseContent degrades to the client fetch it does today. An empty array
 // would instead render the permanent "No sequences found" empty state.
 export async function fetchBrowsePage(filters: SequenceFilters): Promise<BrowsePageData> {
   try {
     const supabase = createPublicClient()
-    const [listing, config, availablePatches] = await Promise.all([
+    const [listing, currentPatch, availablePatches] = await Promise.all([
       buildBrowseQuery(supabase, filters),
-      supabase.from('site_config').select('current_patch').single(),
-      fetchAvailablePatches(supabase),
+      getCachedCurrentPatch(),
+      getCachedAvailablePatches(),
     ])
 
     if (listing.error) {
@@ -58,7 +84,7 @@ export async function fetchBrowsePage(filters: SequenceFilters): Promise<BrowseP
             return {
               sequences: (clamped.data ?? []) as Sequence[],
               count: clamped.count ?? 0,
-              currentPatch: config.data?.current_patch ?? null,
+              currentPatch,
               availablePatches,
             }
           }
@@ -70,7 +96,7 @@ export async function fetchBrowsePage(filters: SequenceFilters): Promise<BrowseP
     return {
       sequences: (listing.data ?? []) as Sequence[],
       count: listing.count ?? 0,
-      currentPatch: config.data?.current_patch ?? null,
+      currentPatch,
       availablePatches,
     }
   } catch {
