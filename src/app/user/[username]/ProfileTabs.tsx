@@ -9,7 +9,13 @@ import {
 } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
-import { sanitizeAvatarUrl, sanitizeBannerUrl } from '@/lib/url-safety'
+import {
+  allowedUploadExtension,
+  cssUrl,
+  sanitizeAvatarUrl,
+  sanitizeBannerUrl,
+  UPLOAD_EXTENSION_REJECTED_MESSAGE,
+} from '@/lib/url-safety'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import type { ViewTrendPoint, ActivityItem } from '@/lib/creator-dashboard'
 
@@ -976,6 +982,11 @@ function SettingsTab({ profile, publishedSequences }: {
 
   const [bannerUrl, setBannerUrl] = useState<string | null>(profile.banner_url)
   const safeBannerUrl = sanitizeBannerUrl(bannerUrl)
+  // Same F7.1 fix as user/[username]/page.tsx. This copy is owner-only, so it
+  // was self-inflicted rather than reachable by a visitor -- fixed anyway,
+  // because leaving one of two identical sinks quoted and the other not is how
+  // the unquoted shape gets copied forward into a third.
+  const bannerCss = cssUrl(safeBannerUrl)
   const [uploadingBanner, setUploadingBanner] = useState(false)
   const [bannerSaved, setBannerSaved] = useState(false)
 
@@ -1069,9 +1080,15 @@ function SettingsTab({ profile, publishedSequences }: {
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    const ext = allowedUploadExtension(file.name, file.type)
+    if (!ext) {
+      alert(UPLOAD_EXTENSION_REJECTED_MESSAGE)
+      e.target.value = ''
+      return
+    }
+
     setUploadingAvatar(true)
 
-    const ext = file.name.split('.').pop()
     const path = `${profile.id}.${ext}`
 
     const { error: uploadError } = await supabase.storage
@@ -1097,9 +1114,15 @@ function SettingsTab({ profile, publishedSequences }: {
   async function handleBannerUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    const ext = allowedUploadExtension(file.name, file.type)
+    if (!ext) {
+      alert(UPLOAD_EXTENSION_REJECTED_MESSAGE)
+      e.target.value = ''
+      return
+    }
+
     setUploadingBanner(true)
 
-    const ext = file.name.split('.').pop()
     const path = `${profile.id}.${ext}`
 
     const { error: uploadError } = await supabase.storage
@@ -1528,7 +1551,7 @@ function SettingsTab({ profile, publishedSequences }: {
           width: '100%',
           height: 120,
           borderRadius: 'var(--radius-md)',
-          background: safeBannerUrl ? `center / cover no-repeat url(${safeBannerUrl})` : 'var(--bg-tertiary)',
+          background: bannerCss ? `center / cover no-repeat ${bannerCss}` : 'var(--bg-tertiary)',
           border: '0.5px solid var(--border-strong)',
           marginBottom: 14,
           display: safeBannerUrl ? 'block' : 'flex',
