@@ -1,6 +1,12 @@
 import zlib from "node:zlib";
 import { CborReader } from "./emsDecoder";
 import type { ExportFormat } from "./types";
+import {
+  assertEncodedExportWithinLimit,
+  EXPORT_TOO_LARGE_MESSAGE,
+  INFLATE_LIMITS,
+  isOutputLimitError
+} from "./limits";
 
 // Prefix constants matching GRIP-EMS Data/Defaults.lua + Import/Serialization.lua.
 export const PREFIXES: Record<ExportFormat, string> = {
@@ -79,10 +85,14 @@ export function getPrefixLength(format: ExportFormat): number {
 }
 
 export function inflateCompressedPayload(compressed: Buffer): Buffer {
+  // All three attempts carry the output cap, not just the first. A cap on
+  // inflateRawSync alone is bypassed by any payload that fails raw inflation
+  // and succeeds as a zlib or gzip stream, which is exactly what the fallback
+  // chain exists to accept.
   const attempts = [
-    () => zlib.inflateRawSync(compressed),
-    () => zlib.inflateSync(compressed),
-    () => zlib.unzipSync(compressed)
+    () => zlib.inflateRawSync(compressed, INFLATE_LIMITS),
+    () => zlib.inflateSync(compressed, INFLATE_LIMITS),
+    () => zlib.unzipSync(compressed, INFLATE_LIMITS)
   ];
 
   let lastError: unknown;
@@ -90,6 +100,16 @@ export function inflateCompressedPayload(compressed: Buffer): Buffer {
     try {
       return attempt();
     } catch (error) {
+      // FAIL FAST ON THE CAP, and this is load-bearing rather than an
+      // optimisation. Without it, a payload refused by attempt one for being
+      // too large goes on to fail attempts two and three for a WRONG HEADER,
+      // lastError ends up holding the header error, and the caller reports a
+      // corrupt paste instead of a refused one. The cap would still hold and
+      // nothing could prove it did. It also stops a bomb being inflated up to
+      // the ceiling three times over.
+      if (isOutputLimitError(error)) {
+        throw new Error(EXPORT_TOO_LARGE_MESSAGE);
+      }
       lastError = error;
     }
   }
@@ -100,6 +120,11 @@ export function inflateCompressedPayload(compressed: Buffer): Buffer {
 // Strip a known prefix, base64-decode, inflate, and CBOR-decode.
 export function decodeCborExport(input: unknown, format?: ExportFormat): unknown {
   const cleaned = cleanExportCode(input);
+
+  // Before the format is even resolved. This is the only guard that acts before
+  // any allocation, so it goes as early as the cleaned string exists.
+  assertEncodedExportWithinLimit(cleaned);
+
   const detected = format || detectExportFormat(cleaned);
 
   if (!detected) {
@@ -122,6 +147,11 @@ export function decodeCborExport(input: unknown, format?: ExportFormat): unknown
   try {
     inflated = inflateCompressedPayload(compressed);
   } catch (error) {
+    // A refusal for size must not be reported as a corrupt payload. Everything
+    // else keeps the message it always had.
+    if (error instanceof Error && error.message === EXPORT_TOO_LARGE_MESSAGE) {
+      throw error;
+    }
     throw new Error(`The ${detected} export payload could not be inflated.`);
   }
 

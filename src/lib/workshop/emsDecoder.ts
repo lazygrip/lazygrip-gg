@@ -1,5 +1,11 @@
 import zlib from "node:zlib";
 import type { DecodeResult } from "./types";
+import {
+  assertEncodedExportWithinLimit,
+  EXPORT_TOO_LARGE_MESSAGE,
+  INFLATE_LIMITS,
+  isOutputLimitError
+} from "./limits";
 import { translateSpellTokens } from "./spellCatalog";
 import { normalizeResetModifiers } from "./gripResetModifiers";
 import { findTalentStringInComments, stripTalentFromText, parseTalentImportHeader } from "./talentExtract";
@@ -78,6 +84,11 @@ function decodeEMSExport(input: unknown): DecodeResult {
     throw new Error("Paste a GRIP EMS export code first.");
   }
 
+  // Ahead of the prefix test on purpose. A size refusal is the cheapest answer
+  // this function can give, and it should not be reached only by input that has
+  // already proven it names a format we decode.
+  assertEncodedExportWithinLimit(cleaned);
+
   if (!EXPORT_PREFIX.test(cleaned)) {
     throw new Error("Expected an export code beginning with !EMS1! or !GRIP1!.");
   }
@@ -91,8 +102,11 @@ function decodeEMSExport(input: unknown): DecodeResult {
 
   let inflated;
   try {
-    inflated = zlib.inflateRawSync(compressed);
+    inflated = zlib.inflateRawSync(compressed, INFLATE_LIMITS);
   } catch (error) {
+    if (isOutputLimitError(error)) {
+      throw new Error(EXPORT_TOO_LARGE_MESSAGE);
+    }
     throw new Error("The export payload could not be inflated as GRIP EMS data.");
   }
 
