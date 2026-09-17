@@ -918,6 +918,37 @@ async function runDecode(exportString: string) {
       return
     }
 
+    // Audit F6. Two published sequences carried a null spec, and the count was
+    // RISING rather than static -- the audit found one, and a second
+    // (legaciers-boomkin-st-mt-sequence-mu5v79ml) joined it two days later. So
+    // the defect was never the two rows, it was that this form accepted a
+    // publish without a spec at all. Backfilling without this check would just
+    // have reset the counter.
+    //
+    // This is the publish path specifically: handleSubmit is what calls
+    // create_sequence_with_version, publish_draft_sequence and the collection
+    // insert. Draft autosave does NOT come through here, so a half-filled draft
+    // is still saveable, which is the point of drafts.
+    //
+    // Resolved against the selected CLASS rather than merely checked for
+    // non-empty, because form.spec_name survives a class change: pick Balance,
+    // switch Druid to Shaman, and the string is still 'Balance' while
+    // selectedSpec is undefined and p_spec_id goes null. That is the exact
+    // shape that produces a row with a spec_name and no spec_id, and a
+    // non-empty check would wave it through.
+    const publishSpec = WOW_CLASSES
+      .find(c => c.id === Number(form.class_id))
+      ?.specs.find(s => s.name === form.spec_name)
+
+    if (!publishSpec) {
+      setError(
+        form.spec_name
+          ? 'That spec does not belong to the selected class. Pick the spec again.'
+          : 'A spec is required to publish. Pick one before posting.'
+      )
+      return
+    }
+
     // Gate check before either submit path runs. The middleware in
     // src/middleware.ts already blocks incomplete-onboarding users from
     // reaching /post at all, so this is a backstop for a stale session or
