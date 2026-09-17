@@ -1,4 +1,10 @@
 import zlib from "node:zlib";
+import {
+  assertEncodedExportWithinLimit,
+  EXPORT_TOO_LARGE_MESSAGE,
+  INFLATE_LIMITS,
+  isOutputLimitError
+} from "./limits";
 import { CborReader } from "./emsDecoder";
 import { encodeCbor } from "./cborEncode";
 import { detectExportFormat, FORMAT_ERRORS } from "./serialization";
@@ -76,6 +82,8 @@ function decodeGSEExport(input: unknown): DecodeResult {
     throw new Error("Paste a GSE export code first.");
   }
 
+  assertEncodedExportWithinLimit(cleaned);
+
   const format = detectExportFormat(cleaned);
   if (format === "GSE3_ENCRYPTED") {
     throw new Error(FORMAT_ERRORS.GSE3_ENCRYPTED);
@@ -96,6 +104,9 @@ function decodeGSEExport(input: unknown): DecodeResult {
   try {
     inflated = decompressGSEPayload(compressed);
   } catch (error) {
+    if (error instanceof Error && error.message === EXPORT_TOO_LARGE_MESSAGE) {
+      throw error;
+    }
     throw new Error("The export payload could not be inflated as GSE3 data.");
   }
 
@@ -550,10 +561,14 @@ function resolveBlockKind(record: LooseRecord): string {
 }
 
 function decompressGSEPayload(compressed: Buffer): Buffer {
+  // Same shape and same reasoning as inflateCompressedPayload in
+  // serialization.ts: the cap goes on all three attempts, and an
+  // output-limit refusal exits immediately rather than being overwritten by the
+  // header errors the other two attempts would raise.
   const attempts = [
-    () => zlib.inflateRawSync(compressed),
-    () => zlib.inflateSync(compressed),
-    () => zlib.unzipSync(compressed)
+    () => zlib.inflateRawSync(compressed, INFLATE_LIMITS),
+    () => zlib.inflateSync(compressed, INFLATE_LIMITS),
+    () => zlib.unzipSync(compressed, INFLATE_LIMITS)
   ];
 
   let lastError;
@@ -561,6 +576,9 @@ function decompressGSEPayload(compressed: Buffer): Buffer {
     try {
       return attempt();
     } catch (error) {
+      if (isOutputLimitError(error)) {
+        throw new Error(EXPORT_TOO_LARGE_MESSAGE);
+      }
       lastError = error;
     }
   }
