@@ -102,13 +102,7 @@ src/
     changelog/, faq/, about/, privacy/, tos/, welcome/
     auth/                    # login, signup, callback, reset-password, confirm
     notifications/
-    api/
-      workshop/              # build, convert, decode, import, spells
-      decode-grip/           # standalone GRIP string decoder endpoint
-      comments/, sequences/  # edit/delete actions
-      relay/, relay-identity/, notify-discord/  # Discord bridge
-      admin/sequence-thread/
-      cron/patch-reminder/
+    api/                     # server routes backing the Workshop, comments, sequences, and Discord sync
   components/
     layout/, sequence/, browse/, auth/, editor/, guide/, ui/
   lib/
@@ -148,7 +142,7 @@ scripts/
 
 ## Open items
 
-- Admin moderation tools beyond the existing admin API route
+- Broader moderation tooling
 - `/browse` and `/browse/[slug]` are still fully dynamic and are the largest active CPU cost (tracked in [#24](https://github.com/lazygrip/lazygrip-gg/issues/24))
 - Wago.io-style P2P sharing integration
 
