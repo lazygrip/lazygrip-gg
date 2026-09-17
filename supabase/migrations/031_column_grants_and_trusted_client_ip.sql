@@ -26,11 +26,21 @@
 -- plpgsql does not catch at CREATE time, so it applied clean and would have
 -- thrown on the first real call.
 --
--- So: the column list below is intersected against information_schema rather
--- than named blind, and the outcome is checked with has_column_privilege
--- afterwards. A name that does not exist is skipped with a notice instead of
--- raising and rolling back the file. A column that was supposed to end up
--- revoked and did not raises loudly.
+-- So: the column list below is intersected against the catalog rather than
+-- named blind, and the outcome is then checked with has_column_privilege. An
+-- intended column the table does not have raises with its own name in the
+-- message; a must-stay-revoked column the table does not have is reported and
+-- not counted as verified; a column that was supposed to end up locked and did
+-- not raises loudly.
+--
+-- THE CATALOG IS pg_attribute AND NOT information_schema.columns, which matters
+-- more than it looks. information_schema.columns is PRIVILEGE-FILTERED: it
+-- returns only columns the current user owns or holds some privilege on. Read
+-- through it by any applier that is not the table owner, the column list comes
+-- back short, every assertion gated on that list silently skips the columns it
+-- could not see, and the migration reports green having verified nothing about
+-- them. A verifier that can be blinded by the privileges of whoever runs it is
+-- not a verifier. pg_attribute is not filtered.
 --
 -- This matters for a specific reason. The 2026-09-15 audit's proposed grant list
 -- named `discord_bridge_opted_out`, which 017:26 puts on public.profiles and NOT
@@ -61,21 +71,50 @@
 --
 -- WHAT WOULD MAKE THE FALLBACK WRONG, recorded so the next reader does not have
 -- to rediscover it. The rightmost element is the true peer only while exactly
--- one hop appends. If Supabase's chain ever grows a second hop, the rightmost
--- value becomes that hop's own address -- a constant -- and every caller
--- collapses into one throttle bucket. That fails toward OVER-throttling, which
--- is the safe direction for a counter, and cf-connecting-ip is checked first
--- precisely so the chain length stops mattering.
+-- one hop appends, and the chain can be wrong in BOTH directions:
+--
+--   GROWS a hop -- the rightmost value becomes that hop's own address, a
+--   constant, and every caller collapses into one throttle bucket. This fails
+--   toward OVER-throttling, which is the safe direction for a counter.
+--
+--   SHRINKS to nothing -- if a request reaches PostgREST with NO proxy having
+--   appended, the header holds one element and that element is whatever the
+--   caller sent, so the rightmost value is fully client-controlled and the
+--   failure is UNDER-throttling. That is the same direction as the bug being
+--   fixed. An earlier draft of this comment reasoned only about the growth case
+--   and implied the fallback was safe in general; it is not.
+--
+-- cf-connecting-ip is checked FIRST precisely because it is immune to both: it
+-- is a single value written by the edge, with no chain to be wrong about. The
+-- residual exposure is therefore exactly "a request path that reaches PostgREST
+-- without Cloudflare in front of it", which is worth one curl against the
+-- deployed RPC -- `X-Forwarded-For: spoofed` and no CF header -- before this is
+-- signed off as closing H6 rather than narrowing it.
 --
 -- 011 and 024 are NOT edited in place. They are applied history; a function is
 -- changed by superseding it. A from-scratch apply runs their versions and then
 -- this one, and ends in the right state.
 
+-- SECURITY INVOKER, deliberately, and this is a correction rather than an
+-- oversight. An earlier draft made this SECURITY DEFINER and revoked EXECUTE
+-- from PUBLIC. That combination has a failure mode that reports success:
+-- `create or replace function` does NOT change an existing function's owner, so
+-- if the live increment_view_count and increment_copy_count are owned by a
+-- different role than whoever applies this file, those two would keep running as
+-- their old owner while this brand-new function is owned by the applier -- and
+-- with EXECUTE revoked from PUBLIC the old owner has no grant, so every view
+-- increment starts failing with `permission denied for function
+-- request_client_ip` while the migration reports green.
+--
+-- Nothing is given up. The body reads two request headers out of a GUC and
+-- touches no table, so definer rights buy it nothing, and the GUC is readable by
+-- the caller anyway -- there is no privilege here to escalate and no data here to
+-- leak. EXECUTE is therefore granted to the roles that call it instead of being
+-- revoked, which removes the owner-mismatch class entirely.
 create or replace function public.request_client_ip()
 returns text
 language plpgsql
 stable
-security definer
 set search_path = public, pg_temp
 as $$
 declare
@@ -120,8 +159,7 @@ $$;
 comment on function public.request_client_ip() is
   'Returns the client IP as the edge reported it: cf-connecting-ip if present, otherwise the RIGHTMOST X-Forwarded-For element. Never the leftmost, which is client-supplied -- see supabase/supabase discussion 34647 for the reproduction. Null when no request headers are present (direct database connection). Callers must treat null as "unknown" and still throttle.';
 
-revoke all on function public.request_client_ip() from public, anon, authenticated;
-grant execute on function public.request_client_ip() to service_role;
+grant execute on function public.request_client_ip() to anon, authenticated, service_role;
 
 create or replace function public.increment_view_count(seq_id uuid)
 returns void
@@ -262,15 +300,41 @@ grant execute on function public.increment_copy_count(uuid) to anon, authenticat
 -- delta. Revoking the column without replacing the capability would have been a
 -- production regression wearing a security label.
 --
--- WHAT IT REFUSES, AND WHY THAT IS THE WHOLE FIX. H5's exploit is
--- create_draft_sequence (deliberately not rate limited, 007:130-133) N times,
--- then PATCH status to 'published' N times -- which skips the title, class_id
--- and grip_string checks, the slug reminting, and the creation of the
--- sequence_versions row, leaving current_version_id null. This function
--- therefore permits transitions ONLY between 'published' and 'private'. A
--- draft reaching 'published' still has to go through create_sequence_with_version,
+-- WHAT IT REFUSES. H5's exploit is create_draft_sequence (deliberately not rate
+-- limited, 007:130-133) N times, then PATCH status to 'published' N times --
+-- which skips the title, class_id and grip_string checks, the slug reminting,
+-- and the creation of the sequence_versions row, leaving current_version_id
+-- null. This function therefore permits transitions ONLY between 'published'
+-- and 'private'.
+--
+-- WHAT THIS DOES **NOT** CLOSE, stated here because an earlier draft of this
+-- comment claimed otherwise and the claim was wrong. It said a draft reaching
+-- 'published' "still has to go through create_sequence_with_version,
 -- publish_sequence_version or publish_draft_sequences_batch, which is where all
--- four gates live.
+-- four gates live." It does not. src/app/post/page.tsx:1079-1110 is a RAW
+-- BROWSER-CLIENT INSERT whose payload ends `status: 'published'`, and the
+-- code's own comment at :1094-1098 says so outright: "the one write on this
+-- page that is a raw table insert rather than an RPC ... it bypasses
+-- create_sequence_with_version entirely." So a published row can be created
+-- without ever being a draft, and no UPDATE grant can reach that.
+--
+-- WHAT STOPS IT FROM BEING UNLIMITED, since that is the part the severity turns
+-- on. The INSERT policy is NOT 002:194's bare `auth.uid() = author_id`; 007:531
+-- supersedes it with
+--
+--     with check (auth.uid() = author_id
+--                 and public.is_verified_poster(author_id)
+--                 and public.check_post_rate_limit(author_id))
+--
+-- so the raw insert path IS verified-poster gated and IS rate limited. What it
+-- genuinely skips is publish-time VALIDATION and the sequence_versions row --
+-- the null current_version_id state 028:12-17 describes -- not the rate limit.
+-- The remaining work is moving that one path onto an RPC, which is a change to
+-- post/page.tsx and not to a grant.
+--
+-- (Note that check_post_rate_limit only bites while the account is under 7 days
+-- old, 027:30-32. That is a separate pre-existing decision about what the limit
+-- should be, and it applies equally to every RPC path.)
 --
 -- WHY IT DOES NOT CALL check_post_rate_limit, which is the non-obvious half.
 -- That function has a SIDE EFFECT: on success it INSERTS into
@@ -282,9 +346,18 @@ grant execute on function public.increment_copy_count(uuid) to anon, authenticat
 -- refused. If the permitted transition set is ever widened to include it, the
 -- rate limit stops being optional and must be added in the same change.
 --
--- The invariant that makes this sound: 'private' is reachable only from
--- 'published' through this function, so anything private was once validly
--- published and carries a version row.
+-- AN INVARIANT AN EARLIER DRAFT ASSERTED AND THIS FILE CANNOT ENFORCE. It said
+-- "'private' is reachable only from 'published' through this function, so
+-- anything private was once validly published and carries a version row." That
+-- is false for the same reason as above: the raw insert at post/page.tsx can
+-- name any status, including 'private', so a private row need not ever have been
+-- published. The consequence is narrow but real -- INSERT 'private' followed by
+-- set_sequence_status(id, 'published') is a two-step publish that skips
+-- publish-time validation, and this function is what grants the second step --
+-- and it is bounded by the same 007:531 gates as a direct INSERT 'published',
+-- so it buys an attacker nothing they did not already have. It is written down
+-- rather than fixed here because the fix is the same one: put that insert path
+-- behind an RPC.
 --
 -- updated_at is deliberately NOT touched. See part 3.
 
@@ -372,6 +445,12 @@ grant execute on function public.set_sequence_status(uuid, text) to authenticate
 -- ownership-transfer hole. Column-level grants are the only mechanism that
 -- constrains which columns an RLS-permitted UPDATE may touch.
 --
+-- BOTH UPDATE AND INSERT ARE RE-GRANTED PER COLUMN, and an earlier draft of
+-- this file did only UPDATE. That closed forging a ranking key on an EXISTING
+-- row and left it wide open on a NEW one, because authenticated kept the
+-- default INSERT grant on all 40-odd columns and a forged new row ranks exactly
+-- as well as a forged existing one. Half of H4 is not H4.
+--
 -- WHY THERE IS NO updated_at TRIGGER, against the audit's suggestion. The
 -- audit proposed moving updated_at to a BEFORE UPDATE trigger once it came off
 -- the grant. It is not needed and it would have been actively harmful:
@@ -424,18 +503,43 @@ declare
     'attribution_acknowledged_at'
   ];
 
+  -- INSERT needs three columns UPDATE must not have. The raw collection-publish
+  -- insert at src/app/post/page.tsx:1079-1110 names author_id, slug and status
+  -- itself, so an INSERT grant without them turns a published collection into a
+  -- silent draft. They are safe to grant on INSERT and not on UPDATE for
+  -- different reasons each: author_id is pinned by 007:531's
+  -- `auth.uid() = author_id` check, slug is only ever minted once, and status on
+  -- INSERT is already gated by is_verified_poster and check_post_rate_limit in
+  -- that same policy -- where status on UPDATE had no gate at all, which is what
+  -- H5 was.
+  v_insert_extra text[] := array['author_id', 'slug', 'status'];
+
   v_existing text[];
   v_granting text[];
+  v_inserting text[];
   v_missing text[];
+  v_absent_sensitive text[];
+  v_verified integer := 0;
   v_col text;
 begin
-  select coalesce(array_agg(column_name::text), array[]::text[])
+  -- pg_attribute, NOT information_schema.columns, and the difference is a false
+  -- pass rather than a preference. information_schema.columns is
+  -- PRIVILEGE-FILTERED: it shows only columns the current user owns or holds some
+  -- privilege on. Read through it by any applier that is not the table owner or a
+  -- superuser, v_existing comes back as a SUBSET of the real column set -- and
+  -- since every assertion below gates on membership of v_existing, each unseen
+  -- sensitive column would be skipped and reported green. pg_attribute is not
+  -- filtered, so the verification below means what it says regardless of who runs
+  -- the file.
+  select coalesce(array_agg(attname::text), array[]::text[])
   into v_existing
-  from information_schema.columns
-  where table_schema = 'public' and table_name = 'sequences';
+  from pg_attribute
+  where attrelid = 'public.sequences'::regclass
+    and attnum > 0
+    and not attisdropped;
 
   if array_length(v_existing, 1) is null then
-    raise exception '031: public.sequences has no columns in information_schema -- refusing to grant blind.';
+    raise exception '031: public.sequences reports no columns in pg_attribute -- refusing to grant blind.';
   end if;
 
   select coalesce(array_agg(c), array[]::text[]) into v_granting
@@ -444,28 +548,71 @@ begin
   select coalesce(array_agg(c), array[]::text[]) into v_missing
   from unnest(v_intended) as c where not (c = any(v_existing));
 
+  -- NOW THAT THE CATALOG READ IS TRUSTWORTHY, A MISSING INTENDED COLUMN RAISES.
+  -- The first draft of this file downgraded it to a notice to defang the 026
+  -- failure mode, and that was the right instinct against the wrong risk: with a
+  -- privilege-filtered read, skipping was the only safe option, but with an
+  -- unfiltered one a name in this list that the table does not have means the
+  -- schema genuinely lacks a column authors are supposed to be able to edit.
+  -- Applying anyway would leave them unable to edit it, silently, which is worse
+  -- than refusing with the name in hand.
   if array_length(v_missing, 1) is not null then
-    -- A notice, not an exception. This is the 026 failure mode defanged: an
-    -- intended column that does not exist is reported and skipped rather than
-    -- rolling back every other statement in this file.
-    raise notice '031: skipping % intended column(s) absent from public.sequences: %',
+    raise exception '031: % intended column(s) do not exist on public.sequences: %. Either the column list is wrong or a migration is missing -- fix one of those rather than granting a narrower set silently.',
       array_length(v_missing, 1), array_to_string(v_missing, ', ');
   end if;
 
-  if array_length(v_granting, 1) is null then
-    raise exception '031: no intended column matched public.sequences -- refusing to leave the table with no author-writable columns.';
+  select coalesce(array_agg(c), array[]::text[]) into v_inserting
+  from unnest(v_granting || v_insert_extra) as c where c = any(v_existing);
+
+  -- The reverse direction stays a notice, because there is nothing to revoke from
+  -- a column that does not exist. It is reported rather than swallowed so the
+  -- count in the closing notice cannot overstate what was checked -- and it fires
+  -- today: copy_count is written by 024:97/:109/:120 and created by no migration
+  -- in this repo, which is M6's finding still open.
+  select coalesce(array_agg(c), array[]::text[]) into v_absent_sensitive
+  from unnest(v_must_stay_revoked) as c where not (c = any(v_existing));
+
+  if array_length(v_absent_sensitive, 1) is not null then
+    raise notice '031: % column(s) on the must-stay-revoked list do not exist and were not checked: %',
+      array_length(v_absent_sensitive, 1), array_to_string(v_absent_sensitive, ', ');
   end if;
 
   -- Order matters. Revoke first, then re-grant the narrow set, so there is no
   -- window in which both the table-level grant and the column grants are live.
-  execute 'revoke update on public.sequences from public';
-  execute 'revoke update on public.sequences from anon';
-  execute 'revoke update on public.sequences from authenticated';
+  -- A table-level REVOKE also drops the matching column-level privileges, so
+  -- nothing stale survives underneath.
+  execute 'revoke update, insert on public.sequences from public';
+  execute 'revoke update, insert on public.sequences from anon';
+  execute 'revoke update, insert on public.sequences from authenticated';
 
   execute format(
     'grant update (%s) on public.sequences to authenticated',
     (select string_agg(quote_ident(c), ', ' order by c) from unnest(v_granting) as c)
   );
+
+  -- INSERT IS GRANTED PER COLUMN TOO, and leaving it out was a real hole in the
+  -- first draft of this file. Revoking UPDATE on the counters closes forging them
+  -- on an EXISTING row and does nothing about forging them on a NEW one:
+  -- authenticated kept the default INSERT grant on all 40-odd columns, so one
+  -- insert could carry view_count, save_count, avg_score, rating_count,
+  -- comment_count, is_featured and updated_at at any value -- and for
+  -- browse-ranking inflation (browse-query.ts:38-46, including the default
+  -- updated_at sort) a forged new row is worth exactly as much as a forged
+  -- existing one. H4 was half closed.
+  execute format(
+    'grant insert (%s) on public.sequences to authenticated',
+    (select string_agg(quote_ident(c), ', ' order by c) from unnest(v_inserting) as c)
+  );
+
+  -- service_role keeps everything, and this is asserted rather than assumed. It
+  -- is the admin client and does its own authorization in the routes. The revokes
+  -- above name public, anon and authenticated only -- but if service_role's
+  -- privilege ever arrived VIA public rather than by a direct grant, the first
+  -- revoke would have taken it, and every createAdminClient write to sequences
+  -- (notify-discord/route.ts:505, admin/sequence-thread/route.ts:345, :626, :782)
+  -- would start failing with this migration reported green. Hence: re-grant here,
+  -- inside the block, where the verification below can see it.
+  execute 'grant update, insert on public.sequences to service_role';
 
   -- ------------------------------------------------------------------
   -- VERIFY THE OUTCOME. A grant that was issued is not a grant that holds.
@@ -473,10 +620,20 @@ begin
   -- because the view only reports rows where a currently enabled role is grantor
   -- or grantee, and this needs to be true regardless of who runs the migration.
   -- ------------------------------------------------------------------
+  -- Sensitive columns: no UPDATE, and no INSERT either except the three that
+  -- 007:531 gates. v_verified counts what was ACTUALLY checked rather than the
+  -- length of the list, because the closing notice must not claim to have
+  -- verified a column that does not exist.
   foreach v_col in array v_must_stay_revoked loop
-    if v_col = any(v_existing)
-       and has_column_privilege('authenticated', 'public.sequences', v_col, 'UPDATE') then
-      raise exception '031: authenticated still holds UPDATE on public.sequences.% after the revoke.', v_col;
+    if v_col = any(v_existing) then
+      if has_column_privilege('authenticated', 'public.sequences', v_col, 'UPDATE') then
+        raise exception '031: authenticated still holds UPDATE on public.sequences.% after the revoke.', v_col;
+      end if;
+      if not (v_col = any(v_insert_extra))
+         and has_column_privilege('authenticated', 'public.sequences', v_col, 'INSERT') then
+        raise exception '031: authenticated still holds INSERT on public.sequences.% -- a forged value on a new row ranks exactly as well as one on an existing row.', v_col;
+      end if;
+      v_verified := v_verified + 1;
     end if;
   end loop;
 
@@ -486,18 +643,27 @@ begin
     end if;
   end loop;
 
-  foreach v_col in array v_existing loop
-    if has_column_privilege('anon', 'public.sequences', v_col, 'UPDATE') then
-      raise exception '031: anon holds UPDATE on public.sequences.% -- it should hold none.', v_col;
+  foreach v_col in array v_inserting loop
+    if not has_column_privilege('authenticated', 'public.sequences', v_col, 'INSERT') then
+      raise exception '031: authenticated did NOT receive INSERT on public.sequences.% -- the collection publish path at post/page.tsx:1079 writes it.', v_col;
     end if;
   end loop;
 
-  raise notice '031: granted UPDATE on % column(s) to authenticated; % sensitive column(s) verified revoked; anon holds none.',
-    array_length(v_granting, 1), array_length(v_must_stay_revoked, 1);
-end $$;
+  foreach v_col in array v_existing loop
+    if has_column_privilege('anon', 'public.sequences', v_col, 'UPDATE')
+       or has_column_privilege('anon', 'public.sequences', v_col, 'INSERT') then
+      raise exception '031: anon holds UPDATE or INSERT on public.sequences.% -- it should hold neither.', v_col;
+    end if;
+    if not has_column_privilege('service_role', 'public.sequences', v_col, 'UPDATE')
+       or not has_column_privilege('service_role', 'public.sequences', v_col, 'INSERT') then
+      raise exception '031: service_role lost UPDATE or INSERT on public.sequences.% -- every admin-client write to this table would start failing.', v_col;
+    end if;
+  end loop;
 
--- service_role keeps everything. It is the admin client, it does its own
--- authorization in the routes, and eight of the nine createAdminClient call
--- sites were already doing so before this migration (the ninth was H1, closed
--- 2026-09-17).
-grant update on public.sequences to service_role;
+  raise notice '031: authenticated holds UPDATE on % column(s) and INSERT on %; % of % sensitive column(s) verified locked; anon holds none; service_role holds all % column(s).',
+    array_length(v_granting, 1),
+    array_length(v_inserting, 1),
+    v_verified,
+    array_length(v_must_stay_revoked, 1),
+    array_length(v_existing, 1);
+end $$;
