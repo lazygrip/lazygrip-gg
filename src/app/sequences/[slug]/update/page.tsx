@@ -95,7 +95,13 @@ export default function UpdateSequencePage() {
       .from('sequences')
       // !sequences_author_id_fkey: required as of migration 030 -- see
       // sequence-server.ts's fetchSequencePage for the full explanation.
-      .select('*, author:profiles!sequences_author_id_fkey(*)')
+      // This page reads NOTHING off the embed -- every `author` reference in
+      // the file is sequences.author_id, the column, not the joined row
+      // (verified by whole-file grep 2026-09-17). Kept as `(username)` rather
+      // than dropped entirely so this query keeps the same shape as the other
+      // sequence fetches; it was `(*)` before migration 034 made select=* on
+      // profiles a permission error.
+      .select('*, author:profiles!sequences_author_id_fkey(username)')
       .eq('slug', slug)
       .eq('status', 'published')
       .single()

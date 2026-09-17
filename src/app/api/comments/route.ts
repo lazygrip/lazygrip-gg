@@ -78,7 +78,14 @@ export async function POST(req: NextRequest) {
         body,
         ...(parentId ? { parent_id: parentId } : {}),
       })
-      .select('*, author:profiles(*)')
+      // `author:profiles(*)` until 2026-09-17, narrowed for migration 034.
+      // The comment two lines down already said this row's wildcard should not
+      // be leaned on -- "leaning on a wildcard select to carry a field the
+      // privacy rules depend on is exactly the coupling that breaks silently
+      // when somebody narrows the select later" -- and this is that narrowing,
+      // done deliberately. Nothing here regressed: this route never read the
+      // embed, and the browser only renders author.username.
+      .select('*, author:profiles(username)')
       .single()
 
     if (insertError || !comment) {

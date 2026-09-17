@@ -87,7 +87,15 @@ export default async function UserProfilePage(props: Props) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, username, display_name, avatar_url, avatar_color, bio, battletag, created_at, banner_url, social_links, featured_sequence_id, discord_bridge_opted_out')
+    // discord_bridge_opted_out is NOT in this list any more, and its absence is
+    // the point. This query runs as `anon` for a signed-out visitor, and audit
+    // M14 is that every profile column was anon-readable. Migration 034 takes
+    // this one off the anon SELECT grant, so naming it here would make
+    // .single() return null for every visitor and send every public profile
+    // page to notFound(). The value is owner-only anyway -- it seeds the
+    // Settings tab and nothing else -- so it is fetched below, once, and only
+    // when the viewer owns the profile.
+    .select('id, username, display_name, avatar_url, avatar_color, bio, battletag, created_at, banner_url, social_links, featured_sequence_id')
     .eq('username', params.username)
     .single()
 
@@ -131,6 +139,22 @@ export default async function UserProfilePage(props: Props) {
   // view on every profile that isn't the viewer's own.
   const viewTrend = isOwnProfile ? await fetchCreatorViewTrend(supabase, seqs.map(s => s.id)) : []
   const activity = isOwnProfile ? await fetchCreatorActivity(supabase, profile.id) : []
+
+  // Owner-only, for the same reason the two reads above are: this column is off
+  // the anon SELECT grant as of migration 034, so a visitor asking for it gets
+  // a 42501 rather than a value. Skipping the query entirely for a visitor is
+  // both faster and the difference between "not fetched" and "fetched and
+  // denied". Defaults to false when the read is skipped or fails, which matches
+  // the column's own `not null default false` from 017:26.
+  let bridgeOptedOut = false
+  if (isOwnProfile) {
+    const { data: ownSettings } = await supabase
+      .from('profiles')
+      .select('discord_bridge_opted_out')
+      .eq('id', profile.id)
+      .single()
+    bridgeOptedOut = ownSettings?.discord_bridge_opted_out === true
+  }
 
   // Owner-only tabs folded in from the old /profile page (2026-09-14
   // consolidation) -- Drafts, Saved, and private sequences (merged inline
@@ -412,7 +436,7 @@ export default async function UserProfilePage(props: Props) {
           banner_url: profile.banner_url,
           social_links: profile.social_links,
           featured_sequence_id: profile.featured_sequence_id,
-          discord_bridge_opted_out: profile.discord_bridge_opted_out === true,
+          discord_bridge_opted_out: bridgeOptedOut,
         } : null}
       />
     </div>
