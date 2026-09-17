@@ -6,6 +6,28 @@ const nextConfig = {
       { protocol: 'https', hostname: 'render.worldofwarcraft.com' },
     ],
   },
+  // Deployment hostnames (*.vercel.app) serve byte-identical pages to lazygrip.net
+  // and were being crawled and indexed alongside it. Every page already emits a
+  // cross-domain canonical pointing at lazygrip.net, so this is consolidation
+  // rather than rescue, but a crawlable duplicate still spends crawl budget and
+  // can surface in results under the wrong hostname.
+  //
+  // This has to be a header rather than a robots.txt Disallow: a noindex is only
+  // obeyed if the crawler is allowed to fetch the page and read it. robots.txt on
+  // the deployment host therefore stays Allow: / on purpose.
+  //
+  // The rule is host-scoped, so it cannot reach lazygrip.net. Preview deploys get
+  // generated hostnames (lazygrip-gg-<hash>-<scope>.vercel.app), which is why this
+  // matches the whole *.vercel.app suffix rather than one literal host.
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: '(?<deployHost>.*\\.vercel\\.app)' }],
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
+    ]
+  },
   async redirects() {
     return [
       // Old singular sequence URLs -> canonical plural route (recovers indexed 404 links)
