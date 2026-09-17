@@ -50,7 +50,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (current === undefined || updated > current) map.set(key, updated)
   }
 
+  // Audit F2: /browse/pvp was submitted for indexing with zero sequences behind
+  // it, so Google was being offered a no-results page. LIVE-VERIFIED
+  // 2026-09-17: 87 published sequences, mythic_plus 82, raid 4, solo 1, **pvp
+  // 0**, and /browse/pvp was one of the 143 URLs in sitemap.xml.
+  //
+  // These are COUNTED SEPARATELY from newestBy*, and that is the whole point of
+  // them existing rather than reusing `newestByContentType.has(...)`. trackNewest
+  // skips any row whose updated_at does not parse -- see the `continue` below --
+  // so a hub whose every sequence carries an unusable timestamp would have no
+  // map entry while genuinely having content. Gating on the timestamp map would
+  // then drop a populated hub out of the sitemap for a reason that has nothing
+  // to do with whether it is populated. Membership here means "at least one
+  // published sequence", nothing else.
+  const populatedClasses = new Set<number>()
+  const populatedContentTypes = new Set<string>()
+
   for (const seq of sequences ?? []) {
+    if (typeof seq.class_id === 'number') populatedClasses.add(seq.class_id)
+    if (typeof seq.content_type === 'string' && seq.content_type) {
+      populatedContentTypes.add(seq.content_type)
+    }
+
     const updated = parseUpdated(seq.updated_at)
     if (updated === null) continue
     trackNewest(newestByClass, seq.class_id, updated)
@@ -141,23 +162,38 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Class and content-type hubs, generated from wow-data so they cannot drift
   // from the routes that /browse/[slug] actually serves. Both are listings, so
-  // a per-hub timestamp is meaningful; hubs with no published sequences yet
-  // fall back to the site-wide listing timestamp.
-  const classHubPages: MetadataRoute.Sitemap = WOW_CLASSES.map(wowClass => ({
-    url: `https://lazygrip.net/browse/${wowClass.slug}`,
-    lastModified: newestByClass.get(wowClass.id) ?? listingUpdated,
-    changeFrequency: 'daily' as const,
-    priority: 0.8,
-  }))
+  // a per-hub timestamp is meaningful. The `?? listingUpdated` fallback below
+  // no longer covers "hub with no sequences" -- that case is filtered out
+  // entirely now -- it covers only a populated hub whose every updated_at
+  // failed to parse.
+  //
+  // An empty hub is dropped rather than submitted. The routes still exist and
+  // still render -- /browse/pvp is reachable, linked from the homepage footer,
+  // and comes back into the sitemap by itself on the day someone publishes a
+  // PvP sequence. What changes is that it is no longer OFFERED to a crawler as
+  // a page worth indexing while it has nothing on it.
+  const classHubPages: MetadataRoute.Sitemap = WOW_CLASSES
+    .filter(wowClass => populatedClasses.has(wowClass.id))
+    .map(wowClass => ({
+      url: `https://lazygrip.net/browse/${wowClass.slug}`,
+      lastModified: newestByClass.get(wowClass.id) ?? listingUpdated,
+      changeFrequency: 'daily' as const,
+      priority: 0.8,
+    }))
 
   // Keyed on the DB value ('mythic_plus'), addressed by the URL slug
-  // ('mythic-plus'); the two differ.
-  const contentTypeHubPages: MetadataRoute.Sitemap = CONTENT_TYPES.map(contentType => ({
-    url: `https://lazygrip.net/browse/${contentType.slug}`,
-    lastModified: newestByContentType.get(contentType.value) ?? listingUpdated,
-    changeFrequency: 'daily' as const,
-    priority: 0.8,
-  }))
+  // ('mythic-plus'); the two differ. This is the one F2 named: pvp was the only
+  // empty hub when it was measured. The class hubs get the identical gate even
+  // though all 13 are populated today, because it is one predicate and the
+  // alternative is the same defect waiting for the first class to go empty.
+  const contentTypeHubPages: MetadataRoute.Sitemap = CONTENT_TYPES
+    .filter(contentType => populatedContentTypes.has(contentType.value))
+    .map(contentType => ({
+      url: `https://lazygrip.net/browse/${contentType.slug}`,
+      lastModified: newestByContentType.get(contentType.value) ?? listingUpdated,
+      changeFrequency: 'daily' as const,
+      priority: 0.8,
+    }))
 
   const additionalStaticPages: MetadataRoute.Sitemap = [
     {
@@ -170,6 +206,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: 'https://lazygrip.net/workshop',
       lastModified: CONTENT_UPDATED,
       changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      // Audit PART 7.8: /creators shipped in the 029/030 delta with its own
+      // metadata, canonical and `revalidate = 1800`, and was never added here.
+      // Confirmed absent from the live sitemap's 143 URLs on 2026-09-17. It is
+      // a real listing page linked from the header and the homepage, so it gets
+      // the listing timestamp rather than CONTENT_UPDATED -- its content is the
+      // creator ranking, which moves whenever a sequence does.
+      url: 'https://lazygrip.net/creators',
+      lastModified: listingUpdated,
+      changeFrequency: 'daily',
       priority: 0.7,
     },
     {
@@ -215,13 +263,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     profilePages = (profiles ?? [])
       .filter(profile => typeof profile.username === 'string' && profile.username.length > 0)
       .map(profile => ({
-        // Percent-encoded one segment at a time. Nothing constrains the
-        // character set of a username on the way in (signup enforces a 3 char
-        // minimum, the profile save only checks uniqueness) and one live
-        // username already begins with a dot, so a name carrying a space or a
-        // '#' is one signup away from putting an invalid <loc> in here. The
-        // /user/<username> canonical and og:url encode the same way, so the
-        // sitemap entry and the page still agree.
+        // Percent-encoded one segment at a time, and the reason is NOT the one
+        // this comment used to give. It said "nothing constrains the character
+        // set of a username on the way in ... the profile save only checks
+        // uniqueness", so "a name carrying a space or a '#' is one signup away
+        // from putting an invalid <loc> in here." That was wrong when it was
+        // written: 008:76-78 adds profiles_username_format, which requires
+        // `^[A-Za-z0-9_.-]{2,32}$`, so a space and a '#' are both rejected at
+        // the database. A reader chasing that sentence would go looking for a
+        // hole that a constraint already closed.
+        //
+        // The encoding stays, for two real reasons. That constraint is NOT
+        // VALID, which exempts every row that existed before 008 -- including
+        // the one live username beginning with a dot -- so historical rows are
+        // not covered by it. And the /user/<username> canonical and og:url
+        // encode the same way, so encoding here is what keeps the sitemap entry
+        // and the page agreeing rather than a defence in its own right.
         url: `https://lazygrip.net/user/${encodeURIComponent(profile.username)}`,
         lastModified: newestByAuthor.get(profile.id) ?? listingUpdated,
         changeFrequency: 'weekly' as const,
