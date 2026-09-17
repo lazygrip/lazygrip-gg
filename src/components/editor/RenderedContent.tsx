@@ -1,10 +1,30 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useMemo, useSyncExternalStore } from 'react'
 import DOMPurify from 'dompurify'
 import { stripHtml } from '@/lib/html-text'
 
 interface RenderedContentProps {
   html: string
+}
+
+// "Are we on the client yet" is a fact about the environment, not component state.
+// Nothing ever changes it after hydration, so the subscribe callback has nothing to
+// subscribe to; useSyncExternalStore is here for its server snapshot, which is the
+// only thing that distinguishes the two renders.
+const NEVER_CHANGES = () => () => {}
+const ON_CLIENT = () => true
+const ON_SERVER = () => false
+
+const SANITIZE_OPTIONS = {
+  ALLOWED_TAGS: [
+    'p', 'br', 'strong', 'em', 's', 'u',
+    'h2', 'h3', 'h4',
+    'ul', 'ol', 'li',
+    'blockquote', 'code', 'pre',
+    'a', 'hr', 'span',
+  ],
+  ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
+  ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
 }
 
 export default function RenderedContent({ html }: RenderedContentProps) {
@@ -19,21 +39,16 @@ export default function RenderedContent({ html }: RenderedContentProps) {
   //
   // clean stays null until mounted, so the first client render matches the server byte for
   // byte and hydration is clean.
-  const [clean, setClean] = useState<string | null>(null)
-
-  useEffect(() => {
-    setClean(DOMPurify.sanitize(html, {
-      ALLOWED_TAGS: [
-        'p', 'br', 'strong', 'em', 's', 'u',
-        'h2', 'h3', 'h4',
-        'ul', 'ol', 'li',
-        'blockquote', 'code', 'pre',
-        'a', 'hr', 'span',
-      ],
-      ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
-      ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
-    }))
-  }, [html])
+  //
+  // This was state written from a mount effect until 2026-09-17. Sanitizing is a
+  // pure function of `html`, so it belongs in the render rather than in an effect
+  // that assigns its result to state: same output, one render pass instead of two,
+  // and the sanitized string can no longer lag a prop change by a frame.
+  const onClient = useSyncExternalStore(NEVER_CHANGES, ON_CLIENT, ON_SERVER)
+  const clean = useMemo(
+    () => (onClient ? DOMPurify.sanitize(html, SANITIZE_OPTIONS) : null),
+    [onClient, html],
+  )
 
   if (!html || html.trim() === '' || html === '<p></p>') {
     return <p style={{ color: 'var(--text-muted, #9ca3af)', fontStyle: 'italic' }}>No description provided.</p>

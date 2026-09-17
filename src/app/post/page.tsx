@@ -233,27 +233,32 @@ function PostForm() {
   // more than one draft exists, since with exactly one we resume it directly
   // without asking. Never touched when isEditMode is true.
   const [pendingDrafts, setPendingDrafts] = useState<Array<{ id: string; title: string; class_name: string; updated_at: string }> | null>(null)
-  const [checkingDrafts, setCheckingDrafts] = useState(!isEditMode)
+  // Not checking on ?new=1: the person has already said they want a blank form, so
+  // there is no ambient scan to wait for and no spinner to show. This is the piece
+  // the old forceNew reset block set by hand; as initial state it is right from the
+  // first render instead of one render later.
+  const [checkingDrafts, setCheckingDrafts] = useState(!isEditMode && !forceNew)
 
+  // STARTING A NEW SEQUENCE RESETS THIS FORM BY REMOUNTING IT, NOT BY LISTING
+  // WHAT TO CLEAR.
+  //
+  // PostForm does not remount on a same-route navigation -- going from
+  // /post?draftId=X to /post?new=1 reuses the component and only re-runs effects
+  // -- so this block used to clear each piece of loaded state by hand. That list
+  // was wrong once already: collection state was added to it later, after
+  // resumeDraft started populating it, and any future state added to this
+  // component is wrong by default until someone remembers this block.
+  //
+  // PostPage now gives PostForm a key derived from ?new=, so React discards the
+  // whole component on that transition and every piece of state goes back to its
+  // initial value at once. `checkingDrafts` starts false when forceNew is set,
+  // which is the only thing the old block did that initial state could not.
+  //
+  // The reset also stops being a synchronous setState inside an effect, which is
+  // what react-hooks/set-state-in-effect reported here.
   useEffect(() => {
     if (editId) return
-    if (forceNew) {
-      // PostForm doesn't remount on a same-route navigation (e.g. coming
-      // from /post?draftId=X to /post?new=1) -- Next.js reuses the component
-      // and only re-runs effects, so anything already loaded into state from
-      // a previous draft has to be explicitly cleared here, not just skipped.
-      // Includes collection state now that resumeDraft can populate it --
-      // same stale-state risk this block was originally written to close.
-      setForm(EMPTY_FORM)
-      setDraftId(null)
-      draftIdRef.current = null
-      setDecodedSteps(null)
-      setPendingDrafts(null)
-      setCollectionSequences(null)
-      setCollectionTitle('')
-      setCheckingDrafts(false)
-      return
-    }
+    if (forceNew) return
 
     async function checkForDrafts() {
       setCheckingDrafts(true)
@@ -2054,9 +2059,22 @@ export default function PostPage() {
         <p style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-base)' }}>Loading...</p>
       </div>
     }>
-      <PostForm />
+      <KeyedPostForm />
     </Suspense>
   )
+}
+
+// Keys PostForm on ?new=, which is what makes "start a new sequence" a remount
+// rather than a list of things to clear. See the long note above the draft-recovery
+// effect in PostForm for why that list was a liability.
+//
+// Only ?new= is in the key, deliberately. ?edit= and ?draftId= transitions are
+// handled by that same effect loading the requested row over the current state, and
+// remounting on those would also discard an autosave timer mid-flight. This key
+// changes on exactly the transition the old reset block existed for.
+function KeyedPostForm() {
+  const searchParams = useSearchParams()
+  return <PostForm key={searchParams.get('new') ?? ''} />
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

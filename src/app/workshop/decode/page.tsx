@@ -29,7 +29,6 @@ interface DecodeResult {
 
 function VersionStepView({ version }: { version: DecodeResult['sequences'][0]['versions'][0] }) {
   const hasActions = Array.isArray(version.actions) && version.actions.length > 0
-  const counter = { n: 0 }
 
   return (
     <div style={{ padding: '14px 16px' }}>
@@ -53,7 +52,7 @@ function VersionStepView({ version }: { version: DecodeResult['sequences'][0]['v
       )}
 
       {hasActions
-        ? <ActionTree nodes={version.actions} counter={counter} />
+        ? <ActionTree nodes={version.actions} />
         : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {version.steps.map((step: any, i: number) => (
@@ -74,12 +73,22 @@ function VersionStepView({ version }: { version: DecodeResult['sequences'][0]['v
 export default function WorkshopDecodePage() {
   const [loading, setLoading] = useState(true)
   const [input, setInput] = useState('')
-  const [result, setResult] = useState<DecodeResult | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  // THE OUTCOME IS KEYED TO THE CODE THAT PRODUCED IT.
+  //
+  // `result` and `error` used to be two independent pieces of state, which the
+  // debounce effect then had to keep in step with the textarea by calling
+  // setResult(null) and setError(null) in its own body -- a synchronous setState
+  // inside an effect, and the reason react-hooks/set-state-in-effect fired here.
+  //
+  // Storing the code alongside the outcome removes the bookkeeping instead of
+  // moving it: the decode of text that is no longer in the box simply stops
+  // matching, so clearing is a comparison rather than a write. It also closes a
+  // race nothing guarded before -- two decodes in flight could previously land out
+  // of order and leave the earlier one's result on screen.
+  const [decoded, setDecoded] = useState<{ code: string; result: DecodeResult | null; error: string | null } | null>(null)
   const [decoding, setDecoding] = useState(false)
   const [copiedTalent, setCopiedTalent] = useState<string | null>(null)
   const router = useRouter()
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -89,10 +98,15 @@ export default function WorkshopDecodePage() {
     })
   }, [router])
 
+  const code = input.trim()
+  // Only the outcome of the code currently in the box counts as this render's
+  // result. Anything older is a decode of text the person has already replaced.
+  const current = decoded && decoded.code === code ? decoded : null
+  const result = current?.result ?? null
+  const error = current?.error ?? null
+
   useEffect(() => {
-    if (timerRef.current) clearTimeout(timerRef.current)
-    const code = input.trim()
-    if (!code) { setResult(null); setError(null); return }
+    if (!code) return
     // No prefix pre-check here -- the server already accepts !EMS1!, !GRIP1!,
     // !GSE3!, !FRG1!, !GEMSCP1!, and now bare macro lines with no envelope at
     // all, and returns its own clear error for anything it truly can't read.
@@ -100,19 +114,18 @@ export default function WorkshopDecodePage() {
     // export" error on valid FRG1/GEMSCP1 input, and would have done the same
     // to valid plain text, before the Decode button even got a chance to
     // prove it actually works.
-    setError(null)
-    timerRef.current = setTimeout(() => decode(code), 350)
-    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
-  }, [input])
+    const timer = setTimeout(() => decode(code), 350)
+    return () => clearTimeout(timer)
+  }, [code])
 
-  async function decode(code: string) {
+  async function decode(codeToDecode: string) {
     setDecoding(true)
     try {
-      const res = await fetch('/api/workshop/decode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) })
+      const res = await fetch('/api/workshop/decode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: codeToDecode }) })
       const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Failed to decode.'); setResult(null) }
-      else { setResult(data); setError(null) }
-    } catch { setError('Network error. Please try again.') }
+      if (!res.ok) setDecoded({ code: codeToDecode, result: null, error: data.error || 'Failed to decode.' })
+      else setDecoded({ code: codeToDecode, result: data, error: null })
+    } catch { setDecoded({ code: codeToDecode, result: null, error: 'Network error. Please try again.' }) }
     finally { setDecoding(false) }
   }
 
@@ -179,7 +192,7 @@ export default function WorkshopDecodePage() {
               {decoding ? 'Decoding...' : 'Decode'}
             </button>
             <button
-              onClick={() => { setInput(''); setResult(null); setError(null) }}
+              onClick={() => setInput('')}
               style={{
                 padding: '8px 16px', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)',
                 border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)',
