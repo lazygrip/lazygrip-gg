@@ -117,6 +117,17 @@ type SettingsProfileData = {
 
 type TabKey = 'sequences' | 'comments' | 'dashboard' | 'drafts' | 'saved' | 'settings'
 
+// Which tab a ?tab= value asks for. Anything unrecognised, and every owner-only
+// tab requested on someone else's profile, falls back to Sequences -- so a stale
+// or hand-edited link lands somewhere sensible rather than on an empty panel.
+function tabFromUrl(tab: string | null, isOwnProfile: boolean): TabKey {
+  if (tab === 'comments') return 'comments'
+  if (isOwnProfile && (tab === 'dashboard' || tab === 'drafts' || tab === 'saved' || tab === 'settings')) {
+    return tab
+  }
+  return 'sequences'
+}
+
 interface ProfileTabsProps {
   seqs: SequenceRowData[]
   comments: CommentRowData[]
@@ -159,22 +170,35 @@ function ProfileTabsInner({
   const searchParams = useSearchParams()
   const supabase = createClient()
 
-  const [activeTab, setActiveTab] = useState<TabKey>('sequences')
-  const [chatOpen, setChatOpen] = useState(false)
-
   // Reads ?tab= from the URL, same as the old /profile page did -- this is
   // what keeps Header.tsx's 10 existing /profile?tab=X links (now forwarded
   // through the /profile redirect shim) and both OAuth redirectTo targets
   // landing on the right tab here instead of always defaulting to Sequences.
-  useEffect(() => {
-    const tab = searchParams.get('tab')
-    if (tab === 'comments') setActiveTab('comments')
-    else if (tab === 'dashboard' && isOwnProfile) setActiveTab('dashboard')
-    else if (tab === 'drafts' && isOwnProfile) setActiveTab('drafts')
-    else if (tab === 'saved' && isOwnProfile) setActiveTab('saved')
-    else if (tab === 'settings' && isOwnProfile) setActiveTab('settings')
-    else setActiveTab('sequences')
-  }, [searchParams, isOwnProfile])
+  const urlTab = tabFromUrl(searchParams.get('tab'), isOwnProfile)
+
+  // THE URL DECIDES THE TAB ON ARRIVAL; A CLICK DECIDES IT AFTERWARDS.
+  //
+  // This was a mount effect calling setActiveTab, which meant the first render
+  // always painted Sequences and the right tab appeared one render later --
+  // visible as a flash of the wrong tab on every /user/x?tab=settings link, and on
+  // both OAuth returns. Seeding the state from the URL instead puts the correct tab
+  // in the first render, including the server one.
+  //
+  // The second piece of state is React's documented way to adjust state when an
+  // input changes: remember the URL value this component last reacted to, and when
+  // a navigation makes it differ, take the new one. Setting state during render is
+  // supported here -- React re-runs this component immediately without committing
+  // the first pass -- and it keeps a click-selected tab from being yanked back by a
+  // re-render that did not involve a navigation, which is the bug the effect's
+  // [searchParams] dependency had.
+  const [activeTab, setActiveTab] = useState<TabKey>(urlTab)
+  const [lastUrlTab, setLastUrlTab] = useState<TabKey>(urlTab)
+  if (urlTab !== lastUrlTab) {
+    setLastUrlTab(urlTab)
+    setActiveTab(urlTab)
+  }
+
+  const [chatOpen, setChatOpen] = useState(false)
 
   // Local, mutable copies of the owner-only lists -- page.tsx's fetches are
   // the initial state, and every mutation below (publish, make private,

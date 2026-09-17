@@ -1,21 +1,22 @@
 'use client'
-import { useEffect, useState } from 'react'
 import { Search, Wrench, ExternalLink } from 'lucide-react'
 import Card from '@/components/ui/Card'
 
+// THERE IS NOTHING TO LOAD ON THIS PAGE, AND THE GATE THAT SAID OTHERWISE COST
+// THE PAGE ITS SERVER HTML.
+//
+// This started as `useState(true)` plus `useEffect(() => setLoading(false), [])`,
+// which returns the word "Loading..." for the whole first render -- including the
+// render that happens on the server. Measured against production on 2026-09-17:
+// GET https://lazygrip.net/workshop returned a body whose only content between
+// the header and the footer was "Loading...". Every tool card, every addon card
+// and all the descriptive copy reached a crawler as nothing at all, on a page
+// linked from the main nav of an SEO-sensitive site.
+//
+// Nothing here is async and nothing here touches a browser API, so the gate was
+// gating on nothing. Removed: the content now renders on the server and the page
+// no longer flashes a spinner before showing static markup.
 export default function WorkshopPage() {
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    setLoading(false)
-  }, [])
-
-  if (loading) return (
-    <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Loading...</span>
-    </div>
-  )
-
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '48px 24px' }}>
 

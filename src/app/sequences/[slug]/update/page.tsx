@@ -83,11 +83,6 @@ export default function UpdateSequencePage() {
   const [isCollection, setIsCollection] = useState(false)
   const [collectionEntries, setCollectionEntries] = useState<EditableCollectionEntry[] | null>(null)
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user))
-    fetchSequence()
-  }, [slug])
-
   async function fetchSequence() {
     setLoading(true)
 
@@ -234,6 +229,16 @@ export default function UpdateSequencePage() {
 
     setLoading(false)
   }
+
+  // Sits BELOW fetchSequence rather than above it, which is not a style choice: a
+  // hoisted function declaration called from an effect above it runs correctly but
+  // binds before the declaration, which is what react-hooks/immutability reports.
+  // Moving the effect is safe here in a way it would not be elsewhere, because this
+  // is the file's only effect and no hook follows it, so hook order is untouched.
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUser(data.user))
+    fetchSequence()
+  }, [slug])
 
   // Decodes a fresh export into a full replacement bundle for a collection
   // version. Unlike runDecode below (which picks ONE sequence out of a

@@ -180,6 +180,117 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
   // just a boolean, silently blocking the second click's scroll.
   const scrolledToHashRef = useRef<string | null>(null)
 
+  // One timestamp per mount, for the staleness banner further down.
+  //
+  // That line read `Date.now()` in the render body until 2026-09-17, which makes
+  // the render non-idempotent: two renders of the same sequence can disagree, and
+  // across a midnight boundary they would. The banner is informational and does not
+  // tick, so the right shape is one reading taken when the component mounts. A lazy
+  // useState initializer is what "once per mount" is spelled as.
+  const [renderedAt] = useState(() => Date.now())
+
+  // The four loaders below sit ABOVE the effects that call them, which is not a
+  // style choice. A function declaration is hoisted, so an effect declared earlier
+  // can call one and it works, but the effect binds the name before the declaration
+  // -- which is what react-hooks/immutability reports as "accessed before it is
+  // declared". Declaring first removes the report and the class of bug behind it.
+  // Bodies are unchanged; the effects below are where they always were, so hook
+  // order is untouched.
+  //
+  // supabase-js query builders are lazy thenables: the request is only issued when the builder
+  // is awaited or .then()-ed. A bare `supabase.rpc(...)` statement builds the request and drops
+  // it on the floor, which is why view counting silently stopped. Measured 2026-07-29 on
+  // production and on a local production build: zero /rest/v1/rpc/increment_view_count requests
+  // on a seeded page load, and view_count did not move across a full load. Calling the RPC
+  // directly returned 204 and incremented, so only the client call site was at fault. Keep the
+  // await, or this stops counting again with no visible symptom.
+  async function countSeededView(sequenceId: string) {
+    const { error } = await supabase.rpc('increment_view_count', { seq_id: sequenceId })
+    if (error) console.error('Failed to increment view count:', error)
+  }
+
+  async function fetchCurrentPatch() {
+    const { data, error } = await supabase
+      .from('site_config')
+      .select('current_patch')
+      .single()
+    if (error) {
+      console.error('Failed to fetch current_patch:', error)
+      return
+    }
+    setCurrentPatch(data?.current_patch ?? null)
+  }
+
+  async function fetchSequence(opts: { silent?: boolean; countView?: boolean } = {}) {
+    if (!opts.silent) setLoading(true)
+    const { data: seq } = await supabase
+      .from('sequences')
+      // !sequences_author_id_fkey: required as of migration 030 -- see
+      // sequence-server.ts's fetchSequencePage for the full explanation of
+      // why an unqualified profiles(...) embed off sequences now fails.
+      .select('*, author:profiles!sequences_author_id_fkey(*)')
+      .eq('slug', slug)
+      .eq('status', 'published')
+      .single()
+
+    if (seq) {
+      setSequence(seq)
+      if (opts.countView !== false) await supabase.rpc('increment_view_count', { seq_id: seq.id })
+
+      const { data: cmts } = await supabase
+        .from('comments')
+        .select('*, author:profiles(*)')
+        .eq('sequence_id', seq.id)
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: true })
+
+      setComments(nestComments(cmts || []))
+
+      const { data: versionData } = await supabase
+        .from('sequence_versions')
+        .select('*')
+        .eq('sequence_id', seq.id)
+        .order('version_number', { ascending: false })
+
+      setVersions(versionData ?? [])
+      setSelectedVersion(deriveSelectedVersion(seq, versionData ?? []))
+
+      if (seq.set_id) {
+        const { data: linked } = await supabase
+          .from('sequences')
+          .select('id, title, slug, content_type, class_name, spec_name, hero_talent')
+          .eq('set_id', seq.set_id)
+          .eq('status', 'published')
+          .neq('id', seq.id)
+          .limit(1)
+          .single()
+
+        if (linked) setLinkedSequence(linked)
+      }
+    }
+    setLoading(false)
+  }
+
+  async function fetchTagBreakdown(sequenceId: string) {
+    const { data, error } = await supabase
+      .from('ratings')
+      .select('reason_tags')
+      .eq('sequence_id', sequenceId)
+      .not('reason_tags', 'is', null)
+    if (error) { console.error('Tag breakdown fetch error:', error); return }
+    const tally = new Map<string, number>()
+    ;(data || []).forEach(row => {
+      (row.reason_tags || []).forEach((tag: string) => {
+        tally.set(tag, (tally.get(tag) ?? 0) + 1)
+      })
+    })
+    setTagBreakdown(
+      Array.from(tally.entries())
+        .map(([tag, count]) => ({ tag, count }))
+        .sort((a, b) => b.count - a.count)
+    )
+  }
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user))
     if (seeded) {
@@ -274,80 +385,6 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
     }
   }, [comments])
 
-  // supabase-js query builders are lazy thenables: the request is only issued when the builder
-  // is awaited or .then()-ed. A bare `supabase.rpc(...)` statement builds the request and drops
-  // it on the floor, which is why view counting silently stopped. Measured 2026-07-29 on
-  // production and on a local production build: zero /rest/v1/rpc/increment_view_count requests
-  // on a seeded page load, and view_count did not move across a full load. Calling the RPC
-  // directly returned 204 and incremented, so only the client call site was at fault. Keep the
-  // await, or this stops counting again with no visible symptom.
-  async function countSeededView(sequenceId: string) {
-    const { error } = await supabase.rpc('increment_view_count', { seq_id: sequenceId })
-    if (error) console.error('Failed to increment view count:', error)
-  }
-
-  async function fetchCurrentPatch() {
-    const { data, error } = await supabase
-      .from('site_config')
-      .select('current_patch')
-      .single()
-    if (error) {
-      console.error('Failed to fetch current_patch:', error)
-      return
-    }
-    setCurrentPatch(data?.current_patch ?? null)
-  }
-
-  async function fetchSequence(opts: { silent?: boolean; countView?: boolean } = {}) {
-    if (!opts.silent) setLoading(true)
-    const { data: seq } = await supabase
-      .from('sequences')
-      // !sequences_author_id_fkey: required as of migration 030 -- see
-      // sequence-server.ts's fetchSequencePage for the full explanation of
-      // why an unqualified profiles(...) embed off sequences now fails.
-      .select('*, author:profiles!sequences_author_id_fkey(*)')
-      .eq('slug', slug)
-      .eq('status', 'published')
-      .single()
-
-    if (seq) {
-      setSequence(seq)
-      if (opts.countView !== false) await supabase.rpc('increment_view_count', { seq_id: seq.id })
-
-      const { data: cmts } = await supabase
-        .from('comments')
-        .select('*, author:profiles(*)')
-        .eq('sequence_id', seq.id)
-        .eq('is_deleted', false)
-        .order('created_at', { ascending: true })
-
-      setComments(nestComments(cmts || []))
-
-      const { data: versionData } = await supabase
-        .from('sequence_versions')
-        .select('*')
-        .eq('sequence_id', seq.id)
-        .order('version_number', { ascending: false })
-
-      setVersions(versionData ?? [])
-      setSelectedVersion(deriveSelectedVersion(seq, versionData ?? []))
-
-      if (seq.set_id) {
-        const { data: linked } = await supabase
-          .from('sequences')
-          .select('id, title, slug, content_type, class_name, spec_name, hero_talent')
-          .eq('set_id', seq.set_id)
-          .eq('status', 'published')
-          .neq('id', seq.id)
-          .limit(1)
-          .single()
-
-        if (linked) setLinkedSequence(linked)
-      }
-    }
-    setLoading(false)
-  }
-
   async function copyGripString() {
     if (!selectedVersion?.grip_string) return
     await navigator.clipboard.writeText(selectedVersion.grip_string)
@@ -424,26 +461,6 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
     setTagsSubmitted(pendingTags.length > 0 || !!tagNote.trim())
     setSelectedScore(null)
     setConfirming(false)
-  }
-
-  async function fetchTagBreakdown(sequenceId: string) {
-    const { data, error } = await supabase
-      .from('ratings')
-      .select('reason_tags')
-      .eq('sequence_id', sequenceId)
-      .not('reason_tags', 'is', null)
-    if (error) { console.error('Tag breakdown fetch error:', error); return }
-    const tally = new Map<string, number>()
-    ;(data || []).forEach(row => {
-      (row.reason_tags || []).forEach((tag: string) => {
-        tally.set(tag, (tally.get(tag) ?? 0) + 1)
-      })
-    })
-    setTagBreakdown(
-      Array.from(tally.entries())
-        .map(([tag, count]) => ({ tag, count }))
-        .sort((a, b) => b.count - a.count)
-    )
   }
 
   async function submitComment(skipGate = false) {
@@ -755,7 +772,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
   // Staleness: patch mismatch (or no patch_version recorded) AND not updated in 60+ days.
   // Same rule as SequenceCard.tsx — both conditions required, purely informational.
   const STALE_DAYS_THRESHOLD = 60
-  const daysSinceUpdate = Math.floor((Date.now() - new Date(sequence.updated_at).getTime()) / (1000 * 60 * 60 * 24))
+  const daysSinceUpdate = Math.floor((renderedAt - new Date(sequence.updated_at).getTime()) / (1000 * 60 * 60 * 24))
   const patchMismatch = !!currentPatch && (sequence.patch_version == null || sequence.patch_version !== currentPatch)
   const isStale = patchMismatch && daysSinceUpdate > STALE_DAYS_THRESHOLD
 
@@ -1390,7 +1407,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                   through its steps. */}
               {activeEntry.actions && activeEntry.actions.length > 0 ? (
                 <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
-                  <ActionTreeView nodes={activeEntry.actions} counter={{ n: 0 }} />
+                  <ActionTreeView nodes={activeEntry.actions} />
                 </div>
               ) : (
                 <>
@@ -1448,7 +1465,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                 Steps ({stepCountForBadge})
               </h2>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
-                <ActionTreeView nodes={actionsTree!} counter={{ n: 0 }} />
+                <ActionTreeView nodes={actionsTree!} />
               </div>
             </div>
           )}

@@ -50,7 +50,23 @@ function ActionLine({ text }: { text: string }) {
   )
 }
 
-export default function ActionTree({ nodes, counter }: { nodes: ActionNode[]; counter: { n: number } }) {
+// STEP NUMBERING IS COMPUTED, NOT ACCUMULATED, AND THAT IS A BUG FIX.
+//
+// Until 2026-09-17 this took a `counter: { n: number }` prop and did
+// `const n = ++counter.n` inside the render body. Mutating a prop during render
+// is not allowed: React may render a component more than once for a single
+// commit, and does so by design under StrictMode in development, so every leaf
+// got its number incremented twice and the visible numbering came out 2, 4, 6.
+// The numbers also depended on how many times React happened to render, which
+// is not something a component may depend on.
+//
+// The replacement is a pure `startIndex`: each position's first step number is
+// the start plus the leaf count of everything before it, which countActionSteps
+// already knows how to compute. Same numbers, no shared mutable object, and the
+// output is now a function of the props alone.
+export default function ActionTree({ nodes, startIndex = 1 }: { nodes: ActionNode[]; startIndex?: number }) {
+  const firstNumber = stepNumbersFor(nodes, startIndex)
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       {nodes.map((node, i) => {
@@ -85,7 +101,7 @@ export default function ActionTree({ nodes, counter }: { nodes: ActionNode[]; co
               </div>
               <div style={{ padding: '8px 10px' }}>
                 {node.children && node.children.length > 0
-                  ? <ActionTree nodes={node.children} counter={counter} />
+                  ? <ActionTree nodes={node.children} startIndex={firstNumber[i]} />
                   : <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Empty loop</span>
                 }
               </div>
@@ -116,7 +132,7 @@ export default function ActionTree({ nodes, counter }: { nodes: ActionNode[]; co
               </div>
               <div style={{ padding: '8px 10px' }}>
                 {node.children && node.children.length > 0
-                  ? <ActionTree nodes={node.children} counter={counter} />
+                  ? <ActionTree nodes={node.children} startIndex={firstNumber[i]} />
                   : <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Empty branch</span>
                 }
               </div>
@@ -125,7 +141,7 @@ export default function ActionTree({ nodes, counter }: { nodes: ActionNode[]; co
         }
 
         if (node.kind === 'Action' || node.kind === 'Step' || node.kind === 'Repeat') {
-          const n = ++counter.n
+          const n = firstNumber[i]
           const lines = (node.text || '').split('\n').filter(Boolean)
           return (
             <div key={i} style={{
@@ -180,6 +196,25 @@ export default function ActionTree({ nodes, counter }: { nodes: ActionNode[]; co
       })}
     </div>
   )
+}
+
+// The step number each position in `nodes` starts at, in the depth-first order a
+// reader counts. A leaf uses its own entry; a Loop or If hands its entry down to
+// its children as their startIndex. Pure: same nodes and same start, same array,
+// however many times it runs.
+//
+// Exported and kept separate from the component because it is the whole of the
+// numbering rule and the component is the whole of the presentation. The suite
+// runs in a node environment with no renderer, so this is the seam at which the
+// numbering can be tested at all -- see actionTreeNumbering.test.ts.
+export function stepNumbersFor(nodes: ActionNode[], startIndex = 1): number[] {
+  const firstNumber: number[] = []
+  let next = startIndex
+  for (const node of nodes) {
+    firstNumber.push(next)
+    next += countActionSteps([node])
+  }
+  return firstNumber
 }
 
 // Counts only real, clickable steps (Action/Step/Repeat leaves) in a tree,
