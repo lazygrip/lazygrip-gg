@@ -305,7 +305,13 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
       // !sequences_author_id_fkey: required as of migration 030 -- see
       // sequence-server.ts's fetchSequencePage for the full explanation of
       // why an unqualified profiles(...) embed off sequences now fails.
-      .select('*, author:profiles!sequences_author_id_fkey(*)')
+      // Kept IDENTICAL to sequence-server.ts:46, deliberately. This query
+      // reconciles the same sequence object the server seeded, so a narrower
+      // list here would make the hydrated render differ from the seeded one on
+      // whichever field was dropped. Narrowed from `(*)` on 2026-09-17 for
+      // migration 034 -- see that file's note on why select=* and a
+      // column-scoped grant cannot coexist.
+      .select('*, author:profiles!sequences_author_id_fkey(username, display_name)')
       .eq('slug', slug)
       .eq('status', 'published')
       .single()
@@ -316,7 +322,9 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
 
       const { data: cmts } = await supabase
         .from('comments')
-        .select('*, author:profiles(*)')
+        // Matches sequence-server.ts:70. CommentThread reads author.username
+        // and nothing else (:2052-2180).
+        .select('*, author:profiles(username)')
         .eq('sequence_id', seq.id)
         .eq('is_deleted', false)
         .order('created_at', { ascending: true })
