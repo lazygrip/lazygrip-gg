@@ -36,5 +36,10 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
+      # Ahead of Build on purpose: a converter that has stopped round-tripping
+      # spell ids should stop the job before a deploy artifact exists, not after.
+      - name: Test
+        run: npm test
+
       - name: Build
         run: npm run build

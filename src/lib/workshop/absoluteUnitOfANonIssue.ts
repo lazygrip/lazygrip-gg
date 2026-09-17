@@ -8,7 +8,15 @@ type LooseRecord = Record<string, any>;
 
 const DEFAULT_ICON = 134400;
 const STEP_FUNCTIONS = new Set(["Sequential", "Priority", "Random", "ReversePriority"]);
-const INTERLEAVE_MIN = 2;
+// The addon carries these as three separate constants and the distinction is
+// load-bearing: Data/Defaults.lua has ACTION_INTERLEAVE_MIN = 1,
+// ACTION_INTERLEAVE_MAX = 50 and ACTION_INTERLEAVE_DEFAULT = 2. Its import path
+// floors at MIN but falls back to the DEFAULT when the value does not parse
+// (Import/LegacyImport.lua: `tonumber(...) or 2`, then a MIN clamp). This file
+// used one constant for both jobs and set it to 2, which silently promoted a
+// legitimate interval of 1 up to 2 on every conversion.
+const INTERLEAVE_MIN = 1;
+const INTERLEAVE_DEFAULT = 2;
 const INTERLEAVE_MAX = 50;
 const LOOP_REPEAT_MAX = 50;
 
@@ -321,7 +329,9 @@ function normalizeStepFunction(stepFunction: unknown): string {
 function clampInterval(value: unknown): number {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) {
-    return INTERLEAVE_MIN;
+    // The DEFAULT, not the MIN: an absent or unparseable interval is not an
+    // interval of 1, and the addon's import path answers 2 here.
+    return INTERLEAVE_DEFAULT;
   }
   return Math.min(INTERLEAVE_MAX, Math.max(INTERLEAVE_MIN, Math.floor(parsed)));
 }
