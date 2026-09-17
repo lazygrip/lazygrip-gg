@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { ArrowRight, Wrench, Trophy, Crown, Eye, HelpCircle, PlusCircle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { WOW_CLASSES, CONTENT_TYPES, getClassColor } from '@/lib/wow-data'
@@ -253,7 +254,7 @@ export default async function HomePage() {
               just tightened into a centered cluster instead of spread edge-to-edge. */}
           <div className="utility-bar" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 40, position: 'relative' }}>
             <div className="info-trigger info-trigger-left">
-              <a
+              <Link
                 href="/guide"
                 className="info-trigger-link"
                 style={{
@@ -263,7 +264,7 @@ export default async function HomePage() {
                   fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)',
                   textDecoration: 'none', transition: 'border-color 0.15s',
                 }}
-              >
+               prefetch={false}>
                 <span style={{
                   width: 26, height: 26, borderRadius: '50%', background: 'var(--accent-subtle)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0,
@@ -271,7 +272,7 @@ export default async function HomePage() {
                   <HelpCircle size={15} />
                 </span>
                 Why GRIP-EMS?
-              </a>
+              </Link>
               <div className="info-tooltip">
                 <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
                   Because a sequence is only as good as the structure behind it. You get loop
@@ -280,14 +281,14 @@ export default async function HomePage() {
                   the line, and variables you can reuse across sequences. All of it is free — no
                   supporter tier, nothing behind a payment.
                 </p>
-                <a href="/guide" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 10, fontSize: 'var(--text-xs)', color: 'var(--accent)', fontWeight: 500, textDecoration: 'none' }}>
+                <Link href="/guide" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 10, fontSize: 'var(--text-xs)', color: 'var(--accent)', fontWeight: 500, textDecoration: 'none' }} prefetch={false}>
                   Read the guide <ArrowRight size={11} />
-                </a>
+                </Link>
               </div>
             </div>
 
             <div className="info-trigger info-trigger-center">
-              <a
+              <Link
                 href="/workshop"
                 className="info-trigger-link"
                 style={{
@@ -297,7 +298,7 @@ export default async function HomePage() {
                   fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)',
                   textDecoration: 'none', transition: 'border-color 0.15s',
                 }}
-              >
+               prefetch={false}>
                 <span style={{
                   width: 26, height: 26, borderRadius: '50%', background: 'var(--accent-subtle)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0,
@@ -305,7 +306,7 @@ export default async function HomePage() {
                   <Wrench size={14} />
                 </span>
                 Build GRIP sequences in the browser
-              </a>
+              </Link>
               <div className="info-tooltip">
                 <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0, marginBottom: 10 }}>
                   The Workshop is a full sequence builder in the browser. Create collections with
@@ -324,14 +325,14 @@ export default async function HomePage() {
                     </span>
                   ))}
                 </div>
-                <a href="/workshop" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-xs)', color: 'var(--accent)', fontWeight: 500, textDecoration: 'none' }}>
+                <Link href="/workshop" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-xs)', color: 'var(--accent)', fontWeight: 500, textDecoration: 'none' }} prefetch={false}>
                   Open Workshop <ArrowRight size={11} />
-                </a>
+                </Link>
               </div>
             </div>
 
             <div className="info-trigger info-trigger-right">
-              <a
+              <Link
                 href="/auth/signup"
                 className="info-trigger-link"
                 style={{
@@ -341,7 +342,7 @@ export default async function HomePage() {
                   fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)',
                   textDecoration: 'none', transition: 'border-color 0.15s',
                 }}
-              >
+               prefetch={false}>
                 <span style={{
                   width: 26, height: 26, borderRadius: '50%', background: 'var(--accent-subtle)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0,
@@ -349,16 +350,16 @@ export default async function HomePage() {
                   <PlusCircle size={14} />
                 </span>
                 Post your sequence
-              </a>
+              </Link>
               <div className="info-tooltip">
                 <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0, marginBottom: 10 }}>
                   Create a free account, paste your GRIP export string, fill in your class and
                   spec, and it goes live on the site. Takes about a minute, and there&apos;s no
                   paid tier to unlock.
                 </p>
-                <a href="/auth/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-xs)', color: 'var(--accent)', fontWeight: 500, textDecoration: 'none' }}>
+                <Link href="/auth/signup" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 'var(--text-xs)', color: 'var(--accent)', fontWeight: 500, textDecoration: 'none' }} prefetch={false}>
                   Create an account <ArrowRight size={11} />
-                </a>
+                </Link>
               </div>
             </div>
           </div>
@@ -430,7 +431,7 @@ export default async function HomePage() {
                       const seq = item
                       const classColor = getClassColor(seq.class_id)
                       return (
-                        <a
+                        <Link
                           key={`cp-${batchIdx}-${seq.id}-${i}`}
                           href={`/sequences/${seq.slug}`}
                           style={{
@@ -440,7 +441,7 @@ export default async function HomePage() {
                             borderLeft: `3px solid ${classColor}`, borderRadius: 'var(--radius-sm)',
                             textDecoration: 'none',
                           }}
-                        >
+                         prefetch={false}>
                           <span style={{
                             fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)',
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -459,7 +460,7 @@ export default async function HomePage() {
                               <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600 }}>{seq.view_count?.toLocaleString() ?? 0}</span>
                             </span>
                           </span>
-                        </a>
+                        </Link>
                       )
                     })}
                   </div>
@@ -494,7 +495,7 @@ export default async function HomePage() {
                       }
                       const seq = item
                       return (
-                        <a
+                        <Link
                           key={`pp-${batchIdx}-${seq.id}-${i}`}
                           href={`/sequences/${seq.slug}`}
                           style={{
@@ -504,12 +505,12 @@ export default async function HomePage() {
                             borderRadius: 'var(--radius-sm)',
                             textDecoration: 'none', whiteSpace: 'nowrap',
                           }}
-                        >
+                         prefetch={false}>
                           <span style={{ width: 6, height: 6, borderRadius: '50%', background: getClassColor(seq.class_id), flexShrink: 0 }} />
                           <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', fontWeight: 500 }}>{seq.title}</span>
                           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {seq.class_name}</span>
                           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {formatDistanceToNow(new Date(seq.created_at), { addSuffix: true })}</span>
-                        </a>
+                        </Link>
                       )
                     })}
                   </div>
@@ -538,9 +539,9 @@ export default async function HomePage() {
                 <Crown size={16} color="var(--accent)" />
                 <h2 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em' }}>Top Creators</h2>
               </div>
-              <a href="/creators" style={{ fontSize: 'var(--text-sm)', color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Link href="/creators" style={{ fontSize: 'var(--text-sm)', color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }} prefetch={false}>
                 View all <ArrowRight size={13} />
-              </a>
+              </Link>
             </div>
 
             {topCreators.length > 0 ? (
@@ -550,7 +551,7 @@ export default async function HomePage() {
                   const displayColor = creator.avatar_color ?? '#1D9E75'
                   const initial = creator.username[0]?.toUpperCase() ?? '?'
                   return (
-                    <a key={creator.id} href={`/user/${creator.username}`} style={{ textDecoration: 'none' }}>
+                    <Link key={creator.id} href={`/user/${creator.username}`} style={{ textDecoration: 'none' }} prefetch={false}>
                       <Card padding="sm" style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
                         <span style={{
                           width: 18, fontSize: 'var(--text-sm)', fontWeight: 700,
@@ -590,7 +591,7 @@ export default async function HomePage() {
                           </span>
                         </div>
                       </Card>
-                    </a>
+                    </Link>
                   )
                 })}
               </div>
@@ -608,9 +609,9 @@ export default async function HomePage() {
                 <Trophy size={16} color="var(--accent)" />
                 <h2 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em' }}>Top sequences</h2>
               </div>
-              <a href="/browse?sort=most_viewed" style={{ fontSize: 'var(--text-sm)', color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Link href="/browse?sort=most_viewed" style={{ fontSize: 'var(--text-sm)', color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }} prefetch={false}>
                 View all <ArrowRight size={13} />
-              </a>
+              </Link>
             </div>
 
             {trending.length > 0 ? (
@@ -618,7 +619,7 @@ export default async function HomePage() {
                 {trending.map((seq, i) => {
                   const classColor = getClassColor(seq.class_id)
                   return (
-                    <a key={seq.id} href={`/sequences/${seq.slug}`} style={{ textDecoration: 'none' }}>
+                    <Link key={seq.id} href={`/sequences/${seq.slug}`} style={{ textDecoration: 'none' }} prefetch={false}>
                       <Card accentColor={classColor} padding="sm" style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
                         <span style={{
                           width: 18, fontSize: 'var(--text-sm)', fontWeight: 700,
@@ -649,7 +650,7 @@ export default async function HomePage() {
                           </span>
                         </div>
                       </Card>
-                    </a>
+                    </Link>
                   )
                 })}
               </div>
@@ -673,7 +674,7 @@ export default async function HomePage() {
             <div className="browse-chip-grid" style={{ marginBottom: 24 }}>
               {WOW_CLASSES.map((cls, i) => (
                 <div key={cls.id} className={`spec-trigger ${i % 2 === 0 ? 'spec-trigger-l' : 'spec-trigger-r'}`}>
-                  <a
+                  <Link
                     href={`/browse/${cls.slug}`}
                     style={{
                       display: 'flex',
@@ -687,15 +688,15 @@ export default async function HomePage() {
                       transition: 'background-color 0.15s, border-color 0.15s',
                       overflow: 'hidden',
                     }}
-                  >
+                   prefetch={false}>
                     <span style={{ width: 7, height: 7, borderRadius: '50%', background: cls.color, flexShrink: 0 }} />
                     <span style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cls.name}</span>
-                  </a>
+                  </Link>
                   <div className="spec-tooltip">
                     {cls.specs.map(spec => (
-                      <a key={spec.id} href={`/browse/${cls.slug}?spec_id=${spec.id}`} className="spec-link">
+                      <Link key={spec.id} href={`/browse/${cls.slug}?spec_id=${spec.id}`} className="spec-link" prefetch={false}>
                         {spec.name}
-                      </a>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -707,7 +708,7 @@ export default async function HomePage() {
             </div>
             <div className="browse-chip-grid">
               {CONTENT_TYPES.map(ct => (
-                <a
+                <Link
                   key={ct.slug}
                   href={`/browse/${ct.slug}`}
                   style={{
@@ -723,9 +724,9 @@ export default async function HomePage() {
                     fontSize: 'var(--text-sm)',
                     fontWeight: 500,
                   }}
-                >
+                 prefetch={false}>
                   {ct.label}
-                </a>
+                </Link>
               ))}
             </div>
           </div>
