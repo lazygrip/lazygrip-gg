@@ -28,11 +28,8 @@ import { createClient } from '@/lib/supabase/client'
 // actual enforcement; this can drift or be bypassed client-side and the
 // database will still reject the write.
 
-const AUTO_GENERATED_USERNAME = /^user_[0-9a-f]{8}$/
-
 export interface UsernameGateResult {
   ok: boolean
-  username: string | null
 }
 
 export function useUsernameGate() {
@@ -43,22 +40,19 @@ export function useUsernameGate() {
     try {
       const supabase = createClient()
 
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('username, terms_accepted_at')
-        .eq('id', userId)
-        .single()
+      // has_completed_onboarding() (migration 008) is the username and terms
+      // check this used to do by reading the two columns: username present,
+      // non-blank, not matching '^user_[0-9a-f]{8}$', and terms_accepted_at
+      // set. Moving it here is what lets M14 revoke authenticated's SELECT on
+      // terms_accepted_at, which a column grant cannot scope to the own row.
+      const { data: onboardingComplete, error: onboardingError } = await supabase
+        .rpc('has_completed_onboarding', { check_user_id: userId })
 
-      // Fail closed on the profile read itself: if we can't confirm
+      // Fail closed, exactly as the profile read did: if we can't confirm
       // anything, treat as blocked rather than letting a write attempt
       // through to fail on RLS with no context.
-      if (profileError || !profile?.username) {
-        return { ok: false, username: profile?.username ?? null }
-      }
-
-      const hasRealUsername = !AUTO_GENERATED_USERNAME.test(profile.username)
-      if (!hasRealUsername || !profile.terms_accepted_at) {
-        return { ok: false, username: profile.username }
+      if (onboardingError || !onboardingComplete) {
+        return { ok: false }
       }
 
       // Username and terms both check out. The remaining conditions
@@ -82,10 +76,10 @@ export function useUsernameGate() {
         // RPC hiccup would trade a rare, informative failure for a common,
         // opaque one. The real RLS check on submit is still the backstop
         // either way.
-        return { ok: true, username: profile.username }
+          return { ok: true }
       }
 
-      return { ok: !!(eligibility as { eligible: boolean }).eligible, username: profile.username }
+      return { ok: !!(eligibility as { eligible: boolean }).eligible }
     } finally {
       setChecking(false)
     }
