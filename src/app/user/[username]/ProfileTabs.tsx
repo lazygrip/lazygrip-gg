@@ -190,17 +190,29 @@ function ProfileTabsInner({
     ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   }, [publishedList, privateList, isOwnProfile])
 
-  // Moves a sequence between 'published' and 'private'. Protected by the
-  // existing "Authors can update their own sequences" RLS policy (author_id
-  // = auth.uid()) -- the .eq('author_id', viewerId) below is
-  // belt-and-suspenders, not the actual security boundary.
+  // Moves a sequence between 'published' and 'private'.
+  //
+  // THIS WAS A DIRECT COLUMN PATCH UNTIL 2026-09-17, and the comment that stood
+  // here said it was "protected by the existing 'Authors can update their own
+  // sequences' RLS policy (author_id = auth.uid())". That policy does restrict
+  // the ROW, and it places no constraint at all on the COLUMNS -- so the same
+  // grant that let this line write `status` let any author write avg_score,
+  // rating_count, view_count, save_count, comment_count, is_featured and
+  // updated_at, which is every ranking key the browse sorts use. Migration 031
+  // takes those columns off the `authenticated` grant, which necessarily takes
+  // `status` with them.
+  //
+  // So the capability moves to an RPC rather than disappearing. set_sequence_status
+  // resolves ownership from the row instead of from an argument, and permits only
+  // published <-> private: a draft reaching published still has to go through the
+  // publish RPCs, which is where the title, class_id and grip_string checks, the
+  // slug reminting and the sequence_versions row actually live.
   async function handleSetStatus(seq: SequenceRowData, newStatus: 'published' | 'private') {
     if (!viewerId) return
-    const { error } = await supabase
-      .from('sequences')
-      .update({ status: newStatus })
-      .eq('id', seq.id)
-      .eq('author_id', viewerId)
+    const { error } = await supabase.rpc('set_sequence_status', {
+      p_sequence_id: seq.id,
+      p_status: newStatus,
+    })
     if (error) return
 
     if (newStatus === 'private') {

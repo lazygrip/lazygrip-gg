@@ -37,14 +37,43 @@ function prune(now: number, windowMs: number) {
   }
 }
 
+// THE LEFTMOST X-Forwarded-For ELEMENT IS WHATEVER THE CALLER SENT. This
+// function took it until 2026-09-17, which meant every limiter below could be
+// defeated by varying one header per request -- a bucket key the attacker
+// chooses is not a rate limit.
+//
+// Proxies APPEND, so the chain reads `client, proxy1, proxy2` and the RIGHTMOST
+// element is the one written by the last proxy, which is the only part of the
+// chain this application controls.
+//
+// The order below is deliberate:
+//
+//   1. x-vercel-forwarded-for -- a single value set by Vercel's own edge, so
+//      there is no chain to parse and no chain length to be wrong about.
+//   2. the RIGHTMOST x-forwarded-for element. Note that this is never WORSE
+//      than the leftmost: if the platform overwrites the header with a single
+//      client IP, rightmost and leftmost are the same value, and if it appends,
+//      only the rightmost is trustworthy. There is no deployment in which the
+//      old behaviour was the better of the two.
+//   3. x-real-ip, unchanged, as the last named header.
+//
+// This limiter is still explicitly not a security boundary -- see the module
+// header for why it is in-memory and what it does and does not promise. The
+// point of this change is that its key stops being caller-chosen.
 export function getClientIp(req: Request): string {
+  const vercel = req.headers.get('x-vercel-forwarded-for')?.trim()
+  if (vercel) return vercel
+
   const forwarded = req.headers.get('x-forwarded-for')
   if (forwarded) {
-    const first = forwarded.split(',')[0]?.trim()
-    if (first) return first
+    const parts = forwarded.split(',')
+    const last = parts[parts.length - 1]?.trim()
+    if (last) return last
   }
+
   const realIp = req.headers.get('x-real-ip')
   if (realIp) return realIp.trim()
+
   // No IP available (e.g. local dev, direct DB access path N/A here since
   // this is HTTP-level). Fail open under a shared bucket rather than
   // blocking legitimate requests when we can't identify the caller.
