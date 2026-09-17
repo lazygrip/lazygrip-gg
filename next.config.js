@@ -1,3 +1,98 @@
+// ---------------------------------------------------------------------------
+// Audit M1: security headers.
+//
+// EVERY ORIGIN BELOW WAS MEASURED, not listed from memory. Loaded
+// https://lazygrip.net/browse and read performance.getEntriesByType('resource')
+// on 2026-09-17. What the live page actually pulls:
+//
+//   lazygrip.net                   16 script, 3 css, 2 link, 49 fetch
+//   csldntgdalzlwxozlmgv.supabase.co   15 fetch, 11 link (storage images)
+//   www.googletagmanager.com       1 link, plus the gtag script layout.tsx:102
+//   fonts.googleapis.com           1 css
+//   region1.google-analytics.com   1 fetch (the GA4 beacon -- a DIFFERENT
+//                                  origin from googletagmanager, and the one a
+//                                  connect-src written from memory always
+//                                  forgets)
+//
+// Plus two image hosts that are not on /browse but are on other pages:
+// cdn.discordapp.com, which handle_new_user() writes into profiles.avatar_url
+// from OAuth metadata (measured: 300-odd of 341 profiles), and the two Blizzard
+// hosts already declared in images.remotePatterns below.
+//
+// REPORT-ONLY FIRST, and here is the specific reason rather than a general one.
+// The same page carries 6 inline <script> blocks -- the theme cookie reader,
+// two JSON-LD blocks, Next's own __next_f flight-data pushes, and the gtag
+// bootstrap -- so an enforcing policy without nonces breaks the site outright.
+// Nonces mean threading one value through layout.tsx and Next's own script
+// injection, which is its own change. Report-only lands the measurement now and
+// costs nothing if a host was missed.
+//
+// style-src KEEPS 'unsafe-inline' PERMANENTLY, and that is architecture rather
+// than laziness: the same page has 458 elements carrying a style attribute,
+// because this codebase styles with React inline objects throughout. Removing
+// it means rewriting the UI, not adding a nonce.
+//
+// WHAT THIS POLICY ACTUALLY BUYS while script-src still allows inline. It
+// constrains ORIGINS, not inline injection -- so it does not stop an injected
+// <script>, but it DOES stop the thing F7.1 was: img-src has no wildcard, and a
+// CSS background-image pointing at an attacker host is an img-src fetch. That
+// is the independent second mitigation the audit asked for, and it holds
+// whatever happens to the sanitizer.
+const SELF = "'self'"
+
+// Derived from the env var rather than pasted as a literal, so a preview or a
+// fork pointed at a different Supabase project gets a policy that matches ITS
+// project rather than one that silently blocks every API call. Empty string
+// when unset, and the filter below drops it -- a missing env var must not emit
+// the token "undefined" into a directive, which is a source that matches
+// nothing and reads like a typo forever after.
+const SUPABASE_ORIGIN = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').origin
+  } catch {
+    return ''
+  }
+})()
+const SUPABASE_WS = SUPABASE_ORIGIN ? SUPABASE_ORIGIN.replace(/^https:/, 'wss:') : ''
+
+const src = (...sources) => sources.filter(Boolean).join(' ')
+
+const CSP_DIRECTIVES = [
+  `default-src ${SELF}`,
+  // 'unsafe-inline' is the nonce work, tracked as the precondition for moving
+  // this header off -Report-Only. 'unsafe-eval' is deliberately ABSENT.
+  `script-src ${SELF} 'unsafe-inline' https://www.googletagmanager.com`,
+  `style-src ${SELF} 'unsafe-inline' https://fonts.googleapis.com`,
+  `font-src ${SELF} https://fonts.gstatic.com data:`,
+  `img-src ${src(SELF, 'data:', 'blob:', SUPABASE_ORIGIN, 'https://cdn.discordapp.com', 'https://render.worldofwarcraft.com', 'https://avatars.battlenet.com.cn', 'https://www.googletagmanager.com')}`,
+  `connect-src ${src(SELF, SUPABASE_ORIGIN, SUPABASE_WS, 'https://www.googletagmanager.com', 'https://*.google-analytics.com', 'https://*.analytics.google.com')}`,
+  // No iframes anywhere in src (grepped), no workers, no plugins.
+  `frame-src 'none'`,
+  `worker-src ${SELF}`,
+  `object-src 'none'`,
+  // frame-ancestors is the modern half of the X-Frame-Options below; both are
+  // sent because the older header is what some scanners and older clients read.
+  `frame-ancestors 'none'`,
+  `base-uri ${SELF}`,
+  `form-action ${SELF}`,
+  'upgrade-insecure-requests',
+]
+
+const SECURITY_HEADERS = [
+  { key: 'Content-Security-Policy-Report-Only', value: CSP_DIRECTIVES.join('; ') },
+  { key: 'X-Content-Type-Options', value: 'nosniff' },
+  { key: 'X-Frame-Options', value: 'DENY' },
+  // strict-origin-when-cross-origin sends the full URL same-origin and only the
+  // origin cross-origin. It matters here specifically because profile and
+  // sequence URLs carry usernames and slugs, and those should not be handed to
+  // every outbound link a creator puts in their bio.
+  { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+  {
+    key: 'Permissions-Policy',
+    value: 'accelerometer=(), autoplay=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), usb=()',
+  },
+]
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -25,6 +120,18 @@ const nextConfig = {
         source: '/:path*',
         has: [{ type: 'host', value: '(?<deployHost>.*\\.vercel\\.app)' }],
         headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
+      // Audit M1. LIVE-VERIFIED 2026-09-17: /browse on lazygrip.net carried
+      // strict-transport-security and nothing else -- no CSP in either form, no
+      // nosniff, no frame-options, no referrer-policy, no permissions-policy.
+      //
+      // Unscoped on purpose. The block above is host-scoped because a noindex
+      // must NOT reach lazygrip.net; these must reach every host the app is
+      // served from, previews included, or the preview deploys are the one
+      // place the policy is never exercised before it goes live.
+      {
+        source: '/:path*',
+        headers: SECURITY_HEADERS,
       },
     ]
   },
