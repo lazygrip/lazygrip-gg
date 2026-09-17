@@ -1,0 +1,23 @@
+# Migrations that do NOT apply to an empty database, as of 2026-09-17.
+#
+# This file is a ratchet, not a permission slip. apply-from-scratch.sh compares
+# the actual failure set against this list and fails on ANY difference -- a new
+# failure, or an old one that started passing without this file being updated.
+# The goal is an empty file.
+#
+# Every entry here is downstream of one of two gaps, both tracked in issue #78:
+#
+#   (a) migration 003 is missing from the repo -- the sequence runs 001, 002, 004
+#       -- and with it the 14 public.sequences columns production has and a
+#       from-scratch apply does not, plus the copy_count_throttle table.
+#   (b) 026 alters two function signatures that no migration creates.
+#
+# format: <migration filename>  # <the first error postgres reports>
+002_schema_sync.sql                              # column "status" does not exist
+006_sequence_versions_rls_status_check.sql       # column s.status does not exist
+019_wow_build_and_export_backfill.sql            # column s.current_version_id does not exist
+021_version_row_macro_parity.sql                 # column s.current_version_id does not exist
+024_view_copy_count_daily_ip_cap.sql             # relation "public.copy_count_throttle" does not exist
+025_actions_tree_and_version_sync.sql            # column s.current_version_id does not exist
+026_search_path_hardening_and_rate_limit_ownership.sql  # update_sequence_metadata/update_draft_sequence 23-arg signatures do not exist
+031_column_grants_and_trusted_client_ip.sql      # 4 intended columns do not exist on public.sequences
