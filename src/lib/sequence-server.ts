@@ -43,7 +43,16 @@ export async function fetchSequencePage(slug: string): Promise<SequencePageResul
       // (SequencePageClient.tsx) ran the exact same unqualified embed and
       // got the exact same failure, so the page had nothing left to render
       // but "not found."
-      .select('*, author:profiles!sequences_author_id_fkey(*)')
+      // `author:profiles(*)` until 2026-09-17. Narrowed because `select=*`
+      // expands to every column at parse time and therefore needs SELECT on
+      // every column -- so it is incompatible with the column-scoped grant
+      // migration 034 adds, and would have started returning 42501 rather than
+      // a row. Two columns, both measured from the consumers rather than
+      // guessed: `username` is read at SequencePageClient.tsx:1042-1052, and
+      // `display_name` at sequences/[slug]/page.tsx:148, which is the ONLY
+      // display_name read off any author embed in the codebase -- drop it and
+      // the JSON-LD author name silently degrades to the raw username.
+      .select('*, author:profiles!sequences_author_id_fkey(username, display_name)')
       .eq('slug', slug)
       .eq('status', 'published')
       .single()
@@ -67,7 +76,11 @@ export async function fetchSequencePage(slug: string): Promise<SequencePageResul
     const [comments, versions, config] = await Promise.all([
       supabase
         .from('comments')
-        .select('*, author:profiles(*)')
+        // Comments embed. Unqualified on purpose -- comments has a single FK to
+        // profiles, so there is no ambiguity to hint past (see the 030
+        // two-FK incident). `username` is the only author field CommentThread
+        // reads: SequencePageClient.tsx:2052-2180.
+        .select('*, author:profiles(username)')
         .eq('sequence_id', seq.id)
         .eq('is_deleted', false)
         .order('created_at', { ascending: true }),
