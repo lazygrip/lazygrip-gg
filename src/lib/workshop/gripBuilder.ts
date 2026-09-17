@@ -8,6 +8,7 @@ import {
   macrosToExportMap
 } from "./gripExportEnrich";
 import type { BuildResult, BuilderModel } from "./types";
+import { MAX_BUILD_DEPTH, MAX_BUILD_STEPS } from "./limits";
 import { formatMacroForGripExport } from "./spellCatalog";
 import { exportResetModifiers } from "./gripResetModifiers";
 
@@ -16,6 +17,48 @@ type LooseRecord = Record<string, any>;
 const DEFAULT_ICON = 134400;
 const STEP_FUNCTIONS = new Set(["Sequential", "Priority", "Random", "ReversePriority"]);
 const LOOP_REPEAT_MAX = 50;
+
+// ONE BUDGET FOR THE WHOLE BUILD, not one per version.
+//
+// clampLoopRepeat bounds a SINGLE loop at LOOP_REPEAT_MAX, and that was the only
+// bound the builder had. walk() recursed into child loops with no depth counter
+// and steps had no length ceiling, so the repeats multiplied. Measured on the
+// uncapped builder at repeat 50: depth 1 emits 50 steps, depth 2 2,500, depth 3
+// 125,000, and depth 4 6,250,000 in 8.2 seconds. Depth 5 is 312,500,000 and
+// depth 6 is 15.6 billion, from a request body under 400 bytes, unauthenticated.
+//
+// A per-version budget would not have been enough. model.sequences and
+// sequence.versions are both uncapped arrays, so a budget that resets per
+// version multiplies straight back out -- six versions of a 1,000-step build is
+// 6,000 steps with every individual version comfortably legal. The budget is
+// therefore created once in buildGripFromModel and threaded down.
+type StepBudget = { remaining: number };
+
+function createStepBudget(): StepBudget {
+  return { remaining: MAX_BUILD_STEPS };
+}
+
+function spendStep(budget: StepBudget): void {
+  if (budget.remaining <= 0) {
+    throw new Error(
+      `That build produces too many steps (the limit is ${MAX_BUILD_STEPS.toLocaleString()}). `
+      + "Reduce the loop repeat counts or the nesting."
+    );
+  }
+  budget.remaining -= 1;
+}
+
+// Checked on descent, in both traversals of the action tree, because they are
+// two independent walks of the same untrusted input: createActionNormalizer maps
+// it one-to-one, and buildGripFlatSteps flattens it multiplicatively. Bounding
+// only the second would leave the first able to blow the stack.
+function assertDepthWithinLimit(depth: number): void {
+  if (depth > MAX_BUILD_DEPTH) {
+    throw new Error(
+      `That build is nested too deep (the limit is ${MAX_BUILD_DEPTH} levels of loops and ifs).`
+    );
+  }
+}
 
 function normalizeStepFunction(stepFunction: unknown): string {
   const value = String(stepFunction || "").trim();
@@ -35,7 +78,7 @@ function clampLoopRepeat(value: unknown): number {
   return Math.min(LOOP_REPEAT_MAX, Math.floor(parsed));
 }
 
-function buildGripFlatSteps(actions: LooseRecord[]): string[] {
+function buildGripFlatSteps(actions: LooseRecord[], budget: StepBudget): string[] {
   const steps: string[] = [];
   const disabledSeen = new Set();
 
@@ -53,10 +96,18 @@ function buildGripFlatSteps(actions: LooseRecord[]): string[] {
       disabledSeen.add(key);
     }
 
+    spendStep(budget);
     steps.push(macro);
   }
 
-  function walk(node: LooseRecord): void {
+  // EVERY RECURSIVE DESCENT PASSES depth EXPLICITLY, and none of them is written
+  // as `children.forEach(walk)` any more. Array.prototype.forEach hands its
+  // callback (item, index, array), so a walk(node, depth) reached through a bare
+  // forEach reference receives the ARRAY INDEX as its depth -- a counter that
+  // looks threaded, reads plausibly, and is wrong. The audit records exactly that
+  // shape already living in normalizeGripAction, which threads a depth parameter
+  // that nothing ever compares.
+  function walk(node: LooseRecord, depth: number): void {
     if (!node || typeof node !== "object") {
       return;
     }
@@ -68,22 +119,25 @@ function buildGripFlatSteps(actions: LooseRecord[]): string[] {
     }
 
     if (type === "loop") {
+      assertDepthWithinLimit(depth + 1);
       const repeat = clampLoopRepeat(node.repeat);
       const children = node.children || [];
       for (let round = 0; round < repeat; round += 1) {
-        children.forEach(walk);
+        children.forEach((child: LooseRecord) => walk(child, depth + 1));
       }
       return;
     }
 
     if (type === "if") {
-      (node.then || []).forEach(walk);
-      (node.else || []).forEach(walk);
+      assertDepthWithinLimit(depth + 1);
+      (node.then || []).forEach((child: LooseRecord) => walk(child, depth + 1));
+      (node.else || []).forEach((child: LooseRecord) => walk(child, depth + 1));
       return;
     }
 
     if (type === "pause") {
       const clicks = Number(node.clicks);
+      spendStep(budget);
       steps.push(Number.isFinite(clicks) && clicks > 0
         ? `/pause ${Math.floor(clicks)} clicks`
         : "/pause 1 clicks");
@@ -93,12 +147,13 @@ function buildGripFlatSteps(actions: LooseRecord[]): string[] {
     if (type === "embed") {
       const sequence = String(node.sequence || "").trim();
       if (sequence) {
+        spendStep(budget);
         steps.push(`/embed ${sequence}`);
       }
     }
   }
 
-  (actions || []).forEach(walk);
+  (actions || []).forEach((action: LooseRecord) => walk(action, 0));
   return steps;
 }
 
@@ -192,7 +247,7 @@ function createActionNormalizer(warnings: string[], contextLabel: string): (acti
     warnings.push(prefixWarning(contextLabel, message));
   }
 
-  function normalize(action: LooseRecord): LooseRecord | null {
+  function normalize(action: LooseRecord, depth: number = 0): LooseRecord | null {
     if (!action || typeof action !== "object") {
       return null;
     }
@@ -219,8 +274,9 @@ function createActionNormalizer(warnings: string[], contextLabel: string): (acti
     }
 
     if (type === "loop") {
+      assertDepthWithinLimit(depth + 1);
       const children = (action.children || [])
-        .map((child: LooseRecord) => normalize(child))
+        .map((child: LooseRecord) => normalize(child, depth + 1))
         .filter(Boolean);
 
       if (!children.length) {
@@ -251,11 +307,12 @@ function createActionNormalizer(warnings: string[], contextLabel: string): (acti
     }
 
     if (type === "if") {
+      assertDepthWithinLimit(depth + 1);
       const thenBranch = (action.then || action.children?.[0] || [])
-        .map((child: LooseRecord) => normalize(child))
+        .map((child: LooseRecord) => normalize(child, depth + 1))
         .filter(Boolean);
       const elseBranch = (action.else || action.children?.[1] || [])
-        .map((child: LooseRecord) => normalize(child))
+        .map((child: LooseRecord) => normalize(child, depth + 1))
         .filter(Boolean);
 
       if (!thenBranch.length && !elseBranch.length) {
@@ -303,7 +360,7 @@ function buildVersionContextLabel(model: LooseRecord, sequence: LooseRecord, ver
   return parts.join(" · ");
 }
 
-function buildVersionPayload(version: LooseRecord, warnings: string[], contextLabel: string): LooseRecord {
+function buildVersionPayload(version: LooseRecord, warnings: string[], contextLabel: string, budget: StepBudget): LooseRecord {
   const normalize = createActionNormalizer(warnings, contextLabel);
   const sourceActions = version.actions || [];
   const actions = sourceActions
@@ -314,7 +371,7 @@ function buildVersionPayload(version: LooseRecord, warnings: string[], contextLa
     throw new Error(prefixWarning(contextLabel, "Add at least one block with macro text."));
   }
 
-  const steps = buildGripFlatSteps(sourceActions);
+  const steps = buildGripFlatSteps(sourceActions, budget);
   if (!steps.length) {
     warnings.push(prefixWarning(contextLabel, "No exportable steps were found in this version."));
   }
@@ -339,13 +396,14 @@ function buildVersionPayload(version: LooseRecord, warnings: string[], contextLa
   };
 }
 
-function buildSequencePayload(sequence: LooseRecord, model: BuilderModel, warnings: string[]): LooseRecord {
+function buildSequencePayload(sequence: LooseRecord, model: BuilderModel, warnings: string[], budget: StepBudget): LooseRecord {
   const name = String(sequence.name || "").trim() || "Untitled";
   const versions = (sequence.versions || [])
     .map((version: LooseRecord, index: number) => buildVersionPayload(
       version,
       warnings,
-      buildVersionContextLabel(model, sequence, version, index)
+      buildVersionContextLabel(model, sequence, version, index),
+      budget
     ))
     .filter(Boolean);
 
@@ -382,7 +440,10 @@ function buildGripFromModel(model: BuilderModel): BuildResult {
     throw new Error("Add at least one sequence to the collection.");
   }
 
-  const builtSequences = inputSequences.map(sequence => buildSequencePayload(sequence, model, warnings));
+  // Created once, here, and spent by every sequence and version below it. See
+  // the StepBudget note at the top of this file for why it is not per version.
+  const budget = createStepBudget();
+  const builtSequences = inputSequences.map(sequence => buildSequencePayload(sequence, model, warnings, budget));
   const sequenceNames = builtSequences.map(sequence => sequence.name);
   const isCollection = builtSequences.length > 1;
   const exportMeta = model.exportMeta || {};
