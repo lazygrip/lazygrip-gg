@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { cssUrl, sanitizeAvatarUrl, sanitizeBannerUrl } from '@/lib/url-safety'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import StatBlock from '@/components/ui/StatBlock'
@@ -91,7 +91,34 @@ export default async function UserProfilePage(props: Props) {
     .eq('username', params.username)
     .single()
 
-  if (!profile) notFound()
+  // Audit F7.3. Before 036 a rename 404'd every link to the old name -- the
+  // sitemap's author URLs, every inbound link, every /user/<name> in Discord
+  // history -- and silently, from the renamer's point of view, because their
+  // own tab follows along via router.replace.
+  //
+  // ORDER IS LOAD-BEARING. profiles is queried first, above, and this runs only
+  // when that found nothing. A name freed by one rename can be claimed by
+  // another account, and in that case the LIVE profile must win: an alias that
+  // outranked a real username would send visitors to the wrong person. The
+  // trigger in 036 also deletes a matching alias when a name is claimed, so
+  // this is the second of two defences rather than the only one.
+  if (!profile) {
+    const { data: alias } = await supabase
+      .from('profile_aliases')
+      .select('profiles!inner(username)')
+      .eq('old_username', params.username)
+      .maybeSingle()
+
+    const currentUsername = (alias?.profiles as unknown as { username: string } | null)?.username
+    if (currentUsername) {
+      // permanentRedirect, not redirect: a rename is permanent, and a 308 is
+      // what moves the link equity and the crawler's index entry across rather
+      // than leaving both pointing at a URL that only works by redirect.
+      permanentRedirect(`/user/${encodeURIComponent(currentUsername)}`)
+    }
+
+    notFound()
+  }
 
   // Who's looking. Every existing auth.getUser() call in this codebase is
   // in a client component (checked 2026-08-11, none in a server component
