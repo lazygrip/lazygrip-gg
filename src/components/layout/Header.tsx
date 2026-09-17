@@ -54,10 +54,13 @@ export default function Header() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [dropdownOpen])
 
-  // Close mobile menu on route change
+  // Close mobile menu on route change. `pathname` has to be in the dep array:
+  // Header renders from the layout, so an App Router navigation does not remount
+  // it. With an empty array this ran once on mount and never again, leaving the
+  // menu open on top of the page the user had just navigated to.
   useEffect(() => {
     setMobileMenuOpen(false)
-  }, [])
+  }, [pathname])
 
   async function loadProfile(userId: string) {
     const { data } = await supabase
