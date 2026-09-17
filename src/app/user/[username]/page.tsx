@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import { cssUrl, sanitizeAvatarUrl, sanitizeBannerUrl } from '@/lib/url-safety'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import StatBlock from '@/components/ui/StatBlock'
@@ -87,11 +87,46 @@ export default async function UserProfilePage(props: Props) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('id, username, display_name, avatar_url, avatar_color, bio, battletag, created_at, banner_url, social_links, featured_sequence_id, discord_bridge_opted_out')
+    // discord_bridge_opted_out is NOT in this list any more, and its absence is
+    // the point. This query runs as `anon` for a signed-out visitor, and audit
+    // M14 is that every profile column was anon-readable. Migration 034 takes
+    // this one off the anon SELECT grant, so naming it here would make
+    // .single() return null for every visitor and send every public profile
+    // page to notFound(). The value is owner-only anyway -- it seeds the
+    // Settings tab and nothing else -- so it is fetched below, once, and only
+    // when the viewer owns the profile.
+    .select('id, username, display_name, avatar_url, avatar_color, bio, battletag, created_at, banner_url, social_links, featured_sequence_id')
     .eq('username', params.username)
     .single()
 
-  if (!profile) notFound()
+  // Audit F7.3. Before 036 a rename 404'd every link to the old name -- the
+  // sitemap's author URLs, every inbound link, every /user/<name> in Discord
+  // history -- and silently, from the renamer's point of view, because their
+  // own tab follows along via router.replace.
+  //
+  // ORDER IS LOAD-BEARING. profiles is queried first, above, and this runs only
+  // when that found nothing. A name freed by one rename can be claimed by
+  // another account, and in that case the LIVE profile must win: an alias that
+  // outranked a real username would send visitors to the wrong person. The
+  // trigger in 036 also deletes a matching alias when a name is claimed, so
+  // this is the second of two defences rather than the only one.
+  if (!profile) {
+    const { data: alias } = await supabase
+      .from('profile_aliases')
+      .select('profiles!inner(username)')
+      .eq('old_username', params.username)
+      .maybeSingle()
+
+    const currentUsername = (alias?.profiles as unknown as { username: string } | null)?.username
+    if (currentUsername) {
+      // permanentRedirect, not redirect: a rename is permanent, and a 308 is
+      // what moves the link equity and the crawler's index entry across rather
+      // than leaving both pointing at a URL that only works by redirect.
+      permanentRedirect(`/user/${encodeURIComponent(currentUsername)}`)
+    }
+
+    notFound()
+  }
 
   // Who's looking. Every existing auth.getUser() call in this codebase is
   // in a client component (checked 2026-08-11, none in a server component
@@ -131,6 +166,22 @@ export default async function UserProfilePage(props: Props) {
   // view on every profile that isn't the viewer's own.
   const viewTrend = isOwnProfile ? await fetchCreatorViewTrend(supabase, seqs.map(s => s.id)) : []
   const activity = isOwnProfile ? await fetchCreatorActivity(supabase, profile.id) : []
+
+  // Owner-only, for the same reason the two reads above are: this column is off
+  // the anon SELECT grant as of migration 034, so a visitor asking for it gets
+  // a 42501 rather than a value. Skipping the query entirely for a visitor is
+  // both faster and the difference between "not fetched" and "fetched and
+  // denied". Defaults to false when the read is skipped or fails, which matches
+  // the column's own `not null default false` from 017:26.
+  let bridgeOptedOut = false
+  if (isOwnProfile) {
+    const { data: ownSettings } = await supabase
+      .from('profiles')
+      .select('discord_bridge_opted_out')
+      .eq('id', profile.id)
+      .single()
+    bridgeOptedOut = ownSettings?.discord_bridge_opted_out === true
+  }
 
   // Owner-only tabs folded in from the old /profile page (2026-09-14
   // consolidation) -- Drafts, Saved, and private sequences (merged inline
@@ -412,7 +463,7 @@ export default async function UserProfilePage(props: Props) {
           banner_url: profile.banner_url,
           social_links: profile.social_links,
           featured_sequence_id: profile.featured_sequence_id,
-          discord_bridge_opted_out: profile.discord_bridge_opted_out === true,
+          discord_bridge_opted_out: bridgeOptedOut,
         } : null}
       />
     </div>

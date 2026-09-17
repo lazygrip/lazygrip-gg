@@ -1,0 +1,19 @@
+# Migrations that do NOT apply to an empty database, as of 2026-09-17.
+#
+# This file is a ratchet, not a permission slip. apply-from-scratch.sh compares
+# the actual failure set against this list and fails on ANY difference -- a new
+# failure, or an old one that started passing without this file being updated.
+# The goal is an empty file.
+#
+# Was 8 entries. 002's idempotency repair and 003 closed seven of them.
+#
+# The one left needs the pg_dump in issue #78 and cannot be fixed by reading
+# this repo: 026 alters update_sequence_metadata and update_draft_sequence at
+# 23 arguments, and every CREATE of either function in this repo -- 002, 010,
+# 025 -- defines 20. So production has 23-argument versions built outside the
+# repo, and nothing here says what the three extra parameters are. Correcting
+# 026 to target the 20-argument signatures would make this green and would
+# then set search_path on a function production does not have.
+#
+# format: <migration filename>  # <the first error postgres reports>
+026_search_path_hardening_and_rate_limit_ownership.sql  # update_sequence_metadata/update_draft_sequence 23-arg signatures do not exist
