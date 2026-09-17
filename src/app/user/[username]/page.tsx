@@ -2,7 +2,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import { sanitizeAvatarUrl, sanitizeBannerUrl } from '@/lib/url-safety'
+import { cssUrl, sanitizeAvatarUrl, sanitizeBannerUrl } from '@/lib/url-safety'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import StatBlock from '@/components/ui/StatBlock'
 import ProfileTabs, { type SequenceRowData } from './ProfileTabs'
@@ -116,6 +116,11 @@ export default async function UserProfilePage(props: Props) {
   const displayColor = profile.avatar_color ?? '#1D9E75'
   const safeAvatarUrl = sanitizeAvatarUrl(profile.avatar_url)
   const safeBannerUrl = sanitizeBannerUrl(profile.banner_url)
+  // The CSS token, not the bare URL. cssUrl returns the whole quoted
+  // `url("...")` so there is no shape in which the value reaches a stylesheet
+  // unquoted -- which is what audit F7.1 was. Null here falls through to the
+  // gradient below exactly as a null banner_url always has.
+  const bannerCss = cssUrl(safeBannerUrl)
   const joinDate = new Date(profile.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' })
 
   // Owner's own dashboard data -- both reads are RLS-gated to "the
@@ -239,8 +244,8 @@ export default async function UserProfilePage(props: Props) {
       }}>
         <div style={{
           height: 150,
-          background: safeBannerUrl
-            ? `url(${safeBannerUrl}) center/cover no-repeat`
+          background: bannerCss
+            ? `${bannerCss} center/cover no-repeat`
             : 'linear-gradient(135deg, var(--accent-subtle), var(--bg-secondary))',
         }} />
 
