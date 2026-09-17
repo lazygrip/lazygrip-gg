@@ -212,6 +212,40 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 })
     }
 
+    // AUDIT M9. `status` has been in the select list above since before this
+    // check existed and was never read -- the audit's exact words were that it
+    // "selects the column at :143 and never reads it". A draft could therefore
+    // be pushed into the public forum and PERMANENTLY BOUND to a thread whose
+    // linked page 404s for everyone but its author, because the write-back at
+    // the bottom of this route sets discord_thread_id and nothing ever clears
+    // it. Publishing the sequence later reuses that thread; the thread's early
+    // messages point at a page that did not exist yet.
+    //
+    // 'private' and 'archived' are refused for the same reason as 'draft'.
+    // /sequences/[slug] serves published rows only, so a card for any of the
+    // three links somewhere a visitor cannot open.
+    //
+    // admin/sequence-thread has always checked this correctly -- at :377-381 on
+    // main today, which is where the audit's ":388-393" landed after the file
+    // moved; verified rather than carried over. So this is the two routes
+    // agreeing rather than a new rule, and the 409 is copied from it verbatim
+    // down to the status code. The request is well-formed and the caller is
+    // entitled to it, the sequence is just not in a state where a public card
+    // makes sense -- which a retry after publishing fixes, and a 400 would
+    // suggest otherwise.
+    //
+    // BREAKS NOTHING: all six notifyDiscord call sites in post/page.tsx fire
+    // AFTER the publish RPC or insert has resolved (:1063, :1114, :1243, :1281,
+    // :1361, :1409), so the row is 'published' by the time this route reads it.
+    // Draft autosave does not call this route at all.
+    if (sequenceRow.status !== 'published') {
+      console.warn(`[notify-discord] Refused a notification for a non-published sequence: ${slug} (status=${sequenceRow.status})`)
+      return NextResponse.json(
+        { ok: false, error: 'That sequence is not published yet.' },
+        { status: 409 },
+      )
+    }
+
     const storedThreadId = sequenceRow?.discord_thread_id ?? null
     const existingThreadId = storedThreadId && SNOWFLAKE_RE.test(storedThreadId) ? storedThreadId : null
 

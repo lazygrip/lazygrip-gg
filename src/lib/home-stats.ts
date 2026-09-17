@@ -23,10 +23,48 @@ export type TopCreator = {
 // public client pattern as browse-server.ts, so this stays cacheable rather than
 // opting the homepage into dynamic rendering. Returns null on any failure so the
 // page can omit the stat block rather than render zeros or stale-looking numbers.
+// A Postgres function that has not been created yet. PostgREST answers PGRST202
+// for "could not find the function in the schema cache", which is exactly the
+// state between this code deploying and @slowdog-dev applying migration 035 --
+// migrations here are applied by hand, so that window is real and can be hours.
+// Every RPC call below falls back to the old in-JS path on this code alone, so
+// the homepage is correct in both orders. Any OTHER error is a real failure and
+// is treated as one.
+const FUNCTION_MISSING = 'PGRST202'
+
+function isMissingFunction(error: { code?: string } | null): boolean {
+  return error?.code === FUNCTION_MISSING
+}
+
 export async function fetchHomeStats(): Promise<HomeStats | null> {
   try {
     const supabase = createPublicClient()
 
+    // Audit F7.5. The old path below fetched view_count for EVERY published
+    // sequence and class_name for EVERY published sequence with no .limit(),
+    // then summed and de-duped in JS. PostgREST truncates past its row cap and
+    // returns NO error, so those two numbers would quietly stop being right
+    // with nothing to notice it by -- while sequenceCount, which comes from
+    // { count: 'exact' }, stayed correct. One query, two numbers, disagreeing.
+    const { data: agg, error: aggError } = await supabase.rpc('home_stats')
+    if (!aggError) {
+      const row = Array.isArray(agg) ? agg[0] : agg
+      if (row) {
+        return {
+          sequenceCount: Number(row.sequence_count ?? 0),
+          classCount: Number(row.class_count ?? 0),
+          memberCount: Number(row.member_count ?? 0),
+          viewCount: Number(row.view_count ?? 0),
+        }
+      }
+    } else if (!isMissingFunction(aggError)) {
+      return null
+    }
+
+    // Fallback only. Retained verbatim so the page keeps working before 035 is
+    // applied; it carries the truncation defect the RPC exists to remove, which
+    // is acceptable for a window measured in hours and not acceptable as the
+    // permanent path.
     const [sequences, classes, members] = await Promise.all([
       supabase
         .from('sequences')
@@ -101,6 +139,43 @@ export async function fetchTopCreators(limit = 15): Promise<TopCreator[]> {
   try {
     const supabase = createPublicClient()
 
+    // Audit F7.5, the third of the three. `limit` bounded the RANKED OUTPUT and
+    // not the source query, so /creators passing 500 did not bound the fetch at
+    // all -- it pulled (author_id, view_count) for every published sequence and
+    // grouped in JS, with the same silent truncation as fetchHomeStats.
+    const { data: rankedRows, error: rankError } = await supabase.rpc('top_creators', {
+      p_limit: limit,
+    })
+    if (!rankError) {
+      return ((rankedRows ?? []) as Array<{
+        id: string
+        username: string | null
+        display_name: string | null
+        avatar_url: string | null
+        avatar_color: string | null
+        sequence_count: number | string
+        total_views: number | string
+      }>)
+        .filter(row => typeof row.username === 'string' && row.username.length > 0)
+        .map(row => ({
+          id: row.id,
+          username: row.username as string,
+          display_name: row.display_name ?? null,
+          avatar_url: row.avatar_url ?? null,
+          avatar_color: row.avatar_color ?? null,
+          // count() and sum() come back as bigint, which supabase-js hands over
+          // as a STRING once it exceeds what JSON can carry safely -- and as a
+          // number below that. Number() on both is the only shape that is right
+          // in both cases; `row.total_views as number` would compile and then
+          // sort lexicographically once the site gets popular enough for it to
+          // matter, which is the worst possible moment to find out.
+          sequenceCount: Number(row.sequence_count ?? 0),
+          totalViews: Number(row.total_views ?? 0),
+        }))
+    }
+    if (!isMissingFunction(rankError)) return []
+
+    // Fallback only, until 035 is applied. See fetchHomeStats.
     const { data: sequences, error: seqError } = await supabase
       .from('sequences')
       .select('author_id, view_count')

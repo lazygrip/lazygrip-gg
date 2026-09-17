@@ -148,10 +148,12 @@ export default function PostingEligibilityChecklist({ userId, onEligible, onClos
   async function acceptTerms() {
     setSavingTerms(true)
     const supabase = createClient()
-    const { error } = await supabase
-      .from('profiles')
-      .update({ terms_accepted_at: new Date().toISOString() })
-      .eq('id', userId)
+    // Migration 032 takes terms_accepted_at off the `authenticated` UPDATE
+    // grant, because a client-supplied timestamp can be backdated or rewritten.
+    // accept_terms() stamps now() server-side and resolves the user from
+    // auth.uid(), so there is no id argument to get wrong either -- note this
+    // call passes none, where the old write keyed on the `userId` prop.
+    const { error } = await supabase.rpc('accept_terms')
     setSavingTerms(false)
 
     if (!error) fetchEligibility()
