@@ -305,7 +305,7 @@ function formatSpellReference(
     if (tagForExport) {
       return bareIds ? String(numericId) : `{spell:${numericId}}`;
     }
-    return getSpellName(numericId) || value;
+    return readableSpellReference(numericId, value);
   }
 
   const numericId = readNumericSpellId(value);
@@ -317,7 +317,7 @@ function formatSpellReference(
       return bareIds ? String(numericId) : `{spell:${numericId}}`;
     }
     if (allowNumericResolution) {
-      return getSpellName(numericId) || value;
+      return readableSpellReference(numericId, value);
     }
     return value;
   }
@@ -330,6 +330,32 @@ function formatSpellReference(
   }
 
   return value;
+}
+
+// The decode leg's substitution rule, asked by BOTH the token branch and the
+// bare-numeric branch above because both hand a plain string to the export leg.
+//
+// That leg has no carrier for the source id -- it sees only the string -- so it
+// recovers an id by asking the name-to-id index, and that index maps one
+// lowercased name to ONE id. When a name is carried by several ids (Judgment is
+// carried by five) the export leg re-emits whichever one the index holds, and
+// the id the user typed is silently replaced by a different spell's.
+//
+// So a name is substituted only when the round trip is known to be lossless:
+// the index has to answer with this very id. Otherwise the {spell:NNN} token
+// stays, which is the smallest carrier that survives a plain-string
+// intermediate and one the format already understands. A name the catalog does
+// not know falls back to what the caller had, so an uncatalogued id still shows
+// as the bare number the user typed rather than becoming a token.
+function readableSpellReference(numericId: number, fallback: string): string {
+  const resolvedName = getSpellName(numericId);
+  if (!resolvedName) {
+    return fallback;
+  }
+  if (getSpellIdByName(resolvedName) === numericId) {
+    return resolvedName;
+  }
+  return `{spell:${numericId}}`;
 }
 
 function readNumericSpellId(value: string): number | null {
