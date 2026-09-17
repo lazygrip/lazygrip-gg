@@ -31,8 +31,6 @@ function isExempt(pathname: string): boolean {
   return EXEMPT_PREFIXES.some(prefix => pathname.startsWith(prefix))
 }
 
-const AUTO_GENERATED_USERNAME = /^user_[0-9a-f]{8}$/
-
 export async function middleware(request: NextRequest) {
   // Let the callback route handle itself — middleware interferes with PKCE exchange
   if (request.nextUrl.pathname.startsWith('/auth/callback')) {
@@ -72,14 +70,21 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('username, terms_accepted_at')
-    .eq('id', user.id)
-    .single()
-
-  const hasRealUsername = !!profile?.username && !AUTO_GENERATED_USERNAME.test(profile.username)
-  const onboardingComplete = hasRealUsername && !!profile?.terms_accepted_at
+  // has_completed_onboarding() is this exact check, in the database, since
+  // migration 008: a username that is present, non-blank and does not match
+  // '^user_[0-9a-f]{8}$', AND terms_accepted_at is not null. Its own comment
+  // calls it "the real posting gate". Calling it instead of reading the two
+  // columns means `authenticated` no longer needs SELECT on terms_accepted_at
+  // to serve a page load -- the point of M14's authenticated half, since a
+  // column grant cannot say "own row only" and the SELECT policy is using(true).
+  //
+  // 014 revoked this function from anon and kept it for authenticated, which
+  // is the role middleware runs as: the request carries the user's session.
+  //
+  // Fails closed exactly as the column read did. On any error `data` is null,
+  // which is falsy, so the redirect fires rather than the request passing.
+  const { data: onboardingComplete } = await supabase
+    .rpc('has_completed_onboarding', { check_user_id: user.id })
 
   if (!onboardingComplete) {
     const redirectUrl = new URL('/welcome', request.url)
