@@ -12,6 +12,7 @@ const NAV = [
   { href: '/guide/building-sequences', label: 'Building sequences' },
   { href: '/guide/from-legacy-program', label: 'Coming from the legacy program' },
   { href: '/guide/validating', label: 'Validating your work' },
+  { href: '/guide/wow-forever', label: 'WoW: Forever' },
 ]
 
 function GuideSidebar() {
