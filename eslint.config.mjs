@@ -21,7 +21,7 @@ import nextCoreWebVitals from 'eslint-config-next/core-web-vitals'
 // finishing it.
 //
 // THE FIVE THAT REMAIN ARE ALL ONE SHAPE: an effect that calls a named async
-// loader which eventually sets state. SequencePageClient:300, update/page:240,
+// loader which eventually sets state. SequencePageClient:336, update/page:240,
 // PostingEligibilityChecklist:85, BrowseContent:197 and :211.
 //
 // The rule cannot see through the call, and reports them whether or not a
