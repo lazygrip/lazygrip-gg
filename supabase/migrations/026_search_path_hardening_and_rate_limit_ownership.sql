@@ -18,8 +18,14 @@
 alter function public.create_draft_sequence(uuid, text, text, text, integer, text, integer, text, text, text, text, text, text, integer, text, text, text, text, text, text, boolean, text, text, text) set search_path = public, pg_temp;
 alter function public.create_sequence_with_version(uuid, text, text, text, integer, text, integer, text, text, text, text, text, text, integer, text, text, text, text, text, text, text, boolean, text, text) set search_path = public, pg_temp;
 alter function public.update_sequence_with_version(uuid, uuid, text, text, integer, text, integer, text, text, text, text, text, text, integer, text, text, text, text, text, text, text, text) set search_path = public, pg_temp;
-alter function public.update_sequence_metadata(uuid, uuid, text, text, integer, text, integer, text, text, text, text, text, text, integer, text, text, text, text, text, text, text, text, text) set search_path = public, pg_temp;
-alter function public.update_draft_sequence(uuid, uuid, text, text, integer, text, integer, text, text, text, text, text, text, integer, text, text, text, text, text, text, text, text, text) set search_path = public, pg_temp;
+-- CORRECTED 2026-09-18. These two alters named TWENTY-THREE argument types, one more
+-- than 025 creates. Production carried a 23rd parameter from 2026-09-01 to some point
+-- after 2026-09-09, added and removed outside every migration in this repo, which is
+-- why this applied there and fails from scratch. Both functions are at 22 today and
+-- both live bodies already carry SET search_path, so this edit is a no-op against
+-- production and makes apply-from-scratch reach the same state.
+alter function public.update_sequence_metadata(uuid, uuid, text, text, integer, text, integer, text, text, text, text, text, text, integer, text, text, text, text, text, text, text, text) set search_path = public, pg_temp;
+alter function public.update_draft_sequence(uuid, uuid, text, text, integer, text, integer, text, text, text, text, text, text, integer, text, text, text, text, text, text, text, text) set search_path = public, pg_temp;
 alter function public.publish_draft_sequence(uuid, uuid, text, text) set search_path = public, pg_temp;
 alter function public.publish_draft_sequences_batch(uuid[], uuid, text) set search_path = public, pg_temp;
 
