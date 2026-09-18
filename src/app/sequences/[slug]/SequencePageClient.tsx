@@ -228,7 +228,32 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
       // !sequences_author_id_fkey: required as of migration 030 -- see
       // sequence-server.ts's fetchSequencePage for the full explanation of
       // why an unqualified profiles(...) embed off sequences now fails.
-      .select('*, author:profiles!sequences_author_id_fkey(*)')
+      //
+      // `author:profiles!sequences_author_id_fkey(*)` until 2026-09-18. This
+      // embed and the comments one below SURVIVED migration 034's narrowing
+      // pass: 034's header cites this file at :308 and :319, neither of which
+      // held a select by the time it merged, so the two live ones were never
+      // touched. 034 is unapplied as of 2026-09-18 and MUST NOT be applied
+      // against the code as it stood -- `select=*` expands to every column at
+      // parse time and needs SELECT on every one of them, so under 034's
+      // column-scoped grant both embeds return `permission denied for table
+      // profiles`. fetchSequence runs from a useEffect keyed on [slug] with no
+      // auth guard, i.e. for every signed-out visitor, and on a cache-seeded
+      // load it is the BACKGROUND reconcile -- the server content renders and
+      // comments and versions just never appear.
+      //
+      // The column list is measured from this file's consumers, not copied from
+      // 034's header. `username` is read at :1059-1069. `display_name` is read
+      // by NOTHING here, and is kept anyway because this row overwrites
+      // `seeded.sequence`, which sequence-server.ts:46 fetches WITH
+      // display_name because sequences/[slug]/page.tsx:148 builds the JSON-LD
+      // author name from it. Dropping it would make the reconcile quietly
+      // narrower than the seed it replaces -- a field present on a warm load
+      // and absent after reconcile is the failure mode nothing here would
+      // report. Both columns are in 034's anon grant.
+      // src/lib/profiles-embed-grants.test.ts asserts this for the whole tree
+      // rather than by line number, which is what let the two survive.
+      .select('*, author:profiles!sequences_author_id_fkey(username, display_name)')
       .eq('slug', slug)
       .eq('status', 'published')
       .single()
@@ -239,7 +264,18 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
 
       const { data: cmts } = await supabase
         .from('comments')
-        .select('*, author:profiles(*)')
+        // `author:profiles(*)` until 2026-09-18, the second embed 034's pass
+        // missed -- see the explanation on the sequences select above.
+        // Unqualified on purpose: comments has a single FK to profiles, so
+        // there is no ambiguity to hint past.
+        //
+        // username only, and it is the whole list the consumers read: the
+        // avatar initial at :2069, the profile link and label at :2074-2083,
+        // and the reply placeholder at :2197. This also makes the fetched rows
+        // shape-identical to the optimistic ones, which come back from
+        // api/comments/route.ts's `author:profiles(username)` -- the two were
+        // out of step from 2026-09-17 until this edit.
+        .select('*, author:profiles(username)')
         .eq('sequence_id', seq.id)
         .eq('is_deleted', false)
         .order('created_at', { ascending: true })
