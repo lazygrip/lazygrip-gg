@@ -18,8 +18,19 @@
 alter function public.create_draft_sequence(uuid, text, text, text, integer, text, integer, text, text, text, text, text, text, integer, text, text, text, text, text, text, boolean, text, text, text) set search_path = public, pg_temp;
 alter function public.create_sequence_with_version(uuid, text, text, text, integer, text, integer, text, text, text, text, text, text, integer, text, text, text, text, text, text, text, boolean, text, text) set search_path = public, pg_temp;
 alter function public.update_sequence_with_version(uuid, uuid, text, text, integer, text, integer, text, text, text, text, text, text, integer, text, text, text, text, text, text, text, text) set search_path = public, pg_temp;
-alter function public.update_sequence_metadata(uuid, uuid, text, text, integer, text, integer, text, text, text, text, text, text, integer, text, text, text, text, text, text, text, text, text) set search_path = public, pg_temp;
-alter function public.update_draft_sequence(uuid, uuid, text, text, integer, text, integer, text, text, text, text, text, text, integer, text, text, text, text, text, text, text, text, text) set search_path = public, pg_temp;
+-- CORRECTED 2026-09-19. These two alters carried the FAILED FIRST DRAFT of this
+-- migration, not the version that ran. Per @slowdog-dev reading the Postgres logs for
+-- 2026-09-09: a first attempt at 17:48:06 used these 23-argument signatures and errored
+-- 12ms later with "function ... does not exist", because production was at 22 arguments,
+-- matching what 025 created eight days earlier. The statement was inside one
+-- begin/commit, so the whole transaction aborted and nothing was written to
+-- schema_migrations. A second attempt at 17:48:25 used named parameters at the correct
+-- 22 arguments, succeeded, and is the one recorded as version 20260909174825. The text
+-- below is that recorded version. The logs are not readable from this side, so the
+-- account is his; what IS verifiable here is that 025 creates both at 22 and that all
+-- seven alters in this file now match the arity of the last CREATE before them.
+alter function public.update_sequence_metadata(p_sequence_id uuid, p_author_id uuid, p_title text, p_description text, p_class_id integer, p_class_name text, p_spec_id integer, p_spec_name text, p_content_type text, p_hero_talent text, p_patch_version text, p_grip_version text, p_step_function text, p_step_count integer, p_grip_string text, p_raw_steps text, p_talent_string text, p_warcraftlogs_url text, p_performance_notes text, p_collection_sequences text, p_wow_build text, p_actions text) set search_path = public, pg_temp;
+alter function public.update_draft_sequence(p_sequence_id uuid, p_author_id uuid, p_title text, p_description text, p_class_id integer, p_class_name text, p_spec_id integer, p_spec_name text, p_content_type text, p_hero_talent text, p_patch_version text, p_grip_version text, p_step_function text, p_step_count integer, p_grip_string text, p_raw_steps text, p_talent_string text, p_warcraftlogs_url text, p_performance_notes text, p_collection_sequences text, p_wow_build text, p_actions text) set search_path = public, pg_temp;
 alter function public.publish_draft_sequence(uuid, uuid, text, text) set search_path = public, pg_temp;
 alter function public.publish_draft_sequences_batch(uuid[], uuid, text) set search_path = public, pg_temp;
 

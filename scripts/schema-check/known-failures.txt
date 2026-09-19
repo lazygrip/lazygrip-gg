@@ -1,19 +1,19 @@
-# Migrations that do NOT apply to an empty database, as of 2026-09-17.
+# Migrations that do NOT apply to an empty database. EMPTY as of 2026-09-19.
 #
 # This file is a ratchet, not a permission slip. apply-from-scratch.sh compares
-# the actual failure set against this list and fails on ANY difference -- a new
-# failure, or an old one that started passing without this file being updated.
-# The goal is an empty file.
+# the actual failure set against this list and fails on ANY difference, a new
+# failure or an old one that started passing without this file being updated.
 #
-# Was 8 entries. 002's idempotency repair and 003 closed seven of them.
+# Was 8 entries. 002's idempotency repair and 003 closed seven. The eighth, 026,
+# closed on 2026-09-19.
 #
-# The one left needs the pg_dump in issue #78 and cannot be fixed by reading
-# this repo: 026 alters update_sequence_metadata and update_draft_sequence at
-# 23 arguments, and every CREATE of either function in this repo -- 002, 010,
-# 025 -- defines 20. So production has 23-argument versions built outside the
-# repo, and nothing here says what the three extra parameters are. Correcting
-# 026 to target the 20-argument signatures would make this green and would
-# then set search_path on a function production does not have.
+# THE EIGHTH ENTRY, and why its stated reason was wrong. It read: "every CREATE
+# of either function in this repo, 002, 010, 025, defines 20". Measured file by
+# file, the repo climbs 20 -> 21 -> 22: 002, 009 and 010 create at 20; 019 DROPs
+# at 20 and recreates at 21, adding p_wow_build; 025 DROPs at 21 and recreates at
+# 22, adding p_actions. The DROP FUNCTION IF EXISTS lines are at 019:205, 019:477,
+# 025:294 and 025:460, which is why a scan looking only for CREATE statements
+# missed the climb. So the gap was never three unexplained parameters. It was that
+# 026 held a draft that never ran.
 #
 # format: <migration filename>  # <the first error postgres reports>
-026_search_path_hardening_and_rate_limit_ownership.sql  # update_sequence_metadata/update_draft_sequence 23-arg signatures do not exist
