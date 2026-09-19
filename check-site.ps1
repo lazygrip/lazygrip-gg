@@ -1,5 +1,5 @@
 # LazyGrip Monthly Health Check
-# Run this from the repo root: C:\Users\edost\Documents\GitHub\lazygrip-gg
+# Run this from the repo root.
 # Usage: .\check-site.ps1
 
 Write-Host ""
