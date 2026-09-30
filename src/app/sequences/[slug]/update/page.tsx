@@ -694,6 +694,19 @@ export default function UpdateSequencePage() {
             Version
           </h2>
           <div>
+            <div style={{
+              background: 'var(--accent-subtle)',
+              border: '0.5px solid var(--accent)',
+              borderRadius: 'var(--radius-md)',
+              padding: '12px 14px',
+              marginBottom: 14,
+              fontSize: 'var(--text-sm)',
+              color: 'var(--text-primary)',
+              fontFamily: 'var(--font-sans)',
+              lineHeight: 1.5,
+            }}>
+              <strong>Set your own version label before you publish.</strong> The box below is only pre-filled with a suggestion. Type whatever you want it to be, for example v1.1 for a small tweak or v2.0 for a rebuild, because whatever you put here is exactly what readers see on your sequence page.
+            </div>
             <label style={{ display: 'block', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', marginBottom: 6 }}>
               Version label
             </label>

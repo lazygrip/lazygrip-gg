@@ -53,6 +53,13 @@
 -- version-1 row -- that is a one-row data fix, handled separately, not a
 -- schema change replayable from scratch.
 --
+-- APPLIED BY HAND, VERIFIED 2026-09-30. This was run in the Supabase SQL
+-- editor on 2026-09-29, so it has no row in supabase_migrations. The original
+-- SQL text was not kept anywhere recoverable. What IS verified, by hashing
+-- prosrc against the body below with comments removed: the live function body
+-- is identical to this file's. The comments in this file are not in prod, and
+-- prod currently has no COMMENT ON FUNCTION for this function either.
+--
 -- SEARCH_PATH IS CARRIED FORWARD DELIBERATELY. 028's own definition set
 -- search_path to 'public' (not 'public, pg_temp' -- that broader pinning
 -- was 026's convention applied to other functions, never applied here).
@@ -166,4 +173,4 @@ end;
 $function$;
 
 comment on function public.publish_sequence_version(uuid, integer, text, text, jsonb, text, uuid, text, text, text, text, text, text, text, jsonb, text) is
-  'Publishes a new version of an already-published sequence, including collections (028). p_collection_sequences takes text and parses it with ::jsonb (043) -- the previous jsonb-typed parameter stored the clients JSON.stringify payload as a double-encoded jsonb string rather than an array, crashing the collection-tab UI with X.map is not a function the first time an author published a new version of a collection sequence with real collection data. See 043 header for the kayaans-elemental-shaman case that exposed it.';
+  'Publishes a new version of an already-published sequence, including collections (028). p_collection_sequences takes text and parses it with ::jsonb (043) -- the previous jsonb-typed parameter stored the client''s JSON.stringify payload as a double-encoded jsonb string rather than an array, crashing the collection-tab UI with X.map is not a function the first time an author published a new version of a collection sequence with real collection data. See 043 header for the kayaans-elemental-shaman case that exposed it.';
