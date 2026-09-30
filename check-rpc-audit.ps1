@@ -69,6 +69,8 @@ $knownExempt = @(
     "update_comment_count",
     "update_sequence_rating",
     "update_sequence_save_count",
+    "bump_sequence_view_daily",
+    "record_profile_username_alias",
 
     # Reason 2: read-only eligibility checks, ownership verified by the
     # calling RPC before these are ever invoked. Added 2026-07-31
@@ -93,7 +95,11 @@ Get-ChildItem $migrationsPath -Filter "*.sql" | Sort-Object Name | ForEach-Objec
     # Find each CREATE [OR REPLACE] FUNCTION block that declares security definer.
     # Function bodies are dollar-quoted; capture from CREATE up to the closing
     # dollar-quote tag. Case-insensitive throughout.
-    $pattern = '(?is)create\s+(?:or\s+replace\s+)?function\s+(?:public\.)?([a-z0-9_]+)\s*\(.*?security\s+definer.*?as\s+(\$[a-z0-9_]*\$)(.*?)\2'
+    # The two header segments use a tempered pattern so "security definer" has to
+    # appear BEFORE this same function's "AS $tag$". The old lazy ".*?" could run
+    # past a non-definer function (request_client_ip, migration 031) into the next
+    # function's "security definer" and pin the wrong function and body on it.
+    $pattern = '(?is)create\s+(?:or\s+replace\s+)?function\s+(?:public\.)?([a-z0-9_]+)\s*\((?:(?!\bas\s+\$[a-z0-9_]*\$).)*?security\s+definer(?:(?!\bas\s+\$[a-z0-9_]*\$).)*?\bas\s+(\$[a-z0-9_]*\$)(.*?)\2'
     $matches2 = [regex]::Matches($content, $pattern)
 
     foreach ($m in $matches2) {
