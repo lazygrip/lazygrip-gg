@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Sequence, SequenceVersion, SequenceStep, ActionNode, CollectionSequenceEntry } from '@/types'
 import { Wand2, X } from 'lucide-react'
 import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
+import { normalizeCollectionEntries } from '@/lib/collection-entries'
 import { notifyDiscord } from '@/lib/notify-discord'
 import { useUsernameGate } from '@/lib/useUsernameGate'
 import PostingEligibilityChecklist from '@/components/PostingEligibilityChecklist'
@@ -132,10 +133,11 @@ export default function UpdateSequencePage() {
     // first, so a collection that HAS since been versioned through this
     // same page finds its real history, and one that hasn't gets an honest
     // "no history yet" state rather than a false "not found".
-    if (seq.collection_sequences) {
+    const existingCollectionEntries = normalizeCollectionEntries(seq.collection_sequences)
+    if (existingCollectionEntries.length > 0) {
       setIsCollection(true)
       setCollectionEntries(
-        (seq.collection_sequences as CollectionSequenceEntry[]).map(entry => ({
+        existingCollectionEntries.map(entry => ({
           name: entry.name,
           steps: entry.steps ?? [],
           actions: entry.actions ?? null,

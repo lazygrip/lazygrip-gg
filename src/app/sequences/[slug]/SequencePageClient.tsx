@@ -8,6 +8,7 @@ import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { formatDistanceToNow } from 'date-fns'
 import RenderedContent from '@/components/editor/RenderedContent'
 import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
+import { normalizeCollectionEntries } from '@/lib/collection-entries'
 import type { SequencePageResult } from '@/lib/sequence-server'
 import { useUsernameGate } from '@/lib/useUsernameGate'
 import { trackEvent } from '@/lib/analytics'
@@ -817,8 +818,9 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
   // version's bundle, not always whatever's live on the parent row. Falls
   // back to the parent row for the common case (no version history, or the
   // selected version predates 028 and has nothing of its own).
-  const collectionEntries: CollectionSequenceEntry[] =
+  const collectionEntries: CollectionSequenceEntry[] = normalizeCollectionEntries(
     selectedVersion?.collection_sequences ?? sequence.collection_sequences ?? []
+  )
   const isCollection = collectionEntries.length > 0
   const activeEntry = collectionEntries[activeCollectionTab] ?? null
 
