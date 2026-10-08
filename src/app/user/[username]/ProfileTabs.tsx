@@ -8,6 +8,7 @@ import {
   Trash2, Lock, Globe, X, Twitch, Youtube, Twitter,
 } from 'lucide-react'
 import { formatDistanceToNow, format } from 'date-fns'
+import { describeSequenceAge } from '@/lib/sequence-dates'
 import { createClient } from '@/lib/supabase/client'
 import {
   allowedUploadExtension,
@@ -70,6 +71,9 @@ export type SequenceRowData = {
   save_count?: number | null
   comment_count?: number | null
   created_at: string
+  // Optional so a query that does not select it still type-checks; the row then shows
+  // only the posted date. Every profile list query selects it.
+  updated_at?: string | null
   // Present only on rows fetched through the `saves` table (Saved tab) --
   // that's the one place this page shows sequences that aren't the
   // profile's own, so it's the one place a row needs to say whose it is.
@@ -553,6 +557,8 @@ function SequenceRow({ seq, status, onSetStatus }: {
   status?: 'published' | 'private'
   onSetStatus?: (seq: SequenceRowData) => void
 }) {
+  const [renderedAt] = useState(() => new Date())
+  const sequenceAge = describeSequenceAge(seq.created_at, seq.updated_at, renderedAt)
   const classColor = getClassColor(seq.class_id)
   const contentLabel = CONTENT_TYPES.find(c => c.value === seq.content_type)?.label ?? seq.content_type
   // Private sequences have no reachable /sequences/[slug] page -- that route
@@ -625,7 +631,8 @@ function SequenceRow({ seq, status, onSetStatus }: {
           )}
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{seq.view_count?.toLocaleString() ?? 0} views</div>
-            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{formatDistanceToNow(new Date(seq.created_at), { addSuffix: true })}</div>
+            <div suppressHydrationWarning title={sequenceAge.title} style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{sequenceAge.posted ? `Posted ${sequenceAge.posted}` : ''}</div>
+            {sequenceAge.updated && <div suppressHydrationWarning style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Updated {sequenceAge.updated}</div>}
           </div>
           {status && onSetStatus && (
             <button
@@ -686,6 +693,8 @@ function SavedTab({ seqs, onUnsave }: { seqs: SequenceRowData[]; onUnsave: (id: 
 // keeping the two apart avoids a SequenceRow prop combination that makes no
 // sense (a saved row is never the viewer's own to make private).
 function SavedSequenceRow({ seq, onUnsave }: { seq: SequenceRowData; onUnsave: (id: string) => void }) {
+  const [renderedAt] = useState(() => new Date())
+  const sequenceAge = describeSequenceAge(seq.created_at, seq.updated_at, renderedAt)
   const classColor = getClassColor(seq.class_id)
   const contentLabel = CONTENT_TYPES.find(c => c.value === seq.content_type)?.label ?? seq.content_type
 
@@ -726,7 +735,8 @@ function SavedSequenceRow({ seq, onUnsave }: { seq: SequenceRowData; onUnsave: (
           )}
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{seq.view_count?.toLocaleString() ?? 0} views</div>
-            <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{formatDistanceToNow(new Date(seq.created_at), { addSuffix: true })}</div>
+            <div suppressHydrationWarning title={sequenceAge.title} style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{sequenceAge.posted ? `Posted ${sequenceAge.posted}` : ''}</div>
+            {sequenceAge.updated && <div suppressHydrationWarning style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Updated {sequenceAge.updated}</div>}
           </div>
         </div>
       </Link>

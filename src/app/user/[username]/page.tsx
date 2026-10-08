@@ -141,7 +141,7 @@ export default async function UserProfilePage(props: Props) {
 
   const { data: sequences } = await supabase
     .from('sequences')
-    .select('id, title, slug, class_name, class_id, spec_name, content_type, hero_talent, avg_score, rating_count, view_count, save_count, comment_count, created_at')
+    .select('id, title, slug, class_name, class_id, spec_name, content_type, hero_talent, avg_score, rating_count, view_count, save_count, comment_count, created_at, updated_at')
     .eq('author_id', profile.id)
     .eq('status', 'published')
     .order('created_at', { ascending: false })
@@ -192,7 +192,7 @@ export default async function UserProfilePage(props: Props) {
   const { data: privateData } = isOwnProfile
     ? await supabase
         .from('sequences')
-        .select('id, title, slug, class_name, class_id, spec_name, content_type, hero_talent, avg_score, rating_count, view_count, created_at')
+        .select('id, title, slug, class_name, class_id, spec_name, content_type, hero_talent, avg_score, rating_count, view_count, created_at, updated_at')
         .eq('author_id', profile.id)
         .eq('status', 'private')
         .order('created_at', { ascending: false })
@@ -216,7 +216,7 @@ export default async function UserProfilePage(props: Props) {
   const { data: savesData } = isOwnProfile
     ? await supabase
         .from('saves')
-        .select('sequence:sequences(id, title, slug, class_name, class_id, spec_name, content_type, hero_talent, avg_score, rating_count, view_count, created_at, author:profiles!sequences_author_id_fkey(username))')
+        .select('sequence:sequences(id, title, slug, class_name, class_id, spec_name, content_type, hero_talent, avg_score, rating_count, view_count, created_at, updated_at, author:profiles!sequences_author_id_fkey(username))')
         .eq('user_id', profile.id)
         .order('created_at', { ascending: false })
     : { data: [] as never[] }

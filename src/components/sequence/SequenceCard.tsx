@@ -6,7 +6,8 @@ import { Sequence } from '@/types'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { stripHtml } from '@/lib/html-text'
 import { useState } from 'react'
-import { formatDistance, differenceInDays } from 'date-fns'
+import { differenceInDays } from 'date-fns'
+import { describeSequenceAge } from '@/lib/sequence-dates'
 
 type Props = {
   sequence: Sequence
@@ -38,7 +39,7 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
   // rendered strings are unchanged.
   const [renderedAt] = useState(() => new Date())
 
-  const timeAgo = formatDistance(new Date(sequence.created_at), renderedAt, { addSuffix: true })
+  const sequenceAge = describeSequenceAge(sequence.created_at, sequence.updated_at, renderedAt)
   const plainDescription = sequence.description ? stripHtml(sequence.description) : null
 
   // Surface a real revision separately from the original post date -- a sequence edited well
@@ -46,10 +47,6 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
   // "Recent" sort (which already orders by updated_at) or the hover-only stale tooltip below.
   // A same-day edit (autosave, a typo fix right after posting) is not worth calling out on its
   // own, so this only kicks in once there's a full day of daylight between the two timestamps.
-  const wasEditedAfterPosting = differenceInDays(new Date(sequence.updated_at), new Date(sequence.created_at)) >= 1
-  const updatedAgo = wasEditedAfterPosting
-    ? formatDistance(new Date(sequence.updated_at), renderedAt, { addSuffix: true })
-    : null
 
   const avgScore = sequence.avg_score != null ? sequence.avg_score : null
   const ratingCount = sequence.rating_count != null ? sequence.rating_count : 0
@@ -210,8 +207,8 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
               </Link>
             </span>
           )}
-          <span suppressHydrationWarning>
-            {updatedAgo ? `Posted ${timeAgo} · Updated ${updatedAgo}` : timeAgo}
+          <span suppressHydrationWarning title={sequenceAge.title}>
+            {sequenceAge.text}
           </span>
         </div>
       </div>

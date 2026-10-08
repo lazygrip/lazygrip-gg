@@ -179,7 +179,15 @@ function PostForm() {
   const [collectionTitle, setCollectionTitle] = useState('')
   const collectionTitleRef = useRef('')
   useEffect(() => { collectionTitleRef.current = collectionTitle }, [collectionTitle])
-  const [minorEdit, setMinorEdit] = useState(false)
+  // AN EDIT NEVER CREATES A VERSION. The Edit button (mode=edit) always saves in place
+  // through update_sequence_metadata. A new version, with its own label and changelog, is
+  // the Update button's job and lives on /sequences/[slug]/update. This used to be an
+  // opt-in checkbox that started unticked, so a plain description edit silently minted a
+  // version whose label came from a formula that ignored the author's own labels
+  // (2026-10-07: v2.0 followed by an auto-named 1.2 on the same macro). Only a bare
+  // ?edit= link with no mode, which nothing in the app generates, still reaches the
+  // versioned branch below.
+  const minorEdit = editMode === 'edit'
 
   // THE MACRO AS IT WAS WHEN THIS EDIT SESSION OPENED, captured in
   // loadSequence below and compared against on submit.
@@ -2024,41 +2032,10 @@ async function runDecode(exportString: string) {
                 {autosaveStatus === 'error' && 'Autosave failed'}
               </span>
             )}
-            {isEditMode && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <input
-                  type="checkbox"
-                  id="minor-edit"
-                  checked={minorEdit}
-                  onChange={e => setMinorEdit(e.target.checked)}
-                  style={{ width: 16, height: 16, accentColor: 'var(--accent)', cursor: 'pointer' }}
-                />
-                <label
-                  htmlFor="minor-edit"
-                  style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font-sans)' }}
-                >
-                  {/*
-                    THE OLD LABEL NAMED FOUR THINGS AND THE BOX DOES MORE THAN
-                    FOUR. It read "updates title, description, performance notes,
-                    and metadata without creating a new version", which is an
-                    accurate list of what an author is likely to be changing and
-                    an inaccurate description of what the checkbox does:
-                    update_sequence_metadata also writes grip_string, raw_steps
-                    and talent_string. An author could therefore replace the
-                    entire published macro through a box whose label talks about
-                    titles and notes, leave no version history, and until
-                    2026-08-14 produce no Discord card either.
-
-                    Both halves of that are fixed here. The branch now posts a
-                    card when the export changed, and this line says the export
-                    is in scope. Naming the Discord behaviour in the label as
-                    well is deliberate: a card appearing in a public forum is a
-                    consequence an author should be able to predict from the
-                    control they are ticking, not discover afterwards.
-                  */}
-                  Minor edit: saves every field, including the GRIP export string, without adding to the version history. A changed export still posts a card to the Discord thread.
-                </label>
-              </div>
+            {isEditMode && minorEdit && (
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', maxWidth: 420 }}>
+                Edits save in place and do not add a version. To publish a new version with its own label and changelog, use Update on the sequence page. A changed GRIP export still posts a card to the Discord thread.
+              </span>
             )}
             {isEditMode && (
               <button

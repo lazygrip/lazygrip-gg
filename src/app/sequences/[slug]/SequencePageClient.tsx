@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Sequence, Comment, SequenceVersion, LinkedSequence, CollectionSequenceEntry } from '@/types'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { formatDistanceToNow } from 'date-fns'
+import { describeSequenceAge } from '@/lib/sequence-dates'
 import RenderedContent from '@/components/editor/RenderedContent'
 import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
 import { normalizeCollectionEntries } from '@/lib/collection-entries'
@@ -810,6 +811,16 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
   // Same rule as SequenceCard.tsx — both conditions required, purely informational.
   const STALE_DAYS_THRESHOLD = 60
   const daysSinceUpdate = Math.floor((renderedAt - new Date(sequence.updated_at).getTime()) / (1000 * 60 * 60 * 24))
+  // Shared with the browse cards and profile lists (src/lib/sequence-dates.ts), so the
+  // posted date and the update date read the same way on every page. The newest version
+  // row only counts once a second version exists; a lone v1 row can carry a backfill
+  // timestamp that is not a real revision.
+  const sequenceAge = describeSequenceAge(
+    sequence.created_at,
+    sequence.updated_at,
+    new Date(renderedAt),
+    versions.length > 1 ? versions[0]?.created_at : null,
+  )
   const patchMismatch = !!currentPatch && (sequence.patch_version == null || sequence.patch_version !== currentPatch)
   const isStale = patchMismatch && daysSinceUpdate > STALE_DAYS_THRESHOLD
 
@@ -1106,7 +1117,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
             ) : (
               <strong style={{ color: 'var(--text-primary)' }}>{sequence.author?.username}</strong>
             )}
-            {' · '}<span suppressHydrationWarning>{formatDistanceToNow(new Date(sequence.created_at), { addSuffix: true })}</span>
+            {' · '}<span suppressHydrationWarning title={sequenceAge.title}>{sequenceAge.text}</span>
             {sequence.patch_version && ` · Patch ${sequence.patch_version}`}
             {isStale && (
               <>
