@@ -19,6 +19,11 @@
 // from OAuth metadata (measured: 300-odd of 341 profiles), and the two Blizzard
 // hosts already declared in images.remotePatterns below.
 //
+// ENFORCED as of the report-only measurement run: ~25 public and signed-in pages
+// (browse, sequences, profile tabs, post, workshop, notifications, auth) produced
+// zero real violations through /api/csp-report, and every profile avatar host in
+// the database is already allowed below. The header started life report-only,
+// for this reason, which still explains why script-src keeps 'unsafe-inline'.
 // REPORT-ONLY FIRST, and here is the specific reason rather than a general one.
 // The same page carries 6 inline <script> blocks -- the theme cookie reader,
 // two JSON-LD blocks, Next's own __next_f flight-data pushes, and the gtag
@@ -60,7 +65,7 @@ const src = (...sources) => sources.filter(Boolean).join(' ')
 const CSP_DIRECTIVES = [
   `default-src ${SELF}`,
   // 'unsafe-inline' is the nonce work, tracked as the precondition for moving
-  // this header off -Report-Only. 'unsafe-eval' is deliberately ABSENT.
+  // this header's script-src off 'unsafe-inline'. 'unsafe-eval' is deliberately ABSENT.
   `script-src ${SELF} 'unsafe-inline' https://www.googletagmanager.com`,
   `style-src ${SELF} 'unsafe-inline' https://fonts.googleapis.com`,
   `font-src ${SELF} https://fonts.gstatic.com data:`,
@@ -85,7 +90,7 @@ const CSP_DIRECTIVES = [
 ]
 
 const SECURITY_HEADERS = [
-  { key: 'Content-Security-Policy-Report-Only', value: CSP_DIRECTIVES.join('; ') },
+  { key: 'Content-Security-Policy', value: CSP_DIRECTIVES.join('; ') },
   { key: 'Reporting-Endpoints', value: 'csp="/api/csp-report"' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-Frame-Options', value: 'DENY' },
