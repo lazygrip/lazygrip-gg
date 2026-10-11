@@ -25,6 +25,11 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
   const [resending, setResending] = useState(false)
   const [sessionReady, setSessionReady] = useState(false)
   const [sessionError, setSessionError] = useState(false)
+  // Set when the page was opened from an email link that carries a one-time
+  // token_hash (the cross-device reset flow). The token is only redeemed when the
+  // person clicks the button, so a mail scanner that opens the link cannot use it up.
+  const [tokenHash, setTokenHash] = useState<string | null>(null)
+  const [verifying, setVerifying] = useState(false)
   const isLogin = view === 'login'
 
   useEffect(() => {
@@ -38,6 +43,10 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
     // link, so that's the only signal treated as valid. Anything else,
     // sign out defensively and require a new link.
     let resolved = false
+    const params = new URLSearchParams(window.location.search)
+    const th = params.get('token_hash')
+    const hasToken = !!th && params.get('type') === 'recovery'
+    if (hasToken) setTokenHash(th)
     const { data: listener } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         resolved = true
@@ -45,7 +54,7 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
       }
     })
 
-    const timeout = setTimeout(async () => {
+    const timeout = hasToken ? null : setTimeout(async () => {
       if (resolved) return
       await supabase.auth.signOut()
       setSessionError(true)
@@ -53,9 +62,24 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
 
     return () => {
       listener.subscription.unsubscribe()
-      clearTimeout(timeout)
+      if (timeout) clearTimeout(timeout)
     }
   }, [view])
+
+  async function handleVerifyToken() {
+    if (!tokenHash) return
+    setVerifying(true)
+    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' })
+    setVerifying(false)
+    setTokenHash(null)
+    if (error) {
+      setSessionError(true)
+      return
+    }
+    // The token is single-use and now spent, so take it out of the address bar.
+    window.history.replaceState(null, '', window.location.pathname)
+    setSessionReady(true)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -270,6 +294,21 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
             >
               Request a new one
             </button>
+          </div>
+        ) : view === 'confirm-reset' && tokenHash && !sessionReady ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.5 }}>
+              Your reset link is ready. Click below to confirm it is you and choose a new password.
+            </p>
+            <Button
+              variant="primary"
+              fullWidth
+              disabled={verifying}
+              onClick={handleVerifyToken}
+              style={{ padding: '10px', fontSize: 'var(--text-sm)' }}
+            >
+              {verifying ? 'Checking...' : 'Continue to set a new password'}
+            </Button>
           </div>
         ) : view === 'confirm-reset' && !sessionReady ? (
           <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)', textAlign: 'center' }}>
