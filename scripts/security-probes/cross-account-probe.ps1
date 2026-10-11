@@ -45,6 +45,10 @@ function Call($method, $path, $bodyObj, $prefer) {
 function Rows($text) {
   try { $o = $text | ConvertFrom-Json } catch { return @() }
   if ($null -eq $o) { return @() }
+  # A refusal comes back as ONE error object ({code, message, ...}), not as rows.
+  # Without this it was counted as a row, which made a correctly denied table
+  # report FAIL (relay_failures, after migration 046 took away its SELECT).
+  if (($o -isnot [array]) -and $o.PSObject.Properties['code'] -and $o.PSObject.Properties['message']) { return @() }
   return @($o)
 }
 
@@ -78,8 +82,11 @@ $bad = @((Rows $r.text) | Where-Object { $_.author_id -ne $me }).Count
 if ($bad -eq 0) { Report "other users' drafts and private sequences" "PASS" "0 foreign rows (HTTP $($r.status))" } else { Report "other users' drafts and private sequences" "FAIL" "$bad foreign rows" }
 
 $r = Call "GET" "relay_failures?select=*&limit=5"
-$n = (Rows $r.text).Count
-if ($n -eq 0) { Report "relay_failures table" "PASS" "0 rows (HTTP $($r.status))" } else { Report "relay_failures table" "FAIL" "$n rows" }
+if ($r.status -eq 401 -or $r.status -eq 403) { Report "relay_failures table" "PASS" "denied (HTTP $($r.status))" }
+else {
+  $n = (Rows $r.text).Count
+  if ($n -eq 0) { Report "relay_failures table" "PASS" "0 rows (HTTP $($r.status))" } else { Report "relay_failures table" "FAIL" "$n rows (HTTP $($r.status))" }
+}
 
 foreach ($t in @("comment_rate_throttle","copy_count_throttle","post_rate_throttle","view_count_throttle")) {
   $r = Call "GET" "${t}?select=*&limit=1"
