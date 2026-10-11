@@ -76,10 +76,17 @@ const CSP_DIRECTIVES = [
   `base-uri ${SELF}`,
   `form-action ${SELF}`,
   'upgrade-insecure-requests',
+  // Violation reports go to our own route (src/app/api/csp-report/route.ts), which
+  // only logs them. report-uri is the older spelling and report-to the newer one;
+  // browsers that understand report-to use it and ignore report-uri, and the rest
+  // still report. Both name the same endpoint.
+  'report-uri /api/csp-report',
+  'report-to csp',
 ]
 
 const SECURITY_HEADERS = [
   { key: 'Content-Security-Policy-Report-Only', value: CSP_DIRECTIVES.join('; ') },
+  { key: 'Reporting-Endpoints', value: 'csp="/api/csp-report"' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-Frame-Options', value: 'DENY' },
   // strict-origin-when-cross-origin sends the full URL same-origin and only the
