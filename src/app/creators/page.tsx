@@ -5,11 +5,10 @@ import { sanitizeAvatarUrl } from '@/lib/url-safety'
 import Card from '@/components/ui/Card'
 
 // Public directory, no auth/cookies touched (fetchTopCreators runs through the
-// same cookie-free createPublicClient() the homepage stat block uses) -- so
-// this can be a static/cacheable page like the homepage rather than opting
-// into dynamic rendering. Same 30-minute window as the homepage, for the same
-// reason: view counts change gradually, not by the second.
-export const revalidate = 1800
+// same cookie-free createPublicClient() the homepage stat block uses). Rendered
+// per request now, because the root layout needs a fresh CSP nonce on each
+// response (see src/lib/csp.ts); an unstable_cache around fetchTopCreators is the
+// way to restore the old 30-minute window if the traffic ever calls for it.
 
 export const metadata: Metadata = {
   title: 'Creators',

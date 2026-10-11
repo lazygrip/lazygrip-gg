@@ -5,6 +5,7 @@ import Footer from '@/components/layout/Footer'
 import AnnouncementBar from '@/components/layout/AnnouncementBar'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import Script from 'next/script'
+import { headers } from 'next/headers'
 import { jsonLdString } from '@/lib/json-ld'
 
 // Site-wide JSON-LD, rendered once here so every page on the site carries
@@ -77,14 +78,27 @@ export const metadata: Metadata = {
   },
 }
 
+// Every page is rendered per request. A nonce-based Content-Security-Policy needs
+// a different nonce on every response, and a page that was built once at deploy
+// time has no request to take one from. Reading headers() below already opts the
+// tree out of static rendering; this line says so out loud so removing the read
+// cannot quietly bring back a cached page whose scripts carry a stale nonce.
+export const dynamic = 'force-dynamic'
+
 export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  // Set by src/middleware.ts for this request. undefined only if the middleware
+  // did not run, in which case the scripts below carry no nonce and the browser
+  // blocks them, which is the safe way for that failure to look.
+  const nonce = (await headers()).get('x-nonce') ?? undefined
+
   return (
     <html lang="en" suppressHydrationWarning>
       <script
+        nonce={nonce}
         dangerouslySetInnerHTML={{
           __html: "try{var m=document.cookie.match(/(?:^|;\\s*)theme=(dark|light)/);document.documentElement.setAttribute('data-theme',m?m[1]:'dark')}catch(e){document.documentElement.setAttribute('data-theme','dark')}",
         }}
@@ -101,8 +115,9 @@ export default async function RootLayout({
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-CJTX030THX"
           strategy="afterInteractive"
+          nonce={nonce}
         />
-        <Script id="google-analytics" strategy="afterInteractive">
+        <Script id="google-analytics" strategy="afterInteractive" nonce={nonce}>
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}

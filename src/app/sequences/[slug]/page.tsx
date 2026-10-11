@@ -1,5 +1,3 @@
-export const revalidate = 3600
-
 import { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import { createPublicClient } from '@/lib/supabase/public'
@@ -13,21 +11,9 @@ type Props = {
   params: Promise<{ slug: string }>
 }
 
-export async function generateStaticParams() {
-  // Prerender every published sequence at build so the cache starts warm. Wrapped
-  // because CI builds with placeholder credentials: on failure this returns nothing
-  // and every slug simply renders on demand, which is the pre-existing behaviour.
-  try {
-    const supabase = createPublicClient()
-    const { data } = await supabase
-      .from('sequences')
-      .select('slug')
-      .eq('status', 'published')
-    return (data ?? []).map((row: { slug: string }) => ({ slug: row.slug }))
-  } catch {
-    return []
-  }
-}
+// No revalidate and no generateStaticParams: the root layout needs a fresh CSP nonce on
+// every response (see src/lib/csp.ts), so sequence pages are rendered per request rather
+// than prerendered and cached. Both used to live here to keep these pages warm.
 
 // Resolves a slug through slug_aliases if it doesn't match a published
 // sequence directly. Shared by generateMetadata and the page component so

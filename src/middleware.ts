@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { buildCsp, generateNonce } from '@/lib/csp'
 
 // Paths that stay reachable with no onboarding check, regardless of login
 // state. Browsing, auth flows, the welcome page itself, and API routes must
@@ -37,7 +38,31 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  let supabaseResponse = NextResponse.next({ request })
+  // One nonce per request. The policy goes on the REQUEST as well as the
+  // response: Next.js reads the nonce back out of the request's
+  // Content-Security-Policy header while it renders, and stamps it on its own
+  // inline and chunk scripts. A response-only header would leave those without a
+  // nonce and the browser would refuse every one of them. x-nonce is for
+  // layout.tsx, which has to put the same value on the scripts it writes itself.
+  //
+  // Both are SET, never merged, so a client cannot supply its own value.
+  const nonce = generateNonce()
+  const csp = buildCsp(nonce)
+
+  // Built from request.headers at CALL time, not once up front: the Supabase
+  // cookie callback below mutates request.cookies when it refreshes a session,
+  // and the refreshed cookie has to be in the headers that get forwarded to the
+  // page or the server render sees the stale token.
+  function nextWithCsp() {
+    const requestHeaders = new Headers(request.headers)
+    requestHeaders.set('x-nonce', nonce)
+    requestHeaders.set('Content-Security-Policy', csp)
+    const response = NextResponse.next({ request: { headers: requestHeaders } })
+    response.headers.set('Content-Security-Policy', csp)
+    return response
+  }
+
+  let supabaseResponse = nextWithCsp()
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -51,7 +76,7 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
-          supabaseResponse = NextResponse.next({ request })
+          supabaseResponse = nextWithCsp()
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           )

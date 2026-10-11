@@ -9,10 +9,10 @@ import Badge from '@/components/ui/Badge'
 import StatBlock from '@/components/ui/StatBlock'
 import SequenceMark from '@/components/ui/SequenceMark'
 
-// Homepage is otherwise static (no cookies/headers touched — see public.ts), so without this
-// it builds once and the stat block numbers freeze until the next deploy. 30m (shorter than
-// the 1h window changelog uses elsewhere) so the patch-12.1 ticker picks up new posts sooner.
-export const revalidate = 1800
+// Rendered per request, like every page: the root layout needs a fresh CSP nonce on each
+// response (see src/lib/csp.ts), so this page is no longer statically cached. The stat
+// block and tickers read through the cookie-free public client, so a later unstable_cache
+// around those queries is the way to put caching back if the traffic ever calls for it.
 
 // Marks where a "what row is this" label card gets woven into a ticker. A symbol rather
 // than a string/object literal so it can never collide with real sequence data.
