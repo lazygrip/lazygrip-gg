@@ -9,6 +9,11 @@ import Button from '@/components/ui/Button'
 
 type Mode = 'login' | 'signup' | 'reset' | 'confirm-reset'
 
+// Shown when /auth/callback sends someone here after a refused sign in. Only
+// these two fixed messages are ever displayed, never text from the URL.
+const AUTH_FAILED_MESSAGE = "Sign in didn't finish. Try again, and if it keeps happening, try a different sign in method."
+const AUTH_NO_EMAIL_MESSAGE = "That account didn't share a verified email address with LazyGrip. Verify the email on the account you're signing in with, or sign up with email and password instead."
+
 export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, onSuccess?: (user: any) => void }) {
   const router = useRouter()
   const supabaseRef = useRef(createClient())
@@ -31,6 +36,12 @@ export default function AuthPage({ mode = 'login', onSuccess }: { mode?: Mode, o
   const [tokenHash, setTokenHash] = useState<string | null>(null)
   const [verifying, setVerifying] = useState(false)
   const isLogin = view === 'login'
+
+  useEffect(() => {
+    const reason = new URLSearchParams(window.location.search).get('auth_error')
+    if (reason === 'no_email') setError(AUTH_NO_EMAIL_MESSAGE)
+    else if (reason) setError(AUTH_FAILED_MESSAGE)
+  }, [])
 
   useEffect(() => {
     if (view !== 'confirm-reset') return
