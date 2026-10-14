@@ -113,6 +113,14 @@ export async function fetchTrendingSequences(limit = 6): Promise<Sequence[]> {
       patch ? { sort: 'most_viewed', limit, patch_version: patch } : { sort: 'most_viewed', limit }
     )
     if (error) return []
+    // The day a new patch is set as current, nothing is tagged with it yet, and a scoped
+    // query would hand back an empty leaderboard. Fall back to the unscoped most-viewed
+    // list until the first sequence is tagged on the new patch.
+    if (patch && (data ?? []).length === 0) {
+      const fallback = await buildBrowseQuery(supabase, { sort: 'most_viewed', limit })
+      if (fallback.error) return []
+      return (fallback.data ?? []) as Sequence[]
+    }
     return (data ?? []) as Sequence[]
   } catch {
     return []
@@ -259,18 +267,38 @@ export async function fetchCurrentPatchTicker(limit = 10): Promise<{ patch: stri
     const patch = config?.current_patch ?? null
     if (!patch) return { patch: null, sequences: [] }
 
-    const { data, error } = await supabase
-      .from('sequences')
-      // !sequences_author_id_fkey: see browse-query.ts's buildBrowseQuery for why this
-      // hint is required as of migration 030 (two FKs now exist between sequences and
-      // profiles, so an unqualified embed is ambiguous to PostgREST).
-      .select('id, title, slug, class_id, class_name, view_count, created_at, author:profiles!sequences_author_id_fkey(username, display_name)')
-      .eq('status', 'published')
-      .eq('patch_version', patch)
-      .order('created_at', { ascending: false })
-      .limit(limit)
+    const fetchForPatch = (p: string) =>
+      supabase
+        .from('sequences')
+        // !sequences_author_id_fkey: see browse-query.ts's buildBrowseQuery for why this
+        // hint is required as of migration 030 (two FKs now exist between sequences and
+        // profiles, so an unqualified embed is ambiguous to PostgREST).
+        .select('id, title, slug, class_id, class_name, view_count, created_at, author:profiles!sequences_author_id_fkey(username, display_name)')
+        .eq('status', 'published')
+        .eq('patch_version', p)
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
+    const { data, error } = await fetchForPatch(patch)
     if (error) return { patch, sequences: [] }
-    return { patch, sequences: (data ?? []) as unknown as Sequence[] }
+    if ((data ?? []).length > 0) return { patch, sequences: data as unknown as Sequence[] }
+
+    // Nothing is tagged with the current patch yet (the day a new patch is set, say), so
+    // show the newest patch that does have published sequences, labelled with that patch
+    // instead of an empty row captioned with a patch nobody has posted on.
+    const { data: patchRows } = await supabase
+      .from('sequences')
+      .select('patch_version')
+      .eq('status', 'published')
+      .not('patch_version', 'is', null)
+    const collator = new Intl.Collator('en', { numeric: true, sensitivity: 'base' })
+    const newest = Array.from(new Set((patchRows ?? []).map(r => r.patch_version as string)))
+      .filter(v => v && v !== patch)
+      .sort((a, b) => collator.compare(b, a))[0]
+    if (!newest) return { patch, sequences: [] }
+    const fallback = await fetchForPatch(newest)
+    if (fallback.error) return { patch, sequences: [] }
+    return { patch: newest, sequences: (fallback.data ?? []) as unknown as Sequence[] }
   } catch {
     return { patch: null, sequences: [] }
   }
