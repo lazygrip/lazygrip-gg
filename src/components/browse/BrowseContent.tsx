@@ -353,8 +353,11 @@ export default function BrowseContent({
           .mobile-filter-btn { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border: 0.5px solid var(--border-strong); background: var(--bg-primary); color: var(--text-secondary); font-size: 13px; cursor: pointer; font-family: var(--font-sans); border-radius: 8px; }
           .mobile-filter-sheet { display: block; position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.5); }
           .mobile-filter-inner { position: absolute; bottom: 0; left: 0; right: 0; background: var(--bg-primary); border-radius: 16px 16px 0 0; padding: 20px 20px 40px; max-height: 80vh; overflow-y: auto; }
-          .sort-bar { flex-wrap: wrap; gap: 4px !important; }
-          .sort-bar button { font-size: 11px !important; padding: 4px 8px !important; }
+          .browse-toolbar { flex-direction: column; align-items: stretch !important; gap: 10px !important; }
+          .browse-toolbar-left { justify-content: space-between; }
+          .sort-bar { width: 100%; overflow-x: auto; }
+          .sort-bar button { flex: 1 0 auto; font-size: 13px !important; padding: 10px 8px !important; min-height: 40px; white-space: nowrap; }
+          .mobile-filter-btn { min-height: 40px; }
         }
       `}</style>
 
@@ -392,8 +395,8 @@ export default function BrowseContent({
             </div>
           </form>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="browse-toolbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 8 }}>
+            <div className="browse-toolbar-left" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{loading ? '-' : `${count.toLocaleString()} sequences`}</span>
               <button className="mobile-filter-btn" onClick={() => setShowMobileFilters(true)}>
                 <SlidersHorizontal size={13} />

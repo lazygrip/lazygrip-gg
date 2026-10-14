@@ -867,7 +867,28 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
   const stepCountForBadge = hasActionsTree ? countActionSteps(actionsTree!) : steps.length
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px' }}>
+    <div className="seq-page" style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px' }}>
+      <style>{`
+        /* Phone layout. This page was 660px wide on a 390px screen: a fixed 300px sidebar sat
+           beside the macro, which squeezed the sequence into a narrow column and pushed the
+           sidebar off the right edge. Below 860px everything stacks. The import card comes first
+           (it is the thing people came for), then the sidebar (rating, details, talent build),
+           then the step list and comments. */
+        @media (max-width: 860px) {
+          .seq-page { padding: 16px 12px 32px !important; overflow-wrap: anywhere; }
+          .seq-grid { grid-template-columns: minmax(0, 1fr) !important; }
+          .seq-left { display: contents !important; }
+          .seq-left > * { order: 3; min-width: 0; }
+          .seq-left > .seq-import { order: 1; }
+          .seq-side { order: 2; min-width: 0; }
+          .seq-head-card { padding: 16px !important; }
+          .seq-head-row { gap: 10px !important; }
+          .seq-rating { padding: 0 !important; }
+          .seq-meta-row { flex-direction: column; align-items: stretch !important; gap: 12px; }
+          .seq-actions { flex-wrap: wrap; }
+          .seq-actions > * { flex: 1 1 auto; justify-content: center; min-height: 40px; }
+        }
+      `}</style>
 
       {/* Version delete confirm modal */}
       {versionToDelete && (
@@ -1013,7 +1034,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
       )}
 
       {/* Header card */}
-      <div style={{
+      <div className="seq-head-card" style={{
         background: isStale ? 'rgba(224,160,32,0.08)' : 'var(--bg-primary)',
         border: '0.5px solid var(--border)',
         borderRadius: 'var(--radius-lg)',
@@ -1021,7 +1042,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
         marginBottom: 16,
         borderTop: `3px solid ${classColor}`,
       }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+        <div className="seq-head-row" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
               <h1 style={{
@@ -1077,7 +1098,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
           </div>
 
           {/* Rating display */}
-          <div style={{
+          <div className="seq-rating" style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -1095,7 +1116,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
         </div>
 
         {/* Author + actions row */}
-        <div style={{
+        <div className="seq-meta-row" style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -1137,7 +1158,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="seq-actions" style={{ display: 'flex', gap: 8 }}>
             {isAuthor && (
               <>
                 <button
@@ -1233,14 +1254,14 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
           the caller's own session; isAuthor is the half this page knows. */}
       {isAuthor && <DiscordLinkPrompt />}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 16, alignItems: 'flex-start' }}>
+      <div className="seq-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 16, alignItems: 'flex-start' }}>
 
         {/* Left column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="seq-left" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
           {/* GRIP string import */}
           {selectedVersion && (
-            <div style={{
+            <div className="seq-import" style={{
               background: 'var(--bg-primary)',
               border: '0.5px solid var(--border)',
               borderRadius: 'var(--radius-lg)',
@@ -1654,7 +1675,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
         </div>
 
         {/* Right sidebar */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="seq-side" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
           {/* Rate this sequence */}
           <div style={{

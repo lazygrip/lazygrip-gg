@@ -70,11 +70,21 @@ export default function AnnouncementBar() {
   if (!ANNOUNCEMENT || dismissed) return null
 
   return (
-    <div style={{
+    <div className="ann-bar" style={{
       background: 'var(--accent-subtle)',
       borderBottom: '0.5px solid var(--border)',
       padding: '8px 16px',
     }}>
+      {/* Phone: the bar used to take three lines of full-size text above every page. It now
+          uses smaller type, is held to two lines, and the dismiss button is a real tap target. */}
+      <style>{`
+        @media (max-width: 640px) {
+          .ann-bar { padding: 6px 8px 6px 12px !important; }
+          .ann-text { font-size: 13px !important; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+          .ann-close { width: 40px !important; height: 40px !important; margin: -8px -4px -8px 0 !important; }
+          .ann-icon { display: none; }
+        }
+      `}</style>
       <div style={{
         maxWidth: 1200,
         margin: '0 auto',
@@ -83,8 +93,8 @@ export default function AnnouncementBar() {
         justifyContent: 'center',
         gap: 8,
       }}>
-        <Megaphone size={13} style={{ color: 'var(--accent)', flexShrink: 0 }} />
-        <Link href={ANNOUNCEMENT.href} style={{
+        <Megaphone className="ann-icon" size={13} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+        <Link href={ANNOUNCEMENT.href} className="ann-text" style={{
           fontSize: 'var(--text-sm)',
           fontWeight: 500,
           color: 'var(--accent-text)',
@@ -95,6 +105,8 @@ export default function AnnouncementBar() {
         </Link>
         <button
           onClick={dismiss}
+          className="ann-close"
+          aria-label="Dismiss announcement"
           title="Dismiss"
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',

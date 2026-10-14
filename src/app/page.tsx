@@ -92,14 +92,15 @@ export default async function HomePage() {
         .info-trigger-center:hover .info-tooltip,
         .info-trigger-center:focus-within .info-tooltip { transform: translateX(-50%) translateY(0); }
         .info-trigger-link:hover { border-color: var(--accent) !important; background: var(--bg-secondary) !important; }
-        .explore-grid { display: grid; grid-template-columns: 0.9fr 1.3fr 1fr; gap: 28px; }
-        .browse-chip-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .explore-grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.3fr) minmax(0, 1fr); gap: 28px; }
+        .explore-grid > * { min-width: 0; }
+        .browse-chip-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
         /* Three columns get cramped before the general 640px mobile stack kicks in --
            collapse a step earlier than the rest of the hero/utility-bar rules below so
            Top Creators, Top sequences and Browse Sequences each keep readable width
            instead of all three squeezing side by side on a tablet-width screen. */
         @media (max-width: 900px) {
-          .explore-grid { grid-template-columns: 1fr !important; gap: 36px !important; }
+          .explore-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 36px !important; }
           .browse-divider { border-left: none !important; padding-left: 0 !important; border-top: 0.5px solid var(--border); padding-top: 32px !important; }
         }
 
@@ -129,8 +130,20 @@ export default async function HomePage() {
         /* Opens outward, away from the other column — left-column chips fly out to the left
            (toward the leaderboard side), right-column chips fly out to the right (toward the
            page edge). Previous version had these backwards, opening inward onto each other. */
-        .spec-trigger-l .spec-tooltip { right: calc(100% - 20px); }
-        .spec-trigger-r .spec-tooltip { left: calc(100% - 20px); }
+        /* Both columns open to the LEFT. The right-hand column used to open rightward, which on
+           a 1280px screen put the flyout past the edge of the window (it was cut off mid-word
+           and gave the page a sideways scrollbar). Leftward always has room: the leaderboards
+           sit on that side. */
+        .spec-trigger-l .spec-tooltip,
+        .spec-trigger-r .spec-tooltip { right: calc(100% - 20px); }
+        /* Single-column layout (900px and under) has no room beside the chips, so the flyout
+           drops below the chip instead, left-aligned for the left column, right-aligned for the
+           right column, so it stays inside the screen either way. */
+        @media (max-width: 900px) {
+          .spec-trigger .spec-tooltip { top: calc(100% + 4px); transform: none; }
+          .spec-trigger-l .spec-tooltip { left: 0; right: auto; }
+          .spec-trigger-r .spec-tooltip { right: 0; left: auto; }
+        }
         .spec-trigger:hover .spec-tooltip,
         .spec-trigger:focus-within .spec-tooltip {
           opacity: 1;
@@ -147,6 +160,12 @@ export default async function HomePage() {
           white-space: nowrap;
         }
         .spec-link:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+        /* Touch screens and phones have no hover, and the hidden flyout is absolutely positioned
+           past the chip, which is what gave the homepage a sideways scroll on a phone. Tapping a
+           chip goes straight to that class, so the flyout and its hint are removed there. */
+        @media (hover: none), (max-width: 640px) {
+          .spec-tooltip, .spec-hint { display: none !important; }
+        }
 
         @media (max-width: 640px) {
           .hero-heading { font-size: 32px !important; letter-spacing: -0.02em !important; }
@@ -155,7 +174,7 @@ export default async function HomePage() {
           .utility-bar { flex-direction: column; align-items: center; gap: 14px; }
           .info-tooltip { left: 50% !important; right: auto !important; transform: translateX(-50%) translateY(-4px) !important; width: 280px; }
           .info-trigger:hover .info-tooltip, .info-trigger:focus-within .info-tooltip { transform: translateX(-50%) translateY(0) !important; }
-          .explore-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+          .explore-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 40px !important; }
           .browse-divider { border-left: none !important; padding-left: 0 !important; border-top: 0.5px solid var(--border); padding-top: 32px !important; }
         }
       `}</style>
@@ -669,7 +688,7 @@ export default async function HomePage() {
             <h2 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em', marginBottom: 16 }}>Browse Sequences</h2>
 
             <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '.06em', marginBottom: 10 }}>
-              By class <span style={{ textTransform: 'none' as const, fontWeight: 400, color: 'var(--text-muted)' }}>— hover for specs</span>
+              By class <span className="spec-hint" style={{ textTransform: 'none' as const, fontWeight: 400, color: 'var(--text-muted)' }}>- hover for specs</span>
             </div>
             <div className="browse-chip-grid" style={{ marginBottom: 24 }}>
               {WOW_CLASSES.map((cls, i) => (

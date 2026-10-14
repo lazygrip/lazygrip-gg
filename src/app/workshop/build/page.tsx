@@ -636,7 +636,7 @@ function IfBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, de
         <input placeholder="= true" value={action.variable || ''} onChange={e => onUpdate({ ...action, variable: e.target.value })} style={{ ...S.input(), flex: 1, minWidth: 100, fontSize: 'var(--text-xs)' }} />
         <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
       </div>
-      <div style={{ padding: '8px 10px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div className="wb-stack" style={{ padding: '8px 10px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         {(['then', 'else'] as const).map(branch => (
           <div key={branch}>
             <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{branch}</div>
@@ -810,7 +810,7 @@ function VariablesPanel({ variables, onChange }: { variables: GripVariable[]; on
             </div>
             <button onClick={() => deleteVariable(v.id)} style={S.iconBtn(true)}><Trash2 size={15} /></button>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+          <div className="wb-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
             <div>
               <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Type</label>
               <select value={v.type} onChange={e => updateVariable(v.id, { ...v, type: e.target.value as 'text' | 'function' })} style={{ ...S.select(), width: '100%' }}>
@@ -932,7 +932,7 @@ function VersionPanel({ version, onUpdate, classId }: { version: BuilderVersion;
               {STEP_FUNCTIONS.map(sf => <option key={sf} value={sf}>{sf}</option>)}
             </select>
           </label>
-          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', marginRight: 4 }}>RESET ON:</span>
             {([['resetOnCombat', 'Combat'], ['resetOnTarget', 'Target'], ['resetOnGear', 'Gear'], ['resetOnSpec', 'Spec']] as const).map(([field, label]) => (
               <label key={field} style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', marginRight: 8 }}>
@@ -947,7 +947,7 @@ function VersionPanel({ version, onUpdate, classId }: { version: BuilderVersion;
             </label>
           </div>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="wb-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
             <label style={S.label()}>Key Press</label>
             <MacroTextarea value={version.keyPress} onChange={v => onUpdate({ ...version, keyPress: v })} rows={3} classId={classId} style={S.textarea()} />
@@ -1123,7 +1123,17 @@ export default function WorkshopBuildPage() {
   if (loading) return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Loading...</span></div>
 
   return (
-    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 24px' }}>
+    <div className="wb-root" style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 24px' }}>
+      <style>{`
+        /* Phone layout. The builder is a desktop tool first, but the two-column panels were
+           forcing the page about 200px wider than a phone screen, so below 700px they stack,
+           the edge padding shrinks, and the toolbars are allowed to wrap. */
+        @media (max-width: 700px) {
+          .wb-root { padding: 16px 12px !important; }
+          .wb-stack { grid-template-columns: 1fr !important; }
+          .wb-root input, .wb-root select { max-width: 100%; }
+        }
+      `}</style>
       <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
         <Link href="/workshop" style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', textDecoration: 'none' }}>← Workshop</Link>
         <span style={{ color: 'var(--border)' }}>/</span>
@@ -1131,7 +1141,7 @@ export default function WorkshopBuildPage() {
       </div>
 
       {/* Export bar */}
-<div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', marginBottom: 12, background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
+<div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, padding: '8px 12px', marginBottom: 12, background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
   <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--accent)', flexShrink: 0, letterSpacing: '0.04em' }}>!GRIP1!</span>
   <input readOnly value={user ? exportCode : '••••••••••••••••••••••••••••••••••••••••••••••••••'} placeholder="Export updates automatically as you edit..." style={{ flex: 1, padding: '5px 8px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: user ? 'var(--text-secondary)' : 'transparent', textShadow: user ? 'none' : '0 0 8px rgba(255,255,255,0.3)', userSelect: 'none' as const }} />
   {user ? (
@@ -1222,7 +1232,7 @@ export default function WorkshopBuildPage() {
                   <input value={model.exportMeta.pseudonym || ''} onChange={e => setModel(m => ({ ...m, exportMeta: { ...m.exportMeta, pseudonym: e.target.value } }))} placeholder="Shown instead of your real name" style={{ ...S.input(), width: '100%' }} />
                 </div>
               ) : model.exportMeta.privacyMode === 'private' ? null : (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="wb-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
                     <label style={S.label()}>Realm</label>
                     <input value={model.exportMeta.exporterRealm || ''} onChange={e => setModel(m => ({ ...m, exportMeta: { ...m.exportMeta, exporterRealm: e.target.value } }))} placeholder="Optional" style={{ ...S.input(), width: '100%' }} />
@@ -1233,7 +1243,7 @@ export default function WorkshopBuildPage() {
                   </div>
                 </div>
               )}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="wb-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={S.label()}>Class</label>
                   <select value={activeSeq.classId} onChange={e => updateSeq({ ...activeSeq, classId: Number(e.target.value), specId: null })} style={{ ...S.select(), width: '100%' }}>
@@ -1264,7 +1274,7 @@ export default function WorkshopBuildPage() {
                 <label style={S.label()}>Description</label>
                 <input value={activeSeq.description} onChange={e => updateSeq({ ...activeSeq, description: e.target.value })} placeholder="Optional" style={{ ...S.input(), width: '100%' }} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="wb-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={S.label()}>Talent string (this sequence only)</label>
                   <input value={activeSeq.talentString} onChange={e => updateSeq({ ...activeSeq, talentString: e.target.value })} placeholder="Optional, per-sequence" style={{ ...S.input(), width: '100%', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }} />

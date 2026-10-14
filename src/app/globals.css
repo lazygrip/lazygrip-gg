@@ -260,3 +260,18 @@ body {
 .theme-icon-light { display: inline-block; }
 html[data-theme='dark'] .theme-icon-dark { display: inline-block; }
 html[data-theme='dark'] .theme-icon-light { display: none; }
+
+/* Sequence cards on phones. The title was one nowrap line cut off at about 25 characters, and
+   the footer put views, comments, saves, author and age on one row, which wrapped into a ragged
+   block of tiny text. Titles now take two lines and the footer wraps as two tidy rows. */
+@media (max-width: 640px) {
+  .seq-card-title {
+    white-space: normal !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow-wrap: anywhere;
+  }
+  .seq-card-foot { flex-wrap: wrap; row-gap: 6px; column-gap: 12px; }
+  .seq-card-meta { flex-wrap: wrap; row-gap: 2px; }
+}

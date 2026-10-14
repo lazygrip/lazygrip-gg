@@ -98,7 +98,7 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
     >
       {/* Top row: title + rating */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-        <h3 style={{
+        <h3 className="seq-card-title" style={{
           fontSize: 'var(--text-base)',
           fontWeight: 600,
           color: 'var(--text-primary)',
@@ -182,7 +182,7 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
       )}
 
       {/* Footer */}
-      <div style={{
+      <div className="seq-card-foot" style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -193,7 +193,7 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
           <Stat icon={<MessageSquare size={12} />} value={sequence.comment_count ?? 0} />
           <Stat icon={<Bookmark size={12} />} value={sequence.save_count} />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+        <div className="seq-card-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
           {sequence.author && (
             <span>by{' '}
               <Link
