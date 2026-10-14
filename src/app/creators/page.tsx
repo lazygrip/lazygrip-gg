@@ -35,7 +35,20 @@ export default async function CreatorsPage() {
   const creators = await fetchTopCreators(500)
 
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto', padding: '36px 24px' }}>
+    <div className="cr-page" style={{ maxWidth: 760, margin: '0 auto', padding: '36px 24px' }}>
+      <style>{`
+        /* Phone layout. Each row used to be rank, avatar, name and a stats block that refused to
+           shrink, so the name column collapsed to nothing and the @username printed on top of the
+           sequence count. Below 560px the row wraps: rank, avatar and name on the first line, the
+           stats on a second line lined up under the name. */
+        .cr-name > div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        @media (max-width: 560px) {
+          .cr-page { padding: 20px 16px !important; }
+          .cr-row { flex-wrap: wrap; row-gap: 6px !important; gap: 12px !important; }
+          .cr-stats { flex: 0 0 calc(100% - 76px); min-width: 0; margin-left: 76px; justify-content: flex-start !important; gap: 16px !important; margin-top: -4px; }
+          .cr-stats > div:first-child { display: flex; align-items: baseline; gap: 5px; text-align: left !important; }
+        }
+      `}</style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
         <Users size={22} color="var(--accent)" />
         <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 700, letterSpacing: '-0.02em', margin: 0 }}>
@@ -61,7 +74,7 @@ export default async function CreatorsPage() {
             const initial = creator.username[0]?.toUpperCase() ?? '?'
             return (
               <a key={creator.id} href={`/user/${creator.username}`} style={{ textDecoration: 'none' }}>
-                <Card padding="sm" style={{ display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}>
+                <Card padding="sm" className="cr-row" style={{ display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}>
                   <span style={{
                     width: 24, fontSize: 'var(--text-base)', fontWeight: 700,
                     color: i < 3 ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0, textAlign: 'center',
@@ -82,7 +95,7 @@ export default async function CreatorsPage() {
                     }
                   </div>
 
-                  <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="cr-name" style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {creator.display_name || creator.username}
                     </div>
@@ -91,7 +104,7 @@ export default async function CreatorsPage() {
                     )}
                   </div>
 
-                  <div style={{ display: 'flex', gap: 18, flexShrink: 0, alignItems: 'center' }}>
+                  <div className="cr-stats" style={{ display: 'flex', gap: 18, flexShrink: 0, alignItems: 'center' }}>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
                         {creator.sequenceCount}

@@ -170,6 +170,10 @@ export default async function HomePage() {
         @media (max-width: 640px) {
           .hero-heading { font-size: 32px !important; letter-spacing: -0.02em !important; }
           .hero-stats { justify-content: center !important; }
+          /* Centre the four numbers under the centred hero instead of leaving a lopsided 2x2 block. */
+          .hero-stats > div { justify-content: center !important; gap: 24px 36px !important; }
+          .hero-stats > div > div { text-align: center !important; min-width: 120px; }
+          .hero-stats > div > div > div:first-child { justify-content: center !important; }
           .class-chip-row { justify-content: center !important; }
           .utility-bar { flex-direction: column; align-items: center; gap: 14px; }
           .info-tooltip { left: 50% !important; right: auto !important; transform: translateX(-50%) translateY(-4px) !important; width: 280px; }

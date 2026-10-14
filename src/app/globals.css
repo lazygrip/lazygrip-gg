@@ -275,3 +275,15 @@ html[data-theme='dark'] .theme-icon-light { display: none; }
   .seq-card-foot { flex-wrap: wrap; row-gap: 6px; column-gap: 12px; }
   .seq-card-meta { flex-wrap: wrap; row-gap: 2px; }
 }
+
+/* Profile sequence rows (published, private, saved and draft). Title, details, rating and views
+   all sat on one line, so on a phone the title was cut to about a dozen characters and the details
+   wrapped one word per line. Below 560px the title takes two lines and the numbers drop to their
+   own row underneath. */
+@media (max-width: 560px) {
+  .pr-row { flex-wrap: wrap; padding: 12px 14px !important; row-gap: 10px; }
+  .pr-link { flex-wrap: wrap; row-gap: 10px; }
+  .pr-title { white-space: normal !important; overflow-wrap: anywhere; }
+  .pr-right { flex: 1 0 100%; justify-content: space-between; }
+  .pr-right-col { flex-direction: row !important; align-items: center !important; flex-wrap: wrap; }
+}

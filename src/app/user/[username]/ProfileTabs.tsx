@@ -571,6 +571,7 @@ function SequenceRow({ seq, status, onSetStatus }: {
   return (
     <Link href={href} style={{ textDecoration: 'none' }}>
       <div
+        className="pr-row"
         style={{
           background: 'var(--bg-primary)',
           border: '0.5px solid var(--border)',
@@ -586,7 +587,7 @@ function SequenceRow({ seq, status, onSetStatus }: {
       >
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <div className="pr-title" style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {seq.title}
             </div>
             {status === 'private' && (
@@ -622,7 +623,7 @@ function SequenceRow({ seq, status, onSetStatus }: {
             )}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 16, flexShrink: 0, alignItems: 'center' }}>
+        <div className="pr-right" style={{ display: 'flex', gap: 16, flexShrink: 0, alignItems: 'center' }}>
           {seq.avg_score && seq.rating_count && seq.rating_count > 0 && (
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--accent)', lineHeight: 1 }}>{seq.avg_score}</div>
@@ -711,9 +712,9 @@ function SavedSequenceRow({ seq, onUnsave }: { seq: SequenceRowData; onUnsave: (
         borderLeft: `3px solid ${classColor}`,
       }}
     >
-      <Link href={`/sequences/${seq.slug}`} style={{ textDecoration: 'none', flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}>
+      <Link href={`/sequences/${seq.slug}`} className="pr-link" style={{ textDecoration: 'none', flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div className="pr-title" style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {seq.title}
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -726,7 +727,7 @@ function SavedSequenceRow({ seq, onUnsave }: { seq: SequenceRowData; onUnsave: (
             )}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 16, flexShrink: 0, alignItems: 'center' }}>
+        <div className="pr-right" style={{ display: 'flex', gap: 16, flexShrink: 0, alignItems: 'center' }}>
           {seq.avg_score && (
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--accent)', lineHeight: 1 }}>{seq.avg_score}</div>
@@ -928,10 +929,11 @@ function DraftRow({
       />
       <Link
         href={`/post?draftId=${draft.id}`}
+        className="pr-link"
         style={{ textDecoration: 'none', flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          <div className="pr-title" style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {draft.title && draft.title !== 'Untitled draft' ? draft.title : 'Untitled draft'}
           </div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -944,7 +946,7 @@ function DraftRow({
             )}
           </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+        <div className="pr-right pr-right-col" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
           <span style={{
             fontSize: 'var(--text-xs)',
             fontWeight: 500,
@@ -1839,20 +1841,28 @@ function BreakdownTable({ seqs }: { seqs: SequenceRowData[] }) {
 
   return (
     <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
-      <div style={{
+      <style>{`
+        /* Phone: five fixed columns left the title column almost no width. Saves and Comments
+           drop out below 560px so Sequence, Views and Rating keep room to breathe. */
+        @media (max-width: 560px) {
+          .pt-row { grid-template-columns: minmax(0, 1fr) 60px 48px !important; padding-left: 12px !important; padding-right: 12px !important; }
+          .pt-saves, .pt-comments { display: none !important; }
+        }
+      `}</style>
+      <div className="pt-row" style={{
         display: 'grid', gridTemplateColumns: cols, gap: 8,
         padding: '10px 16px', borderBottom: '0.5px solid var(--border)',
         fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontWeight: 600,
       }}>
         <span>Sequence</span>
         <span style={{ textAlign: 'right' }}>Views</span>
-        <span style={{ textAlign: 'right' }}>Saves</span>
+        <span className="pt-saves" style={{ textAlign: 'right' }}>Saves</span>
         <span style={{ textAlign: 'right' }}>Rating</span>
-        <span style={{ textAlign: 'right' }}>Comments</span>
+        <span className="pt-comments" style={{ textAlign: 'right' }}>Comments</span>
       </div>
       {sorted.map((seq, i) => (
         <Link key={seq.id} href={`/sequences/${seq.slug}`} style={{ textDecoration: 'none' }}>
-          <div style={{
+          <div className="pt-row" style={{
             display: 'grid', gridTemplateColumns: cols, gap: 8,
             padding: '10px 16px',
             borderBottom: i < sorted.length - 1 ? '0.5px solid var(--border)' : 'none',
@@ -1862,11 +1872,11 @@ function BreakdownTable({ seqs }: { seqs: SequenceRowData[] }) {
               {seq.title}
             </span>
             <span style={{ textAlign: 'right' }}>{(seq.view_count ?? 0).toLocaleString()}</span>
-            <span style={{ textAlign: 'right' }}>{(seq.save_count ?? 0).toLocaleString()}</span>
+            <span className="pt-saves" style={{ textAlign: 'right' }}>{(seq.save_count ?? 0).toLocaleString()}</span>
             <span style={{ textAlign: 'right' }}>
               {seq.avg_score != null && (seq.rating_count ?? 0) > 0 ? seq.avg_score : '—'}
             </span>
-            <span style={{ textAlign: 'right' }}>{(seq.comment_count ?? 0).toLocaleString()}</span>
+            <span className="pt-comments" style={{ textAlign: 'right' }}>{(seq.comment_count ?? 0).toLocaleString()}</span>
           </div>
         </Link>
       ))}

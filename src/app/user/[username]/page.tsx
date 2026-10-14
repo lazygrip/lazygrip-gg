@@ -277,7 +277,19 @@ export default async function UserProfilePage(props: Props) {
     : null
 
   return (
-    <div style={{ maxWidth: 860, margin: '0 auto', padding: '36px 24px' }}>
+    <div className="pf-page" style={{ maxWidth: 860, margin: '0 auto', padding: '36px 24px' }}>
+      <style>{`
+        /* Phone layout. The avatar sat in its own column beside the name and bio, which left the
+           text about 200px wide, so below 640px the avatar sits above the text and everything uses
+           the full width. */
+        @media (max-width: 640px) {
+          .pf-page { padding: 16px 12px 32px !important; overflow-wrap: anywhere; }
+          .pf-banner { height: 110px !important; }
+          .pf-head-body { flex-direction: column; gap: 0 !important; padding: 0 16px 20px !important; }
+          .pf-head-text { padding-top: 10px !important; width: 100%; }
+          .pf-stats { padding: 20px 0 !important; --text-3xl: 26px; }
+        }
+      `}</style>
 
       {/* Profile header. Banner + overlapping avatar is the "fuller
           redesign" Slowdog picked (2026-09-14) over a light-polish pass --
@@ -293,14 +305,14 @@ export default async function UserProfilePage(props: Props) {
         marginBottom: 20,
         overflow: 'hidden',
       }}>
-        <div style={{
+        <div className="pf-banner" style={{
           height: 150,
           background: bannerCss
             ? `${bannerCss} center/cover no-repeat`
             : 'linear-gradient(135deg, var(--accent-subtle), var(--bg-secondary))',
         }} />
 
-        <div style={{ padding: '0 28px 28px', display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+        <div className="pf-head-body" style={{ padding: '0 28px 28px', display: 'flex', gap: 20, alignItems: 'flex-start' }}>
           <div style={{
             width: 84, height: 84, borderRadius: '50%',
             background: safeAvatarUrl ? 'transparent' : displayColor,
@@ -316,7 +328,7 @@ export default async function UserProfilePage(props: Props) {
             }
           </div>
 
-          <div style={{ flex: 1, minWidth: 0, paddingTop: 14 }}>
+          <div className="pf-head-text" style={{ flex: 1, minWidth: 0, paddingTop: 14 }}>
             <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
               {profile.display_name || profile.username}
             </h1>
@@ -399,6 +411,7 @@ export default async function UserProfilePage(props: Props) {
           this wrapper is local to this page only. */}
       {seqs.length > 0 && (
         <div
+          className="pf-stats"
           style={{
             background: 'var(--bg-primary)',
             border: '0.5px solid var(--border)',
