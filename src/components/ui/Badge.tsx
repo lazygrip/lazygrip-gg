@@ -19,7 +19,7 @@ export default function Badge({ children, color = 'var(--accent)', style, classN
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 700,
         letterSpacing: '0.06em',
         textTransform: 'uppercase',

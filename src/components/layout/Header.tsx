@@ -115,14 +115,39 @@ export default function Header() {
       <style>{`
         .desktop-nav { display: flex; }
         .mobile-menu-btn { display: none; }
-        @media (max-width: 768px) {
+        /* The seven nav pills plus the right-hand controls need about 1085px logged out and a
+           little over 1140px logged in at the larger type size, so the hamburger takes over
+           below 1200px instead of the old 768px. */
+        @media (max-width: 1200px) {
           .desktop-nav { display: none !important; }
           .mobile-menu-btn { display: flex !important; }
           .desktop-post-btn { display: none !important; }
         }
+        /* Phone widths. The row is logo, search, theme toggle, Sign in, Sign up and the
+           hamburger, and at 390px it was already about 42px too wide, which pushed the
+           hamburger (the only way to reach the nav on a phone) off the right edge. Larger
+           type made it worse. Sign in is hidden here because the menu carries both Sign up and
+           Sign in, and the logo and Sign up are tightened so everything fits down to 320px. */
+        @media (max-width: 480px) {
+          .hdr-signin { display: none !important; }
+          .hdr-signup { padding: 6px 10px !important; }
+          .hdr-logo { font-size: 16px !important; gap: 6px !important; }
+        }
+        /* Narrowest phones (360px and below): the 16px row gap and the 30px mark are what
+           pushed the hamburger off the edge, so both shrink here. */
+        @media (max-width: 400px) {
+          .hdr-bar { padding: 0 10px !important; }
+          .hdr-inner { gap: 6px !important; }
+          .hdr-logo svg { width: 24px !important; height: 24px !important; }
+          .hdr-logo { font-size: 15px !important; }
+        }
+        /* 320px phones: Browse is in the menu, so the search shortcut gives up its 32px. */
+        @media (max-width: 340px) {
+          .hdr-search { display: none !important; }
+        }
       `}</style>
 
-      <header style={{
+      <header className="hdr-bar" style={{
         background: 'var(--bg-primary)',
         borderBottom: '0.5px solid var(--border)',
         height: 56,
@@ -133,7 +158,7 @@ export default function Header() {
         top: 0,
         zIndex: 100,
       }}>
-        <div style={{
+        <div className="hdr-inner" style={{
           maxWidth: 1200,
           width: '100%',
           margin: '0 auto',
@@ -144,7 +169,7 @@ export default function Header() {
           {/* Logo — the same sequence mark used on the homepage hero, not the old generic
               shield icon. The two were never the same shape before, which is a big part of
               why the site read as "homepage got redesigned, rest didn't" even once it had. */}
-          <Link href="/" style={{
+          <Link href="/" className="hdr-logo" style={{
             display: 'flex',
             alignItems: 'center',
             gap: 8,
@@ -204,7 +229,7 @@ export default function Header() {
           {/* Right side */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
 
-            <Link href="/browse" title="Search sequences" style={{
+            <Link href="/browse" title="Search sequences" className="hdr-search" style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               width: 32, height: 32, borderRadius: 'var(--radius-sm)',
               color: 'var(--text-secondary)', textDecoration: 'none',
@@ -336,14 +361,14 @@ export default function Header() {
               </>
             ) : (
               <>
-                <Link href="/auth/login" style={{
+                <Link href="/auth/login" className="hdr-signin" style={{
                   fontSize: 'var(--text-sm)', color: 'var(--text-secondary)',
                   textDecoration: 'none', padding: '6px 12px',
                   whiteSpace: 'nowrap',
                 }}>
                   Sign in
                 </Link>
-                <Link href="/auth/signup" style={{
+                <Link href="/auth/signup" className="hdr-signup" style={{
                   fontSize: 'var(--text-sm)', fontWeight: 500,
                   background: 'var(--accent)', color: 'white',
                   textDecoration: 'none', padding: '6px 14px',

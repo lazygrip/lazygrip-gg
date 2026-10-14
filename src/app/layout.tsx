@@ -6,6 +6,7 @@ import AnnouncementBar from '@/components/layout/AnnouncementBar'
 import { ThemeProvider } from '@/components/ThemeProvider'
 import Script from 'next/script'
 import { headers } from 'next/headers'
+import { preload } from 'react-dom'
 import { jsonLdString } from '@/lib/json-ld'
 
 // Site-wide JSON-LD, rendered once here so every page on the site carries
@@ -94,6 +95,12 @@ export default async function RootLayout({
   // did not run, in which case the scripts below carry no nonce and the browser
   // blocks them, which is the safe way for that failure to look.
   const nonce = (await headers()).get('x-nonce') ?? undefined
+
+  // The body font is the one thing every page needs before it can paint text, so ask for
+  // it at the top of the document instead of waiting for the stylesheet to discover it.
+  // Without this the first paint uses the fallback font and the text visibly jumps. The
+  // other three font files are not preloaded, they only matter for code and rare characters.
+  preload('/fonts/Saira-latin-wght.woff2', { as: 'font', type: 'font/woff2', crossOrigin: 'anonymous' })
 
   return (
     <html lang="en" suppressHydrationWarning>

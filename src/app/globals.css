@@ -1,29 +1,41 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
-
-/* Self-hosted, not Google Fonts — Expressway is a licensed commercial font supplied directly
-   for this project, not a freely-redistributable webfont. Regular/SemiBold/Bold (400/600/700)
-   covers every fontWeight the site actually requests except 500, which sits between Regular
-   and SemiBold with no exact master — browsers resolve that to the nearest available weight. */
+/* Fonts are self-hosted from /public/fonts, both SIL Open Font License (license texts sit
+   beside the files), and both are variable fonts, so every weight from 100 to 900 is a real
+   master and 500, 600, 700 and 800 all render as true weights instead of the browser
+   snapping or faking them. That is the reason the site moved off Expressway, whose three
+   static files did not form a proper weight ladder (its SemiBold drew lighter than its
+   Regular). Nothing is requested from Google or any other third party. The latin-ext files
+   only download when a page actually contains a character outside the basic latin range. */
 @font-face {
-  font-family: 'Expressway';
-  src: url('/fonts/Expressway-Regular.ttf') format('truetype');
-  font-weight: 400;
+  font-family: 'Saira';
   font-style: normal;
+  font-weight: 100 900;
   font-display: swap;
+  src: url('/fonts/Saira-latin-wght.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
-  font-family: 'Expressway';
-  src: url('/fonts/Expressway-SemiBold.otf') format('opentype');
-  font-weight: 600;
+  font-family: 'Saira';
   font-style: normal;
+  font-weight: 100 900;
   font-display: swap;
+  src: url('/fonts/Saira-latin-ext-wght.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 @font-face {
-  font-family: 'Expressway';
-  src: url('/fonts/Expressway-Bold.ttf') format('truetype');
-  font-weight: 700;
+  font-family: 'JetBrains Mono';
   font-style: normal;
+  font-weight: 100 800;
   font-display: swap;
+  src: url('/fonts/JetBrainsMono-latin-wght.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url('/fonts/JetBrainsMono-latin-ext-wght.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
 @tailwind base;
@@ -35,8 +47,8 @@
    explicit opt-in override below, reachable via the theme toggle, kept fully designed rather
    than a stripped-down alternate. */
 :root {
-  --font-sans: 'Expressway', sans-serif;
-  --font-mono: 'DM Mono', monospace;
+  --font-sans: 'Saira', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   --bg-primary: #1e1c2e;
   --bg-secondary: #171524;
@@ -67,11 +79,15 @@
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
   --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
 
-  --text-xs: 12px;
-  --text-sm: 14px;
-  --text-base: 16px;
-  --text-lg: 18px;
-  --text-xl: 22px;
+  /* Raised on Oct 14 2026 (was 12, 14, 16, 18, 22). Saira's x-height is about 6 percent
+     smaller than Expressway's at the same pixel size, so the same numbers would have
+     looked smaller, and the small text was already reported as too small. 2xl and up are
+     untouched. */
+  --text-xs: 14px;
+  --text-sm: 16px;
+  --text-base: 18px;
+  --text-lg: 20px;
+  --text-xl: 24px;
   --text-2xl: 28px;
   --text-3xl: 36px;
   --text-4xl: 52px;

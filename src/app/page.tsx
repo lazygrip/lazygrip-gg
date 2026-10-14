@@ -321,7 +321,7 @@ export default async function HomePage() {
                     'Spell ID conversion',
                   ].map(feature => (
                     <span key={feature} style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <span style={{ color: 'var(--accent)', fontSize: 10 }}>&#10003;</span> {feature}
+                      <span style={{ color: 'var(--accent)', fontSize: 12 }}>&#10003;</span> {feature}
                     </span>
                   ))}
                 </div>
