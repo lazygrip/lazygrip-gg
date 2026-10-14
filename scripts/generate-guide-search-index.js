@@ -9,10 +9,17 @@
 // can't drift out of sync with the source the way a hand-typed copy would, and it
 // covers full section body text, not just titles.
 //
-// Usage:
+// Usage, since every page renders per request (the root layout reads headers() to pick
+// up the CSP nonce, so `npm run build` no longer leaves prerendered guide HTML behind):
 //   npm run build
-//   node scripts/generate-guide-search-index.js
+//   npm run start                      (in a second terminal)
+//   GUIDE_INDEX_BASE_URL=http://localhost:3000 node scripts/generate-guide-search-index.js
 //   (commit the updated src/lib/guide-search-index.ts along with your guide changes)
+//
+// With GUIDE_INDEX_BASE_URL set, each guide page is fetched from that running server.
+// Without it, the script falls back to prerendered HTML under .next/server/app if any
+// exists, which is how it worked before the nonce change. The guide pages do not touch
+// the database, so placeholder Supabase values in the environment are enough to run it.
 const fs = require('fs')
 const path = require('path')
 
@@ -53,62 +60,88 @@ function stripTags(html) {
     .trim()
 }
 
-const entries = []
+const BASE_URL = (process.env.GUIDE_INDEX_BASE_URL || '').replace(/\/+$/, '')
 
-for (const { file, page, pageTitle } of PAGES) {
+async function loadHtml(file, page) {
+  if (BASE_URL) {
+    const res = await fetch(BASE_URL + page)
+    if (!res.ok) {
+      console.error(`Could not fetch ${BASE_URL + page}: HTTP ${res.status}`)
+      process.exit(1)
+    }
+    return res.text()
+  }
   const fullPath = path.join(APP_DIR, file)
   if (!fs.existsSync(fullPath)) {
-    console.error(`Missing build output for ${file} -- run "npm run build" first.`)
+    console.error(
+      `No prerendered HTML for ${file}. Every page renders per request now, so start the site ` +
+        `("npm run build" then "npm run start") and run this again with ` +
+        `GUIDE_INDEX_BASE_URL=http://localhost:3000`
+    )
     process.exit(1)
   }
-  const full = fs.readFileSync(fullPath, 'utf8')
-  const mainMatch = full.match(/<main[^>]*>([\s\S]*?)<\/main>/)
-  if (!mainMatch) {
-    console.error(`No <main> element found in ${file}, skipping.`)
-    continue
-  }
-  const mainHtml = mainMatch[1]
-
-  const sectionRe = /<h2 id="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/g
-  const matches = [...mainHtml.matchAll(sectionRe)]
-
-  for (let i = 0; i < matches.length; i++) {
-    const [, id, titleHtml] = matches[i]
-    const startIdx = matches[i].index + matches[i][0].length
-    const endIdx = i + 1 < matches.length ? matches[i + 1].index : mainHtml.length
-    const chunkHtml = mainHtml.slice(startIdx, endIdx)
-    entries.push({
-      page,
-      pageTitle,
-      section: stripTags(titleHtml),
-      href: `${page}#${id}`,
-      body: stripTags(chunkHtml),
-    })
-  }
+  return fs.readFileSync(fullPath, 'utf8')
 }
 
-if (entries.length === 0) {
-  console.error('Extracted zero sections -- something is wrong, refusing to overwrite the index.')
+async function main() {
+  const entries = []
+
+  for (const { file, page, pageTitle } of PAGES) {
+    const full = await loadHtml(file, page)
+    const mainMatch = full.match(/<main[^>]*>([\s\S]*?)<\/main>/)
+    if (!mainMatch) {
+      console.error(`No <main> element found in ${file}, skipping.`)
+      continue
+    }
+    const mainHtml = mainMatch[1]
+
+    const sectionRe = /<h2 id="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/g
+    const matches = [...mainHtml.matchAll(sectionRe)]
+
+    for (let i = 0; i < matches.length; i++) {
+      const [, id, titleHtml] = matches[i]
+      const startIdx = matches[i].index + matches[i][0].length
+      const endIdx = i + 1 < matches.length ? matches[i + 1].index : mainHtml.length
+      const chunkHtml = mainHtml.slice(startIdx, endIdx)
+      entries.push({
+        page,
+        pageTitle,
+        section: stripTags(titleHtml),
+        href: `${page}#${id}`,
+        body: stripTags(chunkHtml),
+      })
+    }
+  }
+
+  if (entries.length === 0) {
+    console.error('Extracted zero sections -- something is wrong, refusing to overwrite the index.')
+    process.exit(1)
+  }
+
+  const header = `// GENERATED FILE -- do not hand-edit. Produced by scripts/generate-guide-search-index.js
+  // from the site's own build output, so it reflects exactly what's rendered on the page.
+  // After changing any guide page's content: `.trimEnd() + '\n'
+    + '// npm run build, npm run start, then\n'
+    + '// GUIDE_INDEX_BASE_URL=http://localhost:3000 node scripts/generate-guide-search-index.js\n'
+    + `// then commit this file alongside the guide change.\n\n`
+    + `export type GuideSearchEntry = {\n`
+    + `  page: string\n`
+    + `  pageTitle: string\n`
+    + `  section: string\n`
+    + `  href: string\n`
+    + `  body: string\n`
+    + `}\n\n`
+    + `export const GUIDE_SEARCH_INDEX: GuideSearchEntry[] = `
+
+  const body = JSON.stringify(entries, null, 2)
+
+  fs.mkdirSync(path.dirname(OUT_FILE), { recursive: true })
+  fs.writeFileSync(OUT_FILE, header + body + '\n')
+
+  console.log(`Wrote ${entries.length} sections across ${PAGES.length} pages to ${path.relative(ROOT, OUT_FILE)}`)
+}
+
+main().catch(err => {
+  console.error(err)
   process.exit(1)
-}
-
-const header = `// GENERATED FILE -- do not hand-edit. Produced by scripts/generate-guide-search-index.js
-// from the site's own build output, so it reflects exactly what's rendered on the page.
-// After changing any guide page's content: `.trimEnd() + '\n'
-  + '// npm run build && node scripts/generate-guide-search-index.js\n'
-  + `// then commit this file alongside the guide change.\n\n`
-  + `export type GuideSearchEntry = {\n`
-  + `  page: string\n`
-  + `  pageTitle: string\n`
-  + `  section: string\n`
-  + `  href: string\n`
-  + `  body: string\n`
-  + `}\n\n`
-  + `export const GUIDE_SEARCH_INDEX: GuideSearchEntry[] = `
-
-const body = JSON.stringify(entries, null, 2)
-
-fs.mkdirSync(path.dirname(OUT_FILE), { recursive: true })
-fs.writeFileSync(OUT_FILE, header + body + '\n')
-
-console.log(`Wrote ${entries.length} sections across ${PAGES.length} pages to ${path.relative(ROOT, OUT_FILE)}`)
+})

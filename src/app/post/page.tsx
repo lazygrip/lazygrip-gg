@@ -11,8 +11,7 @@ import { notifyDiscord } from '@/lib/notify-discord'
 import { trackEvent } from '@/lib/analytics'
 import { useUsernameGate } from '@/lib/useUsernameGate'
 import PostingEligibilityChecklist from '@/components/PostingEligibilityChecklist'
-
-const PATCH_VERSIONS = ['12.0', '12.0.5', '12.0.7', '12.1']
+import { LATEST_PATCH, PATCH_VERSIONS } from '@/lib/patches'
 
 const EMPTY_FORM = {
   title: '',
@@ -21,7 +20,7 @@ const EMPTY_FORM = {
   spec_name: '',
   content_type: 'mythic_plus',
   hero_talent: '',
-  patch_version: '12.1',
+  patch_version: LATEST_PATCH,
   grip_version: '',
   // Derived from the export envelope on decode, never typed by a human, so
   // there is no form control for it anywhere on this page. It lives in the
@@ -339,7 +338,7 @@ function PostForm() {
       spec_name: data.spec_name ?? '',
       content_type: data.content_type ?? 'mythic_plus',
       hero_talent: data.hero_talent ?? '',
-      patch_version: data.patch_version ?? '12.1',
+      patch_version: data.patch_version ?? LATEST_PATCH,
       grip_version: data.grip_version ?? '',
       wow_build: data.wow_build ?? '',
       step_function: data.step_function ?? 'Sequential',
@@ -434,7 +433,7 @@ function PostForm() {
         spec_name: data.spec_name ?? '',
         content_type: data.content_type ?? 'mythic_plus',
         hero_talent: data.hero_talent ?? '',
-        patch_version: data.patch_version ?? '12.1',
+        patch_version: data.patch_version ?? LATEST_PATCH,
         grip_version: data.grip_version ?? '',
         wow_build: data.wow_build ?? '',
         step_function: data.step_function ?? 'Sequential',

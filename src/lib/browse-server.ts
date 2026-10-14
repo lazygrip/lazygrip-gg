@@ -1,6 +1,7 @@
 import { unstable_cache } from 'next/cache'
 import { createPublicClient } from '@/lib/supabase/public'
 import { buildBrowseQuery, BROWSE_PAGE_SIZE } from '@/lib/browse-query'
+import { orderPatchOptions } from '@/lib/patches'
 import type { Sequence, SequenceFilters } from '@/types'
 
 export type BrowsePageData = {
@@ -11,7 +12,8 @@ export type BrowsePageData = {
 }
 
 // Distinct patch_version values across published sequences, for the Browse patch filter.
-// Sorted numerically (11.2 before 12.1) rather than lexically.
+// Newest first and numeric (12.1.5 above 12.1 above 12.0.7), and the latest patch is always
+// included even before anything has been tagged with it. See src/lib/patches.ts.
 async function fetchAvailablePatchesUncached(): Promise<string[]> {
   const supabase = createPublicClient()
   const { data, error } = await supabase
@@ -28,8 +30,7 @@ async function fetchAvailablePatchesUncached(): Promise<string[]> {
     if (value) values.add(value)
   }
 
-  const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
-  return Array.from(values).sort((a, b) => collator.compare(a, b))
+  return orderPatchOptions(values)
 }
 
 async function fetchCurrentPatchUncached(): Promise<string | null> {

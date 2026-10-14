@@ -8,6 +8,7 @@ import { WOW_CLASSES, CONTENT_TYPES } from '@/lib/wow-data'
 import { Sequence, SequenceFilters } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { BROWSE_PAGE_SIZE, browseFilterKey, buildBrowseQuery } from '@/lib/browse-query'
+import { orderPatchOptions } from '@/lib/patches'
 
 const SORT_OPTIONS = [
   { value: 'recent', label: 'Recent' },
@@ -157,8 +158,7 @@ export default function BrowseContent({
         const value = (row.patch_version || '').trim()
         if (value) values.add(value)
       }
-      const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' })
-      setAvailablePatches(Array.from(values).sort((a, b) => collator.compare(a, b)))
+      setAvailablePatches(orderPatchOptions(values))
     } catch (e) {
       console.error(e)
     }

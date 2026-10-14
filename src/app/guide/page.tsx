@@ -34,7 +34,7 @@ const sections = [
     icon: SlidersHorizontal,
     time: '6 min',
     title: 'Settings',
-    desc: 'The in-game settings that determine whether your sequences run smoothly or feel broken. Key Down Casting, Spell Queue Window, the Dynamic SQW Optimiser, click rate, and how to configure outside programs like AHK, iCue, and Synapse.',
+    desc: 'The in-game settings that determine whether your sequences run smoothly or feel broken. Key Down Casting, Spell Queue Window, the Dynamic SQW Optimiser, click rate and Auto-adjust, and how to configure outside programs like AHK, iCue, and Synapse.',
   },
   {
     href: '/guide/how-it-works',
@@ -106,7 +106,7 @@ export default function GuidePage() {
         </p>
         <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75, maxWidth: 620 }}>
           If your keybind is set but nothing is firing, go straight to{' '}
-          <Link href="/guide/installation" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Installation</Link>. On GRIP-EMS v2.4.20 and later this is rarely the cause since Key Down Casting is now forced on automatically, but on older versions the Cvar Health fix takes thirty seconds and solves that problem the majority of the time. If you are coming from an older macro sequencing addon and want to know whether switching is worth it, start with{' '}
+          <Link href="/guide/installation" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Installation</Link>. On GRIP-EMS v2.3.14 and later this is rarely the cause since Key Down Casting is forced on automatically every time you log in, but on older versions the Cvar Health fix takes thirty seconds and solves that problem the majority of the time. And if GRIP-EMS is missing from your AddOns list altogether after a game patch, update it before you do anything else, because an addon that does not name the current patch will not load; the 12.1.5 fix is v2.4.20-hotfix. If you are coming from an older macro sequencing addon and want to know whether switching is worth it, start with{' '}
           <Link href="/guide/from-legacy-program" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Coming from the legacy program</Link>.
         </p>
 

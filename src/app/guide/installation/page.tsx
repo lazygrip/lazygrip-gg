@@ -58,7 +58,7 @@ export default function InstallationPage() {
 
         <Step number={2} label="Enable the addon in-game">
           <p>At the character select screen, click <strong>AddOns</strong> in the bottom left corner and make sure GRIP-EMS is checked. Log into your character.</p>
-          <p style={{ marginTop: 8 }}>If you do not see GRIP-EMS in the list, your addon manager did not install it correctly. Try a manual download and drop the folder into your <code style={guideCodeStyle}>World of Warcraft\_retail_\Interface\AddOns</code> directory.</p>
+          <p style={{ marginTop: 8 }}>If you do not see GRIP-EMS in the list, your addon manager did not install it correctly. Try a manual download and drop the folder into your <code style={guideCodeStyle}>World of Warcraft\_retail_\Interface\AddOns</code> directory. If it was working before a game patch and has vanished since, it is almost certainly out of date and not broken, so see the first item under troubleshooting below.</p>
         </Step>
       </GuideSection>
 
@@ -69,12 +69,12 @@ export default function InstallationPage() {
 
         <Step number={1} label="Key Down Casting is handled for you now">
           <p>GRIP-EMS fires through WoW's <strong>key-down</strong> event system. By default WoW uses key-up, which means a sequence would register the press only when you release the key rather than when you press it. At 150ms intervals that is the difference between a functioning rotation and nothing happening at all.</p>
-          <p style={{ marginTop: 8 }}>Starting in v2.3.14, GRIP-EMS sets <code style={guideCodeStyle}>ActionButtonUseKeyDown</code> to enabled itself on every login, whether or not you have ever opened the settings. It is no longer a row in the CVar Health tab and there is nothing to fix here manually.</p>
+          <p style={{ marginTop: 8 }}>Starting in v2.3.14, GRIP-EMS sets <code style={guideCodeStyle}>ActionButtonUseKeyDown</code> to enabled itself on every login, whether or not you have ever opened the settings. It is no longer a row in the CVar Health tab and there is nothing to fix here manually. The check runs once per login while you are out of combat, so if a sequence goes dead after you changed settings mid-session, run <code style={guideCodeStyle}>/gems status</code> to read the live value and <code style={guideCodeStyle}>/reload</code> to put it back.</p>
           <GuideCallout>Running an older version than 2.3.14? Update through your addon manager first. On anything older, open <code style={guideCodeStyle}>/gems settings</code>, go to the CVar Health tab, and click Fix if the row is not green. That is the single most common reason a pre-2.3.14 install does nothing on keypress.</GuideCallout>
         </Step>
 
         <Step number={2} label="Verify your SpellQueueWindow">
-          <p>The SpellQueueWindow controls how many milliseconds before a GCD ends WoW will accept your next cast input. The CVar Health tab shows your current value and flags it if it looks off. The default of 400ms is fine to leave alone for now. The full explanation of what SQW does, why it matters, and how to tune it for your connection is on the <Link href="/guide/settings" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Settings</Link> page.</p>
+          <p>The SpellQueueWindow controls how many milliseconds before a GCD ends WoW will accept your next cast input. The CVar Health tab shows your current value and flags it if it looks off. The default of 400ms is fine to leave alone for now, and the Dynamic SQW Optimiser that can manage it for you from your own latency is off until you switch it on. The full explanation of what SQW does, why it matters, and how to tune it for your connection is on the <Link href="/guide/settings" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Settings</Link> page.</p>
           <GuideImage
             src="/guide/cvar-health-tab.png"
             alt="The CVar Health tab in GRIP-EMS settings, showing Macro Sequencing rows"
@@ -83,7 +83,7 @@ export default function InstallationPage() {
         </Step>
 
         <Step number={3} label="Set your click rate">
-          <p>GRIP-EMS advances one step per keypress. Your hardware or software needs to send repeated keypresses at a consistent interval. The right value depends on your setup but 150ms is a reliable starting point that works across most hardware and latency combinations. If you are using Razer hardware, set your repeat rate to 150ms in Synapse.</p>
+          <p>GRIP-EMS advances one step per keypress. Your hardware or software needs to send repeated keypresses at a consistent interval. The right value depends on your setup but 150ms is a reliable starting point that works across most hardware and latency combinations. If you are using Razer hardware, set your repeat rate to 150ms in Synapse. That interval is what your keyboard, mouse or program does, and it is separate from the Click Rate setting inside GRIP-EMS, which is only a reference number; with Auto-adjust click rate per sequence on, which it is by default, EMS picks one for each sequence for you anyway.</p>
           <p style={{ marginTop: 8 }}>Once you have a sequence running and some combat data logged, the Tempo Advisor on the Settings page shows a recommended click rate worked out from your sequence's actual step timing and how you play it. That number is more accurate than any static figure and gets sharper the more you play that sequence.</p>
         </Step>
       </GuideSection>
@@ -123,6 +123,10 @@ export default function InstallationPage() {
       </GuideSection>
 
       <GuideSection title="Troubleshooting common problems" layout="stack">
+        <TroubleshootItem
+          problem="GRIP-EMS is gone from my AddOns list after a game patch"
+          solution="Almost always this is a version problem and not a broken install. Midnight removed the Load out of date AddOns tickbox, so an addon that does not name the current patch simply does not load, and v2.4.20 named 12.1.0 and nothing newer, which meant it never loaded on 12.1.5. Update to v2.4.20-hotfix or later through your addon manager (it names 12.1.5, interface 120105, and is otherwise v2.4.20 with two small fixes), then log in again. The same thing can happen on any patch day until the author adds the new patch number, so when GRIP-EMS is missing after a patch, check for an update before you reinstall or reset anything. If you are already on v2.4.20-hotfix and it still does not show up, make sure the folder sits directly inside World of Warcraft\_retail_\Interface\AddOns and is named GRIP-EMS."
+        />
         <TroubleshootItem
           problem="Keybind is set but nothing fires"
           solution="First, update GRIP-EMS through your addon manager. As of v2.3.14, Key Down Casting is forced on automatically and this is no longer something you can misconfigure. If you are still on an older version, run /gems settings, go to the Cvar Health tab, and click Fix if the row is not green; this solves the majority of pre-2.3.14 keybind problems. On 2.3.14 or later, if the sequence still does not fire, check that you have a target selected and that the sequence has a keybind assigned in the Keybinds tab inside the editor, not just in WoW's default keybind menu. Run /gems keys to check whether another addon or click binding is quietly eating the key before GRIP-EMS ever sees it."
