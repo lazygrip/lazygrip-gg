@@ -58,7 +58,7 @@ jobs:
           newest = max(stable_releases, key=lambda r: r.get('created_at', ''))
           label = newest.get('label', '')
 
-          if not re.match(r'^v?[12]\.\d+\.\d+\$', label):
+          if not re.match(r'^v?[12]\.\d+\.\d+(-[A-Za-z0-9.]+)?\$', label):
               print(f'Wago release label \"{label}\" did not look like an addon version, refusing to proceed', file=sys.stderr)
               sys.exit(1)
 
@@ -87,9 +87,9 @@ jobs:
           # To make sure a stale file can never hide behind an already-current one, this
           # step reports the OLDEST version found across all tracked files, and the update
           # step below unconditionally rewrites all three whenever any one of them is behind.
-          LAYOUT=$(grep -o 'GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*' src/app/guide/layout.tsx | head -1)
-          GUIDE=$(grep -o 'GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*' src/app/guide/page.tsx | head -1)
-          HOME=$(grep -o 'GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*' src/app/page.tsx | head -1)
+          LAYOUT=$(grep -oE 'GRIP-EMS v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.]+)?' src/app/guide/layout.tsx | head -1)
+          GUIDE=$(grep -oE 'GRIP-EMS v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.]+)?' src/app/guide/page.tsx | head -1)
+          HOME=$(grep -oE 'GRIP-EMS v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.]+)?' src/app/page.tsx | head -1)
 
           echo "guide/layout.tsx: ${LAYOUT:-<none>}"
           echo "guide/page.tsx: ${GUIDE:-<none>}"
@@ -139,9 +139,9 @@ jobs:
           FETCHED_VERSION: ${{ steps.fetch_version.outputs.version }}
         run: |
           NEW_VERSION="${FETCHED_VERSION}"
-          sed -i "s/GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*/GRIP-EMS ${NEW_VERSION}/g" src/app/guide/layout.tsx
-          sed -i "s/GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*/GRIP-EMS ${NEW_VERSION}/g" src/app/guide/page.tsx
-          sed -i "s/GRIP-EMS v[0-9]*\.[0-9]*\.[0-9]*/GRIP-EMS ${NEW_VERSION}/g" src/app/page.tsx
+          sed -i -E "s/GRIP-EMS v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.]+)?/GRIP-EMS ${NEW_VERSION}/g" src/app/guide/layout.tsx
+          sed -i -E "s/GRIP-EMS v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.]+)?/GRIP-EMS ${NEW_VERSION}/g" src/app/guide/page.tsx
+          sed -i -E "s/GRIP-EMS v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.]+)?/GRIP-EMS ${NEW_VERSION}/g" src/app/page.tsx
           echo "Updated files to $NEW_VERSION"
 
       - name: Create pull request
