@@ -414,6 +414,69 @@ export const GUIDE_SEARCH_INDEX: GuideSearchEntry[] = [
     "body": "When you import someone else's sequence, run the same validation process before relying on it in serious content. Published sequences are validated against specific talent builds and specific content levels, and those conditions may not match yours exactly. A sequence validated on one hero talent path with one set of tier bonuses will produce different numbers on a different configuration because the spells and their interactions are different. Every sequence on LazyGrip includes the talent string it was validated with. If your talents do not match, the sequence is worth importing as a structural reference but treat it as a starting point rather than a finished product. Two runs at your target difficulty with log analysis takes about thirty minutes and tells you everything you need to know about whether it needs tuning for your setup. The validation workflow used for every sequence published on LazyGrip is: run the content, export the Warcraft Logs CSV, check the key metrics, adjust one thing if a metric is out of range, rerun. No sequence gets published before at least two validated runs at relevant difficulty. Ready to find a validated sequence to start from? Browse sequences Coming from the legacy program"
   },
   {
+    "page": "/guide/blizzard-and-addons",
+    "pageTitle": "Blizzard and addons",
+    "section": "The short version",
+    "href": "/guide/blizzard-and-addons#the-short-version",
+    "body": "As far as we could find on October 14, 2026, no Blizzard employee has ruled on GRIP-EMS or on any sequencing addon of its kind. The forum threads where players asked the question have no Blizzard reply, and one player in a May 2026 thread says outright that the Blizzard posters there cannot give the okay for a specific addon. What exists instead is a handful of Blizzard statements that touch the topic from the side, which are covered below, and a community habit of summing them up as one keypress, one action. Nothing on this page says GRIP-EMS is safe, approved or permitted, because nobody with the authority to say that has said it. Treat it as a map of what is written down, and make your own call on how much risk you are comfortable with."
+  },
+  {
+    "page": "/guide/blizzard-and-addons",
+    "pageTitle": "Blizzard and addons",
+    "section": "The rule everyone cites: one keypress, one action",
+    "href": "/guide/blizzard-and-addons#the-rule-everyone-cites-one-keypress-one-action",
+    "body": "The clearest Blizzard language on this comes from 2008, in a forum thread where players asked about macro keyboards. A Blizzard poster wrote that one hardware function equals one action, that you may not use hardware or software to auto-spam a rotation, and that chaining a full rotation with delays behind a single key was not supported. A second Blizzard poster added that a keyboard repeating an ability while a key is held is not permitted either. The thread is read at Blue Tracker . Two things keep that from being a clean answer. It is nearly two decades old, and it was about hardware like the Logitech G15 rather than addons, so Blizzard has never said how it applies to something running inside the game's own addon system. It is still the language the community leans on, because it is the only place Blizzard wrote the principle down in plain words, and it is the reason the working rule is that a press should do one thing and the player should do the pressing. Here is how that lines up with how GRIP-EMS is built. In the addon's source for v2.4.20-hotfix, each sequence button is set up to respond to a key press going down, and each press drives exactly one step. A step can hold several macro lines, the same as any macro you write in the game's own macro window, and WoW itself decides what goes out, which means only one global-cooldown spell can leave per press whatever the step contains. A search of the Core, Engine, Data, UI and Import code for anything that clicks a sequence button on a timer turned up nothing, and the Click Rate setting is a reference number for the timing advice, not a throttle and not a clicker. That was a search of the source rather than a formal audit, and Sataana is the person to confirm it, but it matches how the Settings page describes the setting. The line Blizzard drew in 2008 is about automatic repetition, so anything that presses the key for you is on the wrong side of it, including macro keyboards, mouse software, and key repeat tools. EMS does not need any of them and works the way Blizzard's language describes only when you are the one pressing."
+  },
+  {
+    "page": "/guide/blizzard-and-addons",
+    "pageTitle": "Blizzard and addons",
+    "section": "What the license agreement says",
+    "href": "/guide/blizzard-and-addons#what-the-license-agreement-says",
+    "body": "The binding text is Blizzard's End User License Agreement , last revised March 21, 2024. Section 1.C.ii bars creating, using or distributing cheats, hacks and bots, and it defines a bot as code or software that Blizzard has not expressly authorized and that allows the automated control of a game. It closes with a catch-all covering any unauthorized code or software that can be used in connection with the platform, and Section 1.C.i separately bars modifying the platform and building derivative works from it. The agreement does not name macros or addons anywhere. The word doing the work is automated. Read literally, the catch-all would sweep in every addon ever written, which cannot be what Blizzard means, and the reasonable reading is that the addon system and the addon policy below are Blizzard's authorization for addons in general. Neither one says where customizing the game ends and automated control of it begins, and the only place Blizzard has ever drawn that line in practice is the one keypress, one action language above. By that measure a sequencer where a person makes every press sits on the human side of the line, but that is a reading of the text and not something Blizzard has confirmed."
+  },
+  {
+    "page": "/guide/blizzard-and-addons",
+    "pageTitle": "Blizzard and addons",
+    "section": "Third-party software is a separate question",
+    "href": "/guide/blizzard-and-addons#third-party-software-is-a-separate-question",
+    "body": "On August 5, 2025 a Blizzard account posted a statement titled Prohibitions on Third-party Software, which you can read on the Blizzard forums . It says software that modifies the game client, or that bypasses its security to change or facilitate gameplay, violates the Terms of Service and the End User License Agreement, that Blizzard uses cheat detection to find it, and that penalties can include permanent account closure. The post does not mention macros, key automation or addons that run in the game's Lua environment, and it does not name any specific tool, so it neither covers nor clears GRIP-EMS. What can be said is that GRIP-EMS is an ordinary addon that sits in your AddOns folder and runs through the same interfaces every other addon uses, and that it does not modify the client. Blizzard's input broadcasting policy is a different thing again. It prohibits software that copies one keystroke or action to several game windows at once, which is aimed at multiboxing and botting, and it lists warnings escalating to suspension and permanent closure. The announcement is on the Blizzard news site . If you run more than one account, that policy applies to you whether or not you use any addon, and mirroring input across clients is not something GRIP-EMS does."
+  },
+  {
+    "page": "/guide/blizzard-and-addons",
+    "pageTitle": "Blizzard and addons",
+    "section": "What the addon policy actually says",
+    "href": "/guide/blizzard-and-addons#what-the-addon-policy-actually-says",
+    "body": "Blizzard's UI Add-On Development Policy has eight rules. Addons have to be free, their code has to be visible and not obfuscated, they cannot hurt realm performance or other players, they cannot advertise or ask for donations in the game, they have to stay within a Teen content rating, and they have to follow the Terms of Use and the EULA. The eighth rule is the one that matters most for a long view, because it says Blizzard may disable any addon functionality at its sole discretion. None of the eight rules mentions automation or how many actions a keypress may trigger, so the policy neither permits nor forbids a sequencer by name. What it does tell you is that Blizzard reserves the right to change what addons can do at any time, which is exactly what happened with Midnight, covered next. The policy also points questions about a specific addon to an email address at Blizzard, and in our experience a message sent there does not get an answer, so we are not leaning on that route and neither should you."
+  },
+  {
+    "page": "/guide/blizzard-and-addons",
+    "pageTitle": "Blizzard and addons",
+    "section": "What Midnight changed",
+    "href": "/guide/blizzard-and-addons#what-midnight-changed",
+    "body": "Blizzard explained its reasoning in Combat Philosophy and Addon Disarmament in Midnight . The stated goal is that addons stay tools for customizing how the game looks and presenting information, and not tools that give a combat advantage. Combat information became what Blizzard calls a secret value, which addons can display but cannot read, and real-time processing of things like buffs, debuffs, cooldowns and combat events is restricted. Blizzard also said it is building some of those functions into the game itself, including Assisted Highlight and a One-Button Rotation. The article says nothing about macros, key presses or sequencers, so it is not a ruling on them either. Two things follow from it that are worth knowing. First, Blizzard shipping its own one-button rotation on retail means it does not treat the idea of a single button doing a rotation as off limits in itself, but that is Blizzard offering it as part of the game and says nothing about whether a third party addon may do the same thing. Second, the practical effect for sequences is the one the How it works page describes: a sequence step can use the macro conditionals the game evaluates itself, and the Variables system can only hand back plain true or false answers, not live numbers like stacks or time remaining. Patch 12.1.5 did not change this picture. The API notes list a few more values becoming secret and a tightening on when addon code can touch protected cooldown frames, and they list no new combat restrictions that affect how a sequence runs. The 12.1.5 notes are on the Warcraft Wiki ."
+  },
+  {
+    "page": "/guide/blizzard-and-addons",
+    "pageTitle": "Blizzard and addons",
+    "section": "WoW: Forever",
+    "href": "/guide/blizzard-and-addons#wow-forever",
+    "body": "In a Kotaku interview published September 14, 2026, lead encounter designer Mike Nuthals said Forever will carry over retail's restriction on in-combat addons that automate marking or communicating for players. The article gives no further specifics and does not mention macros. It is covered, along with what it might mean for Variables, on the WoW: Forever page ."
+  },
+  {
+    "page": "/guide/blizzard-and-addons",
+    "pageTitle": "Blizzard and addons",
+    "section": "What nobody can tell you",
+    "href": "/guide/blizzard-and-addons#what-nobody-can-tell-you",
+    "body": "Whether Blizzard would ever act against a player for using a sequencer in the way described here is not something this page or this site can answer, because it is not written down anywhere we could find, and the people on forums who sound certain either way are giving opinions. Blizzard's enforcement history that is written down is about client modification, input broadcasting and outright botting, and none of it names addons in the Lua environment. If you want to stay on the most conservative reading of everything above, it comes to four habits: press the key yourself for every step, use nothing that repeats presses for you, never mirror input to a second client, and keep your addons to ones you install from CurseForge, Wago or WoWInterface. That is a reading of the text, not a guarantee, and this site is not affiliated with Blizzard and cannot speak for it."
+  },
+  {
+    "page": "/guide/blizzard-and-addons",
+    "pageTitle": "Blizzard and addons",
+    "section": "Sources",
+    "href": "/guide/blizzard-and-addons#sources",
+    "body": "Seeking Blue clarification: key repeating (Blizzard posts, May 2008) Blizzard End User License Agreement (revised March 21, 2024) New things learned about World of Warcraft: Forever (Kotaku, September 14, 2026) Prohibitions on Third-party Software (Blizzard, August 5, 2025) Policy Update for Input Broadcasting Software (Blizzard) UI Add-On Development Policy (Blizzard) Combat Philosophy and Addon Disarmament in Midnight (Blizzard) For clarification on the rules....gse? (player thread, May 2026, no Blizzard reply) Patch 12.1.5 API changes (Warcraft Wiki)"
+  },
+  {
     "page": "/guide/wow-forever",
     "pageTitle": "WoW: Forever",
     "section": "What is confirmed",
@@ -433,6 +496,13 @@ export const GUIDE_SEARCH_INDEX: GuideSearchEntry[] = [
     "section": "The actual blocker: SavedVariables",
     "href": "/guide/wow-forever#the-actual-blocker-savedvariables",
     "body": "Forever beta currently does not write SavedVariables correctly. In Sataana's own words, expect none of your in-game addon changes to survive a UI reload. This is a Blizzard client bug, it affects every addon on Forever, and there is nothing GRIP-EMS or any other addon can do on its own to work around it. This is the reason nothing gets published here yet. A sequence that looks broken on Forever right now could just as easily be a working sequence that lost its saved state on the last reload. There is no way to tell the difference until Blizzard fixes the underlying bug, so no result from this week is meaningful evidence either way."
+  },
+  {
+    "page": "/guide/wow-forever",
+    "pageTitle": "WoW: Forever",
+    "section": "What Blizzard has said about addons on Forever",
+    "href": "/guide/wow-forever#what-blizzard-has-said-about-addons-on-forever",
+    "body": "In a post-BlizzCon interview that Kotaku published on September 14, 2026, lead encounter designer Mike Nuthals said Forever will carry over retail's restriction on in-combat addons that automate marking or communicating for players, which Kotaku calls computational addons. Neither he nor lead Classic designer Tim Jones gave specifics on how addons will work, and the article does not say which addons stay allowed. Kotaku also reports that the One-Button Rotation Blizzard added to retail will not carry over to Forever. Macros are not mentioned anywhere in the piece. GamesRadar picked the story up two days later, and every other write-up we found traces back to that one interview, so there is a single source here and not several. What that means for GRIP-EMS is a guess until someone tests it in the beta. A sequence steps through fixed macro lines and leans on conditionals the game evaluates itself, which is not the kind of calculation the report describes, so the sequencing side looks like the safer half. The part more likely to be affected is the Variables system, because Sataana says Forever is classed internally as Mainline, and if it carries retail's rules for reading aura and cooldown state then Variables could behave on Forever the way the How it works page describes for retail, returning plain true or false answers and nothing numeric. That is an inference from two separate facts and nobody has confirmed it. The wider question of what Blizzard has and has not said about addons that sequence your keypresses, on retail and everywhere else, is on its own page: What Blizzard has said about addons like GRIP-EMS ."
   },
   {
     "page": "/guide/wow-forever",

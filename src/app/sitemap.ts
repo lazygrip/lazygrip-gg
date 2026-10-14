@@ -4,7 +4,7 @@ import { WOW_CLASSES, CONTENT_TYPES } from '@/lib/wow-data'
 
 // lastmod for the guide pages plus /about and /faq. These are hand-written
 // pages, so bump this date whenever that content actually changes.
-const CONTENT_UPDATED = new Date('2026-07-21')
+const CONTENT_UPDATED = new Date('2026-10-14')
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = await createClient()
@@ -201,6 +201,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: CONTENT_UPDATED,
       changeFrequency: 'weekly',
       priority: 0.8,
+    },
+    {
+      url: 'https://lazygrip.net/guide/blizzard-and-addons',
+      lastModified: CONTENT_UPDATED,
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: 'https://lazygrip.net/guide/wow-forever',
+      lastModified: CONTENT_UPDATED,
+      changeFrequency: 'weekly',
+      priority: 0.7,
     },
     {
       url: 'https://lazygrip.net/workshop',

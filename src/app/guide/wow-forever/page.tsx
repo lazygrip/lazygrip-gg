@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import GuideHeader from '@/components/guide/GuideHeader'
 import GuideSection from '@/components/guide/GuideSection'
 import GuideCallout from '@/components/guide/GuideCallout'
@@ -49,7 +50,7 @@ export default function WowForeverPage() {
         }}
       >
         <AlertTriangle size={11} />
-        Last confirmed September 18, 2026. Check the date before trusting anything below as still current.
+        Beta findings last confirmed September 18, 2026. The Blizzard addon rules section was added October 14, 2026 from press reports and has not been tested in the beta. Check the dates before trusting anything below as still current.
       </div>
 
       <GuideSection title="What is confirmed">
@@ -73,6 +74,18 @@ export default function WowForeverPage() {
         </GuideCallout>
         <p>
           This is the reason nothing gets published here yet. A sequence that looks broken on Forever right now could just as easily be a working sequence that lost its saved state on the last reload. There is no way to tell the difference until Blizzard fixes the underlying bug, so no result from this week is meaningful evidence either way.
+        </p>
+      </GuideSection>
+
+      <GuideSection title="What Blizzard has said about addons on Forever">
+        <p style={{ marginBottom: 12 }}>
+          In a post-BlizzCon interview that <a href="https://kotaku.com/new-things-learned-world-of-warcraft-forever-2000734005" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Kotaku</a> published on September 14, 2026, lead encounter designer Mike Nuthals said Forever will carry over retail&apos;s restriction on in-combat addons that automate marking or communicating for players, which Kotaku calls computational addons. Neither he nor lead Classic designer Tim Jones gave specifics on how addons will work, and the article does not say which addons stay allowed. Kotaku also reports that the One-Button Rotation Blizzard added to retail will not carry over to Forever. Macros are not mentioned anywhere in the piece. GamesRadar picked the story up two days later, and every other write-up we found traces back to that one interview, so there is a single source here and not several.
+        </p>
+        <p style={{ marginBottom: 12 }}>
+          What that means for GRIP-EMS is a guess until someone tests it in the beta. A sequence steps through fixed macro lines and leans on conditionals the game evaluates itself, which is not the kind of calculation the report describes, so the sequencing side looks like the safer half. The part more likely to be affected is the Variables system, because Sataana says Forever is classed internally as Mainline, and if it carries retail&apos;s rules for reading aura and cooldown state then Variables could behave on Forever the way the <Link href="/guide/how-it-works" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>How it works page</Link> describes for retail, returning plain true or false answers and nothing numeric. That is an inference from two separate facts and nobody has confirmed it.
+        </p>
+        <p>
+          The wider question of what Blizzard has and has not said about addons that sequence your keypresses, on retail and everywhere else, is on its own page: <Link href="/guide/blizzard-and-addons" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>What Blizzard has said about addons like GRIP-EMS</Link>.
         </p>
       </GuideSection>
 

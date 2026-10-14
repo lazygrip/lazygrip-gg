@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowRight, BookOpen, Wrench, Layers, GitBranch, BarChart2, SlidersHorizontal, Sparkles, AlertTriangle } from 'lucide-react'
+import { ArrowRight, BookOpen, Wrench, Layers, GitBranch, BarChart2, SlidersHorizontal, Sparkles, AlertTriangle, Scale } from 'lucide-react'
 import GuideSection from '@/components/guide/GuideSection'
 import GuideImage from '@/components/guide/GuideImage'
 import Card from '@/components/ui/Card'
@@ -72,11 +72,18 @@ const sections = [
     desc: 'How to know your sequence is actually working for any spec. Warcraft Logs CSV exports as the proof standard, not gut feel and not dummy parsing. Includes how to use the built-in Repair module as a first-pass diagnostic before you ever open a log.',
   },
   {
+    href: '/guide/blizzard-and-addons',
+    icon: Scale,
+    time: '6 min',
+    title: 'Blizzard and addons',
+    desc: "What Blizzard has actually put in writing about addons, macros and one keypress doing one thing, what it has never ruled on, and what Midnight changed. Sourced and dated, and it does not claim GRIP-EMS is approved, because nobody at Blizzard has said that.",
+  },
+  {
     href: '/guide/wow-forever',
     icon: AlertTriangle,
     time: '3 min',
     title: 'WoW: Forever',
-    desc: "Whether GRIP-EMS runs on Blizzard's Classic+ expansion, what Sataana has confirmed as of beta week one, and the Blizzard-side SavedVariables bug currently blocking real testing. Updated as the beta moves.",
+    desc: "Whether GRIP-EMS runs on Blizzard's Classic+ expansion, what Sataana has confirmed as of beta week one, the Blizzard-side SavedVariables bug currently blocking real testing, and what Blizzard has said about addons there. Updated as the beta moves.",
   },
 ]
 

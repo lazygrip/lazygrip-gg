@@ -36,6 +36,7 @@ const PAGES = [
   { file: 'guide/building-sequences.html', page: '/guide/building-sequences', pageTitle: 'Building sequences' },
   { file: 'guide/from-legacy-program.html', page: '/guide/from-legacy-program', pageTitle: 'Coming from the legacy program' },
   { file: 'guide/validating.html', page: '/guide/validating', pageTitle: 'Validating your work' },
+  { file: 'guide/blizzard-and-addons.html', page: '/guide/blizzard-and-addons', pageTitle: 'Blizzard and addons' },
   { file: 'guide/wow-forever.html', page: '/guide/wow-forever', pageTitle: 'WoW: Forever' },
 ]
 
