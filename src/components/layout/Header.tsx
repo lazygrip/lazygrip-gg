@@ -123,27 +123,33 @@ export default function Header() {
           .mobile-menu-btn { display: flex !important; }
           .desktop-post-btn { display: none !important; }
         }
-        /* Phone widths. The row is logo, search, theme toggle, Sign in, Sign up and the
-           hamburger, and at 390px it was already about 42px too wide, which pushed the
-           hamburger (the only way to reach the nav on a phone) off the right edge. Larger
-           type made it worse. Sign in is hidden here because the menu carries both Sign up and
-           Sign in, and the logo and Sign up are tightened so everything fits down to 320px. */
+        /* Phone widths. People read this on phones with the system text size turned up, and
+           px type scales with it, so a row that fits at the default size can push the
+           hamburger (the only way to the nav) off the right edge once text is 30 to 50 percent
+           bigger. It did exactly that on a real phone. So the row is built to survive that:
+           the logo is the one thing allowed to shrink (its text ellipsizes), the search
+           shortcut and Sign up step aside because Browse and Sign up are both in the menu, and
+           Sign in stays visible as the one account button. */
         @media (max-width: 480px) {
-          .hdr-signin { display: none !important; }
-          .hdr-signup { padding: 6px 10px !important; }
-          .hdr-logo { font-size: 16px !important; gap: 6px !important; }
+          .hdr-search { display: none !important; }
+          .hdr-signup { display: none !important; }
+          .hdr-signin {
+            border: 0.5px solid var(--border-strong);
+            border-radius: var(--radius-md);
+            padding: 6px 12px !important;
+            color: var(--text-primary) !important;
+            font-weight: 500;
+          }
+          .hdr-logo { font-size: 16px !important; gap: 6px !important; min-width: 0; flex-shrink: 1 !important; }
+          .hdr-logo svg { flex-shrink: 0; }
+          .hdr-logo-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          .hdr-right { min-width: 0; }
         }
-        /* Narrowest phones (360px and below): the 16px row gap and the 30px mark are what
-           pushed the hamburger off the edge, so both shrink here. */
         @media (max-width: 400px) {
           .hdr-bar { padding: 0 10px !important; }
           .hdr-inner { gap: 6px !important; }
           .hdr-logo svg { width: 24px !important; height: 24px !important; }
           .hdr-logo { font-size: 15px !important; }
-        }
-        /* 320px phones: Browse is in the menu, so the search shortcut gives up its 32px. */
-        @media (max-width: 340px) {
-          .hdr-search { display: none !important; }
         }
       `}</style>
 
@@ -181,7 +187,7 @@ export default function Header() {
             flexShrink: 0,
           }}>
             <SequenceMark size={30} />
-            LazyGrip<span style={{ color: 'var(--accent)' }}>.net</span>
+            <span className="hdr-logo-text">LazyGrip<span style={{ color: 'var(--accent)' }}>.net</span></span>
           </Link>
 
           {/* Desktop Nav — active section gets a solid underline instead of relying on hover
@@ -227,7 +233,7 @@ export default function Header() {
           <div style={{ flex: 1 }} className="mobile-menu-btn" />
 
           {/* Right side */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+          <div className="hdr-right" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
 
             <Link href="/browse" title="Search sequences" className="hdr-search" style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',

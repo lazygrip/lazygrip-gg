@@ -193,12 +193,12 @@ export default function SettingsPage() {
             { cmd: '/gems fs alert', desc: 'Turn mismatch alerts on or off' },
             { cmd: '/gems fs reset', desc: 'Clear the off-GCD classifications EMS has learned and re-run the analysis on your loaded sequences' },
           ].map(item => (
-            <div key={item.cmd} style={{ display: 'flex', gap: 16, alignItems: 'baseline', fontSize: 'var(--text-sm)' }}>
+            <div key={item.cmd} style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', alignItems: 'baseline', fontSize: 'var(--text-sm)' }}>
               <code style={{
                 fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)',
                 color: 'var(--accent)', background: 'var(--accent-subtle)',
                 padding: '2px 8px', borderRadius: 'var(--radius-sm)',
-                flexShrink: 0, whiteSpace: 'nowrap',
+                flexShrink: 0, maxWidth: '100%', overflowWrap: 'anywhere',
               }}>
                 {item.cmd}
               </code>

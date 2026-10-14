@@ -30,7 +30,7 @@ export default function AboutPage() {
             <Shield size={19} style={{ color: 'var(--accent)' }} />
           </div>
         </div>
-        <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--text-primary)' }}>
+        <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--text-primary)', minWidth: 0, overflowWrap: 'anywhere' }}>
           About LazyGrip.net
         </h1>
       </div>

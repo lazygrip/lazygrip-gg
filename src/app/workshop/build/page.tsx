@@ -478,7 +478,7 @@ function BlockControls({ onMoveUp, onMoveDown, onClone, onDelete, dragHandleProp
   dragHandleProps?: Record<string, unknown>
 }) {
   return (
-    <div style={{ display: 'flex', gap: 2, marginLeft: 'auto', alignItems: 'center' }}>
+    <div className="wb-ctl" style={{ display: 'flex', gap: 2, marginLeft: 'auto', alignItems: 'center' }}>
       {dragHandleProps && (
         <div {...dragHandleProps} style={{ cursor: 'grab', padding: '5px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 24, minHeight: 24 }} title="Drag to reorder">
           <GripVertical size={16} />
@@ -529,8 +529,8 @@ function ActionBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone
 
   return (
     <div style={S.blockContainer('action')}>
-      <div style={S.blockHeader('action')}>
-        <span style={S.badge(BLOCK_COLORS.action.badge)}>{blockIndex !== undefined ? `Step ${blockIndex + 1}` : 'Step'}</span>
+      <div className="wb-bh" style={S.blockHeader('action')}>
+        <span className="wb-badge" style={S.badge(BLOCK_COLORS.action.badge)}>{blockIndex !== undefined ? `Step ${blockIndex + 1}` : 'Step'}</span>
         <input placeholder="Name (optional)" value={action.name || ''} onChange={e => onUpdate({ ...action, name: e.target.value })} style={{ ...S.input(), width: 110, fontSize: 'var(--text-xs)' }} />
         <input placeholder="Label" value={action.label || ''} onChange={e => onUpdate({ ...action, label: e.target.value })} style={{ ...S.input(), width: 80, fontSize: 'var(--text-xs)' }} />
         <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -560,8 +560,8 @@ function PauseBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone,
 }) {
   return (
     <div style={S.blockContainer('pause')}>
-      <div style={S.blockHeader('pause')}>
-        <span style={S.badge(BLOCK_COLORS.pause.badge)}>{blockIndex !== undefined ? `Pause ${blockIndex + 1}` : 'Pause'}</span>
+      <div className="wb-bh" style={S.blockHeader('pause')}>
+        <span className="wb-badge" style={S.badge(BLOCK_COLORS.pause.badge)}>{blockIndex !== undefined ? `Pause ${blockIndex + 1}` : 'Pause'}</span>
         <input type="number" min={1} max={20} value={action.clicks ?? 1} onChange={e => onUpdate({ ...action, clicks: Math.max(1, Number(e.target.value)) })} style={{ ...S.input(), width: 48 }} />
         <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>clicks</span>
         <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
@@ -577,8 +577,8 @@ function EmbedBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone,
 }) {
   return (
     <div style={S.blockContainer('embed')}>
-      <div style={S.blockHeader('embed')}>
-        <span style={S.badge(BLOCK_COLORS.embed.badge)}>{blockIndex !== undefined ? `Embed ${blockIndex + 1}` : 'Embed'}</span>
+      <div className="wb-bh" style={S.blockHeader('embed')}>
+        <span className="wb-badge" style={S.badge(BLOCK_COLORS.embed.badge)}>{blockIndex !== undefined ? `Embed ${blockIndex + 1}` : 'Embed'}</span>
         <input placeholder="Sequence name" value={action.sequence || ''} onChange={e => onUpdate({ ...action, sequence: e.target.value })} style={{ ...S.input(), flex: 1, minWidth: 120 }} />
         <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
       </div>
@@ -601,8 +601,8 @@ function LoopBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, 
   }
   return (
     <div style={S.blockContainer('loop')}>
-      <div style={S.blockHeader('loop')}>
-        <span style={S.badge(BLOCK_COLORS.loop.badge)}>{blockIndex !== undefined ? `Loop ${blockIndex + 1}` : 'Loop'}</span>
+      <div className="wb-bh" style={S.blockHeader('loop')}>
+        <span className="wb-badge" style={S.badge(BLOCK_COLORS.loop.badge)}>{blockIndex !== undefined ? `Loop ${blockIndex + 1}` : 'Loop'}</span>
         <input placeholder="Name" value={action.name || ''} onChange={e => onUpdate({ ...action, name: e.target.value })} style={{ ...S.input(), width: 100, fontSize: 'var(--text-xs)' }} />
         <input placeholder="Label" value={action.label || ''} onChange={e => onUpdate({ ...action, label: e.target.value })} style={{ ...S.input(), width: 80, fontSize: 'var(--text-xs)' }} />
         <select value={action.stepFunction || 'Sequential'} onChange={e => onUpdate({ ...action, stepFunction: e.target.value as StepFunction })} style={{ ...S.select(), fontSize: 'var(--text-xs)' }}>
@@ -631,8 +631,8 @@ function IfBlock({ action, onUpdate, onDelete, onMoveUp, onMoveDown, onClone, de
   function cloneBranch(branch: 'then' | 'else', i: number) { const a = [...(action[branch] || [])]; a.splice(i + 1, 0, deepCloneAction(a[i])); onUpdate({ ...action, [branch]: a }) }
   return (
     <div style={S.blockContainer('if')}>
-      <div style={S.blockHeader('if')}>
-        <span style={S.badge(BLOCK_COLORS.if.badge)}>{blockIndex !== undefined ? `If ${blockIndex + 1}` : 'If'}</span>
+      <div className="wb-bh" style={S.blockHeader('if')}>
+        <span className="wb-badge" style={S.badge(BLOCK_COLORS.if.badge)}>{blockIndex !== undefined ? `If ${blockIndex + 1}` : 'If'}</span>
         <input placeholder="= true" value={action.variable || ''} onChange={e => onUpdate({ ...action, variable: e.target.value })} style={{ ...S.input(), flex: 1, minWidth: 100, fontSize: 'var(--text-xs)' }} />
         <BlockControls onMoveUp={onMoveUp} onMoveDown={onMoveDown} onClone={onClone} onDelete={onDelete} dragHandleProps={dragHandleProps} />
       </div>
@@ -726,12 +726,12 @@ function AddBlockBar({ onAdd, useSpellIds, onToggleSpellIds }: {
   onToggleSpellIds?: (v: boolean) => void
 }) {
   return (
-    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
+    <div className="wb-addbar" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
       {([['action', '+ Step', BLOCK_COLORS.action.badge], ['loop', '+ Loop', BLOCK_COLORS.loop.badge], ['pause', '+ Pause', BLOCK_COLORS.pause.badge], ['if', '+ If', BLOCK_COLORS.if.badge], ['embed', '+ Embed', BLOCK_COLORS.embed.badge]] as const).map(([type, label, color]) => (
         <button key={type} onClick={() => onAdd(type)} style={{ padding: '5px 12px', fontSize: 'var(--text-xs)', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-sans)', borderRadius: 'var(--radius-md)', border: 'none', background: color, color: 'white' }}>{label}</button>
       ))}
       {onToggleSpellIds !== undefined && (
-        <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8, cursor: 'pointer' }}>
+        <label className="wb-spellids" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8, cursor: 'pointer' }}>
           <input type="checkbox" checked={Boolean(useSpellIds)} onChange={e => onToggleSpellIds(e.target.checked)} style={{ margin: 0 }} />
           Use Spell IDs
         </label>
@@ -756,7 +756,7 @@ function ResetModifierPanel({ resetModifiers, onChange }: { resetModifiers: Grip
 
   return (
     <div>
-      <button onClick={() => setOpen(o => !o)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
+      <button className="wb-wrapbtn" onClick={() => setOpen(o => !o)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left' }}>
         <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)' }}>{open ? '▼' : '▶'} Modifier reset overrides</span>
         {activeCount > 0 && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--accent)', fontWeight: 600 }}>{activeCount} set</span>}
       </button>
@@ -790,8 +790,8 @@ function VariablesPanel({ variables, onChange }: { variables: GripVariable[]; on
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+        <div style={{ flex: '1 1 220px', minWidth: 0 }}>
           <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>Variables</div>
           <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Manage variables used in this sequence. Variables use <code style={{ fontFamily: 'var(--font-mono)', background: 'var(--bg-tertiary)', padding: '1px 4px', borderRadius: 'var(--radius-sm)' }}>~varname~</code> syntax and get substituted at runtime.</div>
         </div>
@@ -849,8 +849,8 @@ function StandaloneMacrosPanel({ macros, onChange, classId }: { macros: Standalo
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+        <div style={{ flex: '1 1 220px', minWidth: 0 }}>
           <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>Standalone Macros</div>
           <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Named macro bodies bundled with the export.</div>
         </div>
@@ -926,13 +926,13 @@ function VersionPanel({ version, onUpdate, classId }: { version: BuilderVersion;
     <DragDropContext onDragEnd={onDragEnd}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-          <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <label className="wb-sf" style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
             Step Function
             <select value={version.stepFunction} onChange={e => onUpdate({ ...version, stepFunction: e.target.value as StepFunction })} style={S.select()}>
               {STEP_FUNCTIONS.map(sf => <option key={sf} value={sf}>{sf}</option>)}
             </select>
           </label>
-          <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="wb-reset" style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-muted)', marginRight: 4 }}>RESET ON:</span>
             {([['resetOnCombat', 'Combat'], ['resetOnTarget', 'Target'], ['resetOnGear', 'Gear'], ['resetOnSpec', 'Spec']] as const).map(([field, label]) => (
               <label key={field} style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', marginRight: 8 }}>
@@ -961,7 +961,7 @@ function VersionPanel({ version, onUpdate, classId }: { version: BuilderVersion;
           <ResetModifierPanel resetModifiers={version.resetModifiers} onChange={rm => onUpdate({ ...version, resetModifiers: rm })} />
         </div>
         <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div className="wb-actbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <AddBlockBar onAdd={addAction} useSpellIds={Boolean(version.useSpellIds)} onToggleSpellIds={async (toIds) => {
               const texts = collectActionMacros(version.actions)
               if (!texts.length) { onUpdate({ ...version, useSpellIds: toIds }); return }
@@ -976,7 +976,7 @@ function VersionPanel({ version, onUpdate, classId }: { version: BuilderVersion;
                 }
               } catch { onUpdate({ ...version, useSpellIds: toIds }) }
             }} />
-            <button onClick={() => onUpdate({ ...version, actions: [] })} style={{ ...S.btn(), fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 4 }} title="Reset all blocks">
+            <button className="wb-resetall" onClick={() => onUpdate({ ...version, actions: [] })} style={{ ...S.btn(), fontSize: 'var(--text-xs)', display: 'flex', alignItems: 'center', gap: 4 }} title="Reset all blocks">
               <RotateCcw size={11} /> Reset all
             </button>
           </div>
@@ -1128,10 +1128,49 @@ export default function WorkshopBuildPage() {
         /* Phone layout. The builder is a desktop tool first, but the two-column panels were
            forcing the page about 200px wider than a phone screen, so below 700px they stack,
            the edge padding shrinks, and the toolbars are allowed to wrap. */
+        /* The global reset makes every svg display:block, which put the plus icon on its own
+           line above the label of plain buttons such as New Sequence, Add Version and the
+           Step buttons inside an If. Inside a builder button the icon sits inline again. */
+        .wb-root button > svg { display: inline-block; vertical-align: -1px; }
         @media (max-width: 700px) {
           .wb-root { padding: 16px 12px !important; }
           .wb-stack { grid-template-columns: 1fr !important; }
-          .wb-root input, .wb-root select { max-width: 100%; }
+          /* Fields: 16px stops iOS zooming the page on focus, 40px is a usable touch height. */
+          .wb-root input:not([type=checkbox]), .wb-root select, .wb-root textarea { max-width: 100%; font-size: 16px !important; }
+          .wb-root input:not([type=checkbox]), .wb-root select { min-height: 40px; }
+          .wb-root input[type=number] { width: 64px !important; }
+          .wb-root input[type=checkbox] { width: 20px; height: 20px; flex-shrink: 0; }
+          /* Buttons never wrap their own label (that was the stacked "Reset all" and
+             "+ New Sequence"), and icon-only buttons get a 36px target. */
+          .wb-root button { white-space: nowrap; min-height: 40px; }
+          .wb-root button[title] { min-width: 36px; min-height: 36px; }
+          .wb-root button[aria-label="Close"] { min-height: 40px; }
+          /* Block header: badge on the left and the move/clone/delete controls on the right of
+             the first row, then the Name and Label fields share the next row. */
+          .wb-bh { gap: 8px !important; padding: 8px 10px !important; }
+          .wb-bh > * { order: 3; }
+          .wb-bh > .wb-badge { order: 1; }
+          .wb-bh > .wb-ctl { order: 2; margin-left: auto; gap: 0; }
+          .wb-bh > input:not([type=checkbox]):not([type=number]), .wb-bh > select { flex: 1 1 120px !important; width: auto !important; min-width: 0 !important; }
+          .wb-bh > input[placeholder^="Name"]:not([type=checkbox]):not([type=number]) { flex-basis: 100% !important; }
+          .wb-sf { flex-wrap: wrap; width: 100%; }
+          .wb-sf select { flex: 1 1 140px; min-width: 0; }
+          .wb-root button.wb-wrapbtn { white-space: normal; }
+          .wb-ctl > div[title] { min-width: 36px; min-height: 36px; }
+          /* Add-block buttons sit in an even grid; Use Spell IDs takes its own row. */
+          .wb-addbar { display: grid !important; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 8px !important; width: 100%; }
+          .wb-addbar button { min-height: 44px; }
+          .wb-spellids { grid-column: 1 / -1; margin-left: 0 !important; min-height: 36px; }
+          .wb-actbar { flex-direction: column; align-items: stretch !important; gap: 10px; }
+          .wb-resetall { align-self: flex-end; }
+          /* Reset-on options become a two column grid instead of a ragged wrapped line. */
+          .wb-reset { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px !important; width: 100%; }
+          .wb-reset > span { grid-column: 1 / -1; }
+          .wb-reset > label { margin: 0 !important; min-height: 36px; }
+          .wb-reset > label input[type=number] { flex: 1 1 auto; min-width: 0; }
+          /* Sign-in dialog opened from Sign in to export. */
+          .wb-modal { padding: 8px !important; }
+          .wb-modal-close { display: flex !important; }
         }
       `}</style>
       <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1176,7 +1215,7 @@ export default function WorkshopBuildPage() {
         {importOpen && (
           <div style={{ padding: '12px 14px', background: 'var(--bg-primary)', borderTop: '0.5px solid var(--border)' }}>
             <textarea value={importInput} onChange={e => setImportInput(e.target.value)} placeholder="Paste !GRIP1! or !EMS1! export, a legacy program macro, or raw /cast lines..." rows={4} spellCheck={false} style={{ ...S.textarea(), marginBottom: 8 }} />
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <button onClick={importIntoBuilder} style={S.btn(true)}>Import into builder</button>
               <button onClick={() => { setImportInput(''); setImportError('') }} style={S.btn()}>Clear</button>
               {importError && <span style={{ fontSize: 'var(--text-xs)', color: '#c0392b' }}>{importError}</span>}
@@ -1322,7 +1361,7 @@ export default function WorkshopBuildPage() {
         </div>
 
         {/* Version selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
           <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>Default version</label>
           <select value={activeSeq.defaultVersion} onChange={e => updateSeq({ ...activeSeq, defaultVersion: Number(e.target.value) })} style={S.select()}>
             {activeSeq.versions.map((v, i) => <option key={v.id} value={i + 1}>{v.name || `Version ${i + 1}`}</option>)}
@@ -1371,8 +1410,9 @@ export default function WorkshopBuildPage() {
         </div>
       )}
 {showAuthModal && (
-        <div onClick={() => setShowAuthModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 400, background: 'var(--bg-primary)', borderRadius: 'var(--radius-xl)', overflow: 'hidden' }}>
+        <div onClick={() => setShowAuthModal(false)} className="wb-modal" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 24, overflowY: 'auto' }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 400, margin: 'auto', background: 'var(--bg-primary)', borderRadius: 'var(--radius-xl)', overflow: 'hidden', position: 'relative' }}>
+            <button className="wb-modal-close" onClick={() => setShowAuthModal(false)} aria-label="Close" style={{ position: 'absolute', top: 8, right: 8, zIndex: 2, display: 'none', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: '50%', border: '0.5px solid var(--border-strong)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 18, cursor: 'pointer' }}>&times;</button>
             <AuthForm mode="login" onSuccess={(u: any) => { setUser(u); setShowAuthModal(false) }} />
           </div>
         </div>

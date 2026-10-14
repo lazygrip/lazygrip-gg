@@ -287,3 +287,10 @@ html[data-theme='dark'] .theme-icon-light { display: none; }
   .pr-right { flex: 1 0 100%; justify-content: space-between; }
   .pr-right-col { flex-direction: row !important; align-items: center !important; flex-wrap: wrap; }
 }
+
+/* Phone: a long unbroken link or URL (a Discord invite, a Warcraft Logs address) must wrap
+   inside its column instead of pushing the page wider than the screen. Links that are set
+   to nowrap, such as the header ones, are not affected. */
+@media (max-width: 480px) {
+  a, p, li, dd { overflow-wrap: anywhere; }
+}

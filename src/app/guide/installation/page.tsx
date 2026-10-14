@@ -181,12 +181,12 @@ export default function InstallationPage() {
             { cmd: '/gems validate', desc: 'Runs spell validation across all your sequences and reports stale spells' },
             { cmd: '/gems revalidate', desc: 'Forces a full revalidation, useful after a patch or respec' },
           ].map(item => (
-            <div key={item.cmd} style={{ display: 'flex', gap: 16, alignItems: 'baseline', fontSize: 'var(--text-sm)' }}>
+            <div key={item.cmd} style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', alignItems: 'baseline', fontSize: 'var(--text-sm)' }}>
               <code style={{
                 fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)',
                 color: 'var(--accent)', background: 'var(--accent-subtle)',
                 padding: '2px 8px', borderRadius: 'var(--radius-sm)',
-                flexShrink: 0, whiteSpace: 'nowrap',
+                flexShrink: 0, maxWidth: '100%', overflowWrap: 'anywhere',
               }}>
                 {item.cmd}
               </code>
