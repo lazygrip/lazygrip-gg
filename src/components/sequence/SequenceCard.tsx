@@ -9,6 +9,15 @@ import { useState } from 'react'
 import { differenceInDays } from 'date-fns'
 import { describeSequenceAge } from '@/lib/sequence-dates'
 
+// Both links are prefetch={false}: see Header.tsx. A listing page shows up to 20 cards, each
+// carrying a link into /sequences/[slug] and one into /user/[username], both rendered per
+// request with no loading boundary. Measured 2026-10-15 on a local production build, a hard
+// load of /browse fired 7 prefetches into each of those routes before any scrolling, none of
+// them rendering a page, and the metadata-only half of each ran the target's generateMetadata
+// query against the database (visible in the fake PostgREST's log). That is a large share of
+// the invocations on the sequence and profile routes, triggered by browse page views and
+// billed elsewhere.
+
 type Props = {
   // The listing's columns, not a full Sequence row: the card must only read what
   // BROWSE_CARD_COLUMNS (src/lib/browse-query.ts) selects, and this type is what
@@ -113,7 +122,7 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
           whiteSpace: 'nowrap',
           margin: 0,
         }}>
-          <Link href={`/sequences/${sequence.slug}`} className="seq-card-link">
+          <Link prefetch={false} href={`/sequences/${sequence.slug}`} className="seq-card-link">
             {sequence.title}
           </Link>
         </h3>
@@ -201,6 +210,7 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
           {sequence.author && (
             <span>by{' '}
               <Link
+                prefetch={false}
                 href={`/user/${sequence.author.username}`}
                 className="seq-card-author"
                 style={{ color: 'var(--text-secondary)', fontWeight: 500, textDecoration: 'none' }}

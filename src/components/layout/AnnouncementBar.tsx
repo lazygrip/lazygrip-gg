@@ -3,6 +3,9 @@ import Link from 'next/link'
 import { Megaphone, X } from 'lucide-react'
 import { useSyncExternalStore } from 'react'
 
+// prefetch={false}: see Header.tsx. The bar is on every page, so its one link was a
+// prefetch of /welcome (rendered per request, no loading boundary) on every page view.
+
 // Update these two lines when you have a new announcement.
 // Set ANNOUNCEMENT to null to hide the bar entirely.
 const ANNOUNCEMENT: { text: string; href: string } | null = {
@@ -94,7 +97,7 @@ export default function AnnouncementBar() {
         gap: 8,
       }}>
         <Megaphone className="ann-icon" size={13} style={{ color: 'var(--accent)', flexShrink: 0 }} />
-        <Link href={ANNOUNCEMENT.href} className="ann-text" style={{
+        <Link prefetch={false} href={ANNOUNCEMENT.href} className="ann-text" style={{
           fontSize: 'var(--text-sm)',
           fontWeight: 500,
           color: 'var(--accent-text)',

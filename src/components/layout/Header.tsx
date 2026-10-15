@@ -8,6 +8,20 @@ import { useTheme } from '@/components/ThemeProvider'
 import { sanitizeAvatarUrl } from '@/lib/url-safety'
 import SequenceMark from '@/components/ui/SequenceMark'
 
+// Every Link here is prefetch={false}, for the same reason the homepage's are. The targets
+// are all rendered per request with no loading boundary, and for such a route the default
+// viewport prefetch is two requests per distinct href, neither of which renders the page:
+// a route-tree fetch that returns only router state (walkTreeWithFlightRouterState in Next
+// 16.3 skips the component tree for a prefetch of a route without `loading`), then a
+// metadata-only prefetch that renders the target's <head>, so the target's generateMetadata
+// runs, a database query on /sequences/[slug] and /user/[username]. The navigation still
+// fetches the page in full on click. What the prefetch does cost is two function invocations
+// per href per page view, billed to the target route. Measured on a local production build
+// with the Next in the lockfile, 2026-10-15: each of those requests cost about 4 ms of route
+// CPU (8 ms with the middleware counted, which Vercel bills on its own), a third of what
+// rendering a layout-only page costs, and a /browse view fired 34 of them. Those are
+// invocations #24 counts, with nothing to show for them.
+
 export default function Header() {
   const [user, setUser] = useState<any>(null)
   const [username, setUsername] = useState<string | null>(null)
@@ -175,7 +189,7 @@ export default function Header() {
           {/* Logo — the same sequence mark used on the homepage hero, not the old generic
               shield icon. The two were never the same shape before, which is a big part of
               why the site read as "homepage got redesigned, rest didn't" even once it had. */}
-          <Link href="/" className="hdr-logo" style={{
+          <Link prefetch={false} href="/" className="hdr-logo" style={{
             display: 'flex',
             alignItems: 'center',
             gap: 8,
@@ -200,7 +214,7 @@ export default function Header() {
             {navLinks.map(link => {
               const active = pathname === link.href.split('?')[0]
               return (
-                <Link key={link.href} href={link.href} style={{
+                <Link prefetch={false} key={link.href} href={link.href} style={{
                   fontSize: 'var(--text-sm)',
                   fontWeight: active ? 600 : 500,
                   color: active ? 'var(--accent)' : 'var(--text-secondary)',
@@ -235,7 +249,7 @@ export default function Header() {
           {/* Right side */}
           <div className="hdr-right" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
 
-            <Link href="/browse" title="Search sequences" className="hdr-search" style={{
+            <Link prefetch={false} href="/browse" title="Search sequences" className="hdr-search" style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               width: 32, height: 32, borderRadius: 'var(--radius-sm)',
               color: 'var(--text-secondary)', textDecoration: 'none',
@@ -260,7 +274,7 @@ export default function Header() {
 
             {user ? (
               <>
-                <Link href="/post?new=1" className="desktop-post-btn" style={{
+                <Link prefetch={false} href="/post?new=1" className="desktop-post-btn" style={{
                   display: 'flex', alignItems: 'center', gap: 6,
                   background: 'var(--accent)', color: 'white',
                   textDecoration: 'none', padding: '6px 12px',
@@ -272,7 +286,7 @@ export default function Header() {
                 </Link>
 
                 {/* Notification bell */}
-                <Link href="/notifications" title="Notifications" style={{
+                <Link prefetch={false} href="/notifications" title="Notifications" style={{
                   position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   width: 32, height: 32, borderRadius: 'var(--radius-sm)',
                   color: unreadCount > 0 ? 'var(--accent)' : 'var(--text-muted)',
@@ -367,14 +381,14 @@ export default function Header() {
               </>
             ) : (
               <>
-                <Link href="/auth/login" className="hdr-signin" style={{
+                <Link prefetch={false} href="/auth/login" className="hdr-signin" style={{
                   fontSize: 'var(--text-sm)', color: 'var(--text-secondary)',
                   textDecoration: 'none', padding: '6px 12px',
                   whiteSpace: 'nowrap',
                 }}>
                   Sign in
                 </Link>
-                <Link href="/auth/signup" className="hdr-signup" style={{
+                <Link prefetch={false} href="/auth/signup" className="hdr-signup" style={{
                   fontSize: 'var(--text-sm)', fontWeight: 500,
                   background: 'var(--accent)', color: 'white',
                   textDecoration: 'none', padding: '6px 14px',
@@ -424,6 +438,7 @@ export default function Header() {
             {/* Nav links */}
             {navLinks.map(link => (
               <Link
+                prefetch={false}
                 key={link.href}
                 href={link.href}
                 onClick={closeMobileMenu}
@@ -446,6 +461,7 @@ export default function Header() {
               {user ? (
                 <>
                   <Link
+                    prefetch={false}
                     href="/post?new=1"
                     onClick={closeMobileMenu}
                     style={{
@@ -459,6 +475,7 @@ export default function Header() {
                     Post Sequence
                   </Link>
                   <Link
+                    prefetch={false}
                     href="/profile?tab=posted"
                     onClick={closeMobileMenu}
                     style={{
@@ -470,6 +487,7 @@ export default function Header() {
                     <LayoutList size={15} /> My Sequences
                   </Link>
                   <Link
+                    prefetch={false}
                     href="/profile?tab=drafts"
                     onClick={closeMobileMenu}
                     style={{
@@ -481,6 +499,7 @@ export default function Header() {
                     <FileEdit size={15} /> Drafts
                   </Link>
                   <Link
+                    prefetch={false}
                     href="/profile?tab=private"
                     onClick={closeMobileMenu}
                     style={{
@@ -492,6 +511,7 @@ export default function Header() {
                     <Lock size={15} /> Private
                   </Link>
                   <Link
+                    prefetch={false}
                     href="/profile?tab=saved"
                     onClick={closeMobileMenu}
                     style={{
@@ -503,6 +523,7 @@ export default function Header() {
                     <Bookmark size={15} /> Saved
                   </Link>
                   <Link
+                    prefetch={false}
                     href="/profile?tab=settings"
                     onClick={closeMobileMenu}
                     style={{
@@ -528,6 +549,7 @@ export default function Header() {
               ) : (
                 <>
                   <Link
+                    prefetch={false}
                     href="/auth/signup"
                     onClick={closeMobileMenu}
                     style={{
@@ -540,6 +562,7 @@ export default function Header() {
                     Sign up
                   </Link>
                   <Link
+                    prefetch={false}
                     href="/auth/login"
                     onClick={closeMobileMenu}
                     style={{
@@ -570,6 +593,7 @@ function DropdownLink({ href, icon, label, onClick }: {
 }) {
   return (
     <Link
+      prefetch={false}
       href={href}
       onClick={onClick}
       style={{
