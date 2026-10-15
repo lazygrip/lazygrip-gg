@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Eye, MessageSquare, Bookmark, Star, AlertTriangle } from 'lucide-react'
-import { Sequence } from '@/types'
+import { BrowseSequence } from '@/types'
 import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import { stripHtml } from '@/lib/html-text'
 import { useState } from 'react'
@@ -10,7 +10,11 @@ import { differenceInDays } from 'date-fns'
 import { describeSequenceAge } from '@/lib/sequence-dates'
 
 type Props = {
-  sequence: Sequence
+  // The listing's columns, not a full Sequence row: the card must only read what
+  // BROWSE_CARD_COLUMNS (src/lib/browse-query.ts) selects, and this type is what
+  // makes a new read of an unselected column a compile error rather than an
+  // undefined at runtime.
+  sequence: BrowseSequence
   currentPatch?: string | null // site-wide current patch, passed down from BrowseContent
 }
 

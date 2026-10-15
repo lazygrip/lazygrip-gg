@@ -1,6 +1,6 @@
 import { createPublicClient } from '@/lib/supabase/public'
 import { buildBrowseQuery } from '@/lib/browse-query'
-import type { Sequence } from '@/types'
+import type { BrowseSequence, Sequence } from '@/types'
 
 export type HomeStats = {
   sequenceCount: number
@@ -102,7 +102,7 @@ export async function fetchHomeStats(): Promise<HomeStats | null> {
 // configured, so the section never goes empty over a missing config row. Returns []
 // rather than null on failure: the leaderboard section just omits itself, same fallback
 // shape as fetchHomeStats.
-export async function fetchTrendingSequences(limit = 6): Promise<Sequence[]> {
+export async function fetchTrendingSequences(limit = 6): Promise<BrowseSequence[]> {
   try {
     const supabase = createPublicClient()
     const { data: config } = await supabase.from('site_config').select('current_patch').eq('id', true).single()
@@ -119,9 +119,9 @@ export async function fetchTrendingSequences(limit = 6): Promise<Sequence[]> {
     if (patch && (data ?? []).length === 0) {
       const fallback = await buildBrowseQuery(supabase, { sort: 'most_viewed', limit })
       if (fallback.error) return []
-      return (fallback.data ?? []) as Sequence[]
+      return fallback.data ?? []
     }
-    return (data ?? []) as Sequence[]
+    return data ?? []
   } catch {
     return []
   }
