@@ -53,6 +53,16 @@ alter table public.sequences add column if not exists copy_count integer not nul
 -- count_today is NOT included here on purpose: 024's own first statement adds
 -- it, and adding it here too would make that statement the no-op instead of
 -- this one, which would hide it if 024 ever changed.
+--
+-- CORROBORATED AGAINST THE LEDGER, 2026-09-17. @slowdog-dev posted the original
+-- statements from supabase_migrations.schema_migrations on issue #78: this
+-- table is production version 20260811201135, name copy_count_and_increment_fn,
+-- and the create table below matches them column for column. That same run
+-- also created the first increment_copy_count(), a 2-minute per-IP throttle,
+-- which is deliberately not restored here: 024 replaced its body with the daily
+-- cap and 031 replaced it again, so the body that ran at that version is
+-- superseded by the files that follow, not missing. Recorded in
+-- scripts/schema-check/ledger-reconciliation.tsv.
 create table if not exists public.copy_count_throttle (
   sequence_id uuid not null,
   copier_ip text not null,
