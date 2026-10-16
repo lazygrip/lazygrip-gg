@@ -247,6 +247,36 @@ export type SequenceFilters = {
   limit?: number
 }
 
+// What the browse listing fetches per row: the fields SequenceCard and the homepage
+// leaderboard actually read, and nothing else. BROWSE_CARD_COLUMNS in
+// src/lib/browse-query.ts is the matching select list, and the two are held equal at
+// compile time there in both directions. Issue #24: the listing used to select `*`,
+// which carried grip_string, raw_steps, actions and collection_sequences for every
+// card into the server render and into the serialized props in the page HTML.
+export type BrowseSequence = Pick<
+  Sequence,
+  | 'id'
+  | 'slug'
+  | 'title'
+  | 'description'
+  | 'class_id'
+  | 'class_name'
+  | 'spec_name'
+  | 'content_type'
+  | 'patch_version'
+  | 'grip_version'
+  | 'current_version_label'
+  | 'view_count'
+  | 'save_count'
+  | 'comment_count'
+  | 'avg_score'
+  | 'rating_count'
+  | 'created_at'
+  | 'updated_at'
+> & {
+  author?: Pick<Profile, 'username' | 'display_name'>
+}
+
 export type PaginatedResponse<T> = {
   data: T[]
   count: number

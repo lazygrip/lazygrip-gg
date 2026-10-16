@@ -1,6 +1,11 @@
 import Link from 'next/link'
 import { Shield } from 'lucide-react'
 
+// prefetch={false} on every link: see Header.tsx. Each of these targets renders per request
+// with no loading boundary, so a prefetch renders nothing of the page and costs two
+// invocations per href (a router-tree fetch and a metadata-only render) whenever the footer
+// scrolls into view.
+
 export default function Footer() {
   return (
     <footer style={{
@@ -35,7 +40,7 @@ export default function Footer() {
               { href: '/tos', label: 'Terms' },
               { href: '/privacy', label: 'Privacy' },
             ].map(link => (
-              <Link key={link.href} href={link.href} style={{
+              <Link prefetch={false} key={link.href} href={link.href} style={{
                 color: 'var(--text-secondary)',
                 textDecoration: 'none',
               }}>
