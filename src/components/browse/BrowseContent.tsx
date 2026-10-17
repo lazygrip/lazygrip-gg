@@ -389,7 +389,7 @@ export default function BrowseContent({
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Search sequences, authors, specs..."
+                placeholder="Search sequences, authors"
                 style={{ width: '100%', height: 40, paddingLeft: 36, paddingRight: 16, border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
               />
             </div>
