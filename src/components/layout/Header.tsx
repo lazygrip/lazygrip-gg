@@ -164,9 +164,11 @@ export default function Header() {
         }
         /* Tap targets. The theme toggle and the hamburger were 32px squares, which is smaller
            than a fingertip and easy to miss on a phone. They are 44px here (the usual minimum),
-           and Sign in is 40px tall above. */
+           and Sign in is 40px tall above. The signed-in row follows the same rule: the
+           notification bell is 44px and the avatar 40px. */
         @media (max-width: 640px) {
-          .hdr-theme, .mobile-menu-btn { width: 44px !important; height: 44px !important; }
+          .hdr-theme, .mobile-menu-btn, .hdr-bell { width: 44px !important; height: 44px !important; }
+          .hdr-avatar { width: 40px !important; height: 40px !important; }
         }
         @media (max-width: 400px) {
           .hdr-bar { padding: 0 10px !important; }
@@ -296,7 +298,7 @@ export default function Header() {
                 </Link>
 
                 {/* Notification bell */}
-                <Link prefetch={false} href="/notifications" title="Notifications" style={{
+                <Link prefetch={false} href="/notifications" title="Notifications" className="hdr-bell" style={{
                   position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   width: 32, height: 32, borderRadius: 'var(--radius-sm)',
                   color: unreadCount > 0 ? 'var(--accent)' : 'var(--text-muted)',
@@ -320,6 +322,7 @@ export default function Header() {
                   <div
                     onClick={() => setDropdownOpen(prev => !prev)}
                     title="Your profile"
+                    className="hdr-avatar"
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       width: 32, height: 32, borderRadius: '50%',
