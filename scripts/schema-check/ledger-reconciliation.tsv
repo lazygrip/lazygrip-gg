@@ -1,0 +1,63 @@
+# scripts/schema-check/ledger-reconciliation.tsv
+#
+# THE RECORD of how every row of production's migration ledger,
+# supabase_migrations.schema_migrations, lines up with supabase/migrations/.
+# Issue #91. Read reconcile-ledger.js for the mechanism, the export query and
+# the verdict vocabulary; run `node scripts/schema-check/reconcile-ledger.js
+# check` (also run by reconcile-ledger.test.ts under `npm test`) to hold this
+# file against the repo.
+#
+# Columns, tab-separated: version  name  verdict  file  note
+#
+#   version  the ledger's version string: 14 digits for a run through the MCP
+#            server or the CLI, 0XX for a CLI push of a numbered file, `?` for
+#            a row known by name only (named on #78 or in a file header) whose
+#            version the export has not supplied yet, `-` for a repo file row.
+#   name     the ledger's name column; `?` when only the version is known.
+#   verdict  tracked | recovered-by | consolidated-by | number-collision |
+#            missing-file | no-ledger-row (defined in reconcile-ledger.js).
+#   file     the supabase/migrations file the verdict names, if any.
+#   note     evidence, by file:line where it lives in the repo.
+#
+# STATUS 2026-10-16. The full export has not been produced: it needs a
+# connection to production, which @slowdog-dev used for the #78 findings and
+# which this record's author did not have. Every row below is what the repo
+# and the #78 thread establish on their own. Rows with `?` are the ones the
+# export settles; `import` fills the version in by name and appends every row
+# it does not know. Until then:
+#
+#   * The #78 thread names roughly 25 rows between 004 and 031 with 14-digit
+#     versions. The ones keyed below are those the repo and the thread
+#     establish; `?` marks a version the export has not supplied. The 008 and
+#     009 batches alone account for several more: 008:4-6 cites versions
+#     20260805175558 through 20260805181416 and 009:5-8 cites 20260805175606
+#     through 20260805181547, two overlapping MCP sessions on 2026-08-05 whose
+#     per-row names are unknown. The check classifies any version inside
+#     either range as consolidated-by that file.
+#   * 023:1-9 says the check_post_rate_limit auth.uid() check was "applied
+#     directly to the live database" on 2026-08-19 and captured in 023 later.
+#     That is a row with neither version nor name known, so it has no line
+#     here; the export will surface it as missing-file and the verdict to
+#     record is `tracked 023_...`, with the version cited in 023's header.
+#   * Outside the ledger entirely: the `avatars` storage bucket was created in
+#     the dashboard and has neither a ledger row nor a file (030:101-103).
+#     Not a ledger reconciliation item, recorded here so nobody looks for it.
+#
+# Nothing in this file is a migration. Writing a migration for a missing-file
+# row needs that row's `statements` column, which only the export carries.
+20260808194907	017_slug_aliases_and_backfill	number-collision	038_recover_slug_aliases.sql	Repo 017 is 017_discord_bridge_opt_out.sql. DDL recovered in 038 from the statements @slowdog-dev posted on #78 and corroborated live on 2026-09-18; the nine-row untitled-draft-* backfill is excluded on purpose (038 header).
+20260811201135	copy_count_and_increment_fn	recovered-by	003_recover_objects_no_migration_creates.sql	Table: 003 part 3 matches the posted DDL column for column (sequence_id, copier_ip, last_counted_at, primary key, RLS on). Function: the original increment_copy_count() with its 2-minute throttle is in no file because 024 replaced the body with the daily cap and 031 replaced it again; the body that ran at this version is superseded, not missing.
+20260823023857	add_get_posting_eligibility_rpc	recovered-by	041_sync_get_posting_eligibility.sql	Body read off production by @slowdog-dev on #78; 041 adds the revoke from PUBLIC the original lacked (041 header).
+20260909174825	?	tracked	026_search_path_hardening_and_rate_limit_ownership.sql	The recorded run of 026, the second attempt at 22 arguments (026:21-31); 026 was corrected on 2026-09-19 to that text. Name unknown until the export.
+?	add_terms_accepted_at_to_profiles	consolidated-by	008_username_onboarding_infrastructure.sql	008:37-38 adds profiles.terms_accepted_at and 008:4-6 records the batch as applied via Supabase MCP on 2026-08-05, versions 20260805175558 through 20260805181416. Expected inside that range; the export settles the version.
+?	backfill_display_name_from_username	missing-file		Named by @slowdog-dev on #78. No file backfills display_name from username (grep across supabase/migrations, 2026-10-16). A data backfill replays as a no-op on an empty database, but the statements are the only record of what production ran and the file is still owed.
+?	notify_on_reply	tracked	018_notify_on_reply.sql	018:22-25: applied live via Supabase MCP on 2026-08-11 and the file written afterwards, so this row is that application and 018 is its record, not a second run. Compare statements against 018 when the export arrives.
+?	restrict_check_post_rate_limit_grants	tracked	022_restrict_check_post_rate_limit_grants.sql	Same shape as notify_on_reply, dated 2026-08-19 (022:6). Compare statements against 022 when the export arrives.
+?	optimize_rls_policies_sequences_comments	missing-file		Named in 040:25-27, dated 2026-08-09: rewrote every auth.uid() in every policy to (select auth.uid()). No file carries that rewrite, so a rebuilt database has every pre-040 policy in the unoptimised form.
+?	optimize_rls_policies_remaining_tables	missing-file		Same as optimize_rls_policies_sequences_comments (040:25-27).
+?	025_actions_tree_column	number-collision	003_recover_objects_no_migration_creates.sql	Expected from 025:25-26, which says the actions columns were already added in migration 025_actions_tree_column.sql; no such file exists and the repo's 025 is 025_actions_tree_and_version_sync.sql. 003 part 1 restores the two ALTER TABLE statements. Confirm the row and its name from the export.
+-	005_update_sequence_with_version_ownership_check.sql	no-ledger-row	005_update_sequence_with_version_ownership_check.sql	Expected: 005:14-15 says applied live on 2026-07-22 and captured afterwards, before the first MCP or CLI use on 2026-08-05. The export confirms or overturns.
+-	006_sequence_versions_rls_status_check.sql	no-ledger-row	006_sequence_versions_rls_status_check.sql	Expected: 006:25-28 says applied live on 2026-07-25 and verified via pg_policies, before the first MCP or CLI use. The export confirms or overturns.
+-	007_posting_verification_gate.sql	no-ledger-row	007_posting_verification_gate.sql	Expected: 007:11-14 says run through the SQL editor on 2026-07-31, which records nothing in the ledger, and captured as a file afterwards.
+-	021_version_row_macro_parity.sql	no-ledger-row	021_version_row_macro_parity.sql	Never applied: 025:46-48 confirmed on 2026-09-01 that schema_migrations has no record of it. Its fix shipped inside 025 part 2; on a rebuild 021 applies cleanly and 025 supersedes it.
+-	043_fix_publish_sequence_version_collection_type.sql	no-ledger-row	043_fix_publish_sequence_version_collection_type.sql	Run in the SQL editor on 2026-09-29 (043:56-58), which records nothing; the live body was verified identical to the file by hashing prosrc.
