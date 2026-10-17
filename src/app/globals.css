@@ -182,6 +182,11 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .marquee-track, .marquee-track-reverse { animation: none; }
 }
+/* Phones: the two scrolling ticker rows on the home page are hidden. Two rows of animated
+   cards is a lot of motion and a lot of content for a small screen. */
+@media (max-width: 640px) {
+  .home-ticker { display: none; }
+}
 
 /* Class color utilities */
 .class-warrior    { color: #C69B3A; }

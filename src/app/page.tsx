@@ -426,7 +426,7 @@ export default async function HomePage() {
           floating label — that read as a "tunnel" the cards disappeared behind, which
           didn't work. Each row omits itself independently if it has nothing to show. */}
       {(currentPatchTicker.sequences.length > 0 || recent.length > 0) && (
-        <section style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-secondary)' }}>
+        <section className="home-ticker" style={{ borderBottom: '0.5px solid var(--border)', background: 'var(--bg-secondary)' }}>
           {currentPatchTicker.sequences.length > 0 && (
             <div style={{ overflow: 'hidden', borderBottom: recent.length > 0 ? '0.5px solid var(--border)' : 'none' }}>
               <div style={{ display: 'flex', width: 'max-content', padding: '10px 0' }} className="marquee-track">
