@@ -144,7 +144,7 @@ export default function Header() {
            the logo is the one thing allowed to shrink (its text ellipsizes), the search
            shortcut and Sign up step aside because Browse and Sign up are both in the menu, and
            Sign in stays visible as the one account button. */
-        @media (max-width: 480px) {
+        @media (max-width: 640px) {
           .hdr-search { display: none !important; }
           .hdr-signup { display: none !important; }
           .hdr-signin {
@@ -153,11 +153,20 @@ export default function Header() {
             padding: 6px 12px !important;
             color: var(--text-primary) !important;
             font-weight: 500;
+            min-height: 40px;
+            display: inline-flex;
+            align-items: center;
           }
           .hdr-logo { font-size: 16px !important; gap: 6px !important; min-width: 0; flex-shrink: 1 !important; }
           .hdr-logo svg { flex-shrink: 0; }
           .hdr-logo-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
           .hdr-right { min-width: 0; }
+        }
+        /* Tap targets. The theme toggle and the hamburger were 32px squares, which is smaller
+           than a fingertip and easy to miss on a phone. They are 44px here (the usual minimum),
+           and Sign in is 40px tall above. */
+        @media (max-width: 640px) {
+          .hdr-theme, .mobile-menu-btn { width: 44px !important; height: 44px !important; }
         }
         @media (max-width: 400px) {
           .hdr-bar { padding: 0 10px !important; }
@@ -260,6 +269,7 @@ export default function Header() {
             {/* Theme toggle */}
             <button
               onClick={toggle}
+              className="hdr-theme"
               title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',

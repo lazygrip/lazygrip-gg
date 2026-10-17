@@ -1,7 +1,8 @@
 'use client'
 import Link from 'next/link'
 import { Megaphone, X } from 'lucide-react'
-import { useSyncExternalStore } from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 // prefetch={false}: see Header.tsx. The bar is on every page, so its one link was a
 // prefetch of /welcome (rendered per request, no loading boundary) on every page view.
@@ -25,8 +26,7 @@ const DISMISS_KEY = ANNOUNCEMENT ? `announcement-dismissed:${ANNOUNCEMENT.text}`
 // event subscription means dismissing the bar in one tab clears it in every other
 // open tab, which the state-plus-effect version could not do at all.
 //
-// The server snapshot is always false: localStorage does not exist there, and the
-// bar has to be in the server HTML for the visitor who has not dismissed it.
+// The server snapshot is always false: localStorage does not exist there.
 const dismissListeners = new Set<() => void>()
 
 // Set only when localStorage refused the write, so the in-memory fallback can
@@ -67,10 +67,49 @@ function dismiss() {
   for (const listener of dismissListeners) listener()
 }
 
+// The announcement is about setting a username, which only a signed-in account can do, so
+// it is shown to nobody else. A logged-out visitor had no way to act on it, and it cost
+// them two lines at the top of every page. This stays false until the browser has confirmed
+// two things: there is a signed-in session, and has_completed_onboarding() (the same check
+// the posting gate uses) says that account has not finished. If either answer is missing or
+// the call fails, the bar stays hidden rather than nagging someone it cannot be sure about.
+function useNeedsOnboarding(): boolean {
+  const [needs, setNeeds] = useState(false)
+
+  useEffect(() => {
+    const supabase = createClient()
+    let cancelled = false
+
+    async function check(userId: string | null) {
+      if (!userId) {
+        if (!cancelled) setNeeds(false)
+        return
+      }
+      const { data, error } = await supabase.rpc('has_completed_onboarding', { check_user_id: userId })
+      if (!cancelled) setNeeds(!error && data === false)
+    }
+
+    supabase.auth.getUser().then(({ data }) => check(data.user?.id ?? null))
+    // Deferred a tick: supabase-js can deadlock if a callback here starts another
+    // supabase call before the auth event has finished.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setTimeout(() => check(session?.user?.id ?? null), 0)
+    })
+
+    return () => {
+      cancelled = true
+      subscription.unsubscribe()
+    }
+  }, [])
+
+  return needs
+}
+
 export default function AnnouncementBar() {
   const dismissed = useSyncExternalStore(subscribeDismissed, readDismissed, () => false)
+  const needsOnboarding = useNeedsOnboarding()
 
-  if (!ANNOUNCEMENT || dismissed) return null
+  if (!ANNOUNCEMENT || dismissed || !needsOnboarding) return null
 
   return (
     <div className="ann-bar" style={{
