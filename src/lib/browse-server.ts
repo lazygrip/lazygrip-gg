@@ -2,10 +2,10 @@ import { unstable_cache } from 'next/cache'
 import { createPublicClient } from '@/lib/supabase/public'
 import { buildBrowseQuery, BROWSE_PAGE_SIZE } from '@/lib/browse-query'
 import { orderPatchOptions } from '@/lib/patches'
-import type { Sequence, SequenceFilters } from '@/types'
+import type { BrowseSequence, SequenceFilters } from '@/types'
 
 export type BrowsePageData = {
-  sequences: Sequence[] | null
+  sequences: BrowseSequence[] | null
   count: number
   currentPatch: string | null
   availablePatches: string[]
@@ -83,7 +83,7 @@ export async function fetchBrowsePage(filters: SequenceFilters): Promise<BrowseP
           const clamped = lastPage > 1 ? await buildBrowseQuery(supabase, { ...filters, page: lastPage }) : first
           if (!clamped.error) {
             return {
-              sequences: (clamped.data ?? []) as Sequence[],
+              sequences: clamped.data ?? [],
               count: clamped.count ?? 0,
               currentPatch,
               availablePatches,
@@ -95,7 +95,7 @@ export async function fetchBrowsePage(filters: SequenceFilters): Promise<BrowseP
     }
 
     return {
-      sequences: (listing.data ?? []) as Sequence[],
+      sequences: listing.data ?? [],
       count: listing.count ?? 0,
       currentPatch,
       availablePatches,

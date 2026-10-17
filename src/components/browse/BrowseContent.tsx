@@ -5,7 +5,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Search, SlidersHorizontal, X } from 'lucide-react'
 import SequenceCard from '@/components/sequence/SequenceCard'
 import { WOW_CLASSES, CONTENT_TYPES } from '@/lib/wow-data'
-import { Sequence, SequenceFilters } from '@/types'
+import { BrowseSequence, SequenceFilters } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { BROWSE_PAGE_SIZE, browseFilterKey, buildBrowseQuery } from '@/lib/browse-query'
 import { orderPatchOptions } from '@/lib/patches'
@@ -20,7 +20,7 @@ const SORT_OPTIONS = [
 interface Props {
   initialFilters?: Partial<SequenceFilters>
   heading?: string
-  initialSequences?: Sequence[]
+  initialSequences?: BrowseSequence[]
   initialCount?: number
   initialCurrentPatch?: string | null
   initialAvailablePatches?: string[]
@@ -40,7 +40,7 @@ export default function BrowseContent({
   const router = useRouter()
   const pathname = usePathname()
 
-  const [sequences, setSequences] = useState<Sequence[]>(initialSequences ?? [])
+  const [sequences, setSequences] = useState<BrowseSequence[]>(initialSequences ?? [])
   const [loading, setLoading] = useState(initialSequences == null)
   const [count, setCount] = useState(initialCount ?? 0)
   const [search, setSearch] = useState(searchParams.get('search') || '')

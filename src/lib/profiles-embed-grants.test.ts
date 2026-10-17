@@ -26,14 +26,24 @@
 // numbers move; a grep over the whole tree does not. That is the whole argument
 // for this file.
 //
+//   2026-10-15  The browse listing's select (src/lib/browse-query.ts) stopped
+//               being a literal inside `.select(` and became a constant,
+//               BROWSE_LISTING_SELECT, assembled from a column list. This scan
+//               read only `.select('...')` literals, so that embed silently left
+//               the checked set while ten other embeds kept the floor below
+//               satisfied -- the exact failure the floor was written to catch,
+//               one level up. The scan now reads EVERY single-line string
+//               literal in src for a profiles embed, wherever it sits, and the
+//               browse listing's embed is asserted present by name.
+//
 // SCOPE, and its limits, stated rather than implied:
 //
-//   * EMBEDS (`author:profiles(...)` inside a .select string) are checked
-//     column-by-column against 034's anon grant list, because every embed in
-//     src today runs on a public client, a browser client or a session client --
-//     none on the admin client. An embed added on an admin client would be
-//     legitimate and would fail this test; that is the point at which this scope
-//     note should be revisited rather than the assertion weakened.
+//   * EMBEDS (`author:profiles(...)` inside any string literal in src) are
+//     checked column-by-column against 034's anon grant list, because every
+//     embed in src today runs on a public client, a browser client or a session
+//     client -- none on the admin client. An embed added on an admin client
+//     would be legitimate and would fail this test; that is the point at which
+//     this scope note should be revisited rather than the assertion weakened.
 //   * DIRECT selects (`from('profiles').select(...)`) are checked for `*` only.
 //     service_role keeps the whole table and the Discord relay routes read
 //     discord_bridge_opted_out through it on purpose, so checking those against
@@ -149,11 +159,19 @@ function sourceFiles(dir: string): string[] {
 
 type Found = { file: string; line: number; text: string; select: string };
 
-// Single-line select strings only. That is not a simplification, it is what
-// keeps a COMMENT from being read as code: SequencePageClient.tsx's header
-// comment breaks the string `.select('*, author:` across a line ending, and a
-// pattern allowing newlines matches straight through it.
-const SELECT_STRING = /\.select\(\s*(['"])([^'"\n]*)\1/g;
+// Single-line strings only. That is not a simplification, it is what keeps a
+// COMMENT from being read as code: SequencePageClient.tsx's header comment
+// breaks the string `.select('*, author:` across a line ending, and a pattern
+// allowing newlines matches straight through it.
+//
+// Every string literal, not only the ones inside `.select(`: a select assembled
+// in a constant (BROWSE_LISTING_SELECT, a template literal) carries its embed
+// in the same text, and the privilege question is about the embed, not about
+// where the string sits. Quoted strings may contain the other quote characters;
+// a template literal may contain quotes inside its `${...}` parts, so it is
+// matched up to the next backtick rather than the next quote of any kind.
+const QUOTED_STRING = /(['"])((?:\\.|(?!\1)[^\\\n])*)\1/g;
+const TEMPLATE_STRING = /`([^`\n]*)`/g;
 const PROFILES_EMBED = /profiles(?:![A-Za-z0-9_]+)?\(([^()]*)\)/g;
 const PROFILES_EMBED_NESTED = /profiles(?:![A-Za-z0-9_]+)?\([^()]*\(/;
 
@@ -167,11 +185,15 @@ function scan(): { embeds: Found[]; direct: Found[]; nested: Found[] } {
     const code = stripComments(raw);
     const rel = relative(ROOT, file).split(sep).join("/");
 
-    for (const m of code.matchAll(SELECT_STRING)) {
-      const select = m[2];
+    const strings = [
+      ...Array.from(code.matchAll(QUOTED_STRING)).map(m => m[2]),
+      ...Array.from(code.matchAll(TEMPLATE_STRING)).map(m => m[1]),
+    ];
+    for (const select of strings) {
+      if (!/profiles(?:![A-Za-z0-9_]+)?\(/.test(select)) continue;
       // Line number from the stripped text is not the line number in the file.
-      // Find the select string in the original instead, which is what a reader
-      // has to open.
+      // Find the string in the original instead, which is what a reader has to
+      // open.
       const at = raw.indexOf(select);
       const line = at === -1 ? 0 : raw.slice(0, at).split("\n").length;
       const hit = { file: rel, line, text: select, select };
@@ -214,6 +236,16 @@ describe("migration 034's code precondition", () => {
     // count so that removing one read is not a test failure, but losing the
     // scan is.
     expect(embeds.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("still sees the browse listing's embed now that its select is assembled", () => {
+    // 2026-10-15, see the header. The one embed that left the scanned set when
+    // the floor above stayed green. Named so that losing it again is a failure.
+    expect(
+      embeds.filter(e => e.file === "src/lib/browse-query.ts").map(e => e.text),
+      "BROWSE_LISTING_SELECT in src/lib/browse-query.ts carries a profiles embed; " +
+        "if it moved or changed shape, extend the scan rather than deleting this.",
+    ).toEqual(["username, display_name"]);
   });
 
   it("has no profiles embed that selects every column", () => {

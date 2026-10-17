@@ -1,7 +1,64 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { SequenceFilters } from '@/types'
+import type { BrowseSequence, SequenceFilters } from '@/types'
 
 export const BROWSE_PAGE_SIZE = 20
+
+// The columns the browse listing selects. Issue #24: this was `*`, and `*` on sequences
+// means grip_string, raw_steps, the actions tree and collection_sequences for every card
+// on the page, none of which a card renders. Those rows are parsed from PostgREST, rendered
+// through React, and then serialized a second time as the client component's props in the
+// page HTML, on every request, and both browse routes render per request (the root layout
+// needs a fresh CSP nonce, see src/lib/csp.ts). Measured 2026-10-15 on a local production
+// build of main against 20 synthetic rows of about 12 KB each (30 steps, a 3 KB
+// grip_string), 60 sequential requests, CPU read off the server process: /browse was
+// 491 KB of HTML, 351 KB of it serialized props, at 46 ms of CPU per request, against
+// 14 ms for a page that renders only the layout. With this list: 184 KB, 44 KB of props,
+// 26.5 ms. The full table is in the commit that introduced this.
+//
+// `satisfies` rejects a name here that is not a BrowseSequence column, and the Assert below
+// rejects a BrowseSequence column that is not listed here, so the type and the query cannot
+// drift apart in either direction without the build failing. `author` is the embed, not a
+// column of sequences, so it is excluded from both sides rather than from one.
+type BrowseColumn = Exclude<keyof BrowseSequence, 'author'>
+
+export const BROWSE_CARD_COLUMNS = [
+  'id',
+  'slug',
+  'title',
+  'description',
+  'class_id',
+  'class_name',
+  'spec_name',
+  'content_type',
+  'patch_version',
+  'grip_version',
+  'current_version_label',
+  'view_count',
+  'save_count',
+  'comment_count',
+  'avg_score',
+  'rating_count',
+  'created_at',
+  'updated_at',
+] as const satisfies readonly BrowseColumn[]
+
+type Assert<T extends true> = T
+type ColumnNotSelected = Exclude<BrowseColumn, (typeof BROWSE_CARD_COLUMNS)[number]>
+export type BrowseColumnsCoverEveryColumn = Assert<ColumnNotSelected extends never ? true : false>
+
+// !sequences_author_id_fkey pins the embed to the author_id relationship.
+// Migration 030 added profiles.featured_sequence_id, a SECOND foreign key
+// between sequences and profiles (pointing the other way). PostgREST can no
+// longer infer which relationship an unqualified profiles(...) embed means
+// once two exist between the same two tables -- it returns HTTP 300 with a
+// "more than one relationship was found" body instead of data. Confirmed
+// live 2026-09-14: this exact query was silently returning that 300 (Ed's
+// Death Knight browse page showing "0 sequences" with real published rows
+// in the table) until this hint was added.
+//
+// username is what SequenceCard renders; display_name is read by the homepage
+// leaderboard, which runs this same query through fetchTrendingSequences.
+export const BROWSE_LISTING_SELECT = `${BROWSE_CARD_COLUMNS.join(', ')}, author:profiles!sequences_author_id_fkey(username, display_name)`
 
 // PostgREST reads `or=` as a comma-separated condition list, so an unquoted user term containing a
 // comma splits the filter into malformed conditions and the whole request 400s. Wrapping the LIKE
@@ -21,16 +78,7 @@ export function searchPattern(search: string): string {
 export function buildBrowseQuery(supabase: SupabaseClient, filters: SequenceFilters) {
   let query = supabase
     .from('sequences')
-    // !sequences_author_id_fkey pins the embed to the author_id relationship.
-    // Migration 030 added profiles.featured_sequence_id, a SECOND foreign key
-    // between sequences and profiles (pointing the other way). PostgREST can no
-    // longer infer which relationship an unqualified profiles(...) embed means
-    // once two exist between the same two tables -- it returns HTTP 300 with a
-    // "more than one relationship was found" body instead of data. Confirmed
-    // live 2026-09-14: this exact query was silently returning that 300 (Ed's
-    // Death Knight browse page showing "0 sequences" with real published rows
-    // in the table) until this hint was added.
-    .select('*, author:profiles!sequences_author_id_fkey(username, display_name, avatar_url)', { count: 'exact' })
+    .select(BROWSE_LISTING_SELECT, { count: 'exact' })
     .eq('status', 'published')
 
   if (filters.class_id) query = query.eq('class_id', filters.class_id)
@@ -58,7 +106,15 @@ export function buildBrowseQuery(supabase: SupabaseClient, filters: SequenceFilt
 
   const limit = filters.limit || BROWSE_PAGE_SIZE
   const from = ((filters.page || 1) - 1) * limit
-  return query.range(from, from + limit - 1)
+  return (
+    query
+      .range(from, from + limit - 1)
+      // supabase-js types a select from the literal string it is given, and
+      // BROWSE_LISTING_SELECT is assembled at runtime, so the parser cannot read it and
+      // would type every row as its parse-error type. This is where the row type comes
+      // from instead; merge: false so nothing of that error type survives in it.
+      .overrideTypes<BrowseSequence[], { merge: false }>()
+  )
 }
 
 // Stable identity for a filter set. The server hands the client the key it fetched with, and
