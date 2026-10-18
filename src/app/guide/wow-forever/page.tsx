@@ -50,12 +50,15 @@ export default function WowForeverPage() {
         }}
       >
         <AlertTriangle size={11} />
-        Beta findings last confirmed September 18, 2026. The Blizzard addon rules section was added October 14, 2026 from press reports and has not been tested in the beta. Check the dates before trusting anything below as still current.
+        Beta findings last confirmed September 18, 2026. The note on v2.4.20 and v2.4.21 was added October 17, 2026 from the v2.4.21 changelog and has not been tested here. The Blizzard addon rules section was added October 14, 2026 from press reports and has not been tested in the beta. Check the dates before trusting anything below as still current.
       </div>
 
       <GuideSection title="What is confirmed">
         <p style={{ marginBottom: 12 }}>
-          GRIP-EMS loads on WoW: Forever without any changes. Forever&apos;s .toc interface number is <code style={guideCodeStyle}>16001</code>, the same number GRIP-EMS already lists for Classic Era support, so the addon passes Forever&apos;s interface check with the file exactly as it ships today. Sataana confirmed this directly and has gotten the addon running in-game on the beta client himself.
+          As of September 18, GRIP-EMS loaded on WoW: Forever without any changes. Forever&apos;s .toc interface number is <code style={guideCodeStyle}>16001</code>, the same number GRIP-EMS already lists for Classic Era support, so the addon passed Forever&apos;s interface check with the file exactly as it shipped then. Sataana confirmed this directly and had gotten the addon running in-game on the beta client himself.
+        </p>
+        <p style={{ marginBottom: 12 }}>
+          That was true of the build Sataana tested in September, and it stopped being true with v2.4.20. According to the v2.4.21 changelog, v2.4.20 stopped at a Lua error at every Forever login because two spec functions it calls are gone from that client, and nothing after that point in the login ran, so the settings panel never registered, sending and receiving sequences did not work, and plugin sequences, the tracker HUD and the floating menu never loaded. Selecting a sequence stopped with an error before its Keybind tab loaded, which meant there was no way to bind a key to it. v2.4.21 fixes that. If you tried GRIP-EMS on the Forever beta on v2.4.20 and it fell over, that was the addon and not the beta, and updating is the fix. We have not confirmed v2.4.21 on the beta ourselves, so that part rests on the changelog.
         </p>
         <p>
           What that does not confirm is whether a sequence actually runs correctly once it is loaded. Loading and working are different claims, and as of this beta&apos;s first week, only the first one has been verified.
