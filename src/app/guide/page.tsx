@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowRight, BookOpen, Wrench, Layers, GitBranch, GitCommit, ScrollText, BarChart2, SlidersHorizontal, Sparkles, AlertTriangle, Scale } from 'lucide-react'
+import { ArrowRight, BookOpen, Wrench, Layers, GitBranch, ScrollText, BarChart2, SlidersHorizontal, Sparkles, AlertTriangle, Scale } from 'lucide-react'
 import GuideSection from '@/components/guide/GuideSection'
 import GuideImage from '@/components/guide/GuideImage'
 import Card from '@/components/ui/Card'
@@ -91,13 +91,6 @@ const sections = [
     time: 'Every release',
     title: 'EMS-Changelog',
     desc: "Every GRIP-EMS release since the first beta, in Sataana's own words, with a picker that shows what you missed since your version.",
-  },
-  {
-    href: '/guide/lg-changelog',
-    icon: GitCommit,
-    time: 'Live',
-    title: 'LG-Changelog',
-    desc: 'Every change shipped to LazyGrip.net, newest first, pulled live from the site repository.',
   },
 ]
 

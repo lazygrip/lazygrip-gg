@@ -1,46 +1,48 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
+import { Bug, FlaskConical, Gamepad2, Keyboard, Languages, Layers, Package, RotateCcw, Save, Sparkles, Stethoscope, Swords, Trash2, Wrench, Info, type LucideIcon } from 'lucide-react'
 import InlineMd, { InlineText } from './InlineMd'
 import type { ArchivedRelease } from '@/lib/changelog/ems-archive'
 import type { EmsItem } from '@/lib/changelog/ems'
-import { groupByArea, matches } from '@/lib/changelog/areas'
+import { AREA_ORDER, areaIndex, groupByArea, matches } from '@/lib/changelog/areas'
+import { toneOf } from '@/lib/changelog/tone'
 
-const TYPE_COLOR: Record<string, string> = {
-  Added: 'var(--accent)',
-  Changed: 'var(--text-secondary)',
-  Fixed: 'var(--text-muted)',
-  Removed: 'var(--text-muted)',
+const TONE_ICON: Record<string, LucideIcon> = { added: Sparkles, changed: Wrench, removed: Trash2, fixed: Bug, other: Info }
+const AREA_ICON: LucideIcon[] = [Languages, Gamepad2, RotateCcw, Stethoscope, FlaskConical, Package, Keyboard, Swords, Save, Layers]
+const slug = (s: string) => s.toLowerCase().replace(/\W+/g, '-')
+
+function Body({ item, id }: { item: EmsItem; id: string }) {
+  const anchor = <a href={`#${id}`} className="cl-anchor" aria-label="Link to this entry">#</a>
+  return item.lead ? (
+    <>
+      <div className="cl-lead"><InlineText text={item.lead} />{anchor}</div>
+      {item.body && <div style={{ marginTop: 2 }}><InlineMd text={item.body} /></div>}
+    </>
+  ) : (
+    <>
+      <InlineMd text={item.markdown} />
+      {anchor}
+    </>
+  )
 }
 
-const muted = { fontSize: 'var(--text-xs)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--text-muted)' } as const
-
-function Entry({ item, id, color }: { item: EmsItem; id: string; color: string }) {
+function Entry({ item, id }: { item: EmsItem; id: string }) {
   return (
-    <div id={id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, scrollMarginTop: 90 }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0, marginTop: 8 }} />
-      <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6, minWidth: 0 }}>
-        {item.lead ? (
-          <>
-            <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-              <InlineText text={item.lead} />{' '}
-              <a href={`#${id}`} aria-label="Link to this entry" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontWeight: 400 }}>#</a>
-            </div>
-            {item.body && <div style={{ marginTop: 2 }}><InlineMd text={item.body} /></div>}
-          </>
-        ) : (
-          <InlineMd text={item.markdown} />
-        )}
+    <div id={id} className="cl-entry">
+      <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.65, minWidth: 0 }}>
+        <Body item={item} id={id} />
       </div>
     </div>
   )
 }
 
-// One release, with the totals up top, a filter box, and long sections sorted by area.
 export default function ReleaseView({ release }: { release: ArchivedRelease }) {
   const [query, setQuery] = useState('')
+  const [area, setArea] = useState<string | null>(null)
+  const [expanded, setExpanded] = useState(false)
   const searching = query.trim() !== ''
 
-  // A link to an entry inside a folded area has to open that area before it can scroll there.
+  // An entry link into a folded area has to open that area before it can scroll there.
   useEffect(() => {
     const reveal = () => {
       const el = window.location.hash ? document.getElementById(decodeURIComponent(window.location.hash.slice(1))) : null
@@ -55,78 +57,100 @@ export default function ReleaseView({ release }: { release: ArchivedRelease }) {
 
   const sections = useMemo(
     () =>
-      release.sections.map((section, si) => {
-        const kept = section.items
-          .map((item, index) => ({ item, index }))
-          .filter(({ item }) => matches(item, query))
-        return { section, si, kept }
-      }),
+      release.sections.map(section => ({
+        section,
+        tone: toneOf(section.title),
+        groups: groupByArea(section.items),
+        kept: section.items.map((item, index) => ({ item, index })).filter(({ item }) => matches(item, query)),
+      })),
     [release, query],
   )
   const total = sections.reduce((n, s) => n + s.kept.length, 0)
 
+  // Area chips: every area that appears in any long section, with how many entries it holds.
+  const chipCounts = new Map<string, number>()
+  for (const s of sections) for (const g of s.groups ?? []) chipCounts.set(g.area, (chipCounts.get(g.area) ?? 0) + g.items.length)
+  const chips = AREA_ORDER.filter(a => chipCounts.has(a))
+  const hasGroups = chips.length > 0
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        {release.sections.filter(s => s.items.length).map(s => (
-          <a key={s.title} href={`#sec-${s.title.toLowerCase().replace(/\W+/g, '-')}`}
-            style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, padding: '6px 12px', borderRadius: 99, background: 'var(--bg-tertiary)', border: '0.5px solid var(--border-strong)', textDecoration: 'none' }}>
-            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: TYPE_COLOR[s.title] ?? 'var(--text-secondary)' }}>{s.items.length}</span>
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>{s.title}</span>
-          </a>
-        ))}
-      </div>
+    <div>
+      <h2 style={{ margin: '36px 0 4px', fontSize: 'var(--text-lg)', fontWeight: 600 }}>Every entry</h2>
+      <p style={{ margin: '0 0 16px', fontSize: 'var(--text-sm)', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+        The author&apos;s own words, complete. Long sections are sorted into areas by LazyGrip.
+      </p>
 
-      <div>
-        <label htmlFor="ems-filter" style={{ position: 'absolute', left: -9999 }}>Filter this release</label>
-        <input
-          id="ems-filter" type="search" value={query} onChange={e => setQuery(e.target.value)}
-          placeholder={`Filter the ${sections.reduce((n, s) => n + s.section.items.length, 0)} entries in this release`}
-          style={{ width: '100%', padding: '9px 12px', fontSize: 'var(--text-sm)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '0.5px solid var(--border-strong)', borderRadius: 8 }}
-        />
-        {searching && (
-          <p style={{ margin: '8px 0 0', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-            {total === 0 ? 'No entries match.' : `${total} ${total === 1 ? 'entry matches' : 'entries match'}.`}
-          </p>
-        )}
-      </div>
-
-      {release.intro && !searching && (
-        <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6 }}><InlineMd text={release.intro} /></div>
+      <label htmlFor="ems-filter" style={{ position: 'absolute', left: -9999 }}>Filter this release</label>
+      <input id="ems-filter" className="cl-field" type="search" value={query} onChange={e => setQuery(e.target.value)}
+        placeholder={`Filter the ${release.sections.reduce((n, s) => n + s.items.length, 0)} entries in this release`} />
+      {searching && (
+        <p style={{ margin: '8px 0 0', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+          {total === 0 ? 'No entries match.' : `${total} ${total === 1 ? 'entry matches' : 'entries match'}.`}
+        </p>
       )}
 
-      {sections.filter(s => s.kept.length > 0).map(({ section, si, kept }) => {
-        const color = TYPE_COLOR[section.title] ?? 'var(--text-muted)'
-        const idFor = (index: number) => `${section.title.toLowerCase().replace(/\W+/g, '-')}-${index + 1}`
-        // Area grouping works on the whole section so a filter never reshuffles the groups.
-        const groups = searching ? null : groupByArea(section.items)
-        return (
-          <section key={si} id={`sec-${section.title.toLowerCase().replace(/\W+/g, '-')}`} style={{ scrollMarginTop: 90 }}>
-            <div style={muted}>{section.title} <span style={{ fontWeight: 400 }}>({searching ? `${kept.length} of ${section.items.length}` : section.items.length})</span></div>
-            {groups ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 12 }}>
-                <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
-                  Sorted by area by LazyGrip. Every entry is the author&apos;s own wording.
-                </p>
-                {groups.map((g, gi) => (
-                  <details key={g.area} open={gi === 0} style={{ border: '0.5px solid var(--border)', borderRadius: 8, padding: '10px 14px' }}>
-                    <summary style={{ cursor: 'pointer', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {g.area} <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>({g.items.length})</span>
-                    </summary>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 12 }}>
-                      {g.items.map(({ item, index }) => <Entry key={index} item={item} id={idFor(index)} color={color} />)}
-                    </div>
-                  </details>
-                ))}
+      {hasGroups && !searching && (
+        <div role="group" aria-label="Filter by area" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, margin: '14px 0 0' }}>
+          {chips.map(a => (
+            <button key={a} type="button" className={`cl-chip cl-a-${areaIndex(a)}`} aria-pressed={area === a} onClick={() => setArea(area === a ? null : a)}>
+              {a} <small>{chipCounts.get(a)}</small>
+            </button>
+          ))}
+          {area && <button type="button" className="cl-btn" onClick={() => setArea(null)}>Show all</button>}
+          {!area && <button type="button" className="cl-btn" onClick={() => setExpanded(e => !e)}>{expanded ? 'Collapse all' : 'Expand all'}</button>}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 28, marginTop: 24 }}>
+        {sections.filter(s => s.kept.length > 0).map(({ section, tone, groups, kept }) => {
+          const Icon = TONE_ICON[tone]
+          const idFor = (index: number) => `${slug(section.title)}-${index + 1}`
+          const shown = groups && !searching ? groups.filter(g => !area || g.area === area) : null
+          if (groups && !searching && shown!.length === 0) return null
+          return (
+            <section key={section.title} id={`sec-${slug(section.title)}`} className={`cl-t-${tone}`} style={{ scrollMarginTop: 90 }}>
+              <div className="cl-head" style={{ marginBottom: 12 }}>
+                <span className="cl-ico"><Icon size={16} strokeWidth={2.2} aria-hidden /></span>
+                <h3 className="cl-h3" style={{ fontSize: 'var(--text-md, 1.05rem)' }}>{section.title}</h3>
+                <span className="cl-pill">{searching ? `${kept.length} of ${section.items.length}` : section.items.length}</span>
               </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 12 }}>
-                {kept.map(({ item, index }) => <Entry key={index} item={item} id={idFor(index)} color={color} />)}
-              </div>
-            )}
-          </section>
-        )
-      })}
+              {shown ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {shown.map((g, gi) => {
+                    const AIcon = AREA_ICON[areaIndex(g.area)] ?? Layers
+                    return (
+                      <details key={g.area} className={`cl-area cl-a-${areaIndex(g.area)}`} open={expanded || !!area || gi === 0}>
+                        <summary>
+                          <span className="cl-ico"><AIcon size={15} strokeWidth={2.2} aria-hidden /></span>
+                          <span className="cl-h3">{g.area}</span>
+                          <span className="cl-pill">{g.items.length}</span>
+                        </summary>
+                        <div className="cl-entries">
+                          {g.items.map(({ item, index }) => <Entry key={index} item={item} id={idFor(index)} />)}
+                        </div>
+                      </details>
+                    )
+                  })}
+                </div>
+              ) : searching ? (
+                <div className="cl-card"><div className="cl-entries" style={{ padding: 0 }}>
+                  {kept.map(({ item, index }) => <Entry key={index} item={item} id={idFor(index)} />)}
+                </div></div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {kept.map(({ item, index }) => (
+                    <article key={index} id={idFor(index)} className="cl-card" style={{ scrollMarginTop: 90 }}>
+                      <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.65 }}>
+                        <Body item={item} id={idFor(index)} />
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          )
+        })}
+      </div>
     </div>
   )
 }

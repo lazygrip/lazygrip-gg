@@ -18,6 +18,10 @@ const RULES: { area: string; test: RegExp }[] = [
 
 export const OTHER_AREA = 'Everything else'
 
+// Stable position of each area, used to give it the same colour on every page.
+export const AREA_ORDER = [...RULES.map(r => r.area), OTHER_AREA]
+export const areaIndex = (area: string) => Math.max(0, AREA_ORDER.indexOf(area))
+
 export function areaOf(item: EmsItem): string {
   const text = `${item.lead ?? ''} ${item.body}`.toLowerCase()
   for (const r of RULES) if (r.test.test(text)) return r.area

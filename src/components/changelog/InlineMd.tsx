@@ -4,6 +4,9 @@ import type { ReactNode } from 'react'
 // links and nested bullets) as React nodes. It never builds HTML from the text, so nothing
 // in a changelog entry can inject markup, and a link only becomes a link when it is http(s).
 
+// A code span that names a key is drawn as a key cap, anything else as a code chip.
+const KEY = /^(Tab|Space|Esc|Escape|Enter|Shift|Ctrl|Alt|Backspace|Delete|Caps Lock|F\d{1,2}|[A-Z0-9]|Mouse Button \d|Left Click|Right Click|Middle Click)$/
+
 const codeStyle = {
   fontFamily: 'var(--font-mono)',
   fontSize: '0.92em',
@@ -23,7 +26,10 @@ function inline(text: string, keyBase: string): ReactNode[] {
     if (at > last) out.push(text.slice(last, at))
     const tok = m[0]
     const key = `${keyBase}-${i++}`
-    if (m[1]) out.push(<code key={key} style={codeStyle}>{tok.slice(1, -1)}</code>)
+    if (m[1]) {
+      const code = tok.slice(1, -1)
+      out.push(KEY.test(code) ? <kbd key={key} className="cl-kbd">{code}</kbd> : <code key={key} style={codeStyle}>{code}</code>)
+    }
     else if (m[2]) out.push(<strong key={key} style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{inline(tok.slice(2, -2), key)}</strong>)
     else if (m[3]) {
       const mm = /^\[([^\]]+)\]\(([^)\s]+)\)$/.exec(tok)
@@ -42,7 +48,8 @@ export function InlineText({ text }: { text: string }) {
   return <>{inline(text, 't')}</>
 }
 
-export default function InlineMd({ text }: { text: string }) {
+export default function InlineMd({ text, inline: oneLine }: { text: string; inline?: boolean }) {
+  if (oneLine) return <>{inline(text, 'i')}</>
   const lines = text.split('\n')
   const blocks: ReactNode[] = []
   let para: string[] = []

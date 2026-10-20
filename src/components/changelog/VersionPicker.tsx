@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
+import { toneOf } from '@/lib/changelog/tone'
 
 export type PickerRelease = {
   version: string
@@ -25,11 +26,8 @@ export default function VersionPicker({ releases }: { releases: PickerRelease[] 
         id="ems-version"
         value={version}
         onChange={e => setVersion(e.target.value)}
-        style={{
-          width: '100%', maxWidth: 320, padding: '8px 10px', fontSize: 'var(--text-sm)',
-          background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
-          border: '0.5px solid var(--border-strong)', borderRadius: 8,
-        }}
+        className="cl-field"
+        style={{ maxWidth: 320 }}
       >
         <option value="">Pick your version</option>
         {releases.map(r => <option key={r.version} value={r.version}>v{r.version}</option>)}
@@ -49,8 +47,10 @@ export default function VersionPicker({ releases }: { releases: PickerRelease[] 
                 style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'baseline', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', textDecoration: 'none' }}>
                 <span style={{ color: 'var(--accent)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>v{r.version}</span>
                 <span>{r.date}</span>
-                <span style={{ color: 'var(--text-muted)' }}>
-                  {Object.entries(r.counts).map(([k, n]) => `${n} ${k.toLowerCase()}`).join(', ')}
+                <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {Object.entries(r.counts).map(([k, n]) => (
+                    <span key={k} className={`cl-pill cl-t-${toneOf(k)}`}>{n} {k.toLowerCase()}</span>
+                  ))}
                 </span>
               </Link>
             ))}

@@ -8,6 +8,8 @@ import Card from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
 import StatBlock from '@/components/ui/StatBlock'
 import SequenceMark from '@/components/ui/SequenceMark'
+import ChangelogButton from '@/components/home/ChangelogButton'
+import { EMS_RELEASES } from '@/lib/changelog/ems-archive'
 
 // Rendered per request, like every page: the root layout needs a fresh CSP nonce on each
 // response (see src/lib/csp.ts), so this page is no longer statically cached. The stat
@@ -403,15 +405,20 @@ export default async function HomePage() {
           {/* Current GRIP-EMS version — used to only live in the guide sidebar, which meant
               a first-time visitor had no way to know it without digging into docs. This is
               exactly the kind of "proof the site is maintained" detail that belongs up front. */}
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '5px 12px',
-            borderRadius: 99,
-            background: 'var(--bg-tertiary)',
-            border: '0.5px solid var(--border-strong)',
-          }}>
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Current version</span>
-            <Link prefetch={false} href="/guide/ems-changelog" style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-mono)', textDecoration: 'none' }}>GRIP-EMS v2.4.21</Link>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '5px 12px',
+              borderRadius: 99,
+              background: 'var(--bg-tertiary)',
+              border: '0.5px solid var(--border-strong)',
+            }}>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Current version</span>
+              <Link prefetch={false} href="/guide/ems-changelog" style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-mono)', textDecoration: 'none' }}>GRIP-EMS v2.4.21</Link>
+            </div>
+            {/* Keyed on the newest release in the changelog archive, not on the version string
+                above, so it only says New when there is actually a new changelog to read. */}
+            <ChangelogButton latest={EMS_RELEASES[0].version} />
           </div>
         </div>
       </section>

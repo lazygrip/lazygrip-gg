@@ -1,10 +1,15 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ChevronLeft } from 'lucide-react'
-import Card from '@/components/ui/Card'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+import ChangelogStyles from '@/components/changelog/ChangelogStyles'
+import Fingerprint from '@/components/changelog/Fingerprint'
+import Highlights from '@/components/changelog/Highlights'
 import ReleaseView from '@/components/changelog/ReleaseView'
-import { EMS_LINKS, EMS_RELEASES, getRelease, itemCount, versionSlug } from '@/lib/changelog/ems-archive'
+import GrabIt from '@/components/changelog/GrabIt'
+import { EMS_AUTHOR_NOTES, EMS_HIGHLIGHTS } from '@/data/ems-highlights'
+import { EMS_RELEASES, getRelease, itemCount, versionSlug } from '@/lib/changelog/ems-archive'
+import { toneOf } from '@/lib/changelog/tone'
 
 type Params = { version: string }
 
@@ -39,36 +44,53 @@ export default async function EmsReleasePage({ params }: { params: Promise<Param
   const date = r.date
     ? new Date(r.date + 'T12:00:00Z').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
     : ''
+  const counts = Object.fromEntries(r.sections.filter(s => s.items.length).map(s => [s.title, s.items.length]))
+  const highlights = EMS_HIGHLIGHTS[r.version]
 
-  const nav = (to: typeof r | undefined, label: string) =>
-    to ? <Link prefetch={false} href={`/guide/ems-changelog/${versionSlug(to.version)}`} style={{ color: 'var(--accent)', textDecoration: 'none', fontSize: 'var(--text-sm)' }}>{label} v{to.version}</Link> : <span />
+  const nav = (to: typeof r | undefined, dir: 'older' | 'newer') =>
+    to ? (
+      <Link prefetch={false} href={`/guide/ems-changelog/${versionSlug(to.version)}`}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--accent)', textDecoration: 'none', fontSize: 'var(--text-sm)', fontWeight: 600 }}>
+        {dir === 'older' && <ChevronLeft size={16} />}v{to.version}{dir === 'newer' && <ChevronRight size={16} />}
+      </Link>
+    ) : <span />
 
   return (
     <div>
+      <ChangelogStyles />
       <Link prefetch={false} href="/guide/ems-changelog" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-muted)', textDecoration: 'none', fontSize: 'var(--text-sm)', marginBottom: 16 }}>
         <ChevronLeft size={14} /> EMS-Changelog
       </Link>
-      <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.2, margin: 0 }}>
+
+      <h1 style={{ margin: 0, fontSize: 'var(--text-2xl)', fontWeight: 600, letterSpacing: '-0.03em', lineHeight: 1.15 }}>
         GRIP-EMS <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>v{r.version}</span>
       </h1>
-      <p style={{ margin: '8px 0 24px', fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
-        {date} · {itemCount(r)} {itemCount(r) === 1 ? 'entry' : 'entries'}
+      <p style={{ margin: '8px 0 18px', fontSize: 'var(--text-sm)', color: 'var(--text-muted)' }}>
+        Released {date}. {itemCount(r)} {itemCount(r) === 1 ? 'entry' : 'entries'} in the author&apos;s notes.
       </p>
 
-      <Card style={{ padding: '22px 26px' }}>
-        <ReleaseView release={r} />
-      </Card>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginTop: 20 }}>
-        {nav(older, '←')}
-        {nav(newer, '→')}
+      <Fingerprint counts={counts} height={10} />
+      <div className="cl-tiles" style={{ marginTop: 16 }}>
+        {r.sections.filter(s => s.items.length).map(s => (
+          <a key={s.title} href={`#sec-${s.title.toLowerCase().replace(/\W+/g, '-')}`} className={`cl-tile cl-t-${toneOf(s.title)}`}>
+            <b>{s.items.length}</b>
+            <span>{s.title}</span>
+          </a>
+        ))}
       </div>
 
-      <p style={{ marginTop: 28, fontSize: 'var(--text-sm)', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-        Written by Sataana and reproduced here with his permission. Get the addon from{' '}
-        <a href={EMS_LINKS.curseforge} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>CurseForge</a>,{' '}
-        <a href={EMS_LINKS.wago} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>Wago</a> or{' '}
-        <a href={EMS_LINKS.wowinterface} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>WoWInterface</a>.
+      {highlights && <Highlights items={highlights} />}
+      <ReleaseView release={r} />
+
+      <GrabIt authorNote={EMS_AUTHOR_NOTES[r.version]} />
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginTop: 36 }}>
+        {nav(older, 'older')}
+        {nav(newer, 'newer')}
+      </div>
+
+      <p style={{ marginTop: 20, fontSize: 'var(--text-sm)', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+        Release notes written by Sataana and reproduced here with his permission.
       </p>
     </div>
   )
