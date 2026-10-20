@@ -1,0 +1,67 @@
+name: Update EMS-Changelog
+
+# Keeps /guide/ems-changelog current. Wago's public releases page carries the full CHANGELOG.md
+# that shipped with each GRIP-EMS release, so no token and no action from the author is needed.
+# The script stores the author's text exactly as written; the pages format it.
+
+on:
+  schedule:
+    - cron: '20 10 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-changelog:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Sync the archive from Wago
+        id: sync
+        run: node --experimental-strip-types scripts/sync-ems-changelog.mts
+
+      - name: Create pull request
+        if: steps.sync.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        id: cpr
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update EMS-Changelog (newest GRIP-EMS v${{ steps.sync.outputs.newest }})"
+          title: "Update EMS-Changelog (newest GRIP-EMS v${{ steps.sync.outputs.newest }})"
+          body: |
+            Automated update from the daily EMS-Changelog sync.
+
+            - Added: ${{ steps.sync.outputs.added || 'none' }}
+            - Reworded by the author since last time: ${{ steps.sync.outputs.refreshed || 'none' }}
+            - Source: the changelog Wago publishes with each GRIP-EMS release (addons.wago.io/addons/grip-ems)
+
+            Only `src/data/ems-changelog.json` changes. The author's text is stored as written. Once this is merged, the homepage EMS-Changelog button pulses for visitors who have not seen the newest version.
+          branch: "auto/ems-changelog-update"
+          delete-branch: true
+          add-paths: |
+            src/data/ems-changelog.json
+
+      - name: Enable auto-merge
+        if: steps.sync.outputs.changed == 'true' && steps.cpr.outputs.pull-request-number
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            if gh pr merge --auto --squash "${{ steps.cpr.outputs.pull-request-number }}"; then
+              echo "Auto-merge enabled on attempt $attempt."
+              exit 0
+            fi
+            echo "Attempt $attempt: GitHub has not finished computing mergeability yet, retrying in 10s..."
+            sleep 10
+          done
+          echo "Auto-merge could not be enabled after 6 attempts. The PR is still open at ${{ steps.cpr.outputs.pull-request-url }} for a manual merge."
