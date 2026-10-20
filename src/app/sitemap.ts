@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { WOW_CLASSES, CONTENT_TYPES } from '@/lib/wow-data'
+import { EMS_RELEASES, versionSlug } from '@/lib/changelog/ems-archive'
 
 // lastmod for the guide pages plus /about and /faq. These are hand-written
 // pages, so bump this date whenever that content actually changes.
@@ -252,6 +253,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'daily',
       priority: 0.4,
     },
+    {
+      url: 'https://lazygrip.net/guide/ems-changelog',
+      lastModified: new Date(EMS_RELEASES[0].date ?? CONTENT_UPDATED),
+      changeFrequency: 'weekly',
+      priority: 0.7,
+    },
+    ...EMS_RELEASES.map(r => ({
+      url: `https://lazygrip.net/guide/ems-changelog/${versionSlug(r.version)}`,
+      lastModified: new Date(r.date ?? CONTENT_UPDATED),
+      changeFrequency: 'yearly' as const,
+      priority: 0.4,
+    })),
   ]
 
   // Author profiles are currently the only pages that server-render links into
