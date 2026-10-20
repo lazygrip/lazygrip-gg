@@ -58,12 +58,12 @@ export default function BlizzardAndAddonsPage() {
         }}
       >
         <AlertTriangle size={11} />
-        Last checked October 14, 2026. Blizzard can change any of this without notice.
+        Last checked October 20, 2026. Blizzard can change any of this without notice.
       </div>
 
       <GuideSection title="The short version">
         <p style={{ marginBottom: 12 }}>
-          As far as we could find on October 14, 2026, no Blizzard employee has ruled on GRIP-EMS or on any sequencing addon of its kind. The forum threads where players asked the question have no Blizzard reply, and one player in a May 2026 thread says outright that the Blizzard posters there cannot give the okay for a specific addon. What exists instead is a handful of Blizzard statements that touch the topic from the side, which are covered below, and a community habit of summing them up as one keypress, one action.
+          As far as we could find on October 20, 2026, no Blizzard employee has ruled on GRIP-EMS or on any sequencing addon of its kind. The forum threads where players asked the question have no Blizzard reply, and one player in a May 2026 thread says outright that the Blizzard posters there cannot give the okay for a specific addon. What exists instead is a handful of Blizzard statements that touch the topic from the side, which are covered below, and a community habit of summing them up as one keypress, one action.
         </p>
         <GuideCallout>
           Nothing on this page says GRIP-EMS is safe, approved or permitted, because nobody with the authority to say that has said it. Treat it as a map of what is written down, and make your own call on how much risk you are comfortable with.
@@ -128,6 +128,9 @@ export default function BlizzardAndAddonsPage() {
         <p>
           In a Kotaku interview published September 14, 2026, lead encounter designer Mike Nuthals said Forever will carry over retail&apos;s restriction on in-combat addons that automate marking or communicating for players. The article gives no further specifics and does not mention macros. It is covered, along with what it might mean for Variables, on the <Link href="/guide/wow-forever" style={link}>WoW: Forever page</Link>.
         </p>
+        <p style={{ marginTop: 12 }}>
+          A second report followed on September 17. <Ext href="https://www.icy-veins.com/wow-forever/news/addons-in-wow-forever-blizzard-devs-just-addressed-the-big-question/">Icy Veins</Ext> wrote up a message from a Blizzard representative on the WoW UI Discord and a Game Informer interview with the Forever developers. Per that report, Forever will use the same API restrictions introduced with Midnight, and the representative said it shares Mainline&apos;s UI architecture, including &quot;the vast majority of APIs available in 12.1.5.&quot; The <Ext href="https://warcraft.wiki.gg/wiki/Patch_1.60.1/API_changes/notes">Warcraft Wiki&apos;s Forever API notes</Ext> say the same. Neither source mentions macros or sequencing addons, so this tells you which API rules apply on Forever and nothing about whether a sequencer is acceptable there.
+        </p>
       </GuideSection>
 
       <GuideSection title="What nobody can tell you">
@@ -144,6 +147,8 @@ export default function BlizzardAndAddonsPage() {
           <li><Ext href="https://www.bluetracker.gg/wow/topic/us-en/6762551711-seeking-blue-clarification-key-repeating/">Seeking Blue clarification: key repeating</Ext> (Blizzard posts, May 2008)</li>
           <li><Ext href="https://www.blizzard.com/en-us/legal/fba4d00f-c7e4-4883-b8b9-1b4500a402ea/blizzard-end-user-license-agreement">Blizzard End User License Agreement</Ext> (revised March 21, 2024)</li>
           <li><Ext href="https://kotaku.com/new-things-learned-world-of-warcraft-forever-2000734005">New things learned about World of Warcraft: Forever</Ext> (Kotaku, September 14, 2026)</li>
+          <li><Ext href="https://www.icy-veins.com/wow-forever/news/addons-in-wow-forever-blizzard-devs-just-addressed-the-big-question/">Addons in WoW Forever? Blizzard Devs Just Addressed the Big Question</Ext> (Icy Veins, September 17, 2026)</li>
+          <li><Ext href="https://warcraft.wiki.gg/wiki/Patch_1.60.1/API_changes/notes">Patch 1.60.1 API changes and notes</Ext> (Warcraft Wiki, WoW: Forever)</li>
           <li><Ext href="https://us.forums.blizzard.com/en/wow/t/2142972/1">Prohibitions on Third-party Software</Ext> (Blizzard, August 5, 2025)</li>
           <li><Ext href="https://news.blizzard.com/en-us/article/23558957/policy-update-for-input-broadcasting-software">Policy Update for Input Broadcasting Software</Ext> (Blizzard)</li>
           <li><Ext href="https://us.forums.blizzard.com/en/wow/t/ui-add-on-development-policy/24534">UI Add-On Development Policy</Ext> (Blizzard)</li>
