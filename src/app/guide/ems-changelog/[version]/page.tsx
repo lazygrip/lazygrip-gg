@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
 import Card from '@/components/ui/Card'
-import ReleaseBody from '@/components/changelog/ReleaseBody'
+import ReleaseView from '@/components/changelog/ReleaseView'
 import { EMS_LINKS, EMS_RELEASES, getRelease, itemCount, versionSlug } from '@/lib/changelog/ems-archive'
 
 type Params = { version: string }
@@ -56,7 +56,7 @@ export default async function EmsReleasePage({ params }: { params: Promise<Param
       </p>
 
       <Card style={{ padding: '22px 26px' }}>
-        <ReleaseBody release={r} />
+        <ReleaseView release={r} />
       </Card>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginTop: 20 }}>
