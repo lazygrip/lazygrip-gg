@@ -81,10 +81,19 @@ const CSS = `
 .cl-rel:hover { border-color: var(--accent); background: var(--bg-tertiary); }
 .cl-rel:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .cl-rel-latest { border-color: color-mix(in srgb, var(--accent) 55%, transparent); background: color-mix(in srgb, var(--accent) 7%, var(--bg-secondary)); }
+.cl-grab { margin: 40px 0 0; padding-top: 24px; border-top: 1px solid var(--border-strong); }
+.cl-spoiler { margin-top: 18px; }
+.cl-spoiler button { all: unset; box-sizing: border-box; display: block; width: 100%; cursor: pointer; border-radius: 10px; padding: 14px 16px;
+  border: 1px dashed var(--border-strong); background: var(--bg-secondary); }
+.cl-spoiler button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cl-spoiler-hint { display: block; margin-bottom: 8px; font-size: var(--text-xs); font-weight: 600; color: var(--accent-text, var(--accent)); }
+.cl-spoiler-body { display: block; font-size: var(--text-sm); line-height: 1.65; color: var(--text-secondary); filter: blur(7px); user-select: none; transition: filter .2s; }
+.cl-spoiler button.open .cl-spoiler-body { filter: none; user-select: text; }
+.cl-spoiler button.open { border-style: solid; cursor: default; }
 .cl-month { margin: 8px 0 2px; font-size: var(--text-sm); font-weight: 600; color: var(--text-primary); }
 .cl-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; }
 @media (max-width: 560px) { .cl-card { padding: 14px 14px; } .cl-entries { padding: 4px 12px 14px 14px; } .cl-tile b { font-size: 24px; } }
-@media (prefers-reduced-motion: reduce) { .cl-tile, .cl-rel, .cl-area > summary::after { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .cl-tile, .cl-rel, .cl-area > summary::after, .cl-spoiler-body { transition: none; } }
 `
 
 export default function ChangelogStyles() {

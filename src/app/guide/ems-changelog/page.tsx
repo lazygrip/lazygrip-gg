@@ -5,8 +5,9 @@ import PageHeader from '@/components/ui/PageHeader'
 import Card from '@/components/ui/Card'
 import ChangelogStyles from '@/components/changelog/ChangelogStyles'
 import Fingerprint from '@/components/changelog/Fingerprint'
+import GrabIt from '@/components/changelog/GrabIt'
 import VersionPicker from '@/components/changelog/VersionPicker'
-import { EMS_LINKS, EMS_RELEASES, itemCount, versionSlug, type ArchivedRelease } from '@/lib/changelog/ems-archive'
+import { EMS_RELEASES, itemCount, versionSlug, type ArchivedRelease } from '@/lib/changelog/ems-archive'
 import { matches } from '@/lib/changelog/areas'
 import { toneOf } from '@/lib/changelog/tone'
 
@@ -139,12 +140,11 @@ export default async function EmsChangelogPage({ searchParams }: { searchParams:
         </div>
       )}
 
-      <p style={{ marginTop: 28, fontSize: 'var(--text-sm)', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-        These notes are written by Sataana and reproduced here with his permission. The official releases live on{' '}
-        <a href={EMS_LINKS.curseforge} target="_blank" rel="noopener noreferrer" style={link}>CurseForge</a>,{' '}
-        <a href={EMS_LINKS.wago} target="_blank" rel="noopener noreferrer" style={link}>Wago</a> and{' '}
-        <a href={EMS_LINKS.wowinterface} target="_blank" rel="noopener noreferrer" style={link}>WoWInterface</a>.
-        Changes to this site itself are in the <Link href="/guide/lg-changelog" style={link}>LG-Changelog</Link>.
+      <GrabIt notes={[
+        'This archive is rebuilt from the addon author\'s `CHANGELOG.md` and its git history. The file itself only keeps the current and previous release, so every earlier release was recovered from the history of that file.',
+      ]} />
+      <p style={{ marginTop: 20, fontSize: 'var(--text-sm)', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+        These notes are written by Sataana and reproduced here with his permission. Changes to this site itself are in the <Link href="/guide/lg-changelog" style={link}>LG-Changelog</Link>.
       </p>
     </div>
   )

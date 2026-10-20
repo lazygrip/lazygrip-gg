@@ -75,3 +75,11 @@ export const EMS_HIGHLIGHTS: Record<string, Highlight[]> = {
     },
   ],
 }
+
+// A written "for the nerds" note replaces the automatic pick for a release when there is one.
+export const EMS_NERD_NOTES: Record<string, string[]> = {
+  '2.4.21': [
+    'The reset bug came down to one button attribute that the game refuses to let a sequence read or write. EMS now uses a name the game accepts, and it measures the idle gap before the press instead of after it, which is why a long pause puts you on step 1 on the very first press.',
+    '`UnitHealthPercent` was returning 0 instead of failing, so a variable built on it gave a wrong answer and nothing said so. It now evaluates to nothing, and debug output names the missing helper in the log.',
+  ],
+}

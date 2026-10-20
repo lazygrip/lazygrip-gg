@@ -6,8 +6,10 @@ import ChangelogStyles from '@/components/changelog/ChangelogStyles'
 import Fingerprint from '@/components/changelog/Fingerprint'
 import Highlights from '@/components/changelog/Highlights'
 import ReleaseView from '@/components/changelog/ReleaseView'
-import { EMS_HIGHLIGHTS } from '@/data/ems-highlights'
-import { EMS_LINKS, EMS_RELEASES, getRelease, itemCount, versionSlug } from '@/lib/changelog/ems-archive'
+import GrabIt from '@/components/changelog/GrabIt'
+import { nerdNotes } from '@/lib/changelog/nerd'
+import { EMS_HIGHLIGHTS, EMS_NERD_NOTES } from '@/data/ems-highlights'
+import { EMS_RELEASES, getRelease, itemCount, versionSlug } from '@/lib/changelog/ems-archive'
 import { toneOf } from '@/lib/changelog/tone'
 
 type Params = { version: string }
@@ -32,8 +34,6 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
     openGraph: { title, description, url, siteName: 'LazyGrip.net', type: 'article' },
   }
 }
-
-const link = { color: 'var(--accent)' } as const
 
 export default async function EmsReleasePage({ params }: { params: Promise<Params> }) {
   const { version } = await params
@@ -83,16 +83,15 @@ export default async function EmsReleasePage({ params }: { params: Promise<Param
       {highlights && <Highlights items={highlights} />}
       <ReleaseView release={r} />
 
+      <GrabIt notes={EMS_NERD_NOTES[r.version] ?? nerdNotes(r)} />
+
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginTop: 36 }}>
         {nav(older, 'older')}
         {nav(newer, 'newer')}
       </div>
 
-      <p style={{ marginTop: 28, fontSize: 'var(--text-sm)', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-        Release notes written by Sataana and reproduced here with his permission. Get the addon from{' '}
-        <a href={EMS_LINKS.curseforge} target="_blank" rel="noopener noreferrer" style={link}>CurseForge</a>,{' '}
-        <a href={EMS_LINKS.wago} target="_blank" rel="noopener noreferrer" style={link}>Wago</a> or{' '}
-        <a href={EMS_LINKS.wowinterface} target="_blank" rel="noopener noreferrer" style={link}>WoWInterface</a>.
+      <p style={{ marginTop: 20, fontSize: 'var(--text-sm)', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+        Release notes written by Sataana and reproduced here with his permission.
       </p>
     </div>
   )

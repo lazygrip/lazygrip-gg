@@ -4,6 +4,7 @@ import { GitCommit } from 'lucide-react'
 import PageHeader from '@/components/ui/PageHeader'
 import Card from '@/components/ui/Card'
 import ChangelogStyles from '@/components/changelog/ChangelogStyles'
+import GrabIt from '@/components/changelog/GrabIt'
 import Fingerprint from '@/components/changelog/Fingerprint'
 import { groupForPublic, UPKEEP_LINE, type ChangelogDay, type Commit } from '@/lib/changelog/lg'
 import { matches } from '@/lib/changelog/areas'
@@ -205,7 +206,17 @@ export default async function LgChangelogPage({ searchParams }: { searchParams: 
         </>
       )}
 
-      <p style={{ marginTop: 28, fontSize: 'var(--text-sm)', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+      <GrabIt
+        title="Try it"
+        noteLabel="for the nerds"
+        links={[
+          { name: 'Browse sequences', href: '/browse', tone: 'added' },
+          { name: 'Workshop', href: '/workshop', tone: 'changed' },
+          { name: 'Site code on GitHub', href: 'https://github.com/lazygrip/lazygrip-gg', tone: 'fixed', external: true },
+        ]}
+        notes={['This page reads the site\'s public commit history. Lines that describe internal maintenance are rolled into one "Behind-the-scenes upkeep" line a day instead of being shown, and the kind of change on each line is guessed from how the commit message is worded.']}
+      />
+      <p style={{ marginTop: 20, fontSize: 'var(--text-sm)', color: 'var(--text-muted)', lineHeight: 1.6 }}>
         Looking for what changed in the addon? That is the <Link href="/guide/ems-changelog" style={link}>EMS-Changelog</Link>.
       </p>
     </div>
