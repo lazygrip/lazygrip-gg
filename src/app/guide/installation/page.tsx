@@ -58,7 +58,7 @@ export default function InstallationPage() {
 
         <Step number={2} label="Enable the addon in-game">
           <p>At the character select screen, click <strong>AddOns</strong> in the bottom left corner and make sure GRIP-EMS is checked. Log into your character.</p>
-          <p style={{ marginTop: 8 }}>If you do not see GRIP-EMS in the list, your addon manager did not install it correctly. Try a manual download and drop the folder into your <code style={guideCodeStyle}>World of Warcraft\_retail_\Interface\AddOns</code> directory. If it was working before a game patch and has vanished since, it is almost certainly out of date and not broken, so see the first item under troubleshooting below.</p>
+          <p style={{ marginTop: 8 }}>If you do not see GRIP-EMS in the list, your addon manager did not install it correctly. Try a manual download and drop both folders, <code style={guideCodeStyle}>GRIP-EMS</code> and <code style={guideCodeStyle}>GRIP-EMS_LocaleNames</code>, into your <code style={guideCodeStyle}>World of Warcraft\_retail_\Interface\AddOns</code> directory. The second one is a load-on-demand bundle of spell names that only loads when a sequence needs it, so leave it enabled. If it was working before a game patch and has vanished since, it is almost certainly out of date and not broken, so see the first item under troubleshooting below.</p>
         </Step>
       </GuideSection>
 

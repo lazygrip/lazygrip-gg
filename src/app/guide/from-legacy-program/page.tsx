@@ -98,7 +98,7 @@ export default function FromLegacyProgramPage() {
             <CompareRow label="Action bar button" grip="Single-version sequences have no bar button. Multi-version sequences create a macro you can place on your bar." gse="Creates a draggable button you place on a bar" />
             <CompareRow label="Keybinds" grip="Assigned inside GRIP-EMS per spec, auto-switch on spec change" gse="Via the action bar button you place and bind" />
             <CompareRow label="Import format" grip="!EMS1! format, import legacy program strings with /gems import" gse="Base64 string with version prefix" />
-            <CompareRow label="Step functions" grip="Sequential, Priority, Reverse Priority, Random" gse="Sequential, Priority, and others depending on version" />
+            <CompareRow label="Step functions" grip="Sequential, Priority, Reverse Priority (shown as Rev. Priority in the editor), Random" gse="Sequential, Priority, and others depending on version" />
             <CompareRow label="Opener logic" grip="True single-block loop, step 1 is only the opener" gse="Block 1 fires between every loop step when compiled, not just once" />
             <CompareRow label="Spell validation" grip="Built-in scanner with patch-aware auto-translation" gse="Limited or absent depending on version" />
             <CompareRow label="Click rate guidance" grip="Tempo Advisor learns from your actual play and recommends a click rate per sequence, with a live Faster, Slower overlay" gse="None built in" />

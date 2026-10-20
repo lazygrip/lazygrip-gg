@@ -35,7 +35,7 @@ export default function ValidatingPage() {
           Before you run any content, run the Repair module. It is the fastest way to catch structural problems that would otherwise waste a key or a raid attempt finding out.
         </p>
         <p style={{ marginBottom: 12 }}>
-          GRIP-EMS scans your sequence across 13 diagnostic categories: empty steps, oversized steps that exceed WoW&apos;s 255-character limit, stale or renamed spells, duplicate steps, missing variables, broken reset conditions, keybind conflicts, missing metadata, and more. Each issue gets flagged in the editor with a colored health score badge and most can be fixed in a single click.
+          GRIP-EMS scans your sequence across 11 diagnostic categories: spells, structure, limits, variables, actions, macro stubs, config, locale, readiness, post-substitution and cross-sequence. That covers things like oversized steps that exceed WoW&apos;s 255-character limit, stale or renamed spells, and missing variables. Each issue gets flagged in the editor with a colored health score badge and most can be fixed in a single click.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
