@@ -17,7 +17,6 @@ const NAV = [
   { href: '/guide/blizzard-and-addons', label: 'Blizzard and addons' },
   { href: '/guide/wow-forever', label: 'WoW: Forever' },
   { href: '/guide/ems-changelog', label: 'EMS-Changelog' },
-  { href: '/guide/lg-changelog', label: 'LG-Changelog' },
 ]
 
 // Below 860px the sidebar stops being a 200px column beside the content (which left roughly
