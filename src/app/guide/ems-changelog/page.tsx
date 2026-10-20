@@ -140,9 +140,7 @@ export default async function EmsChangelogPage({ searchParams }: { searchParams:
         </div>
       )}
 
-      <GrabIt notes={[
-        'This archive is rebuilt from the addon author\'s `CHANGELOG.md` and its git history. The file itself only keeps the current and previous release, so every earlier release was recovered from the history of that file.',
-      ]} />
+      <GrabIt siteNote={"This archive is rebuilt from the addon author's `CHANGELOG.md` and its git history. The file only keeps the current and previous release, so every earlier release was recovered from the history of that file. Nothing in an entry is edited."} />
       <p style={{ marginTop: 20, fontSize: 'var(--text-sm)', color: 'var(--text-muted)', lineHeight: 1.6 }}>
         These notes are written by Sataana and reproduced here with his permission. Changes to this site itself are in the <Link href="/guide/lg-changelog" style={link}>LG-Changelog</Link>.
       </p>

@@ -208,13 +208,12 @@ export default async function LgChangelogPage({ searchParams }: { searchParams: 
 
       <GrabIt
         title="Try it"
-        noteLabel="for the nerds"
         links={[
           { name: 'Browse sequences', href: '/browse', tone: 'added' },
           { name: 'Workshop', href: '/workshop', tone: 'changed' },
           { name: 'Site code on GitHub', href: 'https://github.com/lazygrip/lazygrip-gg', tone: 'fixed', external: true },
         ]}
-        notes={['This page reads the site\'s public commit history. Lines that describe internal maintenance are rolled into one "Behind-the-scenes upkeep" line a day instead of being shown, and the kind of change on each line is guessed from how the commit message is worded.']}
+        siteNote={'This page reads the site\'s public commit history. Lines that describe internal maintenance are rolled into one "Behind-the-scenes upkeep" line a day instead of being shown, and the kind of change on each line is guessed from how the commit message is worded.'}
       />
       <p style={{ marginTop: 20, fontSize: 'var(--text-sm)', color: 'var(--text-muted)', lineHeight: 1.6 }}>
         Looking for what changed in the addon? That is the <Link href="/guide/ems-changelog" style={link}>EMS-Changelog</Link>.

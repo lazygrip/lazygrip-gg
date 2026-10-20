@@ -10,11 +10,14 @@ const SOURCES = [
 ]
 
 // The closing block of every changelog page: where to get it, and a short note that stays blurred until clicked.
-export default function GrabIt({ title = 'Grab it', links, notes, noteLabel = 'for the nerds' }: {
+export default function GrabIt({ title = 'Grab it', links, authorNote, siteNote, siteNoteLabel = 'How this page is built' }: {
   title?: string
   links?: { name: string; href: string; tone: string; external?: boolean }[]
-  notes: string[]
-  noteLabel?: string
+  // Sataana's own words, shown exactly as he wrote them.
+  authorNote?: string
+  // A note written by LazyGrip about the page itself, labelled as such.
+  siteNote?: string
+  siteNoteLabel?: string
 }) {
   const items = links ?? SOURCES.map(s => ({ ...s, external: true }))
   return (
@@ -31,9 +34,14 @@ export default function GrabIt({ title = 'Grab it', links, notes, noteLabel = 'f
           </a>
         ))}
       </div>
-      {notes.length > 0 && (
-        <Spoiler label={noteLabel}>
-          {notes.map((n, i) => <p key={i} style={{ margin: i ? '8px 0 0' : 0 }}><InlineMd text={n} inline /></p>)}
+      {authorNote && (
+        <Spoiler label="P.S. from Sataana">
+          <span>{authorNote}</span>
+        </Spoiler>
+      )}
+      {siteNote && (
+        <Spoiler label={siteNoteLabel}>
+          <span><InlineMd text={siteNote} inline /></span>
         </Spoiler>
       )}
     </section>
