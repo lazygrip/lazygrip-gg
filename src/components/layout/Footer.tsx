@@ -34,7 +34,6 @@ export default function Footer() {
             {[
               { href: '/guide', label: 'Guide' },
               { href: '/creators', label: 'Creators' },
-              { href: '/guide/ems-changelog', label: 'EMS-Changelog' },
               { href: '/guide/lg-changelog', label: 'LG-Changelog' },
               { href: '/about', label: 'About' },
               { href: '/faq', label: 'FAQ' },
