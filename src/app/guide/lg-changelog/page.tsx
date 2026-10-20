@@ -3,18 +3,19 @@ import Link from 'next/link'
 import { GitCommit } from 'lucide-react'
 import PageHeader from '@/components/ui/PageHeader'
 import Card from '@/components/ui/Card'
+import ChangelogStyles from '@/components/changelog/ChangelogStyles'
+import Fingerprint from '@/components/changelog/Fingerprint'
 import { groupForPublic, UPKEEP_LINE, type ChangelogDay, type Commit } from '@/lib/changelog/lg'
 import { matches } from '@/lib/changelog/areas'
+import { LG_AREAS, areaOfEntry, kindOf } from '@/lib/changelog/lg-tags'
 
 const DESCRIPTION =
-  'Recent changes to LazyGrip.net, pulled from the site repository, with search and a link to every day. Behind-the-scenes upkeep is rolled into one line a day.'
+  'Recent changes to LazyGrip.net, pulled from the site repository, with search, a colour for each kind of change and a link to every day. Behind-the-scenes upkeep is rolled into one line a day.'
 
 export const metadata: Metadata = {
   title: 'LG-Changelog',
   description: DESCRIPTION,
-  alternates: {
-    canonical: 'https://lazygrip.net/guide/lg-changelog',
-  },
+  alternates: { canonical: 'https://lazygrip.net/guide/lg-changelog' },
   openGraph: {
     title: 'LG-Changelog',
     description: DESCRIPTION,
@@ -28,6 +29,7 @@ export const metadata: Metadata = {
 // Five pages of 100 reaches back past the site's first public commits without a token.
 const PAGES = 5
 const MAX_HITS = 60
+const TONE = { New: 'added', Changed: 'changed', Fixed: 'fixed', Removed: 'removed' } as Record<string, string>
 
 const day = (d: string) =>
   new Date(d.slice(0, 10) + 'T12:00:00Z').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
@@ -57,19 +59,45 @@ async function getCommits(): Promise<Commit[]> {
   return pages.flat()
 }
 
-export default async function LgChangelogPage({ searchParams }: { searchParams: Promise<{ q?: string | string[] }> }) {
-  const raw = (await searchParams).q
-  const q = (Array.isArray(raw) ? raw[0] : raw ?? '').trim().slice(0, 80)
-  const days: ChangelogDay[] = groupForPublic(await getCommits())
+function Entry({ entry }: { entry: string }) {
+  if (entry === UPKEEP_LINE) {
+    return <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', lineHeight: 1.6 }}>{entry}</div>
+  }
+  const kind = kindOf(entry)
+  const area = areaOfEntry(entry)
+  return (
+    <div className="cl-row" style={{ alignItems: 'flex-start' }}>
+      <span className={`cl-pill cl-t-${kind.tone}`} style={{ minWidth: 62, textAlign: 'center' }}>{kind.label}</span>
+      <span style={{ flex: 1, minWidth: 200, fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{entry}</span>
+      {area !== 'Everything else' && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{area}</span>}
+    </div>
+  )
+}
 
-  const changes = days.reduce((n, d) => n + d.entries.filter(e => e !== UPKEEP_LINE).length, 0)
-  const since = days.length ? days[days.length - 1].date : null
+export default async function LgChangelogPage({ searchParams }: { searchParams: Promise<{ q?: string | string[]; area?: string | string[] }> }) {
+  const params = await searchParams
+  const q = ((Array.isArray(params.q) ? params.q[0] : params.q) ?? '').trim().slice(0, 80)
+  const areaParam = Array.isArray(params.area) ? params.area[0] : params.area
+  const area = areaParam && LG_AREAS.includes(areaParam) ? areaParam : null
+
+  const allDays: ChangelogDay[] = groupForPublic(await getCommits())
+  const visible = allDays.flatMap(d => d.entries.filter(e => e !== UPKEEP_LINE))
+  const since = allDays.length ? allDays[allDays.length - 1].date : null
+
+  const kindCounts: Record<string, number> = { New: 0, Changed: 0, Fixed: 0, Removed: 0 }
+  const areaCounts = new Map<string, number>()
+  for (const e of visible) {
+    kindCounts[kindOf(e).label]++
+    areaCounts.set(areaOfEntry(e), (areaCounts.get(areaOfEntry(e)) ?? 0) + 1)
+  }
+
+  const days: ChangelogDay[] = area
+    ? allDays.map(d => ({ date: d.date, entries: d.entries.filter(e => e !== UPKEEP_LINE && areaOfEntry(e) === area) })).filter(d => d.entries.length)
+    : allDays
 
   const hits = q
-    ? days.flatMap(d =>
-        d.entries
-          .filter(e => e !== UPKEEP_LINE && matches({ markdown: e, lead: null, body: e }, q))
-          .map(entry => ({ date: d.date, entry })),
+    ? allDays.flatMap(d =>
+        d.entries.filter(e => e !== UPKEEP_LINE && matches({ markdown: e, lead: null, body: e }, q)).map(entry => ({ date: d.date, entry })),
       )
     : []
 
@@ -79,46 +107,56 @@ export default async function LgChangelogPage({ searchParams }: { searchParams: 
     if (months.at(-1)?.key !== key) months.push({ key, days: [] })
     months.at(-1)!.days.push(d)
   }
+  const link = { color: 'var(--accent)' } as const
 
   return (
     <div>
+      <ChangelogStyles />
       <PageHeader
         icon={GitCommit}
         title="LG-Changelog"
-        description="Every change shipped to LazyGrip.net, newest first, pulled live from GitHub. Search it, or jump to a month. Behind-the-scenes upkeep is rolled into one line a day."
+        description="Every change shipped to LazyGrip.net, newest first, pulled live from GitHub. Search it, filter by part of the site, or jump to a month. Behind-the-scenes upkeep is rolled into one line a day."
       />
 
-      {days.length === 0 ? (
+      {allDays.length === 0 ? (
         <Card style={{ padding: '32px 24px', textAlign: 'center' }}>
-          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>Could not load the changelog. Try again later.</p>
+          <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)' }}>Could not load the changelog from GitHub. Try again in a few minutes.</p>
         </Card>
       ) : (
         <>
-          <Card style={{ padding: '20px 24px', marginBottom: 16 }}>
+          <Fingerprint counts={kindCounts} height={10} />
+          <div className="cl-tiles" style={{ marginTop: 16 }}>
+            {Object.entries(kindCounts).filter(([, n]) => n > 0).map(([k, n]) => (
+              <div key={k} className={`cl-tile cl-t-${TONE[k]}`}>
+                <b>{n}</b>
+                <span>{k}</span>
+              </div>
+            ))}
+          </div>
+          <p style={{ margin: '10px 0 22px', fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+            {visible.length} changes since {since ? month(since) : 'the start'}. The kind of change is read from the wording of each line.
+          </p>
+
+          <Card style={{ padding: '20px 24px', marginBottom: 20 }}>
             <form action="/guide/lg-changelog" method="get">
               <label htmlFor="lg-q" style={{ display: 'block', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>
                 Search the changelog
               </label>
               <div style={{ display: 'flex', gap: 8 }}>
-                <input
-                  id="lg-q" name="q" type="search" defaultValue={q} maxLength={80}
-                  placeholder={`Search ${changes.toLocaleString('en-US')} changes, for example phones or profile`}
-                  style={{ flex: 1, minWidth: 0, padding: '9px 12px', fontSize: 'var(--text-sm)', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '0.5px solid var(--border-strong)', borderRadius: 8 }}
-                />
-                <button type="submit" style={{ padding: '9px 16px', fontSize: 'var(--text-sm)', fontWeight: 600, background: 'var(--accent)', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Search</button>
+                <input id="lg-q" name="q" type="search" defaultValue={q} maxLength={80} className="cl-field" style={{ flex: 1, minWidth: 0 }}
+                  placeholder={`Search ${visible.length.toLocaleString('en-US')} changes, for example phones or profile`} />
+                <button type="submit" style={{ padding: '9px 18px', fontSize: 'var(--text-sm)', fontWeight: 600, background: 'var(--accent)', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}>Search</button>
               </div>
             </form>
             {!q && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
-                <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, padding: '6px 12px', borderRadius: 99, background: 'var(--bg-tertiary)', border: '0.5px solid var(--border-strong)' }}>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--accent)' }}>{changes}</span>
-                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' }}>changes{since ? ` since ${month(since)}` : ''}</span>
-                </span>
-                {months.map(m => (
-                  <a key={m.key} href={`#m-${m.key}`} style={{ padding: '6px 12px', borderRadius: 99, background: 'var(--bg-tertiary)', border: '0.5px solid var(--border-strong)', fontSize: 'var(--text-xs)', color: 'var(--text-secondary)', textDecoration: 'none' }}>
-                    {month(m.key + '-15')}
-                  </a>
+              <div role="group" aria-label="Filter by part of the site" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
+                {LG_AREAS.filter(a => a !== 'Everything else' && areaCounts.has(a)).map((a, i) => (
+                  <Link key={a} prefetch={false} href={area === a ? '/guide/lg-changelog' : `/guide/lg-changelog?area=${encodeURIComponent(a)}`}
+                    className={`cl-chip cl-a-${i}`} aria-pressed={area === a}>
+                    {a} <small>{areaCounts.get(a)}</small>
+                  </Link>
                 ))}
+                {area && <Link href="/guide/lg-changelog" className="cl-btn" style={{ textDecoration: 'none' }}>Show all</Link>}
               </div>
             )}
           </Card>
@@ -129,41 +167,35 @@ export default async function LgChangelogPage({ searchParams }: { searchParams: 
                 {hits.length === 0
                   ? `Nothing in the changelog mentions "${q}".`
                   : `${hits.length} ${hits.length === 1 ? 'change mentions' : 'changes mention'} "${q}"${hits.length > MAX_HITS ? `, showing the newest ${MAX_HITS}` : ''}.`}{' '}
-                <Link href="/guide/lg-changelog" style={{ color: 'var(--accent)' }}>Clear search</Link>
+                <Link href="/guide/lg-changelog" style={link}>Clear search</Link>
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {hits.slice(0, MAX_HITS).map(({ date, entry }) => (
-                  <Card key={`${date}-${entry}`} href={`/guide/lg-changelog#d-${date}`} style={{ padding: '12px 18px' }}>
-                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{day(date)}</div>
-                    <div style={{ marginTop: 4, fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{entry}</div>
-                  </Card>
+                  <Link key={`${date}-${entry}`} href={`/guide/lg-changelog#d-${date}`} className={`cl-card cl-t-${kindOf(entry).tone}`}
+                    style={{ textDecoration: 'none', display: 'block', padding: '12px 18px' }}>
+                    <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 4 }}>{day(date)}</div>
+                    <Entry entry={entry} />
+                  </Link>
                 ))}
               </div>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+              {months.length === 0 && <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>No changes in this part of the site yet.</p>}
               {months.map(m => (
                 <section key={m.key} id={`m-${m.key}`} style={{ scrollMarginTop: 90 }}>
-                  <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em', color: 'var(--text-muted)', marginBottom: 10 }}>
-                    {month(m.key + '-15')}{' '}
-                    <span style={{ fontWeight: 400 }}>({m.days.reduce((n, d) => n + d.entries.filter(e => e !== UPKEEP_LINE).length, 0)})</span>
-                  </div>
+                  <h2 className="cl-month" style={{ marginBottom: 12 }}>{month(m.key + '-15')}</h2>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {m.days.map(({ date, entries }) => (
-                      <Card key={date} style={{ padding: '18px 22px' }}>
-                        <div id={`d-${date}`} style={{ scrollMarginTop: 90, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--accent)', fontSize: 'var(--text-sm)', marginBottom: 10 }}>
-                          {day(date)}{' '}
-                          <a href={`#d-${date}`} aria-label="Link to this day" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontWeight: 400 }}>#</a>
+                      <article key={date} id={`d-${date}`} className="cl-card cl-t-changed" style={{ scrollMarginTop: 90 }}>
+                        <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text-primary)', fontSize: 'var(--text-sm)', marginBottom: 12 }}>
+                          {day(date)}
+                          <a href={`#d-${date}`} className="cl-anchor" aria-label="Link to this day">#</a>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                          {entries.map(entry => (
-                            <div key={entry} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                              <span style={{ width: 6, height: 6, borderRadius: '50%', background: entry === UPKEEP_LINE ? 'var(--text-muted)' : 'var(--accent)', flexShrink: 0, marginTop: 8 }} />
-                              <span style={{ fontSize: 'var(--text-sm)', color: entry === UPKEEP_LINE ? 'var(--text-muted)' : 'var(--text-secondary)', lineHeight: 1.6 }}>{entry}</span>
-                            </div>
-                          ))}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          {entries.map(entry => <Entry key={entry} entry={entry} />)}
                         </div>
-                      </Card>
+                      </article>
                     ))}
                   </div>
                 </section>
@@ -174,7 +206,7 @@ export default async function LgChangelogPage({ searchParams }: { searchParams: 
       )}
 
       <p style={{ marginTop: 28, fontSize: 'var(--text-sm)', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-        Looking for what changed in the addon? That is the <Link href="/guide/ems-changelog" style={{ color: 'var(--accent)' }}>EMS-Changelog</Link>.
+        Looking for what changed in the addon? That is the <Link href="/guide/ems-changelog" style={link}>EMS-Changelog</Link>.
       </p>
     </div>
   )
