@@ -37,6 +37,11 @@ function inline(text: string, keyBase: string): ReactNode[] {
   return out
 }
 
+// Inline-only version for a single line, so a trailing link can sit on the same line.
+export function InlineText({ text }: { text: string }) {
+  return <>{inline(text, 't')}</>
+}
+
 export default function InlineMd({ text }: { text: string }) {
   const lines = text.split('\n')
   const blocks: ReactNode[] = []

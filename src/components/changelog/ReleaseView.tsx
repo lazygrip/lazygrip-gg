@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
-import InlineMd from './InlineMd'
+import InlineMd, { InlineText } from './InlineMd'
 import type { ArchivedRelease } from '@/lib/changelog/ems-archive'
 import type { EmsItem } from '@/lib/changelog/ems'
 import { groupByArea, matches } from '@/lib/changelog/areas'
@@ -22,7 +22,7 @@ function Entry({ item, id, color }: { item: EmsItem; id: string; color: string }
         {item.lead ? (
           <>
             <div style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-              <InlineMd text={item.lead} />{' '}
+              <InlineText text={item.lead} />{' '}
               <a href={`#${id}`} aria-label="Link to this entry" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontWeight: 400 }}>#</a>
             </div>
             {item.body && <div style={{ marginTop: 2 }}><InlineMd text={item.body} /></div>}
