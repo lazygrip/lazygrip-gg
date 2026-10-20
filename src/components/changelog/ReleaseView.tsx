@@ -11,14 +11,18 @@ const TONE_ICON: Record<string, LucideIcon> = { added: Sparkles, changed: Wrench
 const AREA_ICON: LucideIcon[] = [Languages, Gamepad2, RotateCcw, Stethoscope, FlaskConical, Package, Keyboard, Swords, Save, Layers]
 const slug = (s: string) => s.toLowerCase().replace(/\W+/g, '-')
 
-function Body({ item }: { item: EmsItem }) {
+function Body({ item, id }: { item: EmsItem; id: string }) {
+  const anchor = <a href={`#${id}`} className="cl-anchor" aria-label="Link to this entry">#</a>
   return item.lead ? (
     <>
-      <div className="cl-lead"><InlineText text={item.lead} /></div>
+      <div className="cl-lead"><InlineText text={item.lead} />{anchor}</div>
       {item.body && <div style={{ marginTop: 2 }}><InlineMd text={item.body} /></div>}
     </>
   ) : (
-    <InlineMd text={item.markdown} />
+    <>
+      <InlineMd text={item.markdown} />
+      {anchor}
+    </>
   )
 }
 
@@ -26,8 +30,7 @@ function Entry({ item, id }: { item: EmsItem; id: string }) {
   return (
     <div id={id} className="cl-entry">
       <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.65, minWidth: 0 }}>
-        <Body item={item} />
-        <a href={`#${id}`} className="cl-anchor" aria-label="Link to this entry">#</a>
+        <Body item={item} id={id} />
       </div>
     </div>
   )
@@ -138,8 +141,7 @@ export default function ReleaseView({ release }: { release: ArchivedRelease }) {
                   {kept.map(({ item, index }) => (
                     <article key={index} id={idFor(index)} className="cl-card" style={{ scrollMarginTop: 90 }}>
                       <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.65 }}>
-                        <Body item={item} />
-                        <a href={`#${idFor(index)}`} className="cl-anchor" aria-label="Link to this entry">#</a>
+                        <Body item={item} id={idFor(index)} />
                       </div>
                     </article>
                   ))}
