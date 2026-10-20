@@ -16,6 +16,7 @@ const NAV = [
   { href: '/guide/validating', label: 'Validating your work' },
   { href: '/guide/blizzard-and-addons', label: 'Blizzard and addons' },
   { href: '/guide/wow-forever', label: 'WoW: Forever' },
+  { href: '/guide/lg-changelog', label: 'LG-Changelog' },
 ]
 
 // Below 860px the sidebar stops being a 200px column beside the content (which left roughly

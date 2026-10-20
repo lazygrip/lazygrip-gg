@@ -248,7 +248,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       // Generated from commit history, so its real change time is not knowable
       // here. lastmod is optional in the protocol; omit it rather than publish
       // a value we cannot stand behind.
-      url: 'https://lazygrip.net/changelog',
+      url: 'https://lazygrip.net/guide/lg-changelog',
       changeFrequency: 'daily',
       priority: 0.4,
     },
@@ -303,7 +303,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return {
       url: `https://lazygrip.net/sequences/${seq.slug}`,
       // Omitted rather than faked when the row's timestamp is unusable, the
-      // same reasoning as /changelog above.
+      // same reasoning as /guide/lg-changelog above.
       ...(updated === null ? {} : { lastModified: updated }),
       changeFrequency: 'weekly' as const,
       priority: 0.8,

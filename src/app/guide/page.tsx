@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowRight, BookOpen, Wrench, Layers, GitBranch, BarChart2, SlidersHorizontal, Sparkles, AlertTriangle, Scale } from 'lucide-react'
+import { ArrowRight, BookOpen, Wrench, Layers, GitBranch, GitCommit, BarChart2, SlidersHorizontal, Sparkles, AlertTriangle, Scale } from 'lucide-react'
 import GuideSection from '@/components/guide/GuideSection'
 import GuideImage from '@/components/guide/GuideImage'
 import Card from '@/components/ui/Card'
@@ -84,6 +84,13 @@ const sections = [
     time: '3 min',
     title: 'WoW: Forever',
     desc: "Whether GRIP-EMS runs on Blizzard's Classic+ expansion, what Sataana has confirmed as of beta week one, the Blizzard-side SavedVariables bug currently blocking real testing, and what Blizzard has said about addons there. Updated as the beta moves.",
+  },
+  {
+    href: '/guide/lg-changelog',
+    icon: GitCommit,
+    time: 'Live',
+    title: 'LG-Changelog',
+    desc: 'Every change shipped to LazyGrip.net, newest first, pulled live from the site repository.',
   },
 ]
 

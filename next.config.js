@@ -76,6 +76,8 @@ const nextConfig = {
       // Convert tool taken off the Workshop hub; route kept alive as a redirect, not permanent
       // since the underlying code is disconnected, not deleted.
       { source: '/workshop/convert', destination: '/workshop', permanent: false },
+      // Site changelog moved under the Guide as LG-Changelog
+      { source: '/changelog', destination: '/guide/lg-changelog', permanent: true },
       // Class redirects — query param to clean slug
       { source: '/browse', has: [{ type: 'query', key: 'class_id', value: '1' }], destination: '/browse/warrior?', permanent: true },
       { source: '/browse', has: [{ type: 'query', key: 'class_id', value: '2' }], destination: '/browse/paladin?', permanent: true },
