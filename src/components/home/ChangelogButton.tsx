@@ -51,9 +51,9 @@ export default function ChangelogButton({ latest }: { latest: string }) {
         @media (prefers-reduced-motion: reduce) { .home-cl.fresh { animation: none; } }
       `}</style>
       <Link prefetch={false} href="/guide/ems-changelog" onClick={markSeen} className={fresh ? 'home-cl fresh' : 'home-cl'}
-        aria-label={fresh ? `Changelog, new release v${latest}` : 'Changelog'}>
+        aria-label={fresh ? `EMS-Changelog, new release v${latest}` : 'EMS-Changelog'}>
         <ScrollText size={13} strokeWidth={2.2} aria-hidden />
-        Changelog
+        EMS-Changelog
         {fresh && <span className="badge">New</span>}
       </Link>
     </>
