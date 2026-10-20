@@ -16,6 +16,7 @@ const NAV = [
   { href: '/guide/validating', label: 'Validating your work' },
   { href: '/guide/blizzard-and-addons', label: 'Blizzard and addons' },
   { href: '/guide/wow-forever', label: 'WoW: Forever' },
+  { href: '/guide/ems-changelog', label: 'EMS-Changelog' },
   { href: '/guide/lg-changelog', label: 'LG-Changelog' },
 ]
 
