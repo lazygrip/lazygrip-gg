@@ -1,9 +1,24 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
 import Link from 'next/link'
 import { ScrollText } from 'lucide-react'
 
 const KEY = 'lg-ems-changelog-seen'
+const EVENT = 'lg-ems-changelog-seen-change'
+
+const STORAGE_BLOCKED = 'blocked'
+
+function read(): string | null {
+  try { return window.localStorage.getItem(KEY) } catch { return STORAGE_BLOCKED }
+}
+function subscribe(onChange: () => void) {
+  window.addEventListener('storage', onChange)
+  window.addEventListener(EVENT, onChange)
+  return () => {
+    window.removeEventListener('storage', onChange)
+    window.removeEventListener(EVENT, onChange)
+  }
+}
 
 // The Changelog button beside the current-version pill. It pulses and says New until this
 // visitor has opened the changelog for the latest release, then goes quiet. The "seen" mark lives
@@ -11,19 +26,13 @@ const KEY = 'lg-ems-changelog-seen'
 // button simply stays calm. Visitors who ask their system to reduce motion get a steady badge
 // instead of a pulse.
 export default function ChangelogButton({ latest }: { latest: string }) {
-  const [fresh, setFresh] = useState(false)
-
-  useEffect(() => {
-    try {
-      setFresh(window.localStorage.getItem(KEY) !== latest)
-    } catch {
-      setFresh(false)
-    }
-  }, [latest])
+  // On the server, and until the browser has been read, the button stays calm so the page never flashes.
+  const seen = useSyncExternalStore(subscribe, read, () => latest)
+  const fresh = seen !== latest && seen !== STORAGE_BLOCKED
 
   const markSeen = () => {
     try { window.localStorage.setItem(KEY, latest) } catch { /* storage unavailable, stay calm */ }
-    setFresh(false)
+    window.dispatchEvent(new Event(EVENT))
   }
 
   return (
