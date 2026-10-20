@@ -206,7 +206,7 @@ function compareStatements(row, repoFile) {
 /**
  * @typedef {{ class: string, files: string[], colliding?: string,
  *   citedBy: string[], consolidatedBy: string[], mentionedBy: string[],
- *   statements: Record<string, string> }} Classification
+ *   renumbered: string[], statements: Record<string, string> }} Classification
  */
 
 /**
@@ -235,7 +235,7 @@ function classify(row, repo) {
           .map((f) => f.file)
       : []
   const statements = {}
-  const result = { class: '', files: [], citedBy, consolidatedBy, mentionedBy, statements }
+  const result = { class: '', files: [], citedBy, consolidatedBy, mentionedBy, renumbered: [], statements }
 
   if (key.number) {
     const sameNumber = repo.filter((f) => f.number === key.number)
@@ -246,10 +246,24 @@ function classify(row, repo) {
       statements[exact.file] = compareStatements(row, exact)
       return result
     }
+    // The same stem under another number is a file the repo renumbered after
+    // the run, which this repo has done three times (014_relay_failures is
+    // 015, 018_discord_bridge_opt_out is 017, 019_save_count_trigger_and_
+    // backfill is 020; 020:1-5 tells the story). That file is the row's
+    // record, so it outranks both a citation and the colliding file.
+    const renumbered = repo.filter((f) => f.stem === key.stem && f.number !== key.number)
+    result.renumbered = renumbered.map((f) => f.file)
+    for (const f of renumbered) statements[f.file] = compareStatements(row, f)
     if (sameNumber.length > 0) {
       result.class = 'number-collision'
       result.colliding = sameNumber[0].file
-      result.files = citedBy.length > 0 ? citedBy : [sameNumber[0].file]
+      result.files =
+        result.renumbered.length > 0 ? result.renumbered : citedBy.length > 0 ? citedBy : [sameNumber[0].file]
+      return result
+    }
+    if (result.renumbered.length > 0) {
+      result.class = 'name-matches-file'
+      result.files = result.renumbered
       return result
     }
     result.class = citedBy.length > 0 ? 'cited-by' : 'missing-file'
@@ -412,7 +426,9 @@ function describe(c) {
     case 'tracked-by-name':
       return `tracks it by name as ${c.files.join(', ')}`
     case 'number-collision':
-      return `holds that number as ${c.colliding}`
+      return c.renumbered.length > 0
+        ? `holds that number as ${c.colliding} and the same name as ${c.renumbered.join(', ')}`
+        : `holds that number as ${c.colliding}`
     case 'name-matches-file':
       return `holds a file with that name: ${c.files.join(', ')}`
     case 'cited-by':
@@ -453,7 +469,11 @@ function mechanicalVerdict(c) {
     case 'consolidated-by':
       return { verdict: 'consolidated-by', file: c.files[0] || '' }
     case 'number-collision':
-      return { verdict: 'number-collision', file: c.files[0] || '' }
+      // A renumbered file is the row's record; only a collision with no such
+      // file is left for the reader to resolve.
+      return c.renumbered.length > 0
+        ? { verdict: 'tracked', file: c.renumbered[0] }
+        : { verdict: 'number-collision', file: c.files[0] || '' }
     default:
       return { verdict: 'missing-file', file: '' }
   }
@@ -466,6 +486,7 @@ function mechanicalNote(c) {
     if (result !== 'n/a') bits.push(`statements ${result} vs ${file}`)
   }
   if (c.colliding) bits.push(`number held by ${c.colliding}`)
+  if (c.renumbered.length) bits.push(`same name under another number: ${c.renumbered.join(', ')}`)
   if (c.citedBy.length) bits.push(`version cited by ${c.citedBy.join(', ')}`)
   if (c.consolidatedBy.length) bits.push(`in range cited by ${c.consolidatedBy.join(', ')}`)
   if (c.mentionedBy.length) bits.push(`name mentioned by ${c.mentionedBy.join(', ')}`)

@@ -20,6 +20,16 @@
 //               anywhere. The record that this test holds is what the repo
 //               and the #78 thread establish without it; `import` extends it
 //               when the export exists.
+//   2026-10-17  @slowdog-dev exported the ledger (version and name only) and
+//               ran `import` (PR #97): 41 rows appended with mechanical
+//               verdicts, three of them collisions that were really
+//               renumberings (014_relay_failures is 015, 018_discord_bridge_
+//               opt_out is 017, 019_save_count_trigger_and_backfill is 020),
+//               which the classifier then could not tell from a missing file.
+//   2026-10-20  Every appended verdict read against the repo. Two gates added
+//               below so the record cannot drift back: every file in
+//               supabase/migrations has a row, and no row still carries the
+//               label `import` writes before a person has read it.
 //
 // The classifier is exercised against the real directory on purpose: a test
 // against a fixture directory would pass while the repo it is meant to guard
@@ -35,6 +45,7 @@ import {
   classify,
   compareStatements,
   importExport,
+  mechanicalVerdict,
   parseMigrationsDir,
   parseRecord,
 } from './reconcile-ledger.js'
@@ -64,6 +75,12 @@ describe('repo side: the citations the record relies on', () => {
 
   it('003 cites the production version of copy_count_throttle', () => {
     expect(byFile('003_recover_objects_no_migration_creates.sql').cites.has('20260811201135')).toBe(true)
+  })
+
+  it('023 cites the direct application it captures and its own push', () => {
+    const cites = byFile('023_check_post_rate_limit_repo_sync.sql').cites
+    expect(cites.has('20260819173004')).toBe(true)
+    expect(cites.has('20260828225348')).toBe(true)
   })
 
   it('008 and 009 cite the version ranges of their MCP sessions', () => {
@@ -126,7 +143,30 @@ describe('classify, against the real migrations directory', () => {
     const c = classify({ version: '', name: '025_actions_tree_column' }, repo)
     expect(c.class).toBe('number-collision')
     expect(c.colliding).toBe('025_actions_tree_and_version_sync.sql')
+    expect(c.renumbered).toEqual([])
     expect(c.mentionedBy).toContain('003_recover_objects_no_migration_creates.sql')
+  })
+
+  it('a collision whose stem exists under another number is a renumbering, tracked by that file', () => {
+    // The three the 2026-10-17 export surfaced, each applied under the number
+    // the ledger holds and renumbered in the repo afterwards.
+    const cases: Array<[string, string, string]> = [
+      ['014_relay_failures', '015_relay_failures.sql', '014_restrict_onboarding_check_functions.sql'],
+      ['018_discord_bridge_opt_out', '017_discord_bridge_opt_out.sql', '018_notify_on_reply.sql'],
+      [
+        '019_save_count_trigger_and_backfill',
+        '020_save_count_trigger_and_backfill.sql',
+        '019_wow_build_and_export_backfill.sql',
+      ],
+    ]
+    for (const [name, file, colliding] of cases) {
+      const c = classify({ version: '20260808152958', name }, repo)
+      expect(c.class, name).toBe('number-collision')
+      expect(c.colliding, name).toBe(colliding)
+      expect(c.renumbered, name).toEqual([file])
+      expect(c.files, name).toEqual([file])
+      expect(mechanicalVerdict(c), name).toEqual({ verdict: 'tracked', file })
+    }
   })
 })
 
@@ -200,6 +240,21 @@ describe('the committed record', () => {
     expect(noRow).toContain('021_version_row_macro_parity.sql')
     expect(noRow).toContain('043_fix_publish_sequence_version_collection_type.sql')
   })
+
+  it('accounts for every file in supabase/migrations', () => {
+    // A new migration needs a row: tracked once the CLI or MCP server records
+    // it, no-ledger-row when it was applied by hand. Either way the next reader
+    // finds it here instead of asking the ledger again.
+    const { unaccounted } = check(record, repo)
+    expect(unaccounted).toEqual([])
+  })
+
+  it('carries no verdict that the import step wrote and nobody has read', () => {
+    const unread = record
+      .filter((r) => /not yet reviewed/.test(r.note))
+      .map((r) => `${r.version} ${r.name}`)
+    expect(unread).toEqual([])
+  })
 })
 
 describe('check, proven to bite', () => {
@@ -228,6 +283,16 @@ describe('check, proven to bite', () => {
     )
     expect(contradictions).toHaveLength(1)
     expect(contradictions[0]).toMatch(/add the citation/)
+  })
+
+  it('holds tracked naming the renumbered file, and rejects it naming any other', () => {
+    const held = check(parseRecord('20260808152958\t014_relay_failures\ttracked\t015_relay_failures.sql\t'), repo)
+    expect(held.contradictions).toEqual([])
+    expect(held.unaccounted).not.toContain('015_relay_failures.sql')
+
+    const wrong = check(parseRecord('20260808152958\t014_relay_failures\ttracked\t016_publish_reslug.sql\t'), repo)
+    expect(wrong.contradictions).toHaveLength(1)
+    expect(wrong.contradictions[0]).toMatch(/016_publish_reslug\.sql neither matches/)
   })
 
   it('rejects a verdict outside the vocabulary', () => {

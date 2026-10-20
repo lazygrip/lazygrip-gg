@@ -19,97 +19,114 @@
 #   file     the supabase/migrations file the verdict names, if any.
 #   note     evidence, by file:line where it lives in the repo.
 #
-# STATUS 2026-10-16. The full export has not been produced: it needs a
-# connection to production, which @slowdog-dev used for the #78 findings and
-# which this record's author did not have. Every row below is what the repo
-# and the #78 thread establish on their own. Rows with `?` are the ones the
-# export settles; `import` fills the version in by name and appends every row
-# it does not know. Until then:
+# STATUS 2026-10-20. The export exists: @slowdog-dev ran it on 2026-10-17 and
+# imported it in PR #97, version and name only, no statements column. Every
+# row below has since been read against the repo, and the label the import
+# step writes before a person has read a row is gone (the test holds that).
+# What the read established:
 #
-#   * The #78 thread names roughly 25 rows between 004 and 031 with 14-digit
-#     versions. The ones keyed below are those the repo and the thread
-#     establish; `?` marks a version the export has not supplied. The 008 and
-#     009 batches alone account for several more: 008:4-6 cites versions
-#     20260805175558 through 20260805181416 and 009:5-8 cites 20260805175606
-#     through 20260805181547, two overlapping MCP sessions on 2026-08-05 whose
-#     per-row names are unknown. The check classifies any version inside
-#     either range as consolidated-by that file.
-#   * 023:1-9 says the check_post_rate_limit auth.uid() check was "applied
-#     directly to the live database" on 2026-08-19 and captured in 023 later.
-#     That is a row with neither version nor name known, so it has no line
-#     here; the export will surface it as missing-file and the verdict to
-#     record is `tracked 023_...`, with the version cited in 023's header.
-#   * Outside the ledger entirely: the `avatars` storage bucket was created in
-#     the dashboard and has neither a ledger row nor a file (030:101-103).
-#     Not a ledger reconciliation item, recorded here so nobody looks for it.
+#   * Most 14-digit rows are a file's own run through the Supabase MCP server
+#     under the file's name, and the file is their record (tracked).
+#   * The 2026-08-05 session's rows are consolidated by 008 and 009, assigned
+#     by content: 008 holds the two functions, the column and the constraint,
+#     009 the three policies and every RPC gate.
+#   * Three collisions are renumberings, not missing files: 014_relay_failures
+#     is 015, 018_discord_bridge_opt_out is 017 and
+#     019_save_count_trigger_and_backfill is 020. 031_insert_grants_and_
+#     corrections is 031's second run, folded into the committed file.
+#   * Six rows have no file and need their `statements` column before a
+#     migration can be written for any of them. The query that supplies them:
+#
+#       select version, name, statements
+#       from supabase_migrations.schema_migrations
+#       where name in (
+#         'pin_search_path_on_security_definer_functions',
+#         'fix_publish_draft_sequence_search_path',
+#         'optimize_rls_policies_sequences_comments',
+#         'optimize_rls_policies_remaining_tables',
+#         'add_indexes_for_hot_query_paths',
+#         'backfill_display_name_from_username')
+#       order by version;
+#
+#   * The ledger ends at 037 (2026-09-17). Everything from 038 on, and a few
+#     earlier files, was applied by hand and has no row (no-ledger-row).
+#   * Outside the ledger: four triggers production had that no file created
+#     until 049 (found by PR #98's trigger test), and the `avatars` storage
+#     bucket, created in the dashboard with neither a row nor a file
+#     (030:101-103).
+#
+# A text comparison of the tracked rows against their files is still owed,
+# since the export carried no statements; the 018 and 022 rows say so.
 #
 # Nothing in this file is a migration. Writing a migration for a missing-file
 # row needs that row's `statements` column, which only the export carries.
+001	initial_schema	tracked	001_initial_schema.sql	CLI push of the numbered file; the version is the CLI's reading of the 001 prefix. 001:2 says the file was first run in the SQL editor, which records nothing, so this row is the later push.
+002	schema_sync	tracked	002_schema_sync.sql	CLI push of the numbered file. 002 is idempotent by design (002:17-19) and was built as a snapshot of the live schema, so the push changed nothing it describes.
+004	comments_soft_delete_rls_fix	tracked	004_comments_soft_delete_rls_fix.sql	CLI push of the numbered file.
+20260805175558	add_has_custom_username_check	tracked	008_username_onboarding_infrastructure.sql	First row of the 2026-08-05 MCP session; 008:16-30 is has_custom_username(). 008:4-6 cites this version as the start of its range.
+20260805175606	gate_comments_ratings_on_username_and_verified_poster	consolidated-by	009_username_onboarding_gate_wiring.sql	First row of the gate-wiring half of the same session; 009:22-42 are the comment and rating policies. 009:5-8 cites this version as the start of its range.
+20260805175610	add_username_check_to_sequences_rls	consolidated-by	009_username_onboarding_gate_wiring.sql	009:44 is the sequences insert policy. Inside both cited ranges; assigned to 009 by content.
+20260805175623	add_username_check_to_publish_draft_sequence	consolidated-by	009_username_onboarding_gate_wiring.sql	009 redefines publish_draft_sequence with the gate; 008 defines no RPC.
+20260805175638	add_username_check_to_publish_draft_sequences_batch	consolidated-by	009_username_onboarding_gate_wiring.sql	009 redefines publish_draft_sequences_batch with the gate.
+20260805175649	add_username_check_to_create_draft_sequence	consolidated-by	009_username_onboarding_gate_wiring.sql	009 redefines create_draft_sequence with the gate.
+20260805175700	add_username_check_to_create_sequence_with_version	consolidated-by	009_username_onboarding_gate_wiring.sql	009 redefines create_sequence_with_version with the gate.
+20260805180327	add_username_format_constraint_not_valid	consolidated-by	008_username_onboarding_infrastructure.sql	008:72-79 is the profiles_username_format constraint, added NOT VALID.
+20260805180657	add_gates_to_publish_sequence_version	consolidated-by	009_username_onboarding_gate_wiring.sql	009 redefines publish_sequence_version with the gate.
+20260805180745	add_username_gate_to_update_functions	consolidated-by	009_username_onboarding_gate_wiring.sql	009 redefines update_sequence_metadata, update_draft_sequence and update_sequence_with_version with the gate.
+20260805181406	add_terms_accepted_at_to_profiles	consolidated-by	008_username_onboarding_infrastructure.sql	008:37-38 adds profiles.terms_accepted_at. Inside the range 008:4-6 cites; the 2026-10-17 export supplied the version.
+20260805181416	add_onboarding_complete_check	tracked	008_username_onboarding_infrastructure.sql	008:45-60 is has_completed_onboarding(). 008:4-6 cites this version as the end of its range.
+20260805181427	swap_gates_to_full_onboarding_check	consolidated-by	009_username_onboarding_gate_wiring.sql	The policies in 009 call has_completed_onboarding(), which is this swap; the earlier rows of the session gated on has_custom_username() alone.
+20260805181547	swap_all_rpc_functions_to_onboarding_check	tracked	009_username_onboarding_gate_wiring.sql	The last row of the session and the end of the range 009:5-8 cites; 009's RPC bodies are this text.
+20260805201543	pin_search_path_on_security_definer_functions	missing-file		Applied two hours after the onboarding session. No file pins search_path on that date: 026:9-17 says 025's DROP+CREATE recreated six functions without carrying a pin forward and re-pins them on 2026-09-09, and 037 pins two more, so part of this run was undone by 019 and 025 and redone by 026. Which functions it pinned, and whether any were never re-pinned, needs its statements.
+20260807010252	012_comments_discord_bridge	tracked	012_comments_discord_bridge.sql	MCP run under the file's own name; the file is its record.
+20260807010743	013_discord_identity_lookup_functions	tracked	013_discord_identity_lookup_functions.sql	MCP run under the file's own name; the file is its record.
+20260808152958	014_relay_failures	tracked	015_relay_failures.sql	Renumbered: applied as 014 on 2026-08-08 and held in the repo as 015, because 014_restrict_onboarding_check_functions.sql kept 014. Same stem, same content.
+20260808194555	016_publish_reslug	tracked	016_publish_reslug.sql	MCP run under the file's own name; the file is its record.
 20260808194907	017_slug_aliases_and_backfill	number-collision	038_recover_slug_aliases.sql	Repo 017 is 017_discord_bridge_opt_out.sql. DDL recovered in 038 from the statements @slowdog-dev posted on #78 and corroborated live on 2026-09-18; the nine-row untitled-draft-* backfill is excluded on purpose (038 header).
+20260809172029	fix_publish_draft_sequence_search_path	missing-file		No file carries a 2026-08-09 change to publish_draft_sequence. 019 and 025 later dropped and recreated the function and 026:25 pins its search_path on 2026-09-09, so a pin set here was dropped with it and set again; whether this run changed anything else needs its statements.
+20260809173116	optimize_rls_policies_sequences_comments	missing-file		Named in 040:25-27: rewrote every auth.uid() in every policy on sequences and comments to (select auth.uid()). No file carries that rewrite, so a rebuilt database has every pre-040 policy in the unoptimised form. Needs its statements, or a current read of pg_policies.
+20260809173319	optimize_rls_policies_remaining_tables	missing-file		Same as optimize_rls_policies_sequences_comments, for every other table (040:25-27).
+20260809173508	add_indexes_for_hot_query_paths	missing-file		No file adds indexes on 2026-08-09: the repo's indexes are 001:218-223, 007:73, 012:23, 015:17, 036:53, 037:280 and 038:67. A rebuilt database lacks whatever this run added, a query-plan gap rather than a correctness one. Needs its statements, or select indexdef from pg_indexes where schemaname = 'public'.
+20260810204128	018_discord_bridge_opt_out	tracked	017_discord_bridge_opt_out.sql	Renumbered: applied as 018 on 2026-08-10 and held in the repo as 017, because 018_notify_on_reply.sql, applied the next day, kept 018 (019:22-26 records the collision history). Same stem, same content.
+20260811174544	notify_on_reply	tracked	018_notify_on_reply.sql	018:22-25: applied live via Supabase MCP on 2026-08-11 and the file written afterwards, so this row is that application and 018 is its record, not a second run. The 2026-10-17 export carried no statements, so the text comparison is still owed.
 20260811201135	copy_count_and_increment_fn	recovered-by	003_recover_objects_no_migration_creates.sql	Table: 003 part 3 matches the posted DDL column for column (sequence_id, copier_ip, last_counted_at, primary key, RLS on). Function: the original increment_copy_count() with its 2-minute throttle is in no file because 024 replaced the body with the daily cap and 031 replaced it again; the body that ran at this version is superseded, not missing.
+20260811223846	019_save_count_trigger_and_backfill	tracked	020_save_count_trigger_and_backfill.sql	Renumbered: 020:1-5 says it was applied to production as 019 on 2026-08-11 and renumbered because PR #39's 019_wow_build_and_export_backfill also claimed 019. Same stem, same content.
+20260812002336	019_wow_build_and_export_backfill	tracked	019_wow_build_and_export_backfill.sql	MCP run under the file's own name, the day after the row above.
+20260819170815	backfill_display_name_from_username	missing-file		Named by @slowdog-dev on #78; version supplied by the 2026-10-17 export. No file backfills display_name from username. A data backfill replays as a no-op on an empty database, but the statements are the only record of what production ran and the file is still owed.
+20260819171642	restrict_check_post_rate_limit_grants	tracked	022_restrict_check_post_rate_limit_grants.sql	Same shape as notify_on_reply, dated 2026-08-19 (022:6). The 2026-10-17 export carried no statements, so the text comparison is still owed.
+20260819173004	add_ownership_check_to_check_post_rate_limit	tracked	023_check_post_rate_limit_repo_sync.sql	023:1-9: the auth.uid() check was applied directly on 2026-08-19 and 023 captures it as a no-op create-or-replace; 023's header cites this version. 023's own push is 20260828225348.
 20260823023857	add_get_posting_eligibility_rpc	recovered-by	041_sync_get_posting_eligibility.sql	Body read off production by @slowdog-dev on #78; 041 adds the revoke from PUBLIC the original lacked (041 header).
-20260909174825	026_search_path_hardening_and_rate_limit_ownership	tracked	026_search_path_hardening_and_rate_limit_ownership.sql	The recorded run of 026, the second attempt at 22 arguments (026:21-31); 026 was corrected on 2026-09-19 to that text. Name unknown until the export.
-20260805181406	add_terms_accepted_at_to_profiles	consolidated-by	008_username_onboarding_infrastructure.sql	008:37-38 adds profiles.terms_accepted_at and 008:4-6 records the batch as applied via Supabase MCP on 2026-08-05, versions 20260805175558 through 20260805181416. Expected inside that range; the export settles the version.
-20260819170815	backfill_display_name_from_username	missing-file		Named by @slowdog-dev on #78. No file backfills display_name from username (grep across supabase/migrations, 2026-10-16). A data backfill replays as a no-op on an empty database, but the statements are the only record of what production ran and the file is still owed.
-20260811174544	notify_on_reply	tracked	018_notify_on_reply.sql	018:22-25: applied live via Supabase MCP on 2026-08-11 and the file written afterwards, so this row is that application and 018 is its record, not a second run. Compare statements against 018 when the export arrives.
-20260819171642	restrict_check_post_rate_limit_grants	tracked	022_restrict_check_post_rate_limit_grants.sql	Same shape as notify_on_reply, dated 2026-08-19 (022:6). Compare statements against 022 when the export arrives.
-20260809173116	optimize_rls_policies_sequences_comments	missing-file		Named in 040:25-27, dated 2026-08-09: rewrote every auth.uid() in every policy to (select auth.uid()). No file carries that rewrite, so a rebuilt database has every pre-040 policy in the unoptimised form.
-20260809173319	optimize_rls_policies_remaining_tables	missing-file		Same as optimize_rls_policies_sequences_comments (040:25-27).
-20260901161257	025_actions_tree_column	number-collision	003_recover_objects_no_migration_creates.sql	Expected from 025:25-26, which says the actions columns were already added in migration 025_actions_tree_column.sql; no such file exists and the repo's 025 is 025_actions_tree_and_version_sync.sql. 003 part 1 restores the two ALTER TABLE statements. Confirm the row and its name from the export.
--	005_update_sequence_with_version_ownership_check.sql	no-ledger-row	005_update_sequence_with_version_ownership_check.sql	Expected: 005:14-15 says applied live on 2026-07-22 and captured afterwards, before the first MCP or CLI use on 2026-08-05. The export confirms or overturns.
--	006_sequence_versions_rls_status_check.sql	no-ledger-row	006_sequence_versions_rls_status_check.sql	Expected: 006:25-28 says applied live on 2026-07-25 and verified via pg_policies, before the first MCP or CLI use. The export confirms or overturns.
--	007_posting_verification_gate.sql	no-ledger-row	007_posting_verification_gate.sql	Expected: 007:11-14 says run through the SQL editor on 2026-07-31, which records nothing in the ledger, and captured as a file afterwards.
--	021_version_row_macro_parity.sql	no-ledger-row	021_version_row_macro_parity.sql	Never applied: 025:46-48 confirmed on 2026-09-01 that schema_migrations has no record of it. Its fix shipped inside 025 part 2; on a rebuild 021 applies cleanly and 025 supersedes it.
--	043_fix_publish_sequence_version_collection_type.sql	no-ledger-row	043_fix_publish_sequence_version_collection_type.sql	Run in the SQL editor on 2026-09-29 (043:56-58), which records nothing; the live body was verified identical to the file by hashing prosrc.
-001	initial_schema	tracked	001_initial_schema.sql	name mentioned by 002_schema_sync.sql, 008_username_onboarding_infrastructure.sql, 020_save_count_trigger_and_backfill.sql; mechanical classification, not yet reviewed
-002	schema_sync	tracked	002_schema_sync.sql	mechanical classification, not yet reviewed
-004	comments_soft_delete_rls_fix	tracked	004_comments_soft_delete_rls_fix.sql	mechanical classification, not yet reviewed
-20260805175558	add_has_custom_username_check	tracked	008_username_onboarding_infrastructure.sql	version cited by 008_username_onboarding_infrastructure.sql; in range cited by 008_username_onboarding_infrastructure.sql; mechanical classification, not yet reviewed
-20260805175606	gate_comments_ratings_on_username_and_verified_poster	tracked	009_username_onboarding_gate_wiring.sql	version cited by 009_username_onboarding_gate_wiring.sql; in range cited by 008_username_onboarding_infrastructure.sql, 009_username_onboarding_gate_wiring.sql; mechanical classification, not yet reviewed
-20260805175610	add_username_check_to_sequences_rls	consolidated-by	008_username_onboarding_infrastructure.sql	in range cited by 008_username_onboarding_infrastructure.sql, 009_username_onboarding_gate_wiring.sql; mechanical classification, not yet reviewed
-20260805175623	add_username_check_to_publish_draft_sequence	consolidated-by	008_username_onboarding_infrastructure.sql	in range cited by 008_username_onboarding_infrastructure.sql, 009_username_onboarding_gate_wiring.sql; mechanical classification, not yet reviewed
-20260805175638	add_username_check_to_publish_draft_sequences_batch	consolidated-by	008_username_onboarding_infrastructure.sql	in range cited by 008_username_onboarding_infrastructure.sql, 009_username_onboarding_gate_wiring.sql; mechanical classification, not yet reviewed
-20260805175649	add_username_check_to_create_draft_sequence	consolidated-by	008_username_onboarding_infrastructure.sql	in range cited by 008_username_onboarding_infrastructure.sql, 009_username_onboarding_gate_wiring.sql; mechanical classification, not yet reviewed
-20260805175700	add_username_check_to_create_sequence_with_version	consolidated-by	008_username_onboarding_infrastructure.sql	in range cited by 008_username_onboarding_infrastructure.sql, 009_username_onboarding_gate_wiring.sql; mechanical classification, not yet reviewed
-20260805180327	add_username_format_constraint_not_valid	consolidated-by	008_username_onboarding_infrastructure.sql	in range cited by 008_username_onboarding_infrastructure.sql, 009_username_onboarding_gate_wiring.sql; mechanical classification, not yet reviewed
-20260805180657	add_gates_to_publish_sequence_version	consolidated-by	008_username_onboarding_infrastructure.sql	in range cited by 008_username_onboarding_infrastructure.sql, 009_username_onboarding_gate_wiring.sql; mechanical classification, not yet reviewed
-20260805180745	add_username_gate_to_update_functions	consolidated-by	008_username_onboarding_infrastructure.sql	in range cited by 008_username_onboarding_infrastructure.sql, 009_username_onboarding_gate_wiring.sql; mechanical classification, not yet reviewed
-20260805181416	add_onboarding_complete_check	tracked	008_username_onboarding_infrastructure.sql	version cited by 008_username_onboarding_infrastructure.sql; in range cited by 008_username_onboarding_infrastructure.sql, 009_username_onboarding_gate_wiring.sql; mechanical classification, not yet reviewed
-20260805181427	swap_gates_to_full_onboarding_check	consolidated-by	009_username_onboarding_gate_wiring.sql	in range cited by 009_username_onboarding_gate_wiring.sql; mechanical classification, not yet reviewed
-20260805181547	swap_all_rpc_functions_to_onboarding_check	tracked	009_username_onboarding_gate_wiring.sql	version cited by 009_username_onboarding_gate_wiring.sql; in range cited by 009_username_onboarding_gate_wiring.sql; mechanical classification, not yet reviewed
-20260805201543	pin_search_path_on_security_definer_functions	missing-file		mechanical classification, not yet reviewed
-20260807010252	012_comments_discord_bridge	tracked	012_comments_discord_bridge.sql	mechanical classification, not yet reviewed
-20260807010743	013_discord_identity_lookup_functions	tracked	013_discord_identity_lookup_functions.sql	mechanical classification, not yet reviewed
-20260808152958	014_relay_failures	number-collision	014_restrict_onboarding_check_functions.sql	number held by 014_restrict_onboarding_check_functions.sql; mechanical classification, not yet reviewed
-20260808194555	016_publish_reslug	tracked	016_publish_reslug.sql	name mentioned by 019_wow_build_and_export_backfill.sql, 028_collection_sequence_versioning.sql, 042_publish_reslug_retry_on_collision.sql; mechanical classification, not yet reviewed
-20260809172029	fix_publish_draft_sequence_search_path	missing-file		mechanical classification, not yet reviewed
-20260809173508	add_indexes_for_hot_query_paths	missing-file		mechanical classification, not yet reviewed
-20260810204128	018_discord_bridge_opt_out	number-collision	018_notify_on_reply.sql	number held by 018_notify_on_reply.sql; mechanical classification, not yet reviewed
-20260811223846	019_save_count_trigger_and_backfill	number-collision	019_wow_build_and_export_backfill.sql	number held by 019_wow_build_and_export_backfill.sql; mechanical classification, not yet reviewed
-20260812002336	019_wow_build_and_export_backfill	tracked	019_wow_build_and_export_backfill.sql	name mentioned by 042_publish_reslug_retry_on_collision.sql, 043_fix_publish_sequence_version_collection_type.sql; mechanical classification, not yet reviewed
-20260819173004	add_ownership_check_to_check_post_rate_limit	missing-file		mechanical classification, not yet reviewed
-20260828225348	023_check_post_rate_limit_repo_sync	tracked	023_check_post_rate_limit_repo_sync.sql	mechanical classification, not yet reviewed
-20260828230326	024_view_copy_count_daily_ip_cap	tracked	024_view_copy_count_daily_ip_cap.sql	name mentioned by 030_creator_dashboard.sql; mechanical classification, not yet reviewed
-20260901161619	025_actions_tree_and_version_sync	tracked	025_actions_tree_and_version_sync.sql	name mentioned by 003_recover_objects_no_migration_creates.sql; mechanical classification, not yet reviewed
-20260909174900	027_fix_check_post_rate_limit_column_name	tracked	027_fix_check_post_rate_limit_column_name.sql	mechanical classification, not yet reviewed
-20260911000418	028_collection_sequence_versioning	tracked	028_collection_sequence_versioning.sql	name mentioned by 043_fix_publish_sequence_version_collection_type.sql; mechanical classification, not yet reviewed
-20260914201941	029_private_sequence_status	tracked	029_private_sequence_status.sql	mechanical classification, not yet reviewed
-20260914221211	030_creator_dashboard	tracked	030_creator_dashboard.sql	name mentioned by 040_tighten_leftover_grants_and_view_daily_rls.sql; mechanical classification, not yet reviewed
-20260917184101	031_column_grants_and_trusted_client_ip	tracked	031_column_grants_and_trusted_client_ip.sql	mechanical classification, not yet reviewed
-20260917185254	031_insert_grants_and_corrections	number-collision	031_column_grants_and_trusted_client_ip.sql	number held by 031_column_grants_and_trusted_client_ip.sql; mechanical classification, not yet reviewed
-20260917213326	032_profiles_column_grants	tracked	032_profiles_column_grants.sql	name mentioned by 040_tighten_leftover_grants_and_view_daily_rls.sql; mechanical classification, not yet reviewed
-20260917213832	033_published_sequences_require_a_spec	tracked	033_published_sequences_require_a_spec.sql	mechanical classification, not yet reviewed
-20260917214019	035_home_stats_aggregates	tracked	035_home_stats_aggregates.sql	mechanical classification, not yet reviewed
-20260917214158	036_profile_aliases	tracked	036_profile_aliases.sql	mechanical classification, not yet reviewed
-20260917214451	037_counter_integrity_and_comment_rate_limit	tracked	037_counter_integrity_and_comment_rate_limit.sql	mechanical classification, not yet reviewed
--	010_security_definer_ownership_checks.sql	no-ledger-row	010_security_definer_ownership_checks.sql	The 2026-10-17 export of supabase_migrations.schema_migrations has no row naming or citing this file, and its latest version is 20260917214451 (037), so it was applied without a ledger row, most likely through the SQL editor which records nothing, or has not been applied. Whether its effect is live in production was not checked when this row was written.
+20260828225348	023_check_post_rate_limit_repo_sync	tracked	023_check_post_rate_limit_repo_sync.sql	Push of the file nine days after the direct application it records.
+20260828230326	024_view_copy_count_daily_ip_cap	tracked	024_view_copy_count_daily_ip_cap.sql	MCP run under the file's own name; the file is its record.
+20260901161257	025_actions_tree_column	number-collision	003_recover_objects_no_migration_creates.sql	Confirmed by the export: applied four minutes before 025_actions_tree_and_version_sync, whose header (025:25-26) cites it as the file that added the actions columns. No such file exists; 003 part 1 restores its two ALTER TABLE statements.
+20260901161619	025_actions_tree_and_version_sync	tracked	025_actions_tree_and_version_sync.sql	MCP run under the file's own name; the file is its record.
+20260909174825	026_search_path_hardening_and_rate_limit_ownership	tracked	026_search_path_hardening_and_rate_limit_ownership.sql	The recorded run of 026, the second attempt at 22 arguments (026:21-31); 026 was corrected on 2026-09-19 to that text.
+20260909174900	027_fix_check_post_rate_limit_column_name	tracked	027_fix_check_post_rate_limit_column_name.sql	Applied 35 seconds after 026, fixing the column name 026's body got wrong (031:23-26).
+20260911000418	028_collection_sequence_versioning	tracked	028_collection_sequence_versioning.sql	MCP run under the file's own name; the file is its record.
+20260914201941	029_private_sequence_status	tracked	029_private_sequence_status.sql	MCP run under the file's own name; the file is its record.
+20260914221211	030_creator_dashboard	tracked	030_creator_dashboard.sql	MCP run under the file's own name; the file is its record.
+20260917184101	031_column_grants_and_trusted_client_ip	tracked	031_column_grants_and_trusted_client_ip.sql	First of two runs; see 031_insert_grants_and_corrections.
+20260917185254	031_insert_grants_and_corrections	tracked	031_column_grants_and_trusted_client_ip.sql	Second run, eleven minutes after the first. 031:448-452 says an earlier draft re-granted only UPDATE and the committed file re-grants INSERT per column as well, so the committed 031 is the record of both runs. Confirm from the statements when they are exported.
+20260917213326	032_profiles_column_grants	tracked	032_profiles_column_grants.sql	MCP run under the file's own name; the file is its record.
+20260917213832	033_published_sequences_require_a_spec	tracked	033_published_sequences_require_a_spec.sql	MCP run under the file's own name; the file is its record.
+20260917214019	035_home_stats_aggregates	tracked	035_home_stats_aggregates.sql	MCP run under the file's own name; the file is its record.
+20260917214158	036_profile_aliases	tracked	036_profile_aliases.sql	MCP run under the file's own name; the file is its record.
+20260917214451	037_counter_integrity_and_comment_rate_limit	tracked	037_counter_integrity_and_comment_rate_limit.sql	The last row of the ledger as of the 2026-10-17 export. Everything from 038 on was applied by hand and has no row; see the file rows.
+-	005_update_sequence_with_version_ownership_check.sql	no-ledger-row	005_update_sequence_with_version_ownership_check.sql	005:14-15 says applied live on 2026-07-22 and captured afterwards, before the first MCP or CLI use on 2026-08-05. The 2026-10-17 export has no row naming or citing it.
+-	006_sequence_versions_rls_status_check.sql	no-ledger-row	006_sequence_versions_rls_status_check.sql	006:25-28 says applied live on 2026-07-25 and verified via pg_policies, before the first MCP or CLI use. The 2026-10-17 export has no row naming or citing it.
+-	007_posting_verification_gate.sql	no-ledger-row	007_posting_verification_gate.sql	007:11-14 says run through the SQL editor on 2026-07-31, which records nothing, and captured as a file afterwards. The 2026-10-17 export has no row naming or citing it.
+-	010_security_definer_ownership_checks.sql	no-ledger-row	010_security_definer_ownership_checks.sql	010:3-15 says it captures fixes from the 2026-07-21 live pass that were applied before the ledger was in use. The 2026-10-17 export has no row naming or citing it.
 -	011_view_count_anon_rate_limit.sql	no-ledger-row	011_view_count_anon_rate_limit.sql	The 2026-10-17 export of supabase_migrations.schema_migrations has no row naming or citing this file, and its latest version is 20260917214451 (037), so it was applied without a ledger row, most likely through the SQL editor which records nothing, or has not been applied. Whether its effect is live in production was not checked when this row was written.
+-	014_restrict_onboarding_check_functions.sql	no-ledger-row	014_restrict_onboarding_check_functions.sql	The 2026-10-17 export has no row naming or citing it; the ledger's 014 is 014_relay_failures, which is 015 here. 014:11-20 describes a first version applied live that broke the write paths and was corrected live the same day, so this file was applied by hand, twice.
+-	021_version_row_macro_parity.sql	no-ledger-row	021_version_row_macro_parity.sql	Never applied: 025:46-48 confirmed on 2026-09-01 that schema_migrations has no record of it. Its fix shipped inside 025 part 2; on a rebuild 021 applies cleanly and 025 supersedes it.
 -	034_profiles_select_grants.sql	no-ledger-row	034_profiles_select_grants.sql	The 2026-10-17 export of supabase_migrations.schema_migrations has no row naming or citing this file, and its latest version is 20260917214451 (037), so it was applied without a ledger row, most likely through the SQL editor which records nothing, or has not been applied. Whether its effect is live in production was not checked when this row was written.
 -	039_drop_sequences_is_published.sql	no-ledger-row	039_drop_sequences_is_published.sql	The 2026-10-17 export of supabase_migrations.schema_migrations has no row naming or citing this file, and its latest version is 20260917214451 (037), so it was applied without a ledger row, most likely through the SQL editor which records nothing, or has not been applied. Whether its effect is live in production was not checked when this row was written.
 -	040_tighten_leftover_grants_and_view_daily_rls.sql	no-ledger-row	040_tighten_leftover_grants_and_view_daily_rls.sql	The 2026-10-17 export of supabase_migrations.schema_migrations has no row naming or citing this file, and its latest version is 20260917214451 (037), so it was applied without a ledger row, most likely through the SQL editor which records nothing, or has not been applied. Whether its effect is live in production was not checked when this row was written.
 -	042_publish_reslug_retry_on_collision.sql	no-ledger-row	042_publish_reslug_retry_on_collision.sql	The 2026-10-17 export of supabase_migrations.schema_migrations has no row naming or citing this file, and its latest version is 20260917214451 (037), so it was applied without a ledger row, most likely through the SQL editor which records nothing, or has not been applied. Whether its effect is live in production was not checked when this row was written.
+-	043_fix_publish_sequence_version_collection_type.sql	no-ledger-row	043_fix_publish_sequence_version_collection_type.sql	Run in the SQL editor on 2026-09-29 (043:56-58), which records nothing; the live body was verified identical to the file by hashing prosrc.
 -	044_version_label_follows_author_scheme_and_bump_updated_at.sql	no-ledger-row	044_version_label_follows_author_scheme_and_bump_updated_at.sql	The 2026-10-17 export of supabase_migrations.schema_migrations has no row naming or citing this file, and its latest version is 20260917214451 (037), so it was applied without a ledger row, most likely through the SQL editor which records nothing, or has not been applied. Whether its effect is live in production was not checked when this row was written.
--	047_allow_own_placeholder_username_on_insert.sql	no-ledger-row	047_allow_own_placeholder_username_on_insert.sql	The 2026-10-17 export of supabase_migrations.schema_migrations has no row naming or citing this file, and its latest version is 20260917214451 (037), so it was applied without a ledger row, most likely through the SQL editor which records nothing, or has not been applied. Whether its effect is live in production was not checked when this row was written.
 -	045_revoke_anon_write_grants_and_lock_throttle_tables.sql	no-ledger-row	045_revoke_anon_write_grants_and_lock_throttle_tables.sql	The 2026-10-17 export of supabase_migrations.schema_migrations has no row naming or citing this file, and its latest version is 20260917214451 (037), so it was applied without a ledger row, most likely through the SQL editor which records nothing, or has not been applied. 046's header says 045 was applied before it, so it is live.
 -	046_revoke_truncate_anon_writes_and_terms_column.sql	no-ledger-row	046_revoke_truncate_anon_writes_and_terms_column.sql	The 2026-10-17 export of supabase_migrations.schema_migrations has no row naming or citing this file, and its latest version is 20260917214451 (037), so it was applied without a ledger row, most likely through the SQL editor which records nothing, or has not been applied. Its own header says it was written after a live read of production grants following 045.
+-	047_allow_own_placeholder_username_on_insert.sql	no-ledger-row	047_allow_own_placeholder_username_on_insert.sql	The 2026-10-17 export of supabase_migrations.schema_migrations has no row naming or citing this file, and its latest version is 20260917214451 (037), so it was applied without a ledger row, most likely through the SQL editor which records nothing, or has not been applied. Whether its effect is live in production was not checked when this row was written.
 -	048_revoke_execute_on_trigger_only_functions.sql	no-ledger-row	048_revoke_execute_on_trigger_only_functions.sql	Run in the Supabase SQL editor on 2026-10-17 by hand after PR 98 merged, which records nothing in the ledger. Verified live the same day by reading pg_proc: anon, authenticated and PUBLIC hold no EXECUTE on the nine functions, service_role does, and each still has its one active trigger. The advisor findings fell from 41 to 23.
+-	049_recover_triggers_no_migration_creates.sql	no-ledger-row	049_recover_triggers_no_migration_creates.sql	Added 2026-10-20 to recover the four triggers PR #98 found in production with no file (on_comment_notify, on_rating_notify, trg_comment_count, on_rating_change). A no-op on production, where all four exist, and not yet applied there. If it is applied through the CLI or MCP server, import records the row and this line is replaced by a tracked one.
