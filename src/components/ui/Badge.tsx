@@ -13,23 +13,16 @@ type BadgeProps = {
  * the site so far has been plain colored text, never a contained shape.
  */
 export default function Badge({ children, color = 'var(--accent)', style, className }: BadgeProps) {
+  // The shape lives in .ui-badge (globals.css); only what depends on `color` is inline. The
+  // homepage renders this on every ticker card and leaderboard row, and a server component's
+  // style object is written into the response twice, once as HTML and once as Flight (#107).
   return (
     <span
-      className={className}
+      className={className ? `ui-badge ${className}` : 'ui-badge'}
       style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        fontSize: 12,
-        fontWeight: 700,
-        letterSpacing: '0.06em',
-        textTransform: 'uppercase',
         color,
         background: `${color}1a`,
         border: `0.5px solid ${color}40`,
-        borderRadius: 4,
-        padding: '3px 6px',
-        lineHeight: 1,
-        whiteSpace: 'nowrap',
         ...style,
       }}
     >

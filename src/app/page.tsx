@@ -36,6 +36,13 @@ function withLabelCards<T>(items: T[], every: number): (T | typeof TICKER_LABEL)
   return out
 }
 
+// The eye icon sits on every ticker card and every leaderboard row, 31 times on one render.
+// Built once here, it is one element object reused everywhere, and Flight writes an element
+// it has already written as a back-reference, so the payload carries one <svg> per size
+// instead of 31 (#107).
+const EYE_TICKER = <Eye size={11} />
+const EYE_ROW = <Eye size={12} />
+
 export default async function HomePage() {
   const [stats, trending, currentPatchTicker, topCreators] = await Promise.all([
     fetchHomeStats(),
@@ -51,145 +58,76 @@ export default async function HomePage() {
   const showForeverRow = foreverRow.length > 0
   const recent = showForeverRow ? foreverRow : await fetchRecentSequences(14, currentPatchTicker.patch)
 
+  // Each ticker's cards are built once, and that one array is rendered into both batches of
+  // the seamless loop. The HTML still carries both copies, which the loop's -50% scroll
+  // needs, but Flight writes the array once and the second batch as a back-reference (#107).
+  const currentPatchCards = withLabelCards(currentPatchTicker.sequences, 8).map((item, i) => {
+    if (item === TICKER_LABEL) {
+      return (
+        <div key={`cp-label-${i}`} className="home-cp-label">
+          <span className="home-cp-label-dot" />
+          <span className="home-cp-label-text">
+            Current Patch {currentPatchTicker.patch} Sequences
+          </span>
+        </div>
+      )
+    }
+    const seq = item
+    const classColor = getClassColor(seq.class_id)
+    return (
+      <Link
+        key={`cp-${seq.id}-${i}`}
+        href={`/sequences/${seq.slug}`}
+        className="home-cp-card"
+        style={{ borderLeft: `3px solid ${classColor}` }}
+        prefetch={false}>
+        <span className="home-cp-title">
+          {seq.title}
+        </span>
+        <span className="home-cp-meta">
+          <span className="home-cp-who">
+            <Badge color={classColor} style={{ color: 'var(--text-primary)' }}>{seq.class_name}</Badge>
+            <span className="home-author">
+              {seq.author?.display_name || seq.author?.username || 'Unknown'}
+            </span>
+          </span>
+          <span className="home-cp-views">
+            {EYE_TICKER}
+            <span className="home-cp-count">{seq.view_count?.toLocaleString() ?? 0}</span>
+          </span>
+        </span>
+      </Link>
+    )
+  })
+
+  const recentCards = withLabelCards(recent, 10).map((item, i) => {
+    if (item === TICKER_LABEL) {
+      return (
+        <div key={`pp-label-${i}`} className="home-pp-label">
+          <span className="home-pp-label-dot" />
+          <span className="home-pp-label-text">
+            {showForeverRow ? 'WoW: Forever Sequences' : 'Previous Patch Sequences'}
+          </span>
+        </div>
+      )
+    }
+    const seq = item
+    return (
+      <Link
+        key={`pp-${seq.id}-${i}`}
+        href={`/sequences/${seq.slug}`}
+        className="home-pp-card"
+        prefetch={false}>
+        <span className="home-pp-dot" style={{ background: getClassColor(seq.class_id) }} />
+        <span className="home-pp-title">{seq.title}</span>
+        <span className="home-pp-meta">· {seq.class_name}</span>
+        <span className="home-pp-meta">· {formatDistanceToNow(new Date(seq.created_at), { addSuffix: true })}</span>
+      </Link>
+    )
+  })
+
   return (
     <div>
-      <style>{`
-        .info-trigger { position: relative; display: inline-block; }
-        .info-trigger .info-tooltip {
-          position: absolute;
-          top: calc(100% + 10px);
-          width: 320px;
-          max-width: 82vw;
-          background: var(--bg-primary);
-          border: 0.5px solid var(--border-strong);
-          border-radius: var(--radius-lg);
-          box-shadow: var(--shadow-md);
-          padding: 16px;
-          opacity: 0;
-          visibility: hidden;
-          pointer-events: none;
-          transform: translateY(-4px);
-          transition: opacity 0.15s, transform 0.15s;
-          z-index: 60;
-          text-align: left;
-        }
-        /* Invisible bridge over the 10px gap above the tooltip. Without this, that gap is a
-           dead zone: it belongs to neither the pill nor the tooltip, so a mouse crossing it
-           drops :hover for a frame, pointer-events snaps back to none, and the tooltip closes
-           before the cursor ever reaches the link inside it. This keeps the hover area
-           unbroken from the pill straight through to the card. */
-        .info-trigger .info-tooltip::before {
-          content: '';
-          position: absolute;
-          top: -10px;
-          left: 0;
-          right: 0;
-          height: 10px;
-        }
-        .info-trigger:hover .info-tooltip,
-        .info-trigger:focus-within .info-tooltip {
-          opacity: 1;
-          visibility: visible;
-          pointer-events: auto;
-          transform: translateY(0);
-        }
-        .info-trigger-left .info-tooltip { left: 0; }
-        .info-trigger-right .info-tooltip { right: 0; }
-        .info-trigger-center .info-tooltip { left: 50%; transform: translateX(-50%) translateY(-4px); }
-        .info-trigger-center:hover .info-tooltip,
-        .info-trigger-center:focus-within .info-tooltip { transform: translateX(-50%) translateY(0); }
-        .info-trigger-link:hover { border-color: var(--accent) !important; background: var(--bg-secondary) !important; }
-        .explore-grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.3fr) minmax(0, 1fr); gap: 28px; }
-        .explore-grid > * { min-width: 0; }
-        .browse-chip-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-        /* Three columns get cramped before the general 640px mobile stack kicks in --
-           collapse a step earlier than the rest of the hero/utility-bar rules below so
-           Top Creators, Top sequences and Browse Sequences each keep readable width
-           instead of all three squeezing side by side on a tablet-width screen. */
-        @media (max-width: 900px) {
-          .explore-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 36px !important; }
-          .browse-divider { border-left: none !important; padding-left: 0 !important; border-top: 0.5px solid var(--border); padding-top: 32px !important; }
-        }
-
-        /* Spec tooltip — hover a class chip, see its specs, click one straight to that
-           filtered browse view. Flies out to the side of the chip (vertically centered)
-           rather than dropping below it, so it never covers the next row of chips. Left-
-           column chips open leftward, right-column chips open rightward — outward, away
-           from the other column, instead of the two columns' tooltips landing on each other. */
-        .spec-trigger { position: relative; }
-        .spec-trigger .spec-tooltip {
-          position: absolute;
-          top: 50%;
-          transform: translateY(-50%);
-          min-width: 170px;
-          max-width: 60vw;
-          background: var(--bg-primary);
-          border: 0.5px solid var(--border-strong);
-          border-radius: var(--radius-md);
-          box-shadow: var(--shadow-md);
-          padding: 6px;
-          opacity: 0;
-          visibility: hidden;
-          pointer-events: none;
-          transition: opacity 0.12s;
-          z-index: 70;
-        }
-        /* Opens outward, away from the other column — left-column chips fly out to the left
-           (toward the leaderboard side), right-column chips fly out to the right (toward the
-           page edge). Previous version had these backwards, opening inward onto each other. */
-        /* Both columns open to the LEFT. The right-hand column used to open rightward, which on
-           a 1280px screen put the flyout past the edge of the window (it was cut off mid-word
-           and gave the page a sideways scrollbar). Leftward always has room: the leaderboards
-           sit on that side. */
-        .spec-trigger-l .spec-tooltip,
-        .spec-trigger-r .spec-tooltip { right: calc(100% - 20px); }
-        /* Single-column layout (900px and under) has no room beside the chips, so the flyout
-           drops below the chip instead, left-aligned for the left column, right-aligned for the
-           right column, so it stays inside the screen either way. */
-        @media (max-width: 900px) {
-          .spec-trigger .spec-tooltip { top: calc(100% + 4px); transform: none; }
-          .spec-trigger-l .spec-tooltip { left: 0; right: auto; }
-          .spec-trigger-r .spec-tooltip { right: 0; left: auto; }
-        }
-        .spec-trigger:hover .spec-tooltip,
-        .spec-trigger:focus-within .spec-tooltip {
-          opacity: 1;
-          visibility: visible;
-          pointer-events: auto;
-        }
-        .spec-link {
-          display: block;
-          padding: 6px 8px;
-          border-radius: var(--radius-sm);
-          font-size: var(--text-sm);
-          color: var(--text-secondary);
-          text-decoration: none;
-          white-space: nowrap;
-        }
-        .spec-link:hover { background: var(--bg-tertiary); color: var(--text-primary); }
-        /* Touch screens and phones have no hover, and the hidden flyout is absolutely positioned
-           past the chip, which is what gave the homepage a sideways scroll on a phone. Tapping a
-           chip goes straight to that class, so the flyout and its hint are removed there. */
-        @media (hover: none), (max-width: 640px) {
-          .spec-tooltip, .spec-hint { display: none !important; }
-        }
-
-        @media (max-width: 640px) {
-          .hero-heading { font-size: 32px !important; letter-spacing: -0.02em !important; }
-          .hero-stats { justify-content: center !important; }
-          /* Centre the four numbers under the centred hero instead of leaving a lopsided 2x2 block. */
-          .hero-stats > div { justify-content: center !important; gap: 24px 36px !important; }
-          .hero-stats > div > div { text-align: center !important; min-width: 120px; }
-          .hero-stats > div > div > div:first-child { justify-content: center !important; }
-          .class-chip-row { justify-content: center !important; }
-          .utility-bar { flex-direction: column; align-items: center; gap: 14px; }
-          .info-tooltip { left: 50% !important; right: auto !important; transform: translateX(-50%) translateY(-4px) !important; width: 280px; }
-          .info-trigger:hover .info-tooltip, .info-trigger:focus-within .info-tooltip { transform: translateX(-50%) translateY(0) !important; }
-          .explore-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 40px !important; }
-          .browse-divider { border-left: none !important; padding-left: 0 !important; border-top: 0.5px solid var(--border); padding-top: 32px !important; }
-        }
-      `}</style>
-
       {/* Hero — kept deliberately short: one screen, no scroll needed to see the CTA and the
           proof numbers together. Reordered from a nav-like utility bar sitting above an
           undersized mark to a conventional mark → headline → pitch → actions → proof stack
@@ -461,62 +399,9 @@ export default async function HomePage() {
           {currentPatchTicker.sequences.length > 0 && (
             <div style={{ overflow: 'hidden', borderBottom: recent.length > 0 ? '0.5px solid var(--border)' : 'none' }}>
               <div style={{ display: 'flex', width: 'max-content', padding: '10px 0' }} className="marquee-track">
-                {[withLabelCards(currentPatchTicker.sequences, 8), withLabelCards(currentPatchTicker.sequences, 8)].map((batch, batchIdx) => (
-                  <div key={batchIdx} style={{ display: 'flex', flexShrink: 0 }}>
-                    {batch.map((item, i) => {
-                      if (item === TICKER_LABEL) {
-                        return (
-                          <div
-                            key={`cp-label-${batchIdx}-${i}`}
-                            style={{
-                              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
-                              padding: '17px 14px', margin: '0 6px', width: 230, flexShrink: 0,
-                              background: 'var(--accent-subtle)', border: '0.5px solid rgba(29,158,117,0.35)',
-                              borderRadius: 'var(--radius-sm)',
-                            }}
-                          >
-                            <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
-                            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--accent-text)', whiteSpace: 'nowrap' }}>
-                              Current Patch {currentPatchTicker.patch} Sequences
-                            </span>
-                          </div>
-                        )
-                      }
-                      const seq = item
-                      const classColor = getClassColor(seq.class_id)
-                      return (
-                        <Link
-                          key={`cp-${batchIdx}-${seq.id}-${i}`}
-                          href={`/sequences/${seq.slug}`}
-                          style={{
-                            display: 'flex', flexDirection: 'column', gap: 5,
-                            padding: '8px 14px', margin: '0 6px', width: 230, flexShrink: 0,
-                            background: 'var(--bg-primary)', border: '0.5px solid var(--border-strong)',
-                            borderLeft: `3px solid ${classColor}`, borderRadius: 'var(--radius-sm)',
-                            textDecoration: 'none',
-                          }}
-                         prefetch={false}>
-                          <span style={{
-                            fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)',
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          }}>
-                            {seq.title}
-                          </span>
-                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                              <Badge color={classColor} style={{ color: 'var(--text-primary)' }}>{seq.class_name}</Badge>
-                              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {seq.author?.display_name || seq.author?.username || 'Unknown'}
-                              </span>
-                            </span>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0, color: 'var(--text-muted)' }}>
-                              <Eye size={11} />
-                              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600 }}>{seq.view_count?.toLocaleString() ?? 0}</span>
-                            </span>
-                          </span>
-                        </Link>
-                      )
-                    })}
+                {[0, 1].map(batchIdx => (
+                  <div key={batchIdx} className="home-tick-batch">
+                    {currentPatchCards}
                   </div>
                 ))}
               </div>
@@ -526,47 +411,9 @@ export default async function HomePage() {
           {recent.length > 0 && (
             <div style={{ overflow: 'hidden' }}>
               <div style={{ display: 'flex', width: 'max-content', padding: '9px 0' }} className="marquee-track-reverse">
-                {[withLabelCards(recent, 10), withLabelCards(recent, 10)].map((batch, batchIdx) => (
-                  <div key={batchIdx} style={{ display: 'flex', flexShrink: 0 }}>
-                    {batch.map((item, i) => {
-                      if (item === TICKER_LABEL) {
-                        return (
-                          <div
-                            key={`pp-label-${batchIdx}-${i}`}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 7,
-                              padding: '8px 14px', margin: '0 6px', flexShrink: 0,
-                              background: 'rgba(217,164,65,0.14)', border: '0.5px solid rgba(217,164,65,0.5)',
-                              borderRadius: 'var(--radius-sm)',
-                            }}
-                          >
-                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#D9A441', flexShrink: 0 }} />
-                            <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#E8B85C', whiteSpace: 'nowrap' }}>
-                              {showForeverRow ? 'WoW: Forever Sequences' : 'Previous Patch Sequences'}
-                            </span>
-                          </div>
-                        )
-                      }
-                      const seq = item
-                      return (
-                        <Link
-                          key={`pp-${batchIdx}-${seq.id}-${i}`}
-                          href={`/sequences/${seq.slug}`}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 8,
-                            padding: '8px 14px', margin: '0 6px', flexShrink: 0,
-                            background: 'var(--bg-primary)', border: '0.5px solid var(--border-strong)',
-                            borderRadius: 'var(--radius-sm)',
-                            textDecoration: 'none', whiteSpace: 'nowrap',
-                          }}
-                         prefetch={false}>
-                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: getClassColor(seq.class_id), flexShrink: 0 }} />
-                          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', fontWeight: 500 }}>{seq.title}</span>
-                          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {seq.class_name}</span>
-                          <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>· {formatDistanceToNow(new Date(seq.created_at), { addSuffix: true })}</span>
-                        </Link>
-                      )
-                    })}
+                {[0, 1].map(batchIdx => (
+                  <div key={batchIdx} className="home-tick-batch">
+                    {recentCards}
                   </div>
                 ))}
               </div>
@@ -605,42 +452,31 @@ export default async function HomePage() {
                   const displayColor = creator.avatar_color ?? '#1D9E75'
                   const initial = creator.username[0]?.toUpperCase() ?? '?'
                   return (
-                    <Link key={creator.id} href={`/user/${creator.username}`} style={{ textDecoration: 'none' }} prefetch={false}>
-                      <Card padding="sm" style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-                        <span style={{
-                          width: 18, fontSize: 'var(--text-sm)', fontWeight: 700,
-                          color: i < 3 ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0, textAlign: 'center',
-                        }}>
+                    <Link key={creator.id} href={`/user/${creator.username}`} className="home-lb-link" prefetch={false}>
+                      <Card padding="sm" className="home-creator-row">
+                        <span className={i < 3 ? 'home-lb-rank home-lb-rank-top' : 'home-lb-rank'}>
                           {i + 1}
                         </span>
 
-                        <div style={{
-                          width: 26, height: 26, borderRadius: '50%',
-                          background: safeAvatarUrl ? 'transparent' : displayColor,
-                          overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 12, fontWeight: 700, color: 'white', flexShrink: 0,
-                        }}>
+                        <div className="home-lb-avatar" style={{ background: safeAvatarUrl ? 'transparent' : displayColor }}>
                           {safeAvatarUrl
-                            ? <img src={safeAvatarUrl} alt={creator.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ? <img src={safeAvatarUrl} alt={creator.username} className="home-lb-avatar-img" />
                             : initial
                           }
                         </div>
 
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{
-                            fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)',
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                          }}>
+                        <div className="home-lb-body">
+                          <div className="home-lb-name">
                             {creator.display_name || creator.username}
                           </div>
-                          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                          <div className="home-lb-sub">
                             {creator.sequenceCount} sequence{creator.sequenceCount !== 1 ? 's' : ''}
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, color: 'var(--text-muted)' }}>
-                          <Eye size={12} />
-                          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                        <div className="home-lb-views">
+                          {EYE_ROW}
+                          <span className="home-lb-count">
                             {creator.totalViews.toLocaleString()}
                           </span>
                         </div>
@@ -673,33 +509,27 @@ export default async function HomePage() {
                 {trending.map((seq, i) => {
                   const classColor = getClassColor(seq.class_id)
                   return (
-                    <Link key={seq.id} href={`/sequences/${seq.slug}`} style={{ textDecoration: 'none' }} prefetch={false}>
-                      <Card accentColor={classColor} padding="sm" style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
-                        <span style={{
-                          width: 18, fontSize: 'var(--text-sm)', fontWeight: 700,
-                          color: i < 3 ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0, textAlign: 'center',
-                        }}>
+                    <Link key={seq.id} href={`/sequences/${seq.slug}`} className="home-lb-link" prefetch={false}>
+                      <Card accentColor={classColor} padding="sm" className="home-seq-row">
+                        <span className={i < 3 ? 'home-lb-rank home-lb-rank-top' : 'home-lb-rank'}>
                           {i + 1}
                         </span>
 
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{
-                            fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)',
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3,
-                          }}>
+                        <div className="home-lb-body">
+                          <div className="home-lb-title">
                             {seq.title}
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div className="home-lb-meta">
                             <Badge color={classColor} style={{ color: 'var(--text-primary)' }}>{seq.class_name}</Badge>
-                            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <span className="home-author">
                               {seq.author?.display_name || seq.author?.username || 'Unknown'}
                             </span>
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, color: 'var(--text-muted)' }}>
-                          <Eye size={12} />
-                          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                        <div className="home-lb-views">
+                          {EYE_ROW}
+                          <span className="home-lb-count">
                             {seq.view_count?.toLocaleString() ?? 0}
                           </span>
                         </div>
@@ -730,21 +560,11 @@ export default async function HomePage() {
                 <div key={cls.id} className={`spec-trigger ${i % 2 === 0 ? 'spec-trigger-l' : 'spec-trigger-r'}`}>
                   <Link
                     href={`/browse/${cls.slug}`}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 7,
-                      padding: '7px 12px',
-                      borderRadius: 99,
-                      textDecoration: 'none',
-                      background: `${cls.color}14`,
-                      border: `0.5px solid ${cls.color}45`,
-                      transition: 'background-color 0.15s, border-color 0.15s',
-                      overflow: 'hidden',
-                    }}
+                    className="home-class-chip"
+                    style={{ background: `${cls.color}14`, border: `0.5px solid ${cls.color}45` }}
                    prefetch={false}>
-                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: cls.color, flexShrink: 0 }} />
-                    <span style={{ fontSize: 'var(--text-sm)', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cls.name}</span>
+                    <span className="home-class-dot" style={{ background: cls.color }} />
+                    <span className="home-class-name">{cls.name}</span>
                   </Link>
                   <div className="spec-tooltip">
                     {cls.specs.map(spec => (
@@ -765,19 +585,7 @@ export default async function HomePage() {
                 <Link
                   key={ct.slug}
                   href={`/browse/${ct.slug}`}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '7px 12px',
-                    borderRadius: 99,
-                    textDecoration: 'none',
-                    background: 'var(--bg-tertiary)',
-                    border: '0.5px solid var(--border-strong)',
-                    color: 'var(--text-primary)',
-                    fontSize: 'var(--text-sm)',
-                    fontWeight: 500,
-                  }}
+                  className="home-content-chip"
                  prefetch={false}>
                   {ct.label}
                 </Link>

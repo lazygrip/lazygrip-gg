@@ -40,7 +40,15 @@ export default function Header() {
   // which the two can disagree.
   const [menuOpenFor, setMenuOpenFor] = useState<string | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const supabase = createClient()
+  // Browser only. This component also renders on the server, for every route, where the client
+  // was built and never used (#107). In the browser it is still built here, during the first
+  // render, and the timing matters: auth-js tells every subscriber it already has when it finishes
+  // recovering a stored session (SIGNED_IN), on top of the INITIAL_SESSION each subscriber gets.
+  // Built here, that happens before the effect below and AnnouncementBar's subscribe. Built inside
+  // an effect, the subscriptions came first, and a signed-in visitor's profile, unread and
+  // onboarding queries each ran once more per page load: 11 requests instead of 8, measured on a
+  // production build on 2026-10-21.
+  const supabase = typeof window === 'undefined' ? null : createClient()
   const { theme, toggle } = useTheme()
   const pathname = usePathname()
   const mobileMenuOpen = menuOpenFor === pathname
@@ -50,6 +58,7 @@ export default function Header() {
   }
 
   async function loadProfile(userId: string) {
+    if (!supabase) return
     const { data } = await supabase
       .from('profiles')
       .select('username, avatar_url, avatar_color')
@@ -63,6 +72,7 @@ export default function Header() {
   }
 
   async function loadUnread(userId: string) {
+    if (!supabase) return
     const { count } = await supabase
       .from('notifications')
       .select('id', { count: 'exact', head: true })
@@ -97,6 +107,7 @@ export default function Header() {
   }, [signedInUserId, pathname])
 
   useEffect(() => {
+    if (!supabase) return
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user)
       if (data.user) {
@@ -133,7 +144,7 @@ export default function Header() {
   const signOut = async () => {
     setDropdownOpen(false)
     closeMobileMenu()
-    await supabase.auth.signOut()
+    await supabase?.auth.signOut()
     window.location.href = '/'
   }
 
