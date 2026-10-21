@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { Eye, MessageSquare, Bookmark, Star, AlertTriangle } from 'lucide-react'
 import { BrowseSequence } from '@/types'
-import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
+import { getClassColor, CONTENT_TYPES, getGameVersionLabel } from '@/lib/wow-data'
 import { stripHtml } from '@/lib/html-text'
 import { useState } from 'react'
 import { differenceInDays } from 'date-fns'
@@ -73,7 +73,10 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
   // Staleness: patch mismatch (or no patch_version recorded) AND not updated in the last 60 days.
   // Both conditions required — purely informational, does not affect sort/ranking.
   const daysSinceUpdate = differenceInDays(renderedAt, new Date(sequence.updated_at))
-  const patchMismatch = !!currentPatch && (sequence.patch_version == null || sequence.patch_version !== currentPatch)
+  // currentPatch is the retail patch, so it says nothing about a sequence for another client. A
+  // Forever sequence is never flagged against it.
+  const isRetail = (sequence.game_version ?? 'retail') === 'retail'
+  const patchMismatch = isRetail && !!currentPatch && (sequence.patch_version == null || sequence.patch_version !== currentPatch)
   const isStale = patchMismatch && daysSinceUpdate > STALE_DAYS_THRESHOLD
 
   const staleTooltip = isStale
@@ -154,6 +157,7 @@ export default function SequenceCard({ sequence, currentPatch }: Props) {
         <Badge color={classColor} label={sequence.class_name} />
         {sequence.spec_name && <Badge color="#5a8dee" label={sequence.spec_name} />}
         <Badge color="#1D9E75" label={contentLabel} />
+        {!isRetail && <Badge color="#c8963c" label={getGameVersionLabel(sequence.game_version)} />}
         {sequence.grip_version && <Badge color="#888" label={`GRIP ${sequence.grip_version}`} />}
         {sequence.current_version_label && <Badge color="#1D9E75" label={sequence.current_version_label} />}
         {isStale && (

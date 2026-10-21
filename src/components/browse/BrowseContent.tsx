@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { Search, SlidersHorizontal, X } from 'lucide-react'
 import SequenceCard from '@/components/sequence/SequenceCard'
-import { WOW_CLASSES, CONTENT_TYPES } from '@/lib/wow-data'
+import { WOW_CLASSES, CONTENT_TYPES, GAME_VERSIONS, isGameVersion } from '@/lib/wow-data'
 import { BrowseSequence, SequenceFilters } from '@/types'
 import { createClient } from '@/lib/supabase/client'
 import { BROWSE_PAGE_SIZE, browseFilterKey, buildBrowseQuery } from '@/lib/browse-query'
@@ -100,6 +100,7 @@ export default function BrowseContent({
     spec_id: searchParams.get('spec_id') ? Number(searchParams.get('spec_id')) : undefined,
     search: searchParams.get('search') || undefined,
     patch_version: searchParams.get('patch_version') || undefined,
+    game_version: ((v) => (isGameVersion(v) ? v : undefined))(searchParams.get('game_version')),
   }
 
   function updateUrl(updates: Record<string, string | undefined>) {
@@ -242,6 +243,13 @@ export default function BrowseContent({
     updateUrl({ patch_version: newValue })
   }
 
+  function selectGameVersion(value: string | undefined) {
+    setShowMobileFilters(false)
+    // Retail is the default and is not written to the URL, so the plain /browse address stays the
+    // retail listing and existing links keep meaning what they meant.
+    updateUrl({ game_version: value && value !== 'retail' ? value : undefined })
+  }
+
   function selectContentType(value: string | undefined) {
     setShowMobileFilters(false)
     // On a content-type hub the slug carries the filter, so changing or clearing it has to move
@@ -277,7 +285,7 @@ export default function BrowseContent({
     router.push(`/browse${query ? `?${query}` : ''}`, { scroll: false })
   }
 
-  const hasActiveFilters = filters.class_id || filters.content_type || filters.search || filters.spec_id || filters.patch_version
+  const hasActiveFilters = filters.class_id || filters.content_type || filters.search || filters.spec_id || filters.patch_version || filters.game_version
 
   const filterPanel = (
     <div>
@@ -291,6 +299,16 @@ export default function BrowseContent({
           </button>
         )}
       </div>
+      <FilterSection title="Game">
+        {GAME_VERSIONS.map(g => (
+          <FilterItem
+            key={g.value}
+            label={g.label}
+            active={(filters.game_version ?? 'retail') === g.value}
+            onClick={() => selectGameVersion(g.value)}
+          />
+        ))}
+      </FilterSection>
       <FilterSection title="Content">
         <FilterItem label="All" active={!filters.content_type} onClick={() => selectContentType(undefined)} />
         {CONTENT_TYPES.map(ct => (

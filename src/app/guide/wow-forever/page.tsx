@@ -30,7 +30,7 @@ export default function WowForeverPage() {
         title="Does GRIP-EMS work on WoW: Forever?"
         description={
           <>
-            WoW: Forever is Blizzard&apos;s expanded take on vanilla WoW, in beta since September 17, 2026, with the beta scheduled to end October 22 and the game launching November 4. This page tracks whether GRIP-EMS runs there, sourced directly from Sataana rather than guesswork, and it gets updated as the beta moves. There is no Forever sequence category on this site yet, and the reason why is below.
+            WoW: Forever is Blizzard&apos;s expanded take on vanilla WoW, in beta since September 17, 2026, with the beta scheduled to end October 22 and the game launching November 4. This page tracks whether GRIP-EMS runs there, sourced directly from Sataana rather than guesswork, and it gets updated as the beta moves. The site now has a separate Forever page and a Forever filter on Browse, but no Forever sequence has been validated yet, and the reason why is below.
           </>
         }
       />
@@ -106,7 +106,7 @@ export default function WowForeverPage() {
           The schedule, as reported by <a href="https://www.warcrafttavern.com/forever/news/world-of-warcraft-forever-roadmap-beta-launch-date-raids/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Warcraft Tavern</a> (published September 13, updated October 5): the beta runs September 17 to October 22, early name reservation for upgrade pack buyers opens October 27, the game launches November 4, and raids open December 9. Blizzard can move any of those dates.
         </p>
         <p style={{ marginBottom: 12 }}>
-          No Forever sequence category exists on LazyGrip yet, and none will until someone can confirm a sequence runs correctly end to end on Forever, past a UI reload, with no SavedVariables asterisk attached. This page gets updated the moment that happens.
+          LazyGrip keeps Forever sequences apart from retail ones, with their own page and a filter on Browse, but nothing on it counts as validated until someone can confirm a sequence runs correctly end to end on Forever, past a UI reload, with no SavedVariables asterisk attached. This page gets updated the moment that happens.
         </p>
         <p>
           If you want to try GRIP-EMS on the Forever beta yourself in the meantime, it installs the same way it does on retail. Just do not trust anything you see until the save bug above is confirmed fixed, and check Sataana&apos;s Discord for the latest before assuming a problem is GRIP-EMS&apos;s fault rather than the beta&apos;s.

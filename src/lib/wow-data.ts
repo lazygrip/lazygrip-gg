@@ -115,6 +115,25 @@ export const CONTENT_TYPES = [
   { value: 'solo', label: 'Solo / Leveling', slug: 'solo' },
 ] as const
 
+// Which client a sequence is for. Declared by the author, never inferred from the string:
+// WoW: Forever declares the same .toc interface number (16001) as Classic Era, so nothing in
+// an export separates them. The database column is public.sequences.game_version
+// (migration 050), limited to these values by a check constraint.
+export const GAME_VERSIONS = [
+  { value: 'retail', label: 'Retail', shortLabel: 'Retail' },
+  { value: 'forever', label: 'WoW: Forever', shortLabel: 'Forever' },
+] as const
+
+export const DEFAULT_GAME_VERSION = 'retail' as const
+
+export function isGameVersion(value: unknown): value is (typeof GAME_VERSIONS)[number]['value'] {
+  return GAME_VERSIONS.some(g => g.value === value)
+}
+
+export function getGameVersionLabel(value: string | null | undefined): string {
+  return GAME_VERSIONS.find(g => g.value === value)?.label ?? 'Retail'
+}
+
 export const STEP_FUNCTIONS = [
   'Sequential',
   'Priority',

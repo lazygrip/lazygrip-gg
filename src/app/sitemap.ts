@@ -5,7 +5,7 @@ import { EMS_RELEASES, versionSlug } from '@/lib/changelog/ems-archive'
 
 // lastmod for the guide pages plus /about and /faq. These are hand-written
 // pages, so bump this date whenever that content actually changes.
-const CONTENT_UPDATED = new Date('2026-10-14')
+const CONTENT_UPDATED = new Date('2026-10-20')
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = await createClient()
@@ -211,6 +211,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     {
       url: 'https://lazygrip.net/guide/wow-forever',
+      lastModified: CONTENT_UPDATED,
+      changeFrequency: 'weekly',
+      priority: 0.7,
+    },
+    {
+      url: 'https://lazygrip.net/forever',
       lastModified: CONTENT_UPDATED,
       changeFrequency: 'weekly',
       priority: 0.7,

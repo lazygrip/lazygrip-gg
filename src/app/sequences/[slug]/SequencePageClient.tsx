@@ -3,8 +3,9 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Copy, Check, Bookmark, ExternalLink, ChevronDown, ChevronUp, Pencil, Trash2, CornerDownRight, Link2, Link2Off, Wrench } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import GameVersionControl from '@/components/sequence/GameVersionControl'
 import { Sequence, Comment, SequenceVersion, LinkedSequence, CollectionSequenceEntry } from '@/types'
-import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
+import { getClassColor, CONTENT_TYPES, getGameVersionLabel } from '@/lib/wow-data'
 import { formatDistanceToNow } from 'date-fns'
 import { describeSequenceAge } from '@/lib/sequence-dates'
 import RenderedContent from '@/components/editor/RenderedContent'
@@ -821,7 +822,9 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
     new Date(renderedAt),
     versions.length > 1 ? versions[0]?.created_at : null,
   )
-  const patchMismatch = !!currentPatch && (sequence.patch_version == null || sequence.patch_version !== currentPatch)
+  // currentPatch is the retail patch; a sequence for another client is never compared against it.
+  const isRetail = (sequence.game_version ?? 'retail') === 'retail'
+  const patchMismatch = isRetail && !!currentPatch && (sequence.patch_version == null || sequence.patch_version !== currentPatch)
   const isStale = patchMismatch && daysSinceUpdate > STALE_DAYS_THRESHOLD
 
   // Version-aware as of migration 028: a collection version now carries its
@@ -1075,6 +1078,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
               <Badge color={classColor}>{sequence.class_name}</Badge>
               {sequence.spec_name && <Badge color="#5a8dee">{sequence.spec_name}</Badge>}
               <Badge color="#1D9E75">{contentLabel}</Badge>
+              {!isRetail && <Badge color="#c8963c">{getGameVersionLabel(sequence.game_version)}</Badge>}
               {selectedVersion?.hero_talent && <Badge color="#a330c9">{selectedVersion.hero_talent}</Badge>}
               {selectedVersion?.grip_version && <Badge color="#888">GRIP {selectedVersion.grip_version}</Badge>}
               {selectedVersion?.step_function && <Badge color="#888">{selectedVersion.step_function}</Badge>}
@@ -1253,6 +1257,15 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
           connected. The component decides the second half for itself against
           the caller's own session; isAuthor is the half this page knows. */}
       {isAuthor && <DiscordLinkPrompt />}
+
+      {isAuthor && sequence && (
+        <GameVersionControl
+          supabase={supabase}
+          sequenceId={sequence.id}
+          value={sequence.game_version ?? 'retail'}
+          onChanged={next => setSequence(s => (s ? { ...s, game_version: next } : s))}
+        />
+      )}
 
       <div className="seq-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 16, alignItems: 'flex-start' }}>
 
@@ -1846,6 +1859,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                   // every other row here, this one just hadn't been.
                   ['Steps', stepCountForBadge || null],
                   ['GRIP version', selectedVersion?.grip_version],
+                  ['Game', isRetail ? null : getGameVersionLabel(sequence.game_version)],
                   ['Patch', sequence.patch_version],
                   ['Views', sequence.view_count?.toLocaleString()],
                   ['Comments', sequence.comment_count?.toLocaleString()],
