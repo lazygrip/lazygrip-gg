@@ -299,3 +299,248 @@ html[data-theme='dark'] .theme-icon-light { display: none; }
 @media (max-width: 480px) {
   a, p, li, dd { overflow-wrap: anywhere; }
 }
+
+/* Homepage (src/app/page.tsx), issue #107.
+
+   These rules used to be a <style> block inside the page, and most of the page's
+   repeated elements carried their own style objects. A server component's tree is
+   written into every response twice, once as HTML and once as the flight payload
+   the client hydrates from, so each of those objects was serialized twice per
+   request, over 500 of them on one render. A class name costs a few bytes in both
+   places instead. Only values that differ per row (a class colour, an avatar colour)
+   stay inline.
+
+   Every class name below appears on the homepage only, so on every other page these
+   rules match nothing. */
+
+.info-trigger { position: relative; display: inline-block; }
+.info-trigger .info-tooltip {
+  position: absolute;
+  top: calc(100% + 10px);
+  width: 320px;
+  max-width: 82vw;
+  background: var(--bg-primary);
+  border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 16px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.15s, transform 0.15s;
+  z-index: 60;
+  text-align: left;
+}
+/* Invisible bridge over the 10px gap above the tooltip. Without this, that gap is a
+   dead zone: it belongs to neither the pill nor the tooltip, so a mouse crossing it
+   drops :hover for a frame, pointer-events snaps back to none, and the tooltip closes
+   before the cursor ever reaches the link inside it. This keeps the hover area
+   unbroken from the pill straight through to the card. */
+.info-trigger .info-tooltip::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 0;
+  right: 0;
+  height: 10px;
+}
+.info-trigger:hover .info-tooltip,
+.info-trigger:focus-within .info-tooltip {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+.info-trigger-left .info-tooltip { left: 0; }
+.info-trigger-right .info-tooltip { right: 0; }
+.info-trigger-center .info-tooltip { left: 50%; transform: translateX(-50%) translateY(-4px); }
+.info-trigger-center:hover .info-tooltip,
+.info-trigger-center:focus-within .info-tooltip { transform: translateX(-50%) translateY(0); }
+.info-trigger-link:hover { border-color: var(--accent) !important; background: var(--bg-secondary) !important; }
+.explore-grid { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.3fr) minmax(0, 1fr); gap: 28px; }
+.explore-grid > * { min-width: 0; }
+.browse-chip-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+/* Three columns get cramped before the general 640px mobile stack kicks in --
+   collapse a step earlier than the rest of the hero/utility-bar rules below so
+   Top Creators, Top sequences and Browse Sequences each keep readable width
+   instead of all three squeezing side by side on a tablet-width screen. */
+@media (max-width: 900px) {
+  .explore-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 36px !important; }
+  .browse-divider { border-left: none !important; padding-left: 0 !important; border-top: 0.5px solid var(--border); padding-top: 32px !important; }
+}
+
+/* Spec tooltip — hover a class chip, see its specs, click one straight to that
+   filtered browse view. Flies out to the side of the chip (vertically centered)
+   rather than dropping below it, so it never covers the next row of chips. Left-
+   column chips open leftward, right-column chips open rightward — outward, away
+   from the other column, instead of the two columns' tooltips landing on each other. */
+.spec-trigger { position: relative; }
+.spec-trigger .spec-tooltip {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: 170px;
+  max-width: 60vw;
+  background: var(--bg-primary);
+  border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 6px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s;
+  z-index: 70;
+}
+/* Opens outward, away from the other column — left-column chips fly out to the left
+   (toward the leaderboard side), right-column chips fly out to the right (toward the
+   page edge). Previous version had these backwards, opening inward onto each other. */
+/* Both columns open to the LEFT. The right-hand column used to open rightward, which on
+   a 1280px screen put the flyout past the edge of the window (it was cut off mid-word
+   and gave the page a sideways scrollbar). Leftward always has room: the leaderboards
+   sit on that side. */
+.spec-trigger-l .spec-tooltip,
+.spec-trigger-r .spec-tooltip { right: calc(100% - 20px); }
+/* Single-column layout (900px and under) has no room beside the chips, so the flyout
+   drops below the chip instead, left-aligned for the left column, right-aligned for the
+   right column, so it stays inside the screen either way. */
+@media (max-width: 900px) {
+  .spec-trigger .spec-tooltip { top: calc(100% + 4px); transform: none; }
+  .spec-trigger-l .spec-tooltip { left: 0; right: auto; }
+  .spec-trigger-r .spec-tooltip { right: 0; left: auto; }
+}
+.spec-trigger:hover .spec-tooltip,
+.spec-trigger:focus-within .spec-tooltip {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+.spec-link {
+  display: block;
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.spec-link:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+/* Touch screens and phones have no hover, and the hidden flyout is absolutely positioned
+   past the chip, which is what gave the homepage a sideways scroll on a phone. Tapping a
+   chip goes straight to that class, so the flyout and its hint are removed there. */
+@media (hover: none), (max-width: 640px) {
+  .spec-tooltip, .spec-hint { display: none !important; }
+}
+
+@media (max-width: 640px) {
+  .hero-heading { font-size: 32px !important; letter-spacing: -0.02em !important; }
+  .hero-stats { justify-content: center !important; }
+  /* Centre the four numbers under the centred hero instead of leaving a lopsided 2x2 block. */
+  .hero-stats > div { justify-content: center !important; gap: 24px 36px !important; }
+  .hero-stats > div > div { text-align: center !important; min-width: 120px; }
+  .hero-stats > div > div > div:first-child { justify-content: center !important; }
+  .class-chip-row { justify-content: center !important; }
+  .utility-bar { flex-direction: column; align-items: center; gap: 14px; }
+  .info-tooltip { left: 50% !important; right: auto !important; transform: translateX(-50%) translateY(-4px) !important; width: 280px; }
+  .info-trigger:hover .info-tooltip, .info-trigger:focus-within .info-tooltip { transform: translateX(-50%) translateY(0) !important; }
+  .explore-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 40px !important; }
+  .browse-divider { border-left: none !important; padding-left: 0 !important; border-top: 0.5px solid var(--border); padding-top: 32px !important; }
+}
+
+/* Ticker rows. Each row renders its card list twice, back to back, for the seamless
+   loop (see .marquee-track above). */
+.home-tick-batch { display: flex; flex-shrink: 0; }
+
+/* Row 1: current-patch sequences. */
+.home-cp-label {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  padding: 17px 14px; margin: 0 6px; width: 230px; flex-shrink: 0;
+  background: var(--accent-subtle); border: 0.5px solid rgba(29,158,117,0.35);
+  border-radius: var(--radius-sm);
+}
+.home-cp-label-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.home-cp-label-text { font-size: var(--text-xs); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent-text); white-space: nowrap; }
+/* border-left is set inline, in the sequence's class colour. */
+.home-cp-card {
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 8px 14px; margin: 0 6px; width: 230px; flex-shrink: 0;
+  background: var(--bg-primary); border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+}
+.home-cp-title { font-size: var(--text-sm); font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-cp-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.home-cp-who { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.home-cp-views { display: flex; align-items: center; gap: 3px; flex-shrink: 0; color: var(--text-muted); }
+.home-cp-count { font-size: var(--text-xs); font-weight: 600; }
+
+/* Row 2: previous-patch sequences. */
+.home-pp-label {
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 14px; margin: 0 6px; flex-shrink: 0;
+  background: rgba(217,164,65,0.14); border: 0.5px solid rgba(217,164,65,0.5);
+  border-radius: var(--radius-sm);
+}
+.home-pp-label-dot { width: 6px; height: 6px; border-radius: 50%; background: #D9A441; flex-shrink: 0; }
+.home-pp-label-text { font-size: var(--text-xs); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #E8B85C; white-space: nowrap; }
+.home-pp-card {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px; margin: 0 6px; flex-shrink: 0;
+  background: var(--bg-primary); border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  text-decoration: none; white-space: nowrap;
+}
+/* background is set inline, in the sequence's class colour. */
+.home-pp-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.home-pp-title { font-size: var(--text-sm); color: var(--text-primary); font-weight: 500; }
+.home-pp-meta { font-size: var(--text-xs); color: var(--text-muted); }
+
+/* Shared by the current-patch cards and the Top sequences rows. */
+.home-author { font-size: var(--text-xs); color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Top Creators and Top sequences rows. */
+.home-lb-link { text-decoration: none; }
+.home-creator-row { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.home-seq-row { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+.home-lb-rank { width: 18px; font-size: var(--text-sm); font-weight: 700; color: var(--text-muted); flex-shrink: 0; text-align: center; }
+.home-lb-rank-top { color: var(--accent); }
+/* background is set inline: the avatar colour, or transparent behind an avatar image. */
+.home-lb-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  overflow: hidden; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: white; flex-shrink: 0;
+}
+.home-lb-avatar-img { width: 100%; height: 100%; object-fit: cover; }
+.home-lb-body { flex: 1; min-width: 0; }
+.home-lb-name { font-size: var(--text-sm); font-weight: 500; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-lb-title { font-size: var(--text-sm); font-weight: 500; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 3px; }
+.home-lb-sub { font-size: var(--text-xs); color: var(--text-muted); }
+.home-lb-meta { display: flex; align-items: center; gap: 6px; }
+.home-lb-views { display: flex; align-items: center; gap: 4px; flex-shrink: 0; color: var(--text-muted); }
+.home-lb-count { font-size: var(--text-xs); font-weight: 600; color: var(--text-secondary); }
+
+/* Browse Sequences: class and content chips. A class chip's background and border are
+   set inline, in that class's colour, as is its dot's background. */
+.home-class-chip {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 12px; border-radius: 99px; text-decoration: none;
+  transition: background-color 0.15s, border-color 0.15s;
+  overflow: hidden;
+}
+.home-class-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.home-class-name { font-size: var(--text-sm); font-weight: 500; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-content-chip {
+  display: flex; align-items: center; justify-content: center;
+  padding: 7px 12px; border-radius: 99px; text-decoration: none;
+  background: var(--bg-tertiary); border: 0.5px solid var(--border-strong);
+  color: var(--text-primary); font-size: var(--text-sm); font-weight: 500;
+}
+
+/* src/components/ui/Badge.tsx. Its colour, background and border depend on the colour it
+   is given and stay inline; everything else is here. */
+.ui-badge {
+  display: inline-flex; align-items: center;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+  border-radius: 4px; padding: 3px 6px; line-height: 1; white-space: nowrap;
+}
