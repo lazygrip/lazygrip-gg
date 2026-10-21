@@ -38,7 +38,7 @@ const SECTIONS = [
   },
   {
     title: 'Third-Party Services',
-    body: <p>Supabase handles the database and authentication. Your account data and content live there. Vercel handles hosting and deployment and may collect anonymized request logs. When a private message is reported, an email alert goes to the site owner through Resend. The alert has the usernames involved and the reason the reporter gave, and it does not include the text of the message.</p>,
+    body: <p>Supabase handles the database and authentication. Your account data and content live there. Vercel handles hosting and deployment and may collect anonymized request logs. When a private message is reported, an alert goes to a private Discord channel that only the site owner can see. The alert has the usernames involved and the reason the reporter gave, and it does not include the text of the message.</p>,
   },
   {
     title: 'Private Messages',

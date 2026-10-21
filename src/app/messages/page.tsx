@@ -203,7 +203,7 @@ function MessagesInner() {
 
   async function submitReport(messageId: string) {
     setReportError(null)
-    // Through the server route, not the database directly: the route is what emails the site
+    // Through the server route, not the database directly: the route is what alerts the site
     // owner, and migration 052 stops signed-in members calling the report function themselves.
     let failure: string | null = null
     try {

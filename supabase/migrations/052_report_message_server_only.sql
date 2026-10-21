@@ -1,10 +1,10 @@
 -- 052_report_message_server_only.sql
 --
--- Moves report_message behind a server route so a report can email the site
--- owner. 051 let a signed-in member call report_message straight from the
--- browser, which stores the report and tells nobody. Email has to be sent from
--- the server, and a browser that can still call the function directly would
--- skip the email, so the browser loses the right to call it at all.
+-- Moves report_message behind a server route so a report can alert the site
+-- owner on Discord. 051 let a signed-in member call report_message straight
+-- from the browser, which stores the report and tells nobody. The alert has to
+-- be sent from the server, and a browser that can still call the function
+-- directly would skip it, so the browser loses the right to call it at all.
 --
 -- WHAT CHANGES
 --   report_message(uuid, text)               dropped.
@@ -18,12 +18,12 @@
 --                                            which takes the reporter from the
 --                                            signed-in session and never from
 --                                            the request body.
---   It returns jsonb with what the alert email needs (usernames and the new
+--   It returns jsonb with what the alert needs (usernames and the new
 --   report's id, never the message text) and whether the report was new.
 --
 -- A NEW LIMIT. A reporter can file 10 reports in 24 hours. Reports can only be
 -- filed against messages the reporter received, which are themselves
--- rate limited by send_message, so this is a second fence on email volume and
+-- rate limited by send_message, so this is a second fence on alert volume and
 -- not the first.
 --
 -- ORDER OF OPERATIONS. There is a short gap whichever way round this goes, and
@@ -105,7 +105,7 @@ end;
 $$;
 
 comment on function public.report_message(uuid, uuid, text) is
-  'Reports a message the named reporter received. service_role only: called by /api/messages/report with the reporter taken from the session. One report per reporter per message, 10 per reporter per day. Returns what the alert email needs, never the message text.';
+  'Reports a message the named reporter received. service_role only: called by /api/messages/report with the reporter taken from the session. One report per reporter per message, 10 per reporter per day. Returns what the alert needs, never the message text.';
 
 revoke all on function public.report_message(uuid, uuid, text) from public, anon, authenticated;
 grant execute on function public.report_message(uuid, uuid, text) to service_role;
@@ -113,7 +113,7 @@ grant execute on function public.report_message(uuid, uuid, text) to service_rol
 do $$
 begin
   if to_regprocedure('public.report_message(uuid, text)') is not null then
-    raise exception '052: the old report_message(uuid, text) is still there, so the browser can still skip the email.';
+    raise exception '052: the old report_message(uuid, text) is still there, so the browser can still skip the alert.';
   end if;
 
   if has_function_privilege('anon', 'public.report_message(uuid, uuid, text)', 'EXECUTE')

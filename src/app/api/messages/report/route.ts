@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse, after } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { sendReportAlert, type ReportDetails } from '@/lib/report-email'
+import { sendReportAlert, type ReportDetails } from '@/lib/report-alert'
 
 // Reporting a private message goes through here, and no longer straight from the
-// browser, so that a new report can email the site owner. Migration 052 takes
+// browser, so that a new report can alert the site owner on Discord. Migration 052 takes
 // report_message away from signed-in members entirely and leaves it to the
 // service role, which makes this route the only way a report can be filed.
 //
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
   }
 
   const result = data as (ReportDetails & { inserted: boolean }) | null
-  // Only a report that was actually new sends an email, so pressing Report twice
+  // Only a report that was actually new sends an alert, so pressing Report twice
   // on the same message is one alert and not two.
   if (result?.inserted) {
     after(() => sendReportAlert(result))
