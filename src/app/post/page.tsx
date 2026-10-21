@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { WOW_CLASSES, CONTENT_TYPES, STEP_FUNCTIONS, slugify } from '@/lib/wow-data'
+import { WOW_CLASSES, CONTENT_TYPES, STEP_FUNCTIONS, GAME_VERSIONS, isGameVersion, slugify } from '@/lib/wow-data'
 import { AlertCircle, Wand2 } from 'lucide-react'
 import TiptapEditor from '@/components/editor/TiptapEditor'
 import type { SequenceStep, ActionNode } from '@/types'
@@ -33,6 +33,10 @@ const EMPTY_FORM = {
   talent_string: '',
   warcraftlogs_url: '',
   performance_notes: '',
+  // Which client this is for. Declared by the author (Forever and Classic Era share
+  // interface 16001, so nothing in an export says which). Written through
+  // set_sequence_game_version, not through the draft RPCs, which do not take it.
+  game_version: 'retail',
 }
 
 // Per-sequence data for collection imports
@@ -135,6 +139,34 @@ function PostForm() {
   const forceNew = searchParams.get('new') === '1'
 
   const supabase = createClient()
+
+  // The draft and publish RPCs do not take a game version, so it is written with its own
+  // call (migration 050). Before a publish it throws, so a Forever sequence is never
+  // published as retail without the author seeing an error. The function returns early when
+  // the value is already set, so calling it on every autosave costs one cheap round trip.
+  async function applyGameVersion(sequenceId: string, version: string) {
+    if (!isGameVersion(version)) return
+    const { error: gvError } = await supabase.rpc('set_sequence_game_version', {
+      p_sequence_id: sequenceId,
+      p_game_version: version,
+    })
+    if (gvError) throw gvError
+  }
+
+  // For the two paths that publish in one write and never hold the new row's id. The row is
+  // already live when this runs, so a failure here is logged rather than thrown: throwing
+  // would show an error on a sequence that published, and invite a duplicate. The author can
+  // still change it on the sequence page.
+  async function applyGameVersionBySlug(slug: string, version: string) {
+    if (!isGameVersion(version) || version === 'retail') return
+    try {
+      const { data: row } = await supabase.from('sequences').select('id').eq('slug', slug).single()
+      if (row?.id) await applyGameVersion(row.id, version)
+    } catch (err) {
+      console.error('[post] could not set game version after publish:', err)
+    }
+  }
+
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [showUsernameModal, setShowUsernameModal] = useState(false)
@@ -142,7 +174,12 @@ function PostForm() {
   const { checkGate } = useUsernameGate()
   const [loadingEdit, setLoadingEdit] = useState(isEditMode)
   const [editSlug, setEditSlug] = useState<string | null>(null)
-  const [form, setForm] = useState(EMPTY_FORM)
+  // ?gv=forever comes from the Workshop, so a Forever build is not filed as retail.
+  const gameVersionParam = searchParams.get('gv')
+  const [form, setForm] = useState(() => ({
+    ...EMPTY_FORM,
+    game_version: isGameVersion(gameVersionParam) ? gameVersionParam : EMPTY_FORM.game_version,
+  }))
   // Mirrors `form` at all times. autosave() reads from this instead of the
   // `form` closure directly, because scheduleAutosave/setField are plain
   // functions redefined every render -- without this ref, the debounced
@@ -278,7 +315,7 @@ function PostForm() {
       if (draftIdParam) {
         const { data, error } = await supabase
           .from('sequences')
-          .select('id, title, class_name, content_type, updated_at, description, class_id, spec_name, hero_talent, patch_version, grip_version, wow_build, step_function, grip_string, raw_steps, actions, talent_string, warcraftlogs_url, performance_notes, collection_sequences')
+          .select('id, title, class_name, content_type, updated_at, description, class_id, spec_name, hero_talent, patch_version, grip_version, wow_build, step_function, grip_string, raw_steps, actions, talent_string, warcraftlogs_url, performance_notes, collection_sequences, game_version')
           .eq('id', draftIdParam)
           .eq('author_id', user.id)
           .eq('status', 'draft')
@@ -298,7 +335,7 @@ function PostForm() {
 
       const { data, error } = await supabase
         .from('sequences')
-        .select('id, title, class_name, content_type, updated_at, description, class_id, spec_name, hero_talent, patch_version, grip_version, wow_build, step_function, grip_string, raw_steps, actions, talent_string, warcraftlogs_url, performance_notes, collection_sequences')
+        .select('id, title, class_name, content_type, updated_at, description, class_id, spec_name, hero_talent, patch_version, grip_version, wow_build, step_function, grip_string, raw_steps, actions, talent_string, warcraftlogs_url, performance_notes, collection_sequences, game_version')
         .eq('author_id', user.id)
         .eq('status', 'draft')
         .order('updated_at', { ascending: false })
@@ -347,6 +384,7 @@ function PostForm() {
       talent_string: data.talent_string ?? '',
       warcraftlogs_url: data.warcraftlogs_url ?? '',
       performance_notes: data.performance_notes ?? '',
+      game_version: isGameVersion(data.game_version) ? data.game_version : 'retail',
     })
 
     // Collection draft: restore collectionTitle/collectionSequences the same
@@ -442,6 +480,7 @@ function PostForm() {
         talent_string: data.talent_string ?? '',
         warcraftlogs_url: data.warcraftlogs_url ?? '',
         performance_notes: data.performance_notes ?? '',
+        game_version: isGameVersion(data.game_version) ? data.game_version : 'retail',
       })
 
       // If this is a collection, pre-populate collectionTitle and collectionSequences
@@ -889,6 +928,10 @@ async function runDecode(exportString: string) {
         if (rpcError) throw rpcError
       }
 
+      if (!isEditMode && draftIdRef.current) {
+        await applyGameVersion(draftIdRef.current, f.game_version)
+      }
+
       setAutosaveStatus('saved')
     } catch (err) {
       console.error('[autosave] failed:', err)
@@ -1089,6 +1132,8 @@ async function runDecode(exportString: string) {
           })
           if (updateError) throw updateError
 
+          await applyGameVersion(draftId, form.game_version)
+
           const { error: publishError } = await supabase.rpc('publish_draft_sequence', {
             p_sequence_id: draftId,
             p_author_id: user.id,
@@ -1153,6 +1198,7 @@ async function runDecode(exportString: string) {
             })
 
           if (insertError) throw insertError
+          await applyGameVersionBySlug(slug, form.game_version)
 
           notifyDiscord({
             title: collectionTitle.trim(),
@@ -1383,6 +1429,8 @@ async function runDecode(exportString: string) {
         const suffix = /^[0-9a-z]{6,10}$/.test(tail) ? tail : Date.now().toString(36)
         const desiredSlug = slugify(payload.title) + '-' + suffix
 
+        await applyGameVersion(draftId, form.game_version)
+
         const { data: publishData, error: publishError } = await supabase.rpc('publish_draft_sequence', {
           p_sequence_id: draftId,
           p_author_id: user.id,
@@ -1448,6 +1496,7 @@ async function runDecode(exportString: string) {
         })
 
         if (rpcError) throw rpcError
+        await applyGameVersionBySlug(slug, form.game_version)
 
         notifyDiscord({
           title: payload.title,
@@ -1904,6 +1953,16 @@ async function runDecode(exportString: string) {
                   ))}
                 </select>
               </Field>
+
+              {!isEditMode && (
+                <Field label="Game version *" hint="Pick WoW: Forever for the Forever client. Nothing in an export says which one it was built on, so this is your call.">
+                  <select value={form.game_version} onChange={e => setField('game_version', e.target.value)}>
+                    {GAME_VERSIONS.map(g => (
+                      <option key={g.value} value={g.value}>{g.label}</option>
+                    ))}
+                  </select>
+                </Field>
+              )}
 
               <Field label="Hero talent">
                 <select

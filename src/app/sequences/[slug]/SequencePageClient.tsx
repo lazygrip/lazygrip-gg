@@ -433,7 +433,16 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
     // to actually take a sequence's import string, not just view the page.
     // Fires only after writeText resolves, so a clipboard permission failure
     // never counts as a copy.
+    //
+    // The database counter. increment_copy_count has existed since migration 024
+    // and is throttled per IP, but nothing in src ever called it, so copy_count
+    // sat at 0 on every sequence while views climbed (measured 2026-10-21: 0
+    // copies, 43,195 views, 0 rows in copy_count_throttle). The await matters for
+    // the same reason it does on countSeededView above: a bare supabase.rpc()
+    // builds the request and never sends it.
     if (sequence) {
+      const { error: copyCountError } = await supabase.rpc('increment_copy_count', { seq_id: sequence.id })
+      if (copyCountError) console.error('Failed to increment copy count:', copyCountError)
       trackEvent('grip_import_copied', {
         class_name: sequence.class_name,
         content_type: sequence.content_type,
