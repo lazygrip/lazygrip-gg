@@ -22,16 +22,6 @@ export const metadata: Metadata = {
   },
 }
 
-function CompareRow({ label, grip, gse }: { label: string; grip: string; gse: string }) {
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr 1fr', gap: 1 }}>
-      <div style={{ padding: '10px 14px', background: 'var(--bg-primary)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</div>
-      <div style={{ padding: '10px 14px', background: 'var(--accent-subtle)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{grip}</div>
-      <div style={{ padding: '10px 14px', background: 'var(--bg-primary)', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{gse}</div>
-    </div>
-  )
-}
-
 export default function FromGsePage() {
   return (
     <div>
@@ -50,11 +40,11 @@ export default function FromGsePage() {
           {[
             {
               title: 'Option 1: In-game migration (recommended)',
-              desc: 'If GSE is still installed alongside GRIP-EMS, open the editor with /gems and click Migrate in the sequence list. GRIP-EMS detects your GSE sequences and transfers everything automatically, including steps, variables, metadata, and multi-version data. A report in chat tells you what came across and what, if anything, needed attention.',
+              desc: 'If GSE is still installed and enabled alongside GRIP-EMS (if you have it disabled, enable it and /reload first), open the editor with /gems and click Migrate in the sequence list. GRIP-EMS detects your GSE sequences and transfers everything automatically, including steps, variables, metadata, and multi-version data. A report in chat tells you what came across and what, if anything, needed attention.',
             },
             {
               title: 'Option 2: Clipboard import',
-              desc: 'Export a sequence from GSE to your clipboard, then run /gems import in GRIP-EMS and paste the string. GRIP-EMS auto-detects the format, shows you a preview with metadata and a checksum status, and lets you handle any naming conflicts before importing.',
+              desc: 'Export a sequence from GSE to your clipboard, then run /gems import in GRIP-EMS and paste the string. GRIP-EMS auto-detects the format, shows you a preview with the metadata, colour-codes any name conflicts, and lets you skip, replace or rename each one before importing.',
             },
             {
               title: 'Option 3: Convert it on LazyGrip first',
@@ -69,10 +59,10 @@ export default function FromGsePage() {
         </div>
 
         <p>
-          After importing, run <GuideCode>/gems repairall</GuideCode> to scan every transferred sequence across 13 diagnostic categories. Most issues from format differences get flagged and fixed automatically. This takes about thirty seconds and saves you from discovering problems mid-pull.
+          After importing, run <GuideCode>/gems repairall</GuideCode> to scan every transferred sequence across 11 diagnostic categories. Most issues from format differences get flagged and fixed automatically. This takes about thirty seconds and saves you from discovering problems mid-pull.
         </p>
         <GuideInfoBox>
-          Sequences from GSE frequently overshoot WoW&apos;s 255-character step limit because it builds longer individual step strings than GRIP-EMS allows. The Repair module flags these on import and the fix is to split the oversized step into two shorter steps carrying the same spells. This is one of the most common issues when porting sequences from GSE, so if repair comes back with character limit violations do not be alarmed, it is normal and fixable in a few minutes.
+          Some sequences from GSE overshoot WoW&apos;s 255-character step limit. The Repair module flags any step over 255 characters and the fix is to split the oversized step into two shorter steps carrying the same spells. If repair comes back with character limit violations do not be alarmed, it is fixable in a few minutes.
         </GuideInfoBox>
         <GuideInfoBox>
           Sequences shared in English by another player import and translate to your client language automatically. Spell names stored as IDs under the hood re-render in your locale on import, so a sequence built on an English client works for German or French players without any manual editing.
@@ -81,7 +71,7 @@ export default function FromGsePage() {
 
       <GuideSection title="How advancement actually works">
         <p style={{ marginBottom: 14 }}>
-          Both engines advance one step per keypress and neither one waits for a cast to land. What can make a press do nothing is the macro line on the step. If a /cast names a spell that is still on cooldown, WoW stops running that macro there and the lines under it never fire, so the press comes up empty and the step advances anyway. A /castsequence parked on an entry that is on cooldown behaves the same. That is the WoW macro engine reading your text, so you get it under either addon. Conditional lines are different: a conditional that does not apply is skipped and the next line still runs.
+          GRIP-EMS advances one step per keypress and does not wait for a cast to land. What can make a press do nothing is the macro line on the step. If a /cast names a spell that is still on cooldown, WoW stops running that macro there and the lines under it never fire, so the press comes up empty and the step advances anyway. A /castsequence parked on an entry that is on cooldown behaves the same. That is the WoW macro engine reading your text, so it is not specific to GRIP-EMS. Conditional lines are different: a conditional that does not apply is skipped and the next line still runs.
         </p>
         <p style={{ marginBottom: 14 }}>
           The practical consequence is that loop length is a real cost. In a flat sequential loop every step gets one visit per pass, so a 30 step loop clicked every 150ms is roughly 4.5 seconds between visits to any single step. A press that came up empty is not retried, and that step is spent until the loop comes back around. If a defensive needs to come around faster than that, shorten the loop, move the step earlier, or give it a per-step interval.
@@ -92,24 +82,12 @@ export default function FromGsePage() {
       </GuideSection>
 
       <GuideSection title="What is different between the two addons">
-        <div style={{ background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', overflow: 'hidden', marginBottom: 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr 1fr', gap: 1, background: 'var(--border)' }}>
-            <div style={{ padding: '10px 14px', background: 'var(--bg-secondary)', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}></div>
-            <div style={{ padding: '10px 14px', background: 'var(--bg-secondary)', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>GRIP-EMS</div>
-            <div style={{ padding: '10px 14px', background: 'var(--bg-secondary)', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>GSE</div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'var(--border)' }}>
-            <CompareRow label="Action bar button" grip="Single-version sequences have no bar button. Multi-version sequences create a macro you can place on your bar." gse="Creates a draggable button you place on a bar" />
-            <CompareRow label="Keybinds" grip="Assigned inside GRIP-EMS per spec, auto-switch on spec change" gse="Via the action bar button you place and bind" />
-            <CompareRow label="Import format" grip="!EMS1! format, import GSE strings with /gems import" gse="Base64 string with version prefix" />
-            <CompareRow label="Step functions" grip="Sequential, Priority, Reverse Priority (shown as Rev. Priority in the editor), Random" gse="Sequential, Priority, and others depending on version" />
-            <CompareRow label="Opener logic" grip="True single-block loop, step 1 is only the opener" gse="Block 1 fires between every loop step when compiled, not just once" />
-            <CompareRow label="Spell validation" grip="Built-in scanner with patch-aware auto-translation" gse="Limited or absent depending on version" />
-            <CompareRow label="Click rate guidance" grip="Tempo Advisor learns from your actual play and recommends a click rate per sequence, with a live Faster, Slower overlay" gse="None built in" />
-            <CompareRow label="Post-patch repair" grip="Repair module fixes stale spells in one click" gse="Manual identification and replacement" />
-            <CompareRow label="Cross-language sharing" grip="Spell IDs stored internally, renders in recipient's language" gse="Spell names in source language, may not fire on other clients" />
-          </div>
-        </div>
+        <p style={{ marginBottom: 14 }}>
+          I have not compared GSE and GRIP-EMS feature by feature, so this is a list of what GRIP-EMS has built in, not a claim about what GSE lacks. Check what your version of GSE offers before you treat any of it as a reason to switch.
+        </p>
+        <p style={{ marginBottom: 14 }}>
+          Keybinds are assigned inside GRIP-EMS per spec and switch when you change spec. GRIP-EMS imports GSE strings with /gems import, which also reads its own !EMS1! format. The step functions are Sequential, Priority, Reverse Priority (shown as Rev. Priority in the editor) and Random. A built-in scanner validates spells and translates them after a patch, and the Repair module fixes stale spells in one click. The Tempo Advisor learns from your actual play and recommends a click rate per sequence, with a live Faster, Slower overlay. Spell IDs are stored internally, so a shared sequence renders in the recipient&apos;s language.
+        </p>
       </GuideSection>
 
       <GuideSection title="Things that trip up switchers specifically">
@@ -117,15 +95,15 @@ export default function FromGsePage() {
           {[
             {
               title: 'Looking for the action bar button',
-              desc: "GSE creates a macro button you drag to your action bar and bind to a key. GRIP-EMS works differently. You assign a keybind inside the addon directly. For single-version sequences there is nothing to drag. For sequences with multiple versions, GRIP-EMS creates a macro that can be placed on your bar, but the keybind is still assigned inside the addon. Open the sequence editor, go to the Keybinds tab, and press the key you want.",
+              desc: "In GRIP-EMS the keybind is the main way to run a sequence, and you assign it inside the addon. Open the sequence editor, go to the Keybind tab, and press the key you want. GRIP-EMS also gives every sequence a character macro named GEMS: followed by the sequence name, which clicks the sequence button. You will find it in /macro, and you can drag it to an action bar if you want a button, but you do not need it for the keybind to work.",
             },
             {
               title: 'Keybind set but nothing fires',
-              desc: "GSE works fine with WoW's default key-up event behavior. GRIP-EMS requires key-down. As of GRIP-EMS v2.3.14 this is forced on automatically, so update through your addon manager first. If you are still on an older version, run /gems settings, go to the Cvar Health tab, and click Fix if anything is not green. This used to be the most common reason a switcher imported a sequence, pressed the keybind, and got nothing; on 2.3.14 and later it should not come up at all.",
+              desc: "GRIP-EMS runs a step on key-down, so WoW's key-down casting setting has to be on; /gems status shows whether it is. As of GRIP-EMS v2.3.14 this is handled for you, so update through your addon manager first. If you are still on an older version, run /gems settings, go to the Cvar Health tab, and click Fix if anything is not green. This used to be the most common reason a switcher imported a sequence, pressed the keybind, and got nothing; on 2.3.14 and later it should not come up at all.",
             },
             {
-              title: 'Multi-block opener logic behaving unexpectedly',
-              desc: "In GSE, putting your opener in Block 1 and your main rotation in a Loop block seems like clean architecture, but Block 1 fires between every loop step when the sequence compiles, not just once at the start. Opener spells end up firing far more often than intended. GRIP-EMS does not have this problem because Sequential step function advances linearly. Step 1 is step 1 and not a recurring block. If you are porting a sequence that used this pattern, rebuild it as a flat Sequential loop in GRIP-EMS.",
+              title: 'An opener that keeps repeating',
+              desc: "In GRIP-EMS a Sequential sequence goes back to step 1 after its last step, so an opener at step 1 comes round again on every pass. Guard the opener lines with conditionals such as [nocombat] or [noform:1] so they do nothing when they are not needed, or turn on Reset on combat so each pull starts again at step 1. If you are porting a sequence whose opener was meant to run once, check this first.",
             },
             {
               title: 'Reverse Priority for finisher steps',
