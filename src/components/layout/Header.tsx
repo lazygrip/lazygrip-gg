@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Search, PlusCircle, LogOut, LayoutList, Bookmark, Settings, Sun, Moon, Menu, X, FileEdit, Lock } from 'lucide-react'
+import { Search, PlusCircle, LogOut, LayoutList, Bookmark, Settings, Sun, Moon, Menu, X, FileEdit, Lock, MessageCircle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useEffect, useState, useRef } from 'react'
 import { useTheme } from '@/components/ThemeProvider'
@@ -28,6 +28,7 @@ export default function Header() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [avatarColor, setAvatarColor] = useState<string | null>(null)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [messageUnread, setMessageUnread] = useState(0)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   // The mobile menu is open FOR A PATHNAME, not open or closed on its own.
   //
@@ -70,6 +71,31 @@ export default function Header() {
     setUnreadCount(count ?? 0)
   }
 
+  // Unread private messages, for the speech-bubble icon. An error (the function missing, a network
+  // blip) leaves the count where it was: the icon is a convenience and must never break the header.
+  const signedInUserId: string | null = user?.id ?? null
+
+  useEffect(() => {
+    if (!signedInUserId) return
+    let cancelled = false
+    const sb = createClient()
+    async function refresh() {
+      const { data, error } = await sb.rpc('unread_message_count')
+      if (!cancelled && !error && typeof data === 'number') setMessageUnread(data)
+    }
+    refresh()
+    const onRead = () => { refresh() }
+    window.addEventListener('lg-messages-read', onRead)
+    const t = setInterval(() => {
+      if (document.visibilityState === 'visible') refresh()
+    }, 60_000)
+    return () => {
+      cancelled = true
+      window.removeEventListener('lg-messages-read', onRead)
+      clearInterval(t)
+    }
+  }, [signedInUserId, pathname])
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user)
@@ -88,6 +114,7 @@ export default function Header() {
         setAvatarUrl(null)
         setAvatarColor(null)
         setUnreadCount(0)
+        setMessageUnread(0)
       }
     })
     return () => subscription.unsubscribe()
@@ -297,6 +324,23 @@ export default function Header() {
                   Post Sequence
                 </Link>
 
+                {/* Messages */}
+                <Link prefetch={false} href="/messages" title="Messages" className="hdr-bell" style={{
+                  position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 32, height: 32, borderRadius: 'var(--radius-sm)',
+                  color: messageUnread > 0 ? 'var(--accent)' : 'var(--text-muted)',
+                  textDecoration: 'none',
+                }}>
+                  <MessageCircle size={16} />
+                  {messageUnread > 0 && (
+                    <span style={{
+                      position: 'absolute', top: 4, right: 4, width: 8, height: 8,
+                      background: '#c0392b', borderRadius: '50%',
+                      border: '1.5px solid var(--bg-primary)',
+                    }} />
+                  )}
+                </Link>
+
                 {/* Notification bell */}
                 <Link prefetch={false} href="/notifications" title="Notifications" className="hdr-bell" style={{
                   position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -364,6 +408,7 @@ export default function Header() {
                         <DropdownLink href="/profile?tab=drafts" icon={<FileEdit size={14} />} label="Drafts" onClick={() => setDropdownOpen(false)} />
                         <DropdownLink href="/profile?tab=private" icon={<Lock size={14} />} label="Private" onClick={() => setDropdownOpen(false)} />
                         <DropdownLink href="/profile?tab=saved" icon={<Bookmark size={14} />} label="Saved" onClick={() => setDropdownOpen(false)} />
+                        <DropdownLink href="/messages" icon={<MessageCircle size={14} />} label={messageUnread > 0 ? `Messages (${messageUnread})` : 'Messages'} onClick={() => setDropdownOpen(false)} />
                         <DropdownLink href="/profile?tab=settings" icon={<Settings size={14} />} label="Settings" onClick={() => setDropdownOpen(false)} />
                       </div>
                       <div style={{ borderTop: '0.5px solid var(--border)', padding: '6px 0' }}>
@@ -534,6 +579,18 @@ export default function Header() {
                     }}
                   >
                     <Bookmark size={15} /> Saved
+                  </Link>
+                  <Link
+                    prefetch={false}
+                    href="/messages"
+                    onClick={closeMobileMenu}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '10px 4px', fontSize: 'var(--text-sm)',
+                      color: 'var(--text-secondary)', textDecoration: 'none',
+                    }}
+                  >
+                    <MessageCircle size={15} /> {messageUnread > 0 ? `Messages (${messageUnread})` : 'Messages'}
                   </Link>
                   <Link
                     prefetch={false}

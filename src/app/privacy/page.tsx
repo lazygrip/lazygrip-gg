@@ -41,6 +41,15 @@ const SECTIONS = [
     body: <p>Supabase handles the database and authentication. Your account data and content live there. Vercel handles hosting and deployment and may collect anonymized request logs.</p>,
   },
   {
+    title: 'Private Messages',
+    body: (
+      <>
+        <p>Members can send each other private messages. Those messages are stored in our database so the other person can read them, and only the two people in a conversation can read it through the site. They are not end-to-end encrypted, so do not send passwords or anything you would not want the other person to keep.</p>
+        <p style={{ marginTop: 12 }}>We do not read private messages as a matter of routine. If someone reports a message, we can look at that message and the conversation around it to deal with the report. Block lists and reports are stored along with the messages. When an account is deleted, its messages go with it, which removes those conversations for the other person as well.</p>
+      </>
+    ),
+  },
+  {
     title: 'Cookies',
     body: <p>The only cookies we use are for keeping you logged in. No ad tracking, no third-party tracking cookies.</p>,
   },
@@ -81,7 +90,7 @@ const SECTIONS = [
 export default function PrivacyPage() {
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>
-      <PageHeader title="Privacy Policy" description={<span style={{ color: 'var(--text-muted)' }}>Last updated: May 3, 2026</span>} />
+      <PageHeader title="Privacy Policy" description={<span style={{ color: 'var(--text-muted)' }}>Last updated: October 21, 2026</span>} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
         {SECTIONS.map(section => (

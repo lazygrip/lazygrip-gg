@@ -7,6 +7,7 @@ import { getClassColor, CONTENT_TYPES } from '@/lib/wow-data'
 import StatBlock from '@/components/ui/StatBlock'
 import ProfileTabs, { type SequenceRowData } from './ProfileTabs'
 import SocialLinksRow from './SocialLinksRow'
+import MessageButton from './MessageButton'
 import { fetchCreatorViewTrend, fetchCreatorActivity } from '@/lib/creator-dashboard'
 import type { SocialLinks } from '@/types'
 
@@ -329,12 +330,19 @@ export default async function UserProfilePage(props: Props) {
           </div>
 
           <div className="pf-head-text" style={{ flex: 1, minWidth: 0, paddingTop: 14 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
-              {profile.display_name || profile.username}
-            </h1>
-            {profile.display_name && (
-              <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)', margin: '2px 0 0' }}>@{profile.username}</p>
-            )}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ minWidth: 0 }}>
+                <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
+                  {profile.display_name || profile.username}
+                </h1>
+                {profile.display_name && (
+                  <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-muted)', margin: '2px 0 0' }}>@{profile.username}</p>
+                )}
+              </div>
+              {/* The message control lives here, on the profile header, and not in the tab row where the
+                  old "Chat" stub sat. Someone else's profile: start a conversation. Your own: your inbox. */}
+              <MessageButton username={profile.username} isOwnProfile={isOwnProfile} />
+            </div>
             <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Joined {joinDate}</span>
               <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>{seqs.length} sequence{seqs.length !== 1 ? 's' : ''}</span>
