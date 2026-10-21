@@ -16,10 +16,11 @@
 -- even the test role.
 --
 -- Four of the nine triggers (on_comment_notify, on_rating_notify, trg_comment_count
--- and on_rating_change) exist in production but are created by no file in
--- supabase/migrations, which is a gap in the record that issue 91 covers. This
--- script creates them inside the transaction with the exact definitions read from
--- production's pg_trigger on 2026-10-17, so all nine are exercised.
+-- and on_rating_change) existed in production with no file creating them until
+-- 049_recover_triggers_no_migration_creates.sql, which carries the definitions
+-- read from production's pg_trigger on 2026-10-17. The guarded block below creates
+-- them too, inside the transaction, so this script still exercises all nine against
+-- a database built before 049; once 049 has run, the guard skips it.
 --
 -- Exits non-zero, through RAISE EXCEPTION, on the first thing that does not hold.
 
@@ -34,7 +35,7 @@ begin
   end if;
 end $$;
 
--- The four triggers no migration creates, copied from production.
+-- The four triggers 049 creates, copied from production; skipped once 049 has run.
 do $$
 begin
   if not exists (select 1 from pg_trigger where tgname = 'on_comment_notify' and not tgisinternal) then

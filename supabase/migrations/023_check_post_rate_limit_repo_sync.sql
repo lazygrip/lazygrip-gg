@@ -7,6 +7,12 @@
 -- (CREATE OR REPLACE with the exact current live body) whose only purpose is to give
 -- the repo a migration file that matches what's actually running, so the audit script
 -- picks up the real latest definition.
+--
+-- LEDGER. The direct application this file captures is production version
+-- 20260819173004, name add_ownership_check_to_check_post_rate_limit, in the
+-- 2026-10-17 export of supabase_migrations.schema_migrations; this file's own
+-- push is version 20260828225348. Both are recorded against this file in
+-- scripts/schema-check/ledger-reconciliation.tsv.
 
 create or replace function public.check_post_rate_limit(check_author_id uuid)
 returns boolean
