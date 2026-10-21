@@ -4,6 +4,7 @@ import BrowseContent from '@/components/browse/BrowseContent'
 import { fetchBrowsePage } from '@/lib/browse-server'
 import { BROWSE_PAGE_SIZE, browseFilterKey } from '@/lib/browse-query'
 import type { SequenceFilters } from '@/types'
+import { isGameVersion } from '@/lib/wow-data'
 
 export const metadata: Metadata = {
   title: 'Browse GRIP-EMS Sequences',
@@ -30,6 +31,7 @@ interface Props {
     content_type?: string
     search?: string
     patch_version?: string
+    game_version?: string
   }>
 }
 
@@ -44,6 +46,7 @@ export default async function BrowsePage(props: Props) {
     content_type: searchParams.content_type as SequenceFilters['content_type'],
     search: searchParams.search || undefined,
     patch_version: searchParams.patch_version || undefined,
+    game_version: isGameVersion(searchParams.game_version) ? searchParams.game_version : undefined,
   }
   const page = await fetchBrowsePage(filters)
 

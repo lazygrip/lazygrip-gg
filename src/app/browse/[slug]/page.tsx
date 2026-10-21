@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { redirect } from 'next/navigation'
-import { getClassBySlug, getContentTypeBySlug } from '@/lib/wow-data'
+import { getClassBySlug, getContentTypeBySlug, isGameVersion } from '@/lib/wow-data'
 import BrowseContent from '@/components/browse/BrowseContent'
 import { fetchBrowsePage } from '@/lib/browse-server'
 import { BROWSE_PAGE_SIZE, browseFilterKey } from '@/lib/browse-query'
@@ -16,6 +16,7 @@ interface Props {
     content_type?: string
     search?: string
     patch_version?: string
+    game_version?: string
   }>
 }
 
@@ -47,6 +48,7 @@ export default async function BrowseSlugPage(props: Props) {
     content_type: (searchParams.content_type as SequenceFilters['content_type']) || baseFilters.content_type,
     search: searchParams.search || undefined,
     patch_version: searchParams.patch_version || undefined,
+    game_version: isGameVersion(searchParams.game_version) ? searchParams.game_version : undefined,
   }
 
   const page = await fetchBrowsePage(filters)

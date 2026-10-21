@@ -14,6 +14,9 @@ export type WowSpec = {
 }
 
 export type ContentType = 'raid' | 'mythic_plus' | 'pvp' | 'solo'
+
+// Which client a sequence is for. Matches the check constraint in migration 050.
+export type GameVersion = 'retail' | 'forever'
 export type StepFunction = 'Sequential' | 'Priority' | 'Rev. Priority' | 'Random'
 
 // Hierarchical decoded action tree -- mirrors the shape
@@ -116,6 +119,7 @@ export type Sequence = {
   content_type: ContentType
   hero_talent: string | null
   patch_version: string | null
+  game_version: GameVersion
   grip_version: string | null
   step_function: StepFunction
   step_count: number | null
@@ -241,6 +245,7 @@ export type SequenceFilters = {
   content_type?: ContentType
   grip_version?: string
   patch_version?: string
+  game_version?: GameVersion
   search?: string
   sort?: 'recent' | 'top_rated' | 'most_viewed' | 'most_saved'
   page?: number
@@ -264,6 +269,7 @@ export type BrowseSequence = Pick<
   | 'spec_name'
   | 'content_type'
   | 'patch_version'
+  | 'game_version'
   | 'grip_version'
   | 'current_version_label'
   | 'view_count'

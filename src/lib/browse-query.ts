@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { BrowseSequence, SequenceFilters } from '@/types'
+import { DEFAULT_GAME_VERSION } from '@/lib/wow-data'
 
 export const BROWSE_PAGE_SIZE = 20
 
@@ -31,6 +32,7 @@ export const BROWSE_CARD_COLUMNS = [
   'spec_name',
   'content_type',
   'patch_version',
+  'game_version',
   'grip_version',
   'current_version_label',
   'view_count',
@@ -85,6 +87,9 @@ export function buildBrowseQuery(supabase: SupabaseClient, filters: SequenceFilt
   if (filters.spec_id) query = query.eq('spec_id', filters.spec_id)
   if (filters.content_type) query = query.eq('content_type', filters.content_type)
   if (filters.patch_version) query = query.eq('patch_version', filters.patch_version)
+  // Retail is the default, so a listing never mixes a Forever sequence into retail results
+  // unless the visitor asks for it. Same default on the server page and the client component.
+  query = query.eq('game_version', filters.game_version ?? DEFAULT_GAME_VERSION)
   if (filters.search) {
     const pattern = searchPattern(filters.search)
     query = query.or(`title.ilike.${pattern},description.ilike.${pattern}`)
@@ -128,6 +133,7 @@ export function browseFilterKey(filters: SequenceFilters): string {
     filters.spec_id ?? null,
     filters.content_type ?? null,
     filters.patch_version ?? null,
+    filters.game_version ?? null,
     filters.search ?? null,
   ])
 }
