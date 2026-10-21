@@ -212,8 +212,8 @@ export default function ValidatingPage() {
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'flex-start', paddingTop: 16, borderTop: '0.5px solid var(--border)' }}>
-        <Link href="/guide/from-legacy-program" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', textDecoration: 'none' }}>
-          <ArrowLeft size={14} /> Coming from the legacy program
+        <Link href="/guide/from-gse" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)', textDecoration: 'none' }}>
+          <ArrowLeft size={14} /> Coming from GSE
         </Link>
       </div>
     </div>

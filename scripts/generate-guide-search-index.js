@@ -34,7 +34,7 @@ const PAGES = [
   { file: 'guide/how-it-works.html', page: '/guide/how-it-works', pageTitle: 'How it works' },
   { file: 'guide/features-and-behavior.html', page: '/guide/features-and-behavior', pageTitle: 'Features and behavior' },
   { file: 'guide/building-sequences.html', page: '/guide/building-sequences', pageTitle: 'Building sequences' },
-  { file: 'guide/from-legacy-program.html', page: '/guide/from-legacy-program', pageTitle: 'Coming from the legacy program' },
+  { file: 'guide/from-gse.html', page: '/guide/from-gse', pageTitle: 'Coming from GSE' },
   { file: 'guide/validating.html', page: '/guide/validating', pageTitle: 'Validating your work' },
   { file: 'guide/blizzard-and-addons.html', page: '/guide/blizzard-and-addons', pageTitle: 'Blizzard and addons' },
   { file: 'guide/wow-forever.html', page: '/guide/wow-forever', pageTitle: 'WoW: Forever' },

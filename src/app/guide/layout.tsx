@@ -12,7 +12,7 @@ const NAV = [
   { href: '/guide/how-it-works', label: 'How it works' },
   { href: '/guide/features-and-behavior', label: 'Features and behavior' },
   { href: '/guide/building-sequences', label: 'Building sequences' },
-  { href: '/guide/from-legacy-program', label: 'Coming from the legacy program' },
+  { href: '/guide/from-gse', label: 'Coming from GSE' },
   { href: '/guide/validating', label: 'Validating your work' },
   { href: '/guide/blizzard-and-addons', label: 'Blizzard and addons' },
   { href: '/guide/wow-forever', label: 'WoW: Forever' },

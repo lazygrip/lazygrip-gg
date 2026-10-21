@@ -1182,14 +1182,17 @@ export default function WorkshopBuildPage() {
       {/* Export bar */}
 <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, padding: '8px 12px', marginBottom: 12, background: 'var(--bg-secondary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
   <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--accent)', flexShrink: 0, letterSpacing: '0.04em' }}>!GRIP1!</span>
-  <input readOnly value={user ? exportCode : '••••••••••••••••••••••••••••••••••••••••••••••••••'} placeholder="Export updates automatically as you edit..." style={{ flex: 1, padding: '5px 8px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: user ? 'var(--text-secondary)' : 'transparent', textShadow: user ? 'none' : '0 0 8px rgba(255,255,255,0.3)', userSelect: 'none' as const }} />
+  <input readOnly value={exportCode} placeholder="Export updates automatically as you edit..." style={{ flex: 1, padding: '5px 8px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }} />
+  <button onClick={copyExport} disabled={!exportCode} style={{ ...S.btn(true), display: 'flex', alignItems: 'center', gap: 5, opacity: exportCode ? 1 : 0.4 }}>
+    {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? 'Copied' : 'Copy'}
+  </button>
   {user ? (
-    <button onClick={copyExport} disabled={!exportCode} style={{ ...S.btn(true), display: 'flex', alignItems: 'center', gap: 5, opacity: exportCode ? 1 : 0.4 }}>
-      {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? 'Copied' : 'Copy'}
-    </button>
+    <Link href="/post" style={{ ...S.btn(), display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' as const, textDecoration: 'none' }}>
+      Share on LazyGrip
+    </Link>
   ) : (
-    <button onClick={() => setShowAuthModal(true)} style={{ ...S.btn(true), display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' as const }}>
-      Sign in to export
+    <button onClick={() => setShowAuthModal(true)} style={{ ...S.btn(), display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' as const }}>
+      Sign in to share
     </button>
   )}
   <button onClick={() => {
@@ -1214,7 +1217,7 @@ export default function WorkshopBuildPage() {
         </button>
         {importOpen && (
           <div style={{ padding: '12px 14px', background: 'var(--bg-primary)', borderTop: '0.5px solid var(--border)' }}>
-            <textarea value={importInput} onChange={e => setImportInput(e.target.value)} placeholder="Paste !GRIP1! or !EMS1! export, a legacy program macro, or raw /cast lines..." rows={4} spellCheck={false} style={{ ...S.textarea(), marginBottom: 8 }} />
+            <textarea value={importInput} onChange={e => setImportInput(e.target.value)} placeholder="Paste !GRIP1! or !EMS1! export, a !GSE3! export, a plain macro, or raw /cast lines..." rows={4} spellCheck={false} style={{ ...S.textarea(), marginBottom: 8 }} />
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
               <button onClick={importIntoBuilder} style={S.btn(true)}>Import into builder</button>
               <button onClick={() => { setImportInput(''); setImportError('') }} style={S.btn()}>Clear</button>

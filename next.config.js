@@ -71,11 +71,9 @@ const nextConfig = {
     return [
       // Old singular sequence URLs -> canonical plural route (recovers indexed 404 links)
       { source: '/sequence/:slug', destination: '/sequences/:slug', permanent: true },
-      // Old GSE-named guide URL -> renamed legacy-program page (recovers indexed 404)
-      { source: '/guide/from-gse', destination: '/guide/from-legacy-program', permanent: true },
-      // Convert tool taken off the Workshop hub; route kept alive as a redirect, not permanent
-      // since the underlying code is disconnected, not deleted.
-      { source: '/workshop/convert', destination: '/workshop', permanent: false },
+      // The guide page for GSE users is /guide/from-gse again; the interim legacy-program URL
+      // forwards to it so any link made while it was live keeps working.
+      { source: '/guide/from-legacy-program', destination: '/guide/from-gse', permanent: true },
       // Site changelog moved under the Guide as LG-Changelog
       { source: '/changelog', destination: '/guide/lg-changelog', permanent: true },
       // Class redirects — query param to clean slug

@@ -226,8 +226,8 @@ export default function BuildingSequencesPage() {
         <Link href="/guide/features-and-behavior" style={{ fontSize: 'var(--text-sm)', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
           ← Back: Features and behavior
         </Link>
-        <Link href="/guide/from-legacy-program" style={{ fontSize: 'var(--text-sm)', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
-          Next: Coming from the legacy program →
+        <Link href="/guide/from-gse" style={{ fontSize: 'var(--text-sm)', color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>
+          Next: Coming from GSE →
         </Link>
       </div>
     </div>
