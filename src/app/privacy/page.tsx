@@ -38,7 +38,7 @@ const SECTIONS = [
   },
   {
     title: 'Third-Party Services',
-    body: <p>Supabase handles the database and authentication. Your account data and content live there. Vercel handles hosting and deployment and may collect anonymized request logs.</p>,
+    body: <p>Supabase handles the database and authentication. Your account data and content live there. Vercel handles hosting and deployment and may collect anonymized request logs. When a private message is reported, an alert goes to a private Discord channel that only the site owner can see. The alert has the usernames involved and the reason the reporter gave, and it does not include the text of the message.</p>,
   },
   {
     title: 'Private Messages',
@@ -90,7 +90,7 @@ const SECTIONS = [
 export default function PrivacyPage() {
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>
-      <PageHeader title="Privacy Policy" description={<span style={{ color: 'var(--text-muted)' }}>Last updated: October 21, 2026</span>} />
+      <PageHeader title="Privacy Policy" description={<span style={{ color: 'var(--text-muted)' }}>Last updated: October 22, 2026</span>} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
         {SECTIONS.map(section => (

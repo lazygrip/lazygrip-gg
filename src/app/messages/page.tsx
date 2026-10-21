@@ -203,9 +203,22 @@ function MessagesInner() {
 
   async function submitReport(messageId: string) {
     setReportError(null)
-    const { error } = await supabase.rpc('report_message', { p_message_id: messageId, p_reason: reportReason.trim() || null })
-    if (error) {
-      setReportError(error.message || 'That report could not be sent.')
+    // Through the server route, not the database directly: the route is what alerts the site
+    // owner, and migration 052 stops signed-in members calling the report function themselves.
+    let failure: string | null = null
+    try {
+      const res = await fetch('/api/messages/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId, reason: reportReason.trim() || null }),
+      })
+      const json = (await res.json().catch(() => null)) as { ok?: boolean; error?: string } | null
+      if (!res.ok || !json?.ok) failure = json?.error || 'That report could not be sent.'
+    } catch {
+      failure = 'That report could not be sent. Check your connection and try again.'
+    }
+    if (failure) {
+      setReportError(failure)
       return
     }
     setReportedIds(ids => [...ids, messageId])
