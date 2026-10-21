@@ -43,7 +43,7 @@ export default function ValidatingPage() {
             { cmd: '/gems repair <name>', desc: 'Scan and repair a single sequence by name' },
             { cmd: '/gems repairall', desc: 'Scan every sequence you own in one pass' },
             { cmd: '/gems validate', desc: 'Check all sequences specifically for stale or renamed spells' },
-            { cmd: '/gems revalidate', desc: 'Force a full spell revalidation, run this after a patch' },
+            { cmd: '/gems revalidate', desc: 'Re-tags every sequence with current spell IDs, run this after a patch' },
           ].map(item => (
             <div key={item.cmd} style={{ display: 'flex', gap: 12, alignItems: 'baseline', padding: '9px 14px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
               <code style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--accent-text)', flexShrink: 0, minWidth: 200 }}>{item.cmd}</code>
@@ -197,10 +197,10 @@ export default function ValidatingPage() {
           When you import someone else&apos;s sequence, run the same validation process before relying on it in serious content. Published sequences are validated against specific talent builds and specific content levels, and those conditions may not match yours exactly. A sequence validated on one hero talent path with one set of tier bonuses will produce different numbers on a different configuration because the spells and their interactions are different.
         </p>
         <p>
-          Every sequence on LazyGrip includes the talent string it was validated with. If your talents do not match, the sequence is worth importing as a structural reference but treat it as a starting point rather than a finished product. Two runs at your target difficulty with log analysis takes about thirty minutes and tells you everything you need to know about whether it needs tuning for your setup.
+          Sequences on LazyGrip that list a talent string list the one they were validated with, and not every sequence lists one. If your talents do not match, the sequence is worth importing as a structural reference but treat it as a starting point rather than a finished product. Two runs at your target difficulty with log analysis takes about thirty minutes and tells you everything you need to know about whether it needs tuning for your setup.
         </p>
         <GuideInfoBox>
-          The validation workflow used for every sequence published on LazyGrip is: run the content, export the Warcraft Logs CSV, check the key metrics, adjust one thing if a metric is out of range, rerun. No sequence gets published before at least two validated runs at relevant difficulty.
+          The validation workflow Slowdog uses for his own sequences is: run the content, export the Warcraft Logs CSV, check the key metrics, adjust one thing if a metric is out of range, rerun. He does not publish one of his own before at least two validated runs at relevant difficulty. Sequences from other authors are only as validated as that author says they are.
         </GuideInfoBox>
       </GuideSection>
 

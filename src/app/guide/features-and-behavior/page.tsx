@@ -34,12 +34,11 @@ export default function FeaturesAndBehaviorPage() {
       />
 
       <GuideSection title="The Pause step">
-        <p>GRIP-EMS includes a dedicated Pause step that holds the sequence without attempting a cast. It has three variants and they behave differently depending on what you need.</p>
+        <p>GRIP-EMS includes a dedicated Pause step that holds the sequence without attempting a cast. In the editor a Pause is a number of empty keypresses, and that is the only kind there is, because the engine advances one step per keypress and nothing else.</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
           {[
-            { label: 'Clicks', desc: 'Holds for a set number of keypresses before advancing. Good for spacing out high-cost abilities that need a fixed number of GCDs between them.' },
-            { label: 'Milliseconds', desc: 'Holds for a set duration regardless of keypresses. Useful when you need a hard time gate between steps rather than an action count.' },
-            { label: 'GCD', desc: 'Holds for one or more global cooldown cycles. The safest option for finisher spacing since it adapts to your actual GCD rather than a hardcoded time value.' },
+            { label: 'Clicks', desc: 'Holds for N keypresses before advancing. Each one is a dead press that casts nothing, so it is how you leave room for an ability that needs a few presses between casts.' },
+            { label: 'Milliseconds or GCDs', desc: 'There is no timed or GCD-based Pause in the editor. A pause that was timed in milliseconds or in GCDs in a sequence you convert from elsewhere ends up as empty steps, so it is still counted in keypresses.' },
           ].map(r => (
             <div key={r.label} style={{ display: 'flex', gap: 14, fontSize: 'var(--text-sm)', alignItems: 'flex-start' }}>
               <span style={{ fontWeight: 600, color: 'var(--text-primary)', flexShrink: 0, minWidth: 120 }}>{r.label}</span>
@@ -47,7 +46,7 @@ export default function FeaturesAndBehaviorPage() {
             </div>
           ))}
         </div>
-        <p style={{ marginTop: 12 }}>The Pause step is most commonly needed for specs with strict GCD relationships between abilities, for example preventing Steady Shot from firing too close to a proc window in Marksmanship Hunter. If you find a spell clipping something it should not, a one-GCD pause before that step is usually the fix to try first.</p>
+        <p style={{ marginTop: 12 }}>The Pause step is most commonly needed for specs with strict GCD relationships between abilities, for example preventing Steady Shot from firing too close to a proc window in Marksmanship Hunter. If you find a spell clipping something it should not, a one-click pause before that step is usually the fix to try first.</p>
         <p style={{ marginTop: 12 }}>As of v2.4.0, GRIP-EMS also has a dedicated Hold While Channeling setting, covered in full on the <Link href="/guide/settings" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Settings</Link> page, which stops a mid-channel press from burning a step at all. It solves a related but different problem than the Pause step: Pause deliberately holds position for a set count or duration you choose, while Hold While Channeling reacts to an active channel and holds only for as long as that channel runs. Through v2.4.13 the setting only showed up for characters with an actual empowered spell in their spellbook, in practice meaning Evoker, even though the underlying hold has always worked on any channel. That was a UI gating bug, fixed in v2.4.14, so it is now the first thing to reach for on any channeled spell, not just an Evoker-specific tool.</p>
       </GuideSection>
 
@@ -86,11 +85,11 @@ export default function FeaturesAndBehaviorPage() {
       </GuideSection>
 
       <GuideSection title="Skyriding and mount behavior">
-        <p>Pressing your sequence keybind while skyriding behaves differently depending on whether you have a valid target.</p>
+        <p>Pressing your sequence keybind while skyriding behaves differently depending on whether you have an attackable target.</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16, marginBottom: 16 }}>
           {[
-            { label: 'Valid target below you', desc: 'One press dismounts and fires step 1 in the same action. No separate dismount required.' },
-            { label: 'No valid target', desc: 'The press falls through to your skyriding action bar as if GRIP-EMS is not active. Your normal skyriding controls are unaffected.' },
+            { label: 'Attackable target', desc: 'With an attackable target, one press dismounts and casts that press\u2019s step in the same action. No separate dismount required.' },
+            { label: 'No attackable target', desc: 'The press falls through to your skyriding action bar as if GRIP-EMS is not active. Your normal skyriding controls are unaffected.' },
           ].map(r => (
             <div key={r.label} style={{ display: 'flex', gap: 14, fontSize: 'var(--text-sm)', alignItems: 'flex-start' }}>
               <span style={{ fontWeight: 600, color: 'var(--text-primary)', flexShrink: 0, minWidth: 180 }}>{r.label}</span>

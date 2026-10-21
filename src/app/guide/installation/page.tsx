@@ -30,7 +30,7 @@ export default function InstallationPage() {
         title="Installation"
         description={
           <>
-            Installing GRIP-EMS takes about two minutes. The part most guides skip is what comes after. There are in-game settings that have to be configured before anything will work, and none of them are set correctly by default. This page covers the install steps and the most critical setting. The full settings breakdown is on the <Link href="/guide/settings" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Settings</Link> page.
+            Installing GRIP-EMS takes about two minutes. The part most guides skip is what comes after. Since v2.3.14 the one setting a sequence cannot run without is switched on for you, so what is left is tuning, namely your Spell Queue Window and your click rate. This page covers the install steps and the checks that matter. The full settings breakdown is on the <Link href="/guide/settings" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Settings</Link> page.
           </>
         }
       />
@@ -68,7 +68,7 @@ export default function InstallationPage() {
         </p>
 
         <Step number={1} label="Key Down Casting is handled for you now">
-          <p>GRIP-EMS fires through WoW's <strong>key-down</strong> event system. By default WoW uses key-up, which means a sequence would register the press only when you release the key rather than when you press it. At 150ms intervals that is the difference between a functioning rotation and nothing happening at all.</p>
+          <p>GRIP-EMS runs a step on the <strong>key-down</strong> event, so it needs WoW's key-down casting setting switched on. With it off, the addon's own notes say a sequence does not advance at all, which at 150ms intervals is the difference between a functioning rotation and nothing happening.</p>
           <p style={{ marginTop: 8 }}>Starting in v2.3.14, GRIP-EMS sets <code style={guideCodeStyle}>ActionButtonUseKeyDown</code> to enabled itself on every login, whether or not you have ever opened the settings. It is no longer a row in the CVar Health tab and there is nothing to fix here manually. The check runs once per login while you are out of combat, so if a sequence goes dead after you changed settings mid-session, run <code style={guideCodeStyle}>/gems status</code> to read the live value and <code style={guideCodeStyle}>/reload</code> to put it back.</p>
           <GuideCallout>Running an older version than 2.3.14? Update through your addon manager first. On anything older, open <code style={guideCodeStyle}>/gems settings</code>, go to the CVar Health tab, and click Fix if the row is not green. That is the single most common reason a pre-2.3.14 install does nothing on keypress.</GuideCallout>
         </Step>
@@ -90,18 +90,18 @@ export default function InstallationPage() {
 
       <GuideSection title="What you will not see and why" layout="stack">
         <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-          GRIP-EMS does not work like GSE, which creates a draggable button you place on a bar and bind. GRIP-EMS binds a key directly to a sequence inside the addon. For sequences with multiple versions, a macro is created and can be placed on your action bar, but for single-version sequences there is nothing to drag. If you are looking for a button to appear and it is not appearing, that is expected behavior and not a bug.
+          GRIP-EMS does not need a button on your bar to run a sequence. It binds a key directly to the sequence inside the addon, and that is how most players use it. It does still make a macro for you, though: every sequence gets a character macro named GEMS: followed by the sequence name, which clicks the sequence's button, and you can find it in your /macro list and drag it to an action bar if you want something clickable. A button does not appear on your bars by itself, and that is expected behavior and not a bug.
         </p>
         <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 12 }}>
-          To bind a key to a sequence, open the sequence in the GRIP-EMS editor, go to the Keybinds tab, and assign a key there. The bind is stored per-spec, so switching specs gives you a clean slate for a different rotation on the same key.
+          To bind a key to a sequence, open the sequence in the GRIP-EMS editor, go to the Keybind tab, and assign a key there. The bind is stored per spec, so each spec keeps its own keys and they switch when you do.
         </p>
         <GuideImage
           src="/guide/keybind-tab-bound.png"
-          alt="The Keybinds tab in the GRIP-EMS editor with a key bound to a sequence"
-          caption="The Keybinds tab with a key already bound. This is the only place a sequence gets its key — there is no separate WoW keybind menu entry to hunt for."
+          alt="The Keybind tab in the GRIP-EMS editor with a key bound to a sequence"
+          caption="The Keybind tab with a key already bound. This is where a sequence gets its key, and there is no separate WoW keybind menu entry to hunt for."
         />
         <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 12 }}>
-          If you specifically want a button on your action bar that you can drag and drop the way you would with GSE, that workflow still exists as an optional add-on rather than a built-in GRIP-EMS feature. Daxomault's <a href="https://www.curseforge.com/wow/addons/grip-ems-actionbutton-override" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>GRIP-EMS Actionbutton Override</a> plugin adds action bar override and drag-and-drop keybinding on top of GRIP-EMS. It is not required and the keybind-only approach above is still the default and the one most players end up using, but it is there if you prefer to keep sequences on your bars.
+          If you want to put sequences on your action bars more directly than dragging the GEMS: macro, there is an optional plugin for that. Daxomault's <a href="https://www.curseforge.com/wow/addons/grip-ems-actionbutton-override" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>GRIP-EMS Actionbutton Override</a> plugin needs GRIP-EMS v2.3.19 or newer and lets you assign a sequence straight to an action bar slot, from a right-click menu or by dragging it from the sequence list. It is not required, and the keybind approach above is still the default and the one most players use.
         </p>
       </GuideSection>
 
@@ -111,7 +111,7 @@ export default function InstallationPage() {
           {[
             'On v2.3.14 or later, nothing needed; on older versions, Cvar Health tab shows green with no Fix button visible',
             'You have at least one sequence imported or created',
-            'That sequence has a keybind assigned in the Keybinds tab',
+            'That sequence has a keybind assigned in the Keybind tab',
             'You are in Bear Form or your spec\'s required form when testing',
           ].map((item, i) => (
             <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
@@ -125,19 +125,19 @@ export default function InstallationPage() {
       <GuideSection title="Troubleshooting common problems" layout="stack">
         <TroubleshootItem
           problem="GRIP-EMS is gone from my AddOns list after a game patch"
-          solution="Almost always this is a version problem and not a broken install. Midnight removed the Load out of date AddOns tickbox, so an addon that does not name the current patch simply does not load, and v2.4.20 named 12.1.0 and nothing newer, which meant it never loaded on 12.1.5. Update to v2.4.20-hotfix or later through your addon manager (it names 12.1.5, interface 120105, and is otherwise v2.4.20 with two small fixes), then log in again. The same thing can happen on any patch day until the author adds the new patch number, so when GRIP-EMS is missing after a patch, check for an update before you reinstall or reset anything. If you are already on v2.4.20-hotfix and it still does not show up, make sure the folder sits directly inside World of Warcraft\_retail_\Interface\AddOns and is named GRIP-EMS."
+          solution="Almost always this is a version problem and not a broken install. Unless you have told the game to load out-of-date AddOns, an addon that does not name the current patch simply does not load, and v2.4.20 named 12.1.0 and nothing newer, which meant it never loaded on 12.1.5. Update to v2.4.20-hotfix or later through your addon manager (it names 12.1.5, interface 120105, and is otherwise v2.4.20 with two small fixes), then log in again. The same thing can happen on any patch day until the author adds the new patch number, so when GRIP-EMS is missing after a patch, check for an update before you reinstall or reset anything. If you are already on v2.4.20-hotfix and it still does not show up, make sure the folder sits directly inside World of Warcraft\_retail_\Interface\AddOns and is named GRIP-EMS."
         />
         <TroubleshootItem
           problem="Keybind is set but nothing fires"
-          solution="First, update GRIP-EMS through your addon manager. As of v2.3.14, Key Down Casting is forced on automatically and this is no longer something you can misconfigure. If you are still on an older version, run /gems settings, go to the Cvar Health tab, and click Fix if the row is not green; this solves the majority of pre-2.3.14 keybind problems. On 2.3.14 or later, if the sequence still does not fire, check that you have a target selected and that the sequence has a keybind assigned in the Keybinds tab inside the editor, not just in WoW's default keybind menu. Run /gems keys to check whether another addon or click binding is quietly eating the key before GRIP-EMS ever sees it."
+          solution="First, update GRIP-EMS through your addon manager. As of v2.3.14, Key Down Casting is forced on automatically and this is no longer something you can misconfigure. If you are still on an older version, run /gems settings, go to the Cvar Health tab, and click Fix if the row is not green; this solves the majority of pre-2.3.14 keybind problems. On 2.3.14 or later, if the sequence still does not fire, check that you have a target selected and that the sequence has a keybind assigned in the Keybind tab inside the editor, not just in WoW's default keybind menu. Run /gems keys to check whether another addon or click binding is quietly eating the key before GRIP-EMS ever sees it."
         />
         <TroubleshootItem
           problem="Key still shows correctly in /gems but pressing it does nothing after a loading screen"
           solution="This was a known bug through v2.4.0: GRIP-EMS re-applies sequence keybinds at runtime rather than parking them in WoW's own binding list, so a loading screen could silently drop the live binding while /gems still listed it as bound. Fixed in v2.4.1. Update GRIP-EMS through your addon manager. If you are already current and still see this, it is not the same bug; run /gems keys to check for a genuine conflict instead."
         />
         <TroubleshootItem
-          problem="I put a sequence's macro on my action bar and pressing it does nothing"
-          solution="Multi-version sequences generate a macro you can place on a bar, but clicking that macro with your mouse or pressing it from an action bar slot is not the same as a Keybinds-tab bind, and it will not fire the sequence correctly on its own. GRIP-EMS is built around binding a key directly to the sequence inside the editor's Keybinds tab, not around action bar buttons. If you want the drag-and-drop, click-to-fire workflow you may be used to from GSE, install Daxomault's GRIP-EMS Actionbutton Override addon, which adds that behavior back as an option."
+          problem="A sequence on my action bar goes back to step 1 on every press"
+          solution="Check whether Left Click is ticked as a reset modifier on that sequence. The GEMS: macro only ever sends a left click, and the default action bars pass a key press to a macro as a left click, so with Left Click set to reset, a macro on an action bar key goes back to step 1 on every press. Untick Left Click in the sequence's reset settings and it advances normally. Your keybind alone does not count as a click, so a sequence run from its Keybind tab key is not affected. This is how v2.4.21 handles it, so update through your addon manager first if you are on an older version."
         />
         <TroubleshootItem
           problem="Sequence fires once then stops"
@@ -153,7 +153,7 @@ export default function InstallationPage() {
         />
         <TroubleshootItem
           problem="Sequence key dies after skyriding or leaving a vehicle"
-          solution="The keybind suspend-and-restore runs inside the secure engine and survives skyriding, vehicle exits, and possession. If you are hitting this, update GRIP-EMS through your addon manager. You can also press your sequence key while skyriding over an attackable target and it will dismount and fire step 1 in a single press."
+          solution="The keybind suspend-and-restore runs inside the secure engine and survives skyriding, vehicle exits, and possession. If you are hitting this, update GRIP-EMS through your addon manager. You can also press your sequence key while skyriding with an attackable target and it will dismount and cast that press's step in a single press."
         />
         <TroubleshootItem
           problem="Sequence key fires mid-air or vehicle keys are dead on first flight of the session"
@@ -165,7 +165,7 @@ export default function InstallationPage() {
         />
         <TroubleshootItem
           problem="Sequence says a spell cannot be found, but it works fine once I am in the right form or proc"
-          solution="This is expected behavior, not a bug. GRIP-EMS checks whether a spell is castable right now before it will queue it in a step. Some spells only exist, or only become the correct version, in a specific state, such as Void Volley replacing Void Bolt only while a Shadow Priest is in Voidform, or a spec-specific proc swapping what a button actually casts. Outside that state the addon correctly reports it cannot find the spell, then the step behaves normally the moment you are actually in the state where the spell exists. If the step is working in practice once the condition is met, there is nothing to fix. If you want the warning to stop appearing while testing outside the triggering state, an addon like ErrorMonster can redirect the message so it does not clutter your chat window."
+          solution="This is expected behavior, not a bug. GRIP-EMS looks a step's spell up by name, and a spell that only exists in a particular state can come back as not found outside that state. Some spells only exist, or only become the correct version, in a specific state, such as Void Volley replacing Void Bolt only while a Shadow Priest is in Voidform, or a spec-specific proc swapping what a button actually casts. Outside that state the addon reports it cannot find the spell, then the step behaves normally the moment you are actually in the state where the spell exists. If the step is working in practice once the condition is met, there is nothing to fix."
         />
       </GuideSection>
 
@@ -176,10 +176,10 @@ export default function InstallationPage() {
             { cmd: '/gems settings', desc: 'Opens settings including Cvar Health' },
             { cmd: '/gems binds', desc: 'Shows all currently bound sequences for your active spec' },
             { cmd: '/gems keys', desc: 'Checks every sequence, vehicle, and pet battle key against your saved bindings and names conflicts' },
-            { cmd: '/gems debug on', desc: 'Enables debug output to chat, useful when something is not firing' },
+            { cmd: '/gems debug', desc: 'Turns debug output to chat on or off, useful when something is not firing' },
             { cmd: '/gems debugwindow', desc: 'Opens the debug window with additional diagnostic information' },
             { cmd: '/gems validate', desc: 'Runs spell validation across all your sequences and reports stale spells' },
-            { cmd: '/gems revalidate', desc: 'Forces a full revalidation, useful after a patch or respec' },
+            { cmd: '/gems revalidate', desc: 'Re-tags every sequence with current spell IDs, useful after a patch or respec' },
           ].map(item => (
             <div key={item.cmd} style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', alignItems: 'baseline', fontSize: 'var(--text-sm)' }}>
               <code style={{

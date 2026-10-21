@@ -27,7 +27,7 @@ const sections = [
     icon: Wrench,
     time: '5 min',
     title: 'Installation',
-    desc: 'Download, enable, and check the two settings that most guides skip. As of v2.3.14, Key Down Casting is handled automatically. If your keybind is set but nothing fires, start here.',
+    desc: 'Download, enable, and check the few settings that decide whether a keybind fires. As of v2.3.14, Key Down Casting is handled for you. If your keybind is set but nothing fires, start here.',
   },
   {
     href: '/guide/settings',
@@ -113,14 +113,14 @@ export default function GuidePage() {
           </h1>
         </div>
         <p style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.5, maxWidth: 620, marginBottom: 14 }}>
-          Most guides skip the two settings that actually break your rotation. This one doesn&apos;t.
+          Most rotation problems come down to a few settings and a handful of habits. This guide covers them.
         </p>
         <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75, maxWidth: 620, marginBottom: 12 }}>
-          Written by a player who runs GRIP-EMS through Mythic+ and validates every sequence against Warcraft Logs before publishing it. This is not a feature tour and it is not a rehash of the official documentation. It is a practical guide to making the addon work correctly from the first install through your first validated sequence, written for players of every class and spec.
+          Written by a player who runs GRIP-EMS through Mythic+ and validates his own sequences against Warcraft Logs before publishing them. This is not a feature tour and it is not a rehash of the official documentation. It is a practical guide to making the addon work correctly from the first install through your first validated sequence, written for players of every class and spec.
         </p>
         <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75, maxWidth: 620 }}>
           If your keybind is set but nothing is firing, go straight to{' '}
-          <Link href="/guide/installation" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Installation</Link>. On v2.3.14 and later this is rarely the cause since Key Down Casting is forced on automatically every time you log in, but on older versions the Cvar Health fix takes thirty seconds and solves that problem the majority of the time. And if GRIP-EMS is missing from your AddOns list altogether after a game patch, update it before you do anything else, because an addon that does not name the current patch will not load; the 12.1.5 fix is v2.4.20-hotfix. If you are coming from an older macro sequencing addon and want to know whether switching is worth it, start with{' '}
+          <Link href="/guide/installation" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Installation</Link>. On v2.3.14 and later this is rarely the cause since Key Down Casting is handled for you, but on older versions the Cvar Health fix takes thirty seconds and solves that problem the majority of the time. And if GRIP-EMS is missing from your AddOns list altogether after a game patch, update it before you do anything else, because an addon that does not name the current patch will not load; the 12.1.5 fix arrived in v2.4.20-hotfix and is in every release since. If you are coming from an older macro sequencing addon and want to know whether switching is worth it, start with{' '}
           <Link href="/guide/from-gse" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Coming from GSE</Link>.
         </p>
 
@@ -171,10 +171,10 @@ export default function GuidePage() {
 
       <GuideSection title="About the sequences on this site">
         <p style={{ marginBottom: 12 }}>
-          Every sequence published on LazyGrip includes the content type it was validated at, the key level or difficulty tier, and the talent string it was built for. If a sequence does not list validation data, treat it as a starting point to adapt rather than a finished product to import and run blind. A sequence validated at plus 10 on one hero talent path will produce different numbers on a different path because the spells and their interactions differ.
+          Sequences on LazyGrip can list the content type they were validated at, the key level or difficulty tier, and the talent string they were built for, and many do not. If a sequence does not list validation data, treat it as a starting point to adapt rather than a finished product to import and run blind. A sequence validated at plus 10 on one hero talent path will produce different numbers on a different path because the spells and their interactions differ.
         </p>
         <p>
-          The talent string ships with every sequence for exactly this reason. If your talents do not match, the sequence is still worth importing as a structural reference, but plan on a validation pass before you rely on it in serious content.
+          A talent string is listed with a sequence for exactly this reason when its author includes one. If your talents do not match, the sequence is still worth importing as a structural reference, but plan on a validation pass before you rely on it in serious content.
         </p>
       </GuideSection>
 
