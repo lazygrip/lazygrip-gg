@@ -2,13 +2,13 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: 'Decode a GRIP Export',
-  description: 'Paste a GRIP or legacy macro export to inspect its steps, spells, and settings before importing it.',
+  description: 'Paste a GRIP or GSE export to inspect its steps, spells, and settings before importing it.',
   alternates: {
     canonical: 'https://lazygrip.net/workshop/decode',
   },
   openGraph: {
     title: 'Decode a GRIP Export',
-    description: 'Paste a GRIP or legacy macro export to inspect its steps, spells, and settings before importing it.',
+    description: 'Paste a GRIP or GSE export to inspect its steps, spells, and settings before importing it.',
     url: 'https://lazygrip.net/workshop/decode',
     siteName: 'LazyGrip.net',
     type: 'website',

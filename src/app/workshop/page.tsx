@@ -1,5 +1,5 @@
 'use client'
-import { Search, Wrench, ExternalLink } from 'lucide-react'
+import { Search, Wrench, ExternalLink, ArrowLeftRight } from 'lucide-react'
 import Card from '@/components/ui/Card'
 
 // THERE IS NOTHING TO LOAD ON THIS PAGE, AND THE GATE THAT SAID OTHERWISE COST
@@ -40,7 +40,7 @@ export default function WorkshopPage() {
           </div>
         </div>
         <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: 540 }}>
-          Build, decode, and export sequences without ever opening the addon. Browser-based tools and in-game addons built for the GRIP-EMS community, integrated on LazyGrip by Slowdog.
+          Build, decode, convert, and export sequences without ever opening the addon. Browser-based tools and in-game addons built for the GRIP-EMS community, integrated on LazyGrip by Slowdog.
         </p>
       </div>
 
@@ -51,10 +51,18 @@ export default function WorkshopPage() {
         </p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
           <ToolCard
+            href="/workshop/convert"
+            eyebrow="Switch"
+            title="Convert from GSE"
+            description="Paste a GSE export and get a GRIP-EMS string back, with the original author kept on it. No account needed."
+            icon={<ArrowLeftRight size={20} />}
+            cta="Open converter"
+          />
+          <ToolCard
             href="/workshop/decode"
             eyebrow="Inspect"
             title="Decode Export"
-            description="View loops, actions, steps, and talent builds from !EMS1!, !GRIP1!, or legacy program export strings."
+            description="View loops, actions, steps, and talent builds from !EMS1!, !GRIP1!, or GSE export strings."
             icon={<Search size={20} />}
             cta="Open decoder"
           />

@@ -1,8 +1,6 @@
 'use client'
-import { useEffect, useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
 import { Copy, Check } from 'lucide-react'
 import ActionTree, { type ActionNode } from '@/components/sequence/ActionTree'
 
@@ -71,7 +69,6 @@ function VersionStepView({ version }: { version: DecodeResult['sequences'][0]['v
 }
 
 export default function WorkshopDecodePage() {
-  const [loading, setLoading] = useState(true)
   const [input, setInput] = useState('')
   // THE OUTCOME IS KEYED TO THE CODE THAT PRODUCED IT.
   //
@@ -88,15 +85,6 @@ export default function WorkshopDecodePage() {
   const [decoded, setDecoded] = useState<{ code: string; result: DecodeResult | null; error: string | null } | null>(null)
   const [decoding, setDecoding] = useState(false)
   const [copiedTalent, setCopiedTalent] = useState<string | null>(null)
-  const router = useRouter()
-
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) router.push('/auth/login?next=/workshop/decode')
-      else setLoading(false)
-    })
-  }, [router])
 
   const code = input.trim()
   // Only the outcome of the code currently in the box counts as this render's
@@ -135,8 +123,6 @@ export default function WorkshopDecodePage() {
     setTimeout(() => setCopiedTalent(null), 1500)
   }
 
-  if (loading) return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: 'var(--text-muted)', fontSize: 'var(--text-sm)' }}>Loading...</span></div>
-
   const isGSE = result?.meta?.format === 'GSE3'
   // A converted !GRIP1! keeps the source version, so origin survives the round trip.
   const isGSEOrigin = isGSE || (result?.sequences || []).some(seq => Boolean(seq.gseVersion))
@@ -159,7 +145,7 @@ export default function WorkshopDecodePage() {
           <div>
             <p style={{ fontSize: 'var(--text-xs)', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 4 }}>Inspect</p>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: 6 }}>Decode Export</h1>
-            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>View loops, actions, and steps from !EMS1!, !GRIP1!, or legacy program export strings, or just paste bare macro lines with no envelope at all.</p>
+            <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.6 }}>View loops, actions, and steps from !EMS1!, !GRIP1!, or GSE export strings, or just paste bare macro lines with no envelope at all.</p>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -167,7 +153,7 @@ export default function WorkshopDecodePage() {
             <textarea
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Paste !EMS1!, !GRIP1!, a legacy program export, or bare macro lines..."
+              placeholder="Paste !EMS1!, !GRIP1!, a GSE export, or bare macro lines..."
               rows={8}
               spellCheck={false}
               style={{
@@ -227,7 +213,7 @@ export default function WorkshopDecodePage() {
                     ['Version', result.meta.version as string],
                     result.sequences[0]?.class && ['Class', result.sequences[0].class],
                     result.sequences[0]?.spec && ['Spec', result.sequences[0].spec],
-                    isGSEOrigin ? ['Origin', 'Legacy program'] : '',
+                    isGSEOrigin ? ['Origin', 'GSE'] : '',
                     isGSEOrigin && originAuthor ? ['Author', originAuthor] : '',
                   ].filter(Boolean).map(([label, value]) => value && (
                     <span key={label as string} style={{ fontSize: 'var(--text-xs)', padding: '3px 8px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}>

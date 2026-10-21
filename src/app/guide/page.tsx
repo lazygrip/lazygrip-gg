@@ -58,11 +58,11 @@ const sections = [
     desc: 'The decision framework behind sequence design, applied to a real Guardian Druid Mythic+ sequence and a generic DPS build. Not what the buttons do but why the structure is what it is, what breaks if you change it, and how to apply the same thinking to your own spec.',
   },
   {
-    href: '/guide/from-legacy-program',
+    href: '/guide/from-gse',
     icon: GitBranch,
     time: '6 min',
-    title: 'Coming from the legacy program',
-    desc: 'Written specifically for players who use an older macro sequencing addon and are evaluating whether to switch. The one mechanical difference that actually matters, what transfers automatically, and the practical steps to get your existing sequences running.',
+    title: 'Coming from GSE',
+    desc: 'Written specifically for players who use GSE and are evaluating whether to switch. The one mechanical difference that actually matters, what transfers automatically, and the practical steps to get your existing sequences running.',
   },
   {
     href: '/guide/validating',
@@ -121,7 +121,7 @@ export default function GuidePage() {
         <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.75, maxWidth: 620 }}>
           If your keybind is set but nothing is firing, go straight to{' '}
           <Link href="/guide/installation" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Installation</Link>. On v2.3.14 and later this is rarely the cause since Key Down Casting is forced on automatically every time you log in, but on older versions the Cvar Health fix takes thirty seconds and solves that problem the majority of the time. And if GRIP-EMS is missing from your AddOns list altogether after a game patch, update it before you do anything else, because an addon that does not name the current patch will not load; the 12.1.5 fix is v2.4.20-hotfix. If you are coming from an older macro sequencing addon and want to know whether switching is worth it, start with{' '}
-          <Link href="/guide/from-legacy-program" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Coming from the legacy program</Link>.
+          <Link href="/guide/from-gse" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Coming from GSE</Link>.
         </p>
 
         <GuideImage
