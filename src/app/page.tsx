@@ -10,6 +10,7 @@ import StatBlock from '@/components/ui/StatBlock'
 import SequenceMark from '@/components/ui/SequenceMark'
 import ChangelogButton from '@/components/home/ChangelogButton'
 import { EMS_RELEASES } from '@/lib/changelog/ems-archive'
+import { foreverLaunchLine, isForeverLaunched } from '@/data/forever-observations'
 
 // Rendered per request, like every page: the root layout needs a fresh CSP nonce on each
 // response (see src/lib/csp.ts), so this page is no longer statically cached. The stat
@@ -42,9 +43,13 @@ export default async function HomePage() {
     fetchCurrentPatchTicker(10),
     fetchTopCreators(5),
   ])
-  // Previous-patches row excludes whatever the current-patch row already shows, so the
-  // two tickers never surface the same sequence twice.
-  const recent = await fetchRecentSequences(14, currentPatchTicker.patch)
+  // The second ticker row is Previous Patch Sequences until WoW: Forever launches. From launch day
+  // it becomes WoW: Forever Sequences, as long as there is at least one to show; with none, the
+  // row keeps showing previous patches rather than vanishing. Previous-patches excludes whatever
+  // the current-patch row already shows, so the two tickers never surface the same sequence twice.
+  const foreverRow = isForeverLaunched() ? await fetchRecentSequences(14, null, 'forever') : []
+  const showForeverRow = foreverRow.length > 0
+  const recent = showForeverRow ? foreverRow : await fetchRecentSequences(14, currentPatchTicker.patch)
 
   return (
     <div>
@@ -416,6 +421,25 @@ export default async function HomePage() {
               <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Current version</span>
               <Link prefetch={false} href="/guide/ems-changelog" style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-mono)', textDecoration: 'none' }}>GRIP-EMS v2.4.21</Link>
             </div>
+            {/* WoW: Forever entry point. Forever sequences are kept out of every retail surface on
+                this page, so this is the one way in from the front door. It says what is true
+                (a launch date and that the page tracks what has been confirmed) and links to the
+                page that carries the dated evidence. */}
+            <Link
+              prefetch={false}
+              href="/forever"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '5px 12px',
+                borderRadius: 99,
+                background: 'var(--bg-tertiary)',
+                border: '0.5px solid rgba(200,150,60,0.5)',
+                textDecoration: 'none',
+              }}
+            >
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>WoW: Forever</span>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: '#c8963c' }}>{foreverLaunchLine()} · what works so far</span>
+            </Link>
             {/* Keyed on the newest release in the changelog archive, not on the version string
                 above, so it only says New when there is actually a new changelog to read. */}
             <ChangelogButton latest={EMS_RELEASES[0].version} />
@@ -518,7 +542,7 @@ export default async function HomePage() {
                           >
                             <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#D9A441', flexShrink: 0 }} />
                             <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: '#E8B85C', whiteSpace: 'nowrap' }}>
-                              Previous Patch Sequences
+                              {showForeverRow ? 'WoW: Forever Sequences' : 'Previous Patch Sequences'}
                             </span>
                           </div>
                         )
