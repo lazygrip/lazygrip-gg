@@ -53,3 +53,15 @@ export const FOREVER_OBSERVATIONS: ForeverObservation[] = [
     source: 'Nothing has been run yet',
   },
 ]
+
+// Launch date from the WoW: Forever guide page. The homepage entry point reads it so its wording
+// flips from "Launches" to "Launched" on the day without anyone editing the page.
+export const FOREVER_LAUNCH_DATE = '2026-11-04'
+
+export function isForeverLaunched(now: Date = new Date()): boolean {
+  return now.getTime() >= Date.parse(`${FOREVER_LAUNCH_DATE}T00:00:00Z`)
+}
+
+export function foreverLaunchLine(now: Date = new Date()): string {
+  return isForeverLaunched(now) ? 'Launched Nov 4' : 'Launches Nov 4'
+}

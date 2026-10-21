@@ -202,7 +202,6 @@ function ProfileTabsInner({
     setActiveTab(urlTab)
   }
 
-  const [chatOpen, setChatOpen] = useState(false)
 
   // Local, mutable copies of the owner-only lists -- page.tsx's fetches are
   // the initial state, and every mutation below (publish, make private,
@@ -362,45 +361,7 @@ function ProfileTabsInner({
             />
           )}
         </div>
-        <button
-          onClick={() => setChatOpen(v => !v)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '6px 14px',
-            marginBottom: 6,
-            background: chatOpen ? 'var(--accent-subtle)' : 'var(--bg-primary)',
-            border: '0.5px solid var(--border-strong)',
-            borderRadius: 999,
-            color: chatOpen ? 'var(--accent-text)' : 'var(--text-secondary)',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 500,
-            cursor: 'pointer',
-            fontFamily: 'var(--font-sans)',
-          }}
-        >
-          <MessageCircle size={13} />
-          Chat
-        </button>
       </div>
-
-      {chatOpen && (
-        <div style={{
-          background: 'var(--bg-primary)',
-          border: '0.5px dashed var(--border-strong)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '16px 20px',
-          marginBottom: 16,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          color: 'var(--text-muted)',
-        }}>
-          <MessageCircle size={16} style={{ flexShrink: 0 }} />
-          <p style={{ fontSize: 'var(--text-sm)', margin: 0 }}>
-            Chat with {isOwnProfile ? 'creators' : 'this creator'} — coming soon.
-          </p>
-        </div>
-      )}
 
       {activeTab === 'dashboard' ? (
         <DashboardTab seqs={publishedList} viewTrend={viewTrend} activity={activity} />

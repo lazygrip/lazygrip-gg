@@ -1,6 +1,7 @@
 import { createPublicClient } from '@/lib/supabase/public'
 import { buildBrowseQuery } from '@/lib/browse-query'
-import type { BrowseSequence, Sequence } from '@/types'
+import { DEFAULT_GAME_VERSION } from '@/lib/wow-data'
+import type { BrowseSequence, GameVersion, Sequence } from '@/types'
 
 export type HomeStats = {
   sequenceCount: number
@@ -237,13 +238,20 @@ export async function fetchTopCreators(limit = 15): Promise<TopCreator[]> {
 // within the batch so the scroll reads left-to-right as "newest arrives from the right."
 // excludePatch lets the "previous patches" row skip whatever the "current patch" row is
 // already showing, so the two tickers never duplicate the same sequence.
-export async function fetchRecentSequences(limit = 10, excludePatch?: string | null): Promise<Sequence[]> {
+export async function fetchRecentSequences(
+  limit = 10,
+  excludePatch?: string | null,
+  gameVersion: GameVersion = DEFAULT_GAME_VERSION,
+): Promise<Sequence[]> {
   try {
     const supabase = createPublicClient()
     let query = supabase
       .from('sequences')
       .select('id, title, slug, class_id, class_name, created_at')
       .eq('status', 'published')
+      // One client per row. Without this, a Forever sequence posted through the form (which carries
+      // the current retail patch by default) would show up in the retail rows.
+      .eq('game_version', gameVersion)
       .order('created_at', { ascending: false })
       .limit(limit)
     if (excludePatch) query = query.neq('patch_version', excludePatch)
@@ -276,6 +284,7 @@ export async function fetchCurrentPatchTicker(limit = 10): Promise<{ patch: stri
         .select('id, title, slug, class_id, class_name, view_count, created_at, author:profiles!sequences_author_id_fkey(username, display_name)')
         .eq('status', 'published')
         .eq('patch_version', p)
+        .eq('game_version', DEFAULT_GAME_VERSION)
         .order('created_at', { ascending: false })
         .limit(limit)
 

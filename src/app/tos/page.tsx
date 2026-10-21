@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px' }}>
-      <PageHeader title="Terms of Service" description={<span style={{ color: 'var(--text-muted)' }}>Last updated: September 10, 2026</span>} />
+      <PageHeader title="Terms of Service" description={<span style={{ color: 'var(--text-muted)' }}>Last updated: October 21, 2026</span>} />
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
 
@@ -43,6 +43,11 @@ export default function TermsPage() {
         <Card style={{ padding: '20px 24px' }}>
           <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Acceptable Use</h2>
           <p>Do not use LazyGrip.net to break laws, harass or threaten other users, post spam or unsolicited ads, try to get into someone else's account, run automated tools against the site, impersonate anyone, or post content that infringes on someone else's intellectual property.</p>
+        </Card>
+
+        <Card style={{ padding: '20px 24px' }}>
+          <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 500, color: 'var(--text-primary)', marginBottom: 10 }}>Private Messages</h2>
+          <p>Members with a finished account can send each other private messages. The Acceptable Use rules above apply to them, harassment included. You can block anyone and you can report a message you received. Sending is rate limited, and you can only send a few messages in a row until the other person replies. We can limit or remove messaging for accounts that abuse it.</p>
         </Card>
 
         <Card style={{ padding: '20px 24px' }}>
