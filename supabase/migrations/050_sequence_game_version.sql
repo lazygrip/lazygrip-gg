@@ -149,8 +149,12 @@ begin
     raise exception '050: anon can write sequences.game_version.';
   end if;
 
-  if not has_column_privilege('anon', 'public.sequences', 'game_version', 'SELECT') then
-    raise exception '050: anon cannot read sequences.game_version, so Browse could not filter on it.';
+  -- Only meaningful where anon can read the table at all. Production gets that from Supabase's
+  -- default privileges; the from-scratch harness has none, so there the table check is false
+  -- and this is skipped rather than failing on a grant the harness never made.
+  if has_table_privilege('anon', 'public.sequences', 'SELECT')
+     and not has_column_privilege('anon', 'public.sequences', 'game_version', 'SELECT') then
+    raise exception '050: anon can read sequences but not sequences.game_version, so Browse could not filter on it.';
   end if;
 
   if has_function_privilege('anon', 'public.set_sequence_game_version(uuid, text)', 'EXECUTE') then

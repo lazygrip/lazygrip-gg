@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { useMemo, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import { GAME_VERSIONS, isGameVersion } from '@/lib/wow-data'
 import type { GameVersion } from '@/types'
 
@@ -11,13 +11,15 @@ import type { GameVersion } from '@/types'
 // checks ownership against the row itself, so this control is a convenience and not the gate.
 
 type Props = {
-  supabase: SupabaseClient
   sequenceId: string
   value: GameVersion
   onChanged: (next: GameVersion) => void
 }
 
-export default function GameVersionControl({ supabase, sequenceId, value, onChanged }: Props) {
+export default function GameVersionControl({ sequenceId, value, onChanged }: Props) {
+  // Its own client rather than one handed down from the page: the page keeps its client in a
+  // ref, and passing a ref-derived value into JSX is what react-hooks/refs rejects.
+  const supabase = useMemo(() => createClient(), [])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 

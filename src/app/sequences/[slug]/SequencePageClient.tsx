@@ -1260,7 +1260,6 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
 
       {isAuthor && sequence && (
         <GameVersionControl
-          supabase={supabase}
           sequenceId={sequence.id}
           value={sequence.game_version ?? 'retail'}
           onChanged={next => setSequence(s => (s ? { ...s, game_version: next } : s))}
