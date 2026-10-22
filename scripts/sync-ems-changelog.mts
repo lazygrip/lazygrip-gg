@@ -19,11 +19,26 @@ let html: string
 if (arg) {
   html = readFileSync(arg, 'utf8')
 } else {
-  const res = await fetch(URL_WAGO, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-  })
-  if (!res.ok) throw new Error(`Wago answered ${res.status}`)
-  html = await res.text()
+  // Wago answers 503 for a few minutes at a time (it failed this job on 2026-10-21 and the next
+  // scheduled run was fine), so a failed fetch is tried again before anyone gets an email.
+  const ATTEMPTS = 4
+  let fetched: string | null = null
+  for (let attempt = 1; attempt <= ATTEMPTS && fetched === null; attempt++) {
+    try {
+      const res = await fetch(URL_WAGO, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+      })
+      if (!res.ok) throw new Error(`Wago answered ${res.status}`)
+      const text = await res.text()
+      readWagoReleases(text) // throws on a page with no release data, which is retried like a 503
+      fetched = text
+    } catch (err) {
+      if (attempt === ATTEMPTS) throw err
+      console.log(`::warning::Wago fetch attempt ${attempt} failed (${err instanceof Error ? err.message : err}), trying again in 30 seconds`)
+      await new Promise(resolve => setTimeout(resolve, 30_000))
+    }
+  }
+  html = fetched as string
 }
 
 const wago = readWagoReleases(html)

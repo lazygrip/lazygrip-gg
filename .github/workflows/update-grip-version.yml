@@ -20,11 +20,17 @@ jobs:
       - name: Fetch latest GRIP-EMS version from Wago
         id: fetch_version
         run: |
+          # Wago has answered with a 503, or with a page that carries no release data, for a few
+          # minutes at a time (it failed this job on 2026-10-21 and the next scheduled run was fine).
+          # So the fetch and the parse run together up to four times, thirty seconds apart, and only a
+          # run that fails all four emails anyone. The function body is not indented further because
+          # the python script below has to stay at the YAML block's own indentation.
+          fetch_version() {
           RESPONSE=$(curl -s -L \
             -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
             "https://addons.wago.io/addons/grip-ems/versions?stability=stable")
 
-          VERSION=$(echo "$RESPONSE" | python3 -c "
+          echo "$RESPONSE" | python3 -c "
           import sys, re, json, html
 
           page_html = sys.stdin.read()
@@ -64,7 +70,16 @@ jobs:
 
           version = label if label.startswith('v') else f'v{label}'
           print(version)
-          ")
+          "
+          }
+
+          VERSION=""
+          for attempt in 1 2 3 4; do
+            VERSION=$(fetch_version) && [ -n "$VERSION" ] && break
+            VERSION=""
+            echo "Attempt $attempt did not get a version from Wago." >&2
+            if [ "$attempt" -lt 4 ]; then sleep 30; fi
+          done
 
           if [ -z "$VERSION" ]; then
             echo "Could not find addon version" >&2
