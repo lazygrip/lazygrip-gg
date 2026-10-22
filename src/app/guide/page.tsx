@@ -34,7 +34,7 @@ const sections = [
     icon: SlidersHorizontal,
     time: '6 min',
     title: 'Settings',
-    desc: 'The in-game settings that determine whether your sequences run smoothly or feel broken. Key Down Casting, Spell Queue Window, the Dynamic SQW Optimiser, click rate and Auto-adjust, and how to configure outside programs like AHK, iCue, and Synapse.',
+    desc: 'The in-game settings that determine whether your sequences run smoothly or feel broken. Key Down Casting, Spell Queue Window, the Dynamic SQW Optimiser, click rate and Auto-adjust, and how the Tempo Advisor fits them together.',
   },
   {
     href: '/guide/how-it-works',

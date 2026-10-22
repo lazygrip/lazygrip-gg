@@ -56,7 +56,7 @@ export default function BuildingSequencesPage() {
           </code>
         </div>
 
-        <p style={{ marginTop: 16 }}>This sequence runs 30 steps in a Sequential loop with resetOnCombat enabled, meaning it fires the opener every pull and loops through the rotation continuously from there. At 150ms intervals on Razer hardware this produces Thrash at roughly 47% of total damage done, Ironfur uptime in the 91 to 97% range, and zero deaths across the validated keys.</p>
+        <p style={{ marginTop: 16 }}>This sequence runs 30 steps in a Sequential loop with resetOnCombat enabled, meaning it fires the opener every pull and loops through the rotation continuously from there. In the validated runs this produced Thrash at roughly 47% of total damage done, Ironfur uptime in the 91 to 97% range, and zero deaths across the validated keys.</p>
         <p style={{ marginTop: 12 }}>Two modifiers run throughout the entire sequence. Shift fires Frenzied Regeneration on demand without breaking the loop. Ctrl fires Ironfur manually when you need it outside the automatic cycling. Every step except the two MOONSPAM steps and steps 15 and 30 carries both modifier lines so they are always available regardless of where you are in the rotation.</p>
       </GuideSection>
 
