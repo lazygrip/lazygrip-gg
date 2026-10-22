@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Copy, Check, Plus, Trash2, ChevronUp, ChevronDown, Copy as CopyIcon, RotateCcw, GripVertical } from 'lucide-react'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import AuthForm from '@/components/auth/AuthForm'
-import { CONTENT_TYPES, getClassById } from '@/lib/wow-data'
+import { CONTENT_TYPES, GAME_VERSIONS, getClassById } from '@/lib/wow-data'
 import { RESET_MODIFIER_LABELS, RESET_MODIFIER_GROUPS, createEmptyResetModifiers } from '@/lib/workshop/gripResetModifiers'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -1003,6 +1003,8 @@ export default function WorkshopBuildPage() {
   const [configOpen, setConfigOpen] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
+  // Carried to /post so a Forever build is not filed as retail. See GAME_VERSIONS in wow-data.
+  const [shareGameVersion, setShareGameVersion] = useState<string>('retail')
   const router = useRouter()
   const buildTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastPayload = useRef('')
@@ -1186,8 +1188,16 @@ export default function WorkshopBuildPage() {
   <button onClick={copyExport} disabled={!exportCode} style={{ ...S.btn(true), display: 'flex', alignItems: 'center', gap: 5, opacity: exportCode ? 1 : 0.4 }}>
     {copied ? <Check size={12} /> : <Copy size={12} />} {copied ? 'Copied' : 'Copy'}
   </button>
+  <select
+      aria-label="Game version for sharing"
+      value={shareGameVersion}
+      onChange={e => setShareGameVersion(e.target.value)}
+      style={{ padding: '5px 8px', fontSize: 'var(--text-xs)', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)' }}
+    >
+      {GAME_VERSIONS.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
+    </select>
   {user ? (
-    <Link href="/post" style={{ ...S.btn(), display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' as const, textDecoration: 'none' }}>
+    <Link href={`/post?gv=${shareGameVersion}`} style={{ ...S.btn(), display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' as const, textDecoration: 'none' }}>
       Share on LazyGrip
     </Link>
   ) : (

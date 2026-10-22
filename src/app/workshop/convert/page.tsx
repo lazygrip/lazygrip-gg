@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Copy, Check, AlertTriangle, ArrowRight } from 'lucide-react'
+import { GAME_VERSIONS } from '@/lib/wow-data'
 
 interface ConvertReport {
   export: string
@@ -30,6 +31,8 @@ export default function WorkshopConvertPage() {
   const [outcome, setOutcome] = useState<{ code: string; report: ConvertReport | null; error: string | null } | null>(null)
   const [converting, setConverting] = useState(false)
   const [copied, setCopied] = useState(false)
+  // Carried to /post so a Forever conversion is not filed as retail.
+  const [shareGameVersion, setShareGameVersion] = useState<string>('retail')
 
   const code = input.trim()
   const current = outcome && outcome.code === code ? outcome : null
@@ -197,7 +200,15 @@ export default function WorkshopConvertPage() {
                     {copied ? <Check size={14} /> : <Copy size={14} />} {copied ? 'Copied' : 'Copy export'}
                   </button>
                   <button onClick={openInBuilder} style={secondaryBtn}>Edit in builder <ArrowRight size={14} /></button>
-                  <Link href="/post" style={secondaryBtn}>Share it on LazyGrip <ArrowRight size={14} /></Link>
+                  <select
+                    aria-label="Game version for sharing"
+                    value={shareGameVersion}
+                    onChange={e => setShareGameVersion(e.target.value)}
+                    style={{ padding: '8px 10px', fontSize: 'var(--text-sm)', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius-md)' }}
+                  >
+                    {GAME_VERSIONS.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
+                  </select>
+                  <Link href={`/post?gv=${shareGameVersion}`} style={secondaryBtn}>Share it on LazyGrip <ArrowRight size={14} /></Link>
                 </div>
                 <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 10 }}>
                   In game, type <code style={{ fontFamily: 'var(--font-mono)' }}>/gems import</code> and paste the export. New to GRIP-EMS? <Link href="/guide/from-gse" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Coming from GSE</Link> covers what behaves differently.
