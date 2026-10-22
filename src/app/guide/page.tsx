@@ -34,7 +34,7 @@ const sections = [
     icon: SlidersHorizontal,
     time: '6 min',
     title: 'Settings',
-    desc: 'The in-game settings that determine whether your sequences run smoothly or feel broken. Key Down Casting, Spell Queue Window, the Dynamic SQW Optimiser, click rate and Auto-adjust, and how to configure outside programs like AHK, iCue, and Synapse.',
+    desc: 'The in-game settings that determine whether your sequences run smoothly or feel broken. Key Down Casting, Spell Queue Window, the Dynamic SQW Optimiser, click rate and Auto-adjust, and how the Tempo Advisor fits them together.',
   },
   {
     href: '/guide/how-it-works',
@@ -83,7 +83,7 @@ const sections = [
     icon: AlertTriangle,
     time: '3 min',
     title: 'WoW: Forever',
-    desc: "Whether GRIP-EMS runs on Blizzard's Classic+ expansion, what Sataana has confirmed as of beta week one, the Blizzard-side SavedVariables bug currently blocking real testing, and what Blizzard has said about addons there. Updated as the beta moves.",
+    desc: "Whether GRIP-EMS runs on Blizzard's Classic+ expansion, what Sataana has confirmed so far, where the beta's early SavedVariables bug stands now that a fix build has been reported, and what Blizzard has said about addons there. Updated as the beta moves.",
   },
   {
     href: '/guide/ems-changelog',

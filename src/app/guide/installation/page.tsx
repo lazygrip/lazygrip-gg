@@ -30,7 +30,7 @@ export default function InstallationPage() {
         title="Installation"
         description={
           <>
-            Installing GRIP-EMS takes about two minutes. The part most guides skip is what comes after. Since v2.3.14 the one setting a sequence cannot run without is switched on for you, so what is left is tuning, namely your Spell Queue Window and your click rate. This page covers the install steps and the checks that matter. The full settings breakdown is on the <Link href="/guide/settings" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Settings</Link> page.
+            Installing GRIP-EMS takes about two minutes. The part most guides skip is what comes after. Since v2.3.14 the one setting a sequence cannot run without is switched on for you, so what is left is tuning, namely your Spell Queue Window. This page covers the install steps and the checks that matter. The full settings breakdown is on the <Link href="/guide/settings" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Settings</Link> page.
           </>
         }
       />
@@ -64,11 +64,11 @@ export default function InstallationPage() {
 
       <GuideSection title="Step 2: The settings you should still check" layout="stack">
         <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 20 }}>
-          As of GRIP-EMS v2.3.14, the addon forces Key Down Casting on automatically every time you log in, so that part of setup is no longer something you need to touch. Two things still matter for sequences to feel right, and neither is set to an ideal value by default.
+          As of GRIP-EMS v2.3.14, the addon forces Key Down Casting on automatically every time you log in, so that part of setup is no longer something you need to touch. One thing still matters for sequences to feel right, and it is not set to an ideal value by default.
         </p>
 
         <Step number={1} label="Key Down Casting is handled for you now">
-          <p>GRIP-EMS runs a step on the <strong>key-down</strong> event, so it needs WoW's key-down casting setting switched on. With it off, the addon's own notes say a sequence does not advance at all, which at 150ms intervals is the difference between a functioning rotation and nothing happening.</p>
+          <p>GRIP-EMS runs a step on the <strong>key-down</strong> event, so it needs WoW's key-down casting setting switched on. With it off, the addon's own notes say a sequence does not advance at all, which is the difference between a functioning rotation and nothing happening.</p>
           <p style={{ marginTop: 8 }}>Starting in v2.3.14, GRIP-EMS sets <code style={guideCodeStyle}>ActionButtonUseKeyDown</code> to enabled itself on every login, whether or not you have ever opened the settings. It is no longer a row in the CVar Health tab and there is nothing to fix here manually. The check runs once per login while you are out of combat, so if a sequence goes dead after you changed settings mid-session, run <code style={guideCodeStyle}>/gems status</code> to read the live value and <code style={guideCodeStyle}>/reload</code> to put it back.</p>
           <GuideCallout>Running an older version than 2.3.14? Update through your addon manager first. On anything older, open <code style={guideCodeStyle}>/gems settings</code>, go to the CVar Health tab, and click Fix if the row is not green. That is the single most common reason a pre-2.3.14 install does nothing on keypress.</GuideCallout>
         </Step>
@@ -80,11 +80,6 @@ export default function InstallationPage() {
             alt="The CVar Health tab in GRIP-EMS settings, showing Macro Sequencing rows"
             caption="CVar Health, open on the Macro Sequencing row group. Green means correctly set; a Fix button appears next to anything that isn't."
           />
-        </Step>
-
-        <Step number={3} label="Set your click rate">
-          <p>GRIP-EMS advances one step per keypress. Your hardware or software needs to send repeated keypresses at a consistent interval. The right value depends on your setup but 150ms is a reliable starting point that works across most hardware and latency combinations. If you are using Razer hardware, set your repeat rate to 150ms in Synapse. That interval is what your keyboard, mouse or program does, and it is separate from the Click Rate setting inside GRIP-EMS, which is only a reference number; with Auto-adjust click rate per sequence on, which it is by default, EMS picks one for each sequence for you anyway.</p>
-          <p style={{ marginTop: 8 }}>Once you have a sequence running and some combat data logged, the Tempo Advisor on the Settings page shows a recommended click rate worked out from your sequence's actual step timing and how you play it. That number is more accurate than any static figure and gets sharper the more you play that sequence.</p>
         </Step>
       </GuideSection>
 
@@ -141,7 +136,7 @@ export default function InstallationPage() {
         />
         <TroubleshootItem
           problem="Sequence fires once then stops"
-          solution="GRIP-EMS requires continuous repeated keypresses, not a single press and hold. Your hardware or software needs to be configured to send repeated keypress events. At 150ms that is roughly 6 to 7 presses per second. A single press fires one step and stops."
+          solution="GRIP-EMS advances one step for each keypress it receives, so one press fires one step and then waits for your next press. Press the key again for every step you want to fire."
         />
         <TroubleshootItem
           problem="Sequence shows greyed out after a /reload in arena or M+"

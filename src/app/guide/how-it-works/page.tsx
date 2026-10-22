@@ -48,7 +48,7 @@ export default function HowItWorksPage() {
 
         <p style={{ marginTop: 16 }}>What happens on the press is WoW&apos;s business. If a <code style={code}>/cast</code> names a spell that is on cooldown, the macro engine stops there and the cast lines below it in that same press never run, so the press produces nothing further. A <code style={code}>/castsequence</code> sitting on an entry that is on cooldown does the same thing. This is WoW reading your macro text rather than the sequencer making a decision, and it works identically under any addon that drives a macro. Conditional lines are the exception. A conditional that does not apply is skipped and the line after it still gets its turn.</p>
 
-        <p style={{ marginTop: 16 }}>Both halves matter when you place a defensive. A press that cast nothing is not retried, and the step is spent until the loop comes back around. On a 30 step loop clicked every 150ms that is about 4.5 seconds, long enough for Ironfur to drop while the sequence walks the rest of the loop. Shorten the loop, move the step earlier, or give it a per-step interval.</p>
+        <p style={{ marginTop: 16 }}>Both halves matter when you place a defensive. A press that cast nothing is not retried, and the step is spent until the loop comes back around. On a 30 step loop that is thirty presses before the step comes around again, long enough for Ironfur to drop while the sequence walks the rest of the loop. Shorten the loop, move the step earlier, or give it a per-step interval.</p>
       </GuideSection>
 
       <GuideSection title="Proc-gated abilities">
