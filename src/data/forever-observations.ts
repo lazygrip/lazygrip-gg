@@ -21,7 +21,7 @@ export const FOREVER_OBSERVATIONS: ForeverObservation[] = [
     id: 'loads-on-beta',
     date: '2026-09-18',
     status: 'confirmed',
-    text: 'GRIP-EMS loaded on the Forever beta without any changes. Forever declares interface 16001, the same number GRIP-EMS already lists for Classic Era, so the addon passed the interface check exactly as it shipped at the time.',
+    text: 'GRIP-EMS loaded on the Forever beta without any changes. Forever declares interface 16001, which GRIP-EMS added to its .toc in v2.4.18 on September 17, so the addon passed the interface check exactly as it shipped at the time.',
     source: 'Sataana, who had it running in-game on the beta client',
   },
   {
