@@ -357,7 +357,7 @@ export default async function HomePage() {
               border: '0.5px solid var(--border-strong)',
             }}>
               <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>Current version</span>
-              <Link prefetch={false} href="/guide/ems-changelog" style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-mono)', textDecoration: 'none' }}>GRIP-EMS v2.4.21</Link>
+              <Link prefetch={false} href="/guide/ems-changelog" style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font-mono)', textDecoration: 'none' }}>GRIP-EMS v2.4.22</Link>
             </div>
             {/* WoW: Forever entry point. Forever sequences are kept out of every retail surface on
                 this page, so this is the one way in from the front door. It says what is true
