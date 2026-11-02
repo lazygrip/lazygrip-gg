@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LATEST_PATCH, PATCH_VERSIONS, comparePatchesNewestFirst, orderPatchOptions } from './patches'
+import { LATEST_PATCH, PATCH_VERSIONS, comparePatchesNewestFirst, orderPatchOptions, patchFamily } from './patches'
 
 describe('patch options', () => {
   it('lists the latest patch first in the publish form options', () => {
@@ -36,5 +36,21 @@ describe('patch options', () => {
 
   it('trims values and drops blanks', () => {
     expect(orderPatchOptions([' 12.1 ', '', '   ', '12.0.7'])).toEqual([LATEST_PATCH, '12.1', '12.0.7'])
+  })
+})
+
+describe('patch family', () => {
+  it('groups point releases of one season together', () => {
+    expect(patchFamily('12.1')).toBe('12.1')
+    expect(patchFamily('12.1.5')).toBe('12.1')
+    expect(patchFamily('12.0.7')).toBe('12.0')
+    expect(patchFamily('12.10.2')).toBe('12.10')
+  })
+
+  it('returns null for a value that is not a patch number', () => {
+    expect(patchFamily(null)).toBeNull()
+    expect(patchFamily('')).toBeNull()
+    expect(patchFamily('Midnight')).toBeNull()
+    expect(patchFamily('12')).toBeNull()
   })
 })

@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { ArrowRight, Wrench, Trophy, Crown, Eye, HelpCircle, PlusCircle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { WOW_CLASSES, CONTENT_TYPES, getClassColor } from '@/lib/wow-data'
-import { fetchHomeStats, fetchTrendingSequences, fetchRecentSequences, fetchCurrentPatchTicker, fetchTopCreators } from '@/lib/home-stats'
+import { TOP_SEQUENCES_PER_AUTHOR, fetchHomeStats, fetchTrendingSequences, fetchRecentSequences, fetchCurrentPatchTicker, fetchTopCreators } from '@/lib/home-stats'
 import { sanitizeAvatarUrl } from '@/lib/url-safety'
 import Card from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
@@ -44,7 +44,7 @@ const EYE_TICKER = <Eye size={11} />
 const EYE_ROW = <Eye size={12} />
 
 export default async function HomePage() {
-  const [stats, trending, currentPatchTicker, topCreators] = await Promise.all([
+  const [stats, { family: trendingFamily, sequences: trending }, currentPatchTicker, topCreators] = await Promise.all([
     fetchHomeStats(),
     fetchTrendingSequences(6),
     fetchCurrentPatchTicker(10),
@@ -498,6 +498,11 @@ export default async function HomePage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Trophy size={16} color="var(--accent)" />
                 <h2 style={{ fontSize: 18, fontWeight: 500, letterSpacing: '-0.01em' }}>Top sequences</h2>
+                {trendingFamily && (
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
+                    {trendingFamily}.x, most viewed, up to {TOP_SEQUENCES_PER_AUTHOR} per creator
+                  </span>
+                )}
               </div>
               <Link href="/browse?sort=most_viewed" style={{ fontSize: 'var(--text-sm)', color: 'var(--accent)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }} prefetch={false}>
                 View all <ArrowRight size={13} />

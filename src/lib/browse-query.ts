@@ -87,6 +87,10 @@ export function buildBrowseQuery(supabase: SupabaseClient, filters: SequenceFilt
   if (filters.spec_id) query = query.eq('spec_id', filters.spec_id)
   if (filters.content_type) query = query.eq('content_type', filters.content_type)
   if (filters.patch_version) query = query.eq('patch_version', filters.patch_version)
+  // Digits and dots only, so the family can go into the or() list without quoting.
+  if (filters.patch_family && /^\d+\.\d+$/.test(filters.patch_family)) {
+    query = query.or(`patch_version.eq.${filters.patch_family},patch_version.like.${filters.patch_family}.*`)
+  }
   // Retail is the default, so a listing never mixes a Forever sequence into retail results
   // unless the visitor asks for it. Same default on the server page and the client component.
   query = query.eq('game_version', filters.game_version ?? DEFAULT_GAME_VERSION)
