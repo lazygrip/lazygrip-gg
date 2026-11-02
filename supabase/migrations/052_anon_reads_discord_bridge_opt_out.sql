@@ -1,0 +1,34 @@
+-- 052_anon_reads_discord_bridge_opt_out.sql
+--
+-- Gives anon SELECT on profiles.discord_bridge_opted_out back, and nothing else.
+--
+-- THE READER. gripbot's pingsync module, on the chromeserver box, reads the
+-- opt-out list once an hour with the publishable key, so that it never pings a
+-- creator who has opted out of the Discord bridge:
+--
+--   GET /rest/v1/profiles?select=id&discord_bridge_opted_out=is.true
+--
+-- MEASURED 2026-11-02 on the box: that read answers 401 with PostgREST code
+-- 42501, `permission denied for table profiles`, and has done every hour since
+-- the 2026-09-19 boot, while the same key still reads the published sequences.
+-- id is on anon's list; the filter column is not, and a filter needs SELECT on
+-- the column it names just as a select list does.
+--
+-- WHAT THIS NARROWS. 034_profiles_select_grants.sql made SELECT on
+-- public.profiles column-scoped and put discord_bridge_opted_out on its
+-- authenticated-only list (v_authenticated_extra). This file moves that one
+-- column onto anon's side as well. 034 itself is left as written: its grant
+-- loop is the record of what it did on the day it ran.
+--
+-- WHY IT IS SAFE TO GRANT. 017_discord_bridge_opt_out.sql, which added the
+-- column, called it a bridge preference rather than private data and said in
+-- its header that it was publicly readable like every other profile column.
+-- The publishable key ships in lazygrip.net's page code, so the only way to
+-- keep the column from anon would be to keep it from the bot too. Decided by
+-- Jesper on 2026-11-02.
+--
+-- terms_accepted_at stays authenticated-only; nothing here touches it.
+--
+-- NOT APPLIED by the change that adds it. @slowdog-dev reviews and applies it.
+
+grant select (discord_bridge_opted_out) on public.profiles to anon;

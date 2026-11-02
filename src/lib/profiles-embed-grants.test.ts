@@ -59,17 +59,32 @@ import { join, relative, sep } from "node:path";
 
 const ROOT = process.cwd();
 const SRC = join(ROOT, "src");
-const MIGRATION = join(
-  ROOT,
-  "supabase",
-  "migrations",
-  "034_profiles_select_grants.sql",
-);
+const MIGRATIONS = join(ROOT, "supabase", "migrations");
+const MIGRATION = join(MIGRATIONS, "034_profiles_select_grants.sql");
 
 // ---------------------------------------------------------------------------
-// The anon grant, read from 034 itself.
+// The anon grant: 034's v_public, plus every column grant to anon on profiles
+// in a later migration (052 gave back discord_bridge_opted_out). Comment lines
+// are dropped first, so a header quoting a grant is not read as one.
 // ---------------------------------------------------------------------------
 function anonGrantedColumns(): string[] {
+  const cols = anonGrantedBy034();
+  for (const file of readdirSync(MIGRATIONS).sort()) {
+    const num = /^(\d{3})_.*\.sql$/.exec(file);
+    if (!num || Number(num[1]) <= 34) continue;
+    const sql = readFileSync(join(MIGRATIONS, file), "utf8")
+      .split("\n")
+      .filter(l => !l.trim().startsWith("--"))
+      .join("\n");
+    const grants = sql.matchAll(
+      /grant\s+select\s*\(([^)]*)\)\s*on\s+(?:table\s+)?public\.profiles\s+to\s+anon\b/gi,
+    );
+    for (const g of grants) cols.push(...g[1].split(",").map(c => c.trim()).filter(Boolean));
+  }
+  return cols;
+}
+
+function anonGrantedBy034(): string[] {
   const sql = readFileSync(MIGRATION, "utf8");
   const block = /v_public\s+text\[\]\s*:=\s*array\[([\s\S]*?)\]\s*;/.exec(sql);
   if (!block) {
@@ -226,7 +241,8 @@ describe("migration 034's code precondition", () => {
   it("reads a non-empty anon grant list out of the migration", () => {
     expect(granted).toContain("username");
     expect(granted).not.toContain("terms_accepted_at");
-    expect(granted).not.toContain("discord_bridge_opted_out");
+    // 052, read by gripbot's pingsync with the publishable key.
+    expect(granted).toContain("discord_bridge_opted_out");
     expect(granted).not.toContain("updated_at");
   });
 
@@ -270,7 +286,7 @@ describe("migration 034's code precondition", () => {
     }
     expect(
       offenders,
-      "034 grants anon SELECT on exactly these columns: " +
+      "034 and the later column grants give anon SELECT on exactly these columns: " +
         granted.join(", ") +
         ". A column outside that list in an anon-reachable embed is a 42501 waiting " +
         "to happen, not a missing grant -- check the consumer before widening the grant.",
