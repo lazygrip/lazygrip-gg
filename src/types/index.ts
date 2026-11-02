@@ -245,6 +245,9 @@ export type SequenceFilters = {
   content_type?: ContentType
   grip_version?: string
   patch_version?: string
+  // Matches the family of a patch (12.1 matches 12.1 and 12.1.5, not 12.0.7). Used by the
+  // homepage leaderboard; the Browse filter keeps the exact patch the visitor picked.
+  patch_family?: string
   game_version?: GameVersion
   search?: string
   sort?: 'recent' | 'top_rated' | 'most_viewed' | 'most_saved'

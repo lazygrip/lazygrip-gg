@@ -33,3 +33,15 @@ export function orderPatchOptions(values: Iterable<string>): string[] {
   set.add(LATEST_PATCH)
   return Array.from(set).sort(comparePatchesNewestFirst)
 }
+
+/**
+ * The patch family a patch belongs to: its major and minor numbers, so 12.1 and 12.1.5 are
+ * both "12.1" and 12.0.7 is "12.0". Point releases of one season share a family because a
+ * sequence built on 12.1 is still being played on 12.1.5, and ranking them apart would drop
+ * working sequences from a leaderboard the day a point release ships. Returns null for a
+ * value that does not start with two numbers.
+ */
+export function patchFamily(patch: string | null | undefined): string | null {
+  const match = /^\s*(\d+)\.(\d+)(?:\.\d+)*\s*$/.exec(patch ?? '')
+  return match ? `${match[1]}.${match[2]}` : null
+}

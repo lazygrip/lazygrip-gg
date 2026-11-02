@@ -1,6 +1,7 @@
 import { createPublicClient } from '@/lib/supabase/public'
 import { buildBrowseQuery } from '@/lib/browse-query'
 import { DEFAULT_GAME_VERSION } from '@/lib/wow-data'
+import { patchFamily } from '@/lib/patches'
 import type { BrowseSequence, GameVersion, Sequence } from '@/types'
 
 export type HomeStats = {
@@ -94,37 +95,85 @@ export async function fetchHomeStats(): Promise<HomeStats | null> {
   }
 }
 
-// Powers the homepage "Top Sequences" leaderboard — same query builder the browse page
-// uses (buildBrowseQuery), so this can never drift from what "most viewed" actually
-// means there. Scoped to the current patch (site_config.current_patch, same source of
-// truth fetchCurrentPatchTicker reads below) so the leaderboard reflects the present
-// season instead of surfacing view counts sequences racked up on patches players have
-// since moved past. Falls back to an unscoped most-viewed query if no current patch is
-// configured, so the section never goes empty over a missing config row. Returns []
-// rather than null on failure: the leaderboard section just omits itself, same fallback
-// shape as fetchHomeStats.
-export async function fetchTrendingSequences(limit = 6): Promise<BrowseSequence[]> {
+// How many of the six leaderboard rows one creator can hold. Without a cap, whoever has
+// the most sequences on the current patch can fill the whole list on volume alone.
+export const TOP_SEQUENCES_PER_AUTHOR = 2
+
+// How many candidate rows are pulled before the cap is applied, so the cap has enough
+// other creators to draw from.
+const TOP_SEQUENCES_CANDIDATES = 40
+
+type HasAuthor = { author?: { username?: string | null } | null }
+
+/**
+ * Takes the first `limit` rows of an already ranked list while letting any one author hold
+ * at most `perAuthor` of them. If that leaves the list short (fewer creators than
+ * limit / perAuthor), the best remaining rows are added after the capped ones in ranked
+ * order, so the leaderboard is never left with empty slots just to satisfy the cap and a
+ * row that went over the cap never sits above one that did not.
+ */
+export function capPerAuthor<T extends object>(ranked: T[], limit: number, perAuthor: number): T[] {
+  const kept: T[] = []
+  const overflow: T[] = []
+  const counts = new Map<string, number>()
+  ranked.forEach((row, index) => {
+    const key = (row as HasAuthor).author?.username ?? `row-${index}`
+    const n = counts.get(key) ?? 0
+    if (n < perAuthor) {
+      counts.set(key, n + 1)
+      kept.push(row)
+    } else {
+      overflow.push(row)
+    }
+  })
+  return [...kept, ...overflow].slice(0, limit)
+}
+
+// Powers the homepage "Top Sequences" leaderboard, built on the same query the browse page
+// uses (buildBrowseQuery), so "most viewed" means one thing on both. Three rules decide who
+// appears, and the section heading states the first two so a visitor can see them:
+//
+//  1. Patch family. Only sequences tagged with the current patch's family count (12.1 and
+//     12.1.5 together when the current patch is 12.1.5), so a point release does not wipe
+//     every working sequence off the board and a sequence is not ranked on views it earned
+//     a whole season ago. The family comes from site_config.current_patch.
+//  2. A per-author cap (TOP_SEQUENCES_PER_AUTHOR), so volume cannot fill the board.
+//  3. Ranked by view_count, which is a lifetime total. That favors older sequences within
+//     the family. A fairer measure is views over a recent window, which needs a read path
+//     onto sequence_view_daily that does not exist yet (its RLS only lets an author read
+//     their own rows), so it is not done here.
+//
+// Falls back to an unscoped most-viewed list when no patch is configured or nothing is
+// tagged in the family yet, so the section never goes empty. Returns an empty list on
+// failure: the section just omits itself, same fallback shape as fetchHomeStats.
+export async function fetchTrendingSequences(
+  limit = 6
+): Promise<{ family: string | null; sequences: BrowseSequence[] }> {
   try {
     const supabase = createPublicClient()
     const { data: config } = await supabase.from('site_config').select('current_patch').eq('id', true).single()
-    const patch = config?.current_patch ?? null
+    const family = patchFamily(config?.current_patch ?? null)
 
-    const { data, error } = await buildBrowseQuery(
-      supabase,
-      patch ? { sort: 'most_viewed', limit, patch_version: patch } : { sort: 'most_viewed', limit }
-    )
-    if (error) return []
-    // The day a new patch is set as current, nothing is tagged with it yet, and a scoped
-    // query would hand back an empty leaderboard. Fall back to the unscoped most-viewed
-    // list until the first sequence is tagged on the new patch.
-    if (patch && (data ?? []).length === 0) {
-      const fallback = await buildBrowseQuery(supabase, { sort: 'most_viewed', limit })
-      if (fallback.error) return []
-      return fallback.data ?? []
+    const fetchRanked = async (scopeToFamily: boolean) => {
+      const filters = scopeToFamily && family
+        ? { sort: 'most_viewed' as const, limit: TOP_SEQUENCES_CANDIDATES, patch_family: family }
+        : { sort: 'most_viewed' as const, limit: TOP_SEQUENCES_CANDIDATES }
+      const { data, error } = await buildBrowseQuery(supabase, filters)
+      return error ? null : data ?? []
     }
-    return data ?? []
+
+    if (family) {
+      const scoped = await fetchRanked(true)
+      if (scoped === null) return { family: null, sequences: [] }
+      if (scoped.length > 0) {
+        return { family, sequences: capPerAuthor(scoped, limit, TOP_SEQUENCES_PER_AUTHOR) }
+      }
+    }
+    // No patch configured, or the day a new season is set and nothing is tagged with it yet.
+    const unscoped = await fetchRanked(false)
+    return { family: null, sequences: capPerAuthor(unscoped ?? [], limit, TOP_SEQUENCES_PER_AUTHOR) }
   } catch {
-    return []
+    return { family: null, sequences: [] }
   }
 }
 
