@@ -18,6 +18,48 @@ export type ForeverObservation = {
 
 export const FOREVER_OBSERVATIONS: ForeverObservation[] = [
   {
+    id: 'loads-on-live',
+    date: '2026-11-04',
+    status: 'confirmed',
+    text: 'GRIP-EMS loaded on the live Forever client on launch night, build 1.60.1.70790, with no Lua errors at login or at any point after it. The copy tested was the development build that follows v2.4.22, not the v2.4.22 download.',
+    source: 'Sataana, on the live client on launch night',
+  },
+  {
+    id: 'saves-survive-reload',
+    date: '2026-11-04',
+    status: 'confirmed',
+    text: 'Saving works on the live client. GRIP-EMS wrote its saved data at a UI reload and read it back, and all three saved sequences came back, so the beta-era save bug did not show up at launch.',
+    source: 'Sataana, on the live client on launch night',
+  },
+  {
+    id: 'cvar-health-left-out',
+    date: '2026-11-04',
+    status: 'confirmed',
+    text: 'The CVar health check leaves out the three encounter timeline settings Forever does not have, and /gems status says so, as the v2.4.22 changelog describes.',
+    source: 'Sataana, on the live client on launch night',
+  },
+  {
+    id: 'spell-picker-class-tab',
+    date: '2026-11-04',
+    status: 'confirmed',
+    text: 'The spell picker opens on its Class tab and lists the class spells there, Fireball and Frost Armor on a level 1 Mage, as the v2.4.22 changelog describes.',
+    source: 'Sataana, on the live client on launch night',
+  },
+  {
+    id: 'unitname-two-values',
+    date: '2026-11-04',
+    status: 'confirmed',
+    text: 'UnitName("player") returns a two-part name as two separate values, the first name and then the surname, and GetUnitName("player", true) returns the two joined. An addon that keeps only the first value of UnitName sees the first name alone.',
+    source: 'Sataana, on the live client on launch night',
+  },
+  {
+    id: 'sequences-run',
+    date: '2026-11-04',
+    status: 'untested',
+    text: 'Whether a sequence actually runs correctly once the addon has loaded. Loading and working are different claims. On launch night three imported sequences loaded and came back after a UI reload, but none was run in a fight, and no Forever sequence on this site has been validated.',
+    source: 'Sataana, on the live client on launch night',
+  },
+  {
     id: 'loads-on-beta',
     date: '2026-09-18',
     status: 'confirmed',
@@ -37,20 +79,6 @@ export const FOREVER_OBSERVATIONS: ForeverObservation[] = [
     status: 'reported',
     text: 'v2.4.20 stopped at a Lua error at every Forever login because two spec functions it calls are gone from that client, so the settings panel, sending and receiving sequences, and the tracker never loaded. v2.4.21 fixes it. We have not tested v2.4.21 on the beta ourselves.',
     source: 'GRIP-EMS v2.4.21 changelog',
-  },
-  {
-    id: 'unitname-target',
-    date: '2026-09-18',
-    status: 'unsettled',
-    text: 'UnitName("player") returns your full name on Forever and UnitName("target") does not. The final behavior has not been settled.',
-    source: 'Sataana',
-  },
-  {
-    id: 'sequences-run',
-    date: '2026-10-20',
-    status: 'untested',
-    text: 'Whether a sequence actually runs correctly once the addon has loaded. Loading and working are different claims, and so far only loading has been verified. No Forever sequence on this site has been validated.',
-    source: 'Nothing has been run yet',
   },
 ]
 

@@ -76,7 +76,7 @@ export default async function ForeverPage() {
         GRIP-EMS on WoW: Forever
       </h1>
       <p style={{ ...body, marginBottom: 12 }}>
-        Forever launches November 4, and this is where Forever sequences will live on LazyGrip, kept apart from retail so nobody copies a sequence built for the wrong client. Until real sequences have been run on it, this page is mostly a plain record of what has been confirmed and what has not, and it only says something is true once somebody has seen it happen.
+        Forever launched on November 4, and this is where Forever sequences live on LazyGrip, kept apart from retail so nobody copies a sequence built for the wrong client. Until real sequences have been run on it, this page is mostly a plain record of what has been confirmed and what has not, and it only says something is true once somebody has seen it happen.
       </p>
       <p style={{ ...body, marginBottom: 32 }}>
         The longer write-up, including the Blizzard addon rules and the save bug, is on the{' '}
@@ -110,7 +110,7 @@ export default async function ForeverPage() {
         ))}
       </div>
       <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 36 }}>
-        Check the dates before you trust any of this as still current. The beta moves day to day.
+        Check the dates before you trust any of this as still current, because a Forever patch can change any of it.
       </p>
 
       <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 14 }}>Forever sequences</h2>
@@ -131,7 +131,7 @@ export default async function ForeverPage() {
         Post it the way you post any sequence, then open it and set Game version to WoW: Forever. That control is only visible to you as the author, and until you set it the sequence is listed under retail. The post form still asks for a retail class and spec, because that is the model the site knows, and Forever may not fit it, so that part will change once it is measured and not before.
       </p>
       <p style={{ ...body, marginBottom: 0 }}>
-        If you have tested something on the beta, tell us in the GRIP-EMS Discord with the date and what you ran, and it can go on the list above with your name on it.
+        If you have tested something on Forever, tell us in the GRIP-EMS Discord with the date and what you ran, and it can go on the list above with your name on it.
       </p>
     </div>
   )
