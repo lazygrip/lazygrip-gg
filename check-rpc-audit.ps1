@@ -1,5 +1,5 @@
 # check-rpc-audit.ps1
-# Companion to check-site.ps1 -- covers the gap that build/lint/audit checks
+# Covers the gap that build/lint/audit checks
 # can't see: authorization logic inside SQL functions and new API routes.
 #
 # What this DOES automatically:
