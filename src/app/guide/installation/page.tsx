@@ -88,7 +88,7 @@ export default function InstallationPage() {
           GRIP-EMS does not need a button on your bar to run a sequence. It binds a key directly to the sequence inside the addon, and that is how most players use it. It does still make a macro for you, though: every sequence gets a character macro named GEMS: followed by the sequence name, which clicks the sequence's button, and you can find it in your /macro list and drag it to an action bar if you want something clickable. A button does not appear on your bars by itself, and that is expected behavior and not a bug.
         </p>
         <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 12 }}>
-          To bind a key to a sequence, open the sequence in the GRIP-EMS editor, go to the Keybind tab, and assign a key there. The bind is stored per spec, so each spec keeps its own keys and they switch when you do.
+          To bind a key to a sequence, open the sequence in the GRIP-EMS editor, go to the Keybind tab, and assign a key there. The bind is stored per spec, so each spec keeps its own keys and they switch when you do. As of v2.4.22 a sequence can carry more than one key, so you can put it on a mouse button and a keyboard key at once: the tab lists every key with a button to remove it, Add Key binds another, and every key presses the same sequence button, so the steps advance in one order whichever key you hit. From chat, <code style={guideCodeStyle}>/gems bind &lt;sequence&gt; &lt;key&gt; --add</code> adds a key and <code style={guideCodeStyle}>/gems unbind &lt;sequence&gt; &lt;key&gt;</code> removes one.
         </p>
         <GuideImage
           src="/guide/keybind-tab-bound.png"
@@ -168,6 +168,7 @@ export default function InstallationPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
             { cmd: '/gems', desc: 'Opens the GRIP-EMS sequence editor' },
+            { cmd: '/gems help', desc: 'Lists every command (as of v2.4.22 it has a line for all of them)' },
             { cmd: '/gems settings', desc: 'Opens settings including Cvar Health' },
             { cmd: '/gems binds', desc: 'Shows all currently bound sequences for your active spec' },
             { cmd: '/gems keys', desc: 'Checks every sequence, vehicle, and pet battle key against your saved bindings and names conflicts' },

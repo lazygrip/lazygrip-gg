@@ -80,7 +80,7 @@ export default function FeaturesAndBehaviorPage() {
 
       <GuideSection title="Step toggle keys">
         <p style={{ marginBottom: 4, fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Added in v2.4.21 · /gems stepkey</p>
-        <p>A step can have its own key that turns it off and back on. Right-click the step in the editor, choose Set Toggle Key, and press the key you want. Out of combat, that key switches the step off or on at once and chat names the step and the sequence, and in combat it changes nothing and says so. Each character keeps its own step keys, and <code style={code}>/gems stepkey</code> sets, clears and lists them, which is also the way to reach them in Simplified Mode.</p>
+        <p>A step can have its own key that turns it off and back on. Right-click the step in the editor, choose Set Toggle Key, and press the key you want. Out of combat, that key switches the step off or on at once and chat names the step and the sequence, and in combat it changes nothing and says so. Each character keeps its own step keys, and <code style={code}>/gems stepkey</code> sets, clears and lists them, which is also the way to reach them in Simplified Mode. As of v2.4.22 <code style={code}>/gems keys</code> lists each step toggle key too, says which binding holds one that did not get set, and offers a Fix for a saved binding.</p>
         <p style={{ marginTop: 12 }}>A key that is already bound to something is refused when you set it, and if you give that key to a sequence or to something in the game&apos;s key bindings later, that binding wins and chat tells you. Because it only works out of combat, it is a between-pulls control, for pulling a step out of the loop or putting it back without opening the editor.</p>
       </GuideSection>
 
@@ -116,7 +116,7 @@ export default function FeaturesAndBehaviorPage() {
       </GuideSection>
 
       <GuideSection title="Keybind recovery">
-        <p>GRIP-EMS includes automatic keybind monitoring. If your sequence keybinds go missing after a login, a loadout swap, or a deleted loadout eating its own binds, the addon detects it and tells you. Running <code style={code}>/gems binds restore</code> puts your last working set back immediately.</p>
+        <p>GRIP-EMS includes automatic keybind monitoring. If your sequence keybinds go missing after a login, a loadout swap, or a deleted loadout eating its own binds, the addon detects it and tells you. Running <code style={code}>/gems binds restore</code> puts your last working set back immediately, and as of v2.4.22 that includes every key of a sequence that has more than one (v2.4.21 brought back only the last of them).</p>
         <p style={{ marginTop: 12 }}>The addon snapshots your binds on every clean load, so recovery is reliable even across sessions. If you see a warning about missing binds, run the restore command before assuming something is broken in your sequence.</p>
         <GuideCallout>
           If your keys ever stop responding and you are not in a vehicle, a pet battle, or a cutscene, run <code style={code}>/gems binds restore</code> first. It takes two seconds and covers the most common cause of unexplained dead keys.
