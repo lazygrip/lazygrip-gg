@@ -235,10 +235,6 @@ export default async function ForeverPage() {
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginBottom: 18 }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 12px', borderRadius: 999, background: 'var(--accent-subtle)', border: '0.5px solid var(--accent)', color: 'var(--accent-text)', fontSize: 'var(--text-xs)', fontWeight: 600 }}>
-              <span className="forever-live-dot" style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--accent)', display: 'inline-block' }} />
-              Live since Nov 4
-            </span>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 999, background: 'var(--bg-tertiary)', border: '0.5px solid var(--border-strong)', color: 'var(--text-secondary)', fontSize: 'var(--text-xs)', fontWeight: 500 }}>
               <CalendarDays size={12} />
               {raidsLine}
