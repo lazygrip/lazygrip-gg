@@ -280,7 +280,7 @@ export default async function ForeverPage() {
           </SectionHeading>
 
           {forever && forever.sequences.length > 0 ? (
-            <div className="forever-seq-grid" style={{ marginBottom: 18 }}>
+            <div className="forever-seq-grid">
               {forever.sequences.map(s => {
                 const color = getClassColor(s.class_id)
                 const author = authorName(s.author)
@@ -309,9 +309,6 @@ export default async function ForeverPage() {
                             GRIP {s.grip_version}
                           </span>
                         ) : null}
-                        <span style={{ fontSize: 'var(--text-xs)', padding: '2px 8px', borderRadius: 'var(--radius-sm)', color: STATUS_COLOR.untested, border: `0.5px solid ${STATUS_COLOR.untested}55`, background: `${STATUS_COLOR.untested}18` }}>
-                          Unvalidated
-                        </span>
                       </div>
                       <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)' }}>
                         {author ? `by ${author} · ` : ''}posted {formatDistanceToNow(new Date(s.created_at), { addSuffix: true })}
@@ -322,11 +319,6 @@ export default async function ForeverPage() {
               })}
             </div>
           ) : null}
-
-          <p style={{ ...body, margin: 0 }}>
-            <Link href="/browse?game_version=forever" style={link}>Browse every Forever sequence</Link>
-            {' '}(the plain Browse page shows retail only).
-          </p>
         </section>
 
         {/* How to get going */}
@@ -376,7 +368,7 @@ export default async function ForeverPage() {
                       {t.kind === 'addon' ? 'GRIP-EMS' : 'Game'}
                     </span>
                     {isNext ? (
-                      <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent-text)' }}>Next, in {away} days</span>
+                      <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent-text)' }}>{away === 1 ? 'Next, tomorrow' : `Next, in ${away} days`}</span>
                     ) : null}
                   </div>
                   <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '4px 0 0' }}>{t.detail}</p>

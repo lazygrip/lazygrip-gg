@@ -135,9 +135,15 @@ export const FOREVER_TIMELINE: ForeverTimelineEntry[] = [
   { date: FOREVER_RAIDS_DATE, title: 'Raids open', detail: 'Barrow Deeps, Hyjal Summit and Onyxia\'s Lair, per Blizzard\'s launch posts. Blizzard can move it.', kind: 'game' },
 ]
 
-// Whole days from today (UTC) to an ISO date, negative once it has passed.
+// Whole days from today to an ISO date, negative once it has passed. "Today" is the calendar day in
+// Pacific time, which is the clock Blizzard's own dates run on, so the count drops by one at Pacific
+// midnight and not at 5 p.m. in Tulsa the evening before. The page calls this on every render, so the
+// number moves by itself as the days go by and nobody edits it.
 export function daysUntil(iso: string, now: Date = new Date()): number {
   const [y, m, d] = iso.split('-').map(Number)
-  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-  return Math.round((Date.UTC(y, m - 1, d) - today) / 86_400_000)
+  const [ty, tm, td] = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' })
+    .format(now)
+    .split('-')
+    .map(Number)
+  return Math.round((Date.UTC(y, m - 1, d) - Date.UTC(ty, tm - 1, td)) / 86_400_000)
 }
