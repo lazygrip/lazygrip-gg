@@ -172,10 +172,8 @@ body {
 }
 @keyframes forever-run { to { stroke-dashoffset: -48; } }
 @keyframes forever-pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
-@keyframes forever-live-dot { 0% { box-shadow: 0 0 0 0 rgba(29,158,117,0.6); } 100% { box-shadow: 0 0 0 9px rgba(29,158,117,0); } }
 .forever-loop-run { stroke-dasharray: 10 14; animation: forever-run 3.4s linear infinite; }
 .forever-node-pulse { animation: forever-pulse 2.6s ease-in-out infinite; }
-.forever-live-dot { animation: forever-live-dot 1.8s ease-out infinite; }
 .forever-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .forever-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .forever-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
@@ -195,7 +193,7 @@ body {
   .forever-steps { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .forever-loop-run, .forever-node-pulse, .forever-live-dot { animation: none; }
+  .forever-loop-run, .forever-node-pulse { animation: none; }
   .forever-card { transition: none; }
   .forever-card:hover { transform: none; }
 }
