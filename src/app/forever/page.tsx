@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { CalendarDays, Download, FlaskConical, Library, MessageCircle } from 'lucide-react'
 import { createPublicClient } from '@/lib/supabase/public'
 import { getClassColor } from '@/lib/wow-data'
+import { EMS_RELEASES } from '@/lib/changelog/ems-archive'
 import ForeverMark from '@/components/forever/ForeverMark'
 import {
   FOREVER_FACTS,
@@ -220,8 +221,7 @@ export default async function ForeverPage() {
 
   const tiles = [
     { value: count === null ? 'n/a' : String(count), label: 'Forever sequences on the site' },
-    { value: FOREVER_FACTS.gripRelease, label: 'Current GRIP-EMS release' },
-    { value: FOREVER_FACTS.liveBuild, label: FOREVER_FACTS.liveBuildNote },
+    { value: `v${EMS_RELEASES[0].version}`, label: 'Current GRIP-EMS release' },
     { value: FOREVER_FACTS.interfaceNumber, label: 'Interface number Forever declares' },
   ]
 
@@ -261,7 +261,7 @@ export default async function ForeverPage() {
             </Link>
           </div>
 
-          <div className="forever-tiles">
+          <div className="forever-tiles" style={{ maxWidth: 660, margin: '0 auto' }}>
             {tiles.map(t => (
               <div key={t.label} style={{ ...cardBase, padding: '16px 12px', background: 'var(--bg-secondary)' }}>
                 <div style={{ fontSize: 'clamp(0.95rem, 4.2vw, 1.25rem)', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>{t.value}</div>
