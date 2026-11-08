@@ -423,10 +423,9 @@ export default async function ForeverPage() {
 
         {/* Closing call */}
         <section style={{ ...cardBase, background: 'var(--bg-secondary)', border: '0.5px solid var(--accent)', padding: '30px 28px', textAlign: 'center' }}>
-          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 10px' }}>Nobody has cleared the bar yet</h2>
+          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 10px' }}>Played one on Forever? Tell us how it went</h2>
           <p style={{ ...body, maxWidth: 600, margin: '0 auto 20px' }}>
-            A sequence counts as validated here once somebody runs it on a Forever client, past a UI reload, and says so with a date. That&apos;s the whole test, and the first name on that list is still open.
-          </p>
+            Nothing on this site counts as validated until somebody has actually played it on a Forever client and reported back, so the most useful thing you can do is run one, make sure it survives a UI reload, and drop a note in the Discord with the date and what you ran.</p>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10 }}>
             <a href="https://discord.gg/UUdmCNUv" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 20px', borderRadius: 'var(--radius-md)', background: 'var(--accent)', color: 'white', textDecoration: 'none', fontWeight: 600, fontSize: 'var(--text-base)' }}>
               <MessageCircle size={16} />
