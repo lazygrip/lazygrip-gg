@@ -2,9 +2,10 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import { CalendarDays, Download, FlaskConical, Library, MessageCircle, Power, Save, Swords } from 'lucide-react'
+import { CalendarDays, Download, FlaskConical, Library, MessageCircle } from 'lucide-react'
 import { createPublicClient } from '@/lib/supabase/public'
 import { getClassColor } from '@/lib/wow-data'
+import { EMS_RELEASES } from '@/lib/changelog/ems-archive'
 import ForeverMark from '@/components/forever/ForeverMark'
 import {
   FOREVER_FACTS,
@@ -165,27 +166,6 @@ function ObservationCard({ o }: { o: ForeverObservation }) {
   )
 }
 
-const BOARD: Array<{ id: string; title: string; blurb: string; icon: ReactNode }> = [
-  {
-    id: 'loads-on-live',
-    title: 'It loads',
-    blurb: 'No Lua errors at login or at any point after it on the live client, build 1.60.1.70790, on launch night.',
-    icon: <Power size={20} />,
-  },
-  {
-    id: 'saves-survive-reload',
-    title: 'It saves',
-    blurb: 'Three imported sequences came back from saved data after a UI reload, so the beta-era save bug did not show up at launch.',
-    icon: <Save size={20} />,
-  },
-  {
-    id: 'sequences-run',
-    title: 'It runs in a fight',
-    blurb: 'None of the launch-night sequences was run in a fight, and no Forever sequence on this site has been validated. Run one and tell us.',
-    icon: <Swords size={20} />,
-  },
-]
-
 const STEPS: Array<{ title: string; text: ReactNode; icon: ReactNode }> = [
   {
     title: 'Update the addon',
@@ -235,15 +215,13 @@ export default async function ForeverPage() {
 
   const live = FOREVER_OBSERVATIONS.filter(o => o.date >= FOREVER_LAUNCH_DATE || o.status === 'untested')
   const beta = FOREVER_OBSERVATIONS.filter(o => !live.includes(o))
-  const boardItems = BOARD.map(b => ({ ...b, obs: FOREVER_OBSERVATIONS.find(o => o.id === b.id) }))
 
   // The first timeline entry that has not happened yet gets the "next" treatment.
   const nextIdx = FOREVER_TIMELINE.findIndex(t => daysUntil(t.date) > 0)
 
   const tiles = [
     { value: count === null ? 'n/a' : String(count), label: 'Forever sequences on the site' },
-    { value: FOREVER_FACTS.gripRelease, label: 'Current GRIP-EMS release' },
-    { value: FOREVER_FACTS.liveBuild, label: FOREVER_FACTS.liveBuildNote },
+    { value: `v${EMS_RELEASES[0].version}`, label: 'Current GRIP-EMS release' },
     { value: FOREVER_FACTS.interfaceNumber, label: 'Interface number Forever declares' },
   ]
 
@@ -283,7 +261,7 @@ export default async function ForeverPage() {
             </Link>
           </div>
 
-          <div className="forever-tiles">
+          <div className="forever-tiles" style={{ maxWidth: 660, margin: '0 auto' }}>
             {tiles.map(t => (
               <div key={t.label} style={{ ...cardBase, padding: '16px 12px', background: 'var(--bg-secondary)' }}>
                 <div style={{ fontSize: 'clamp(0.95rem, 4.2vw, 1.25rem)', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>{t.value}</div>
@@ -295,36 +273,6 @@ export default async function ForeverPage() {
       </section>
 
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: '56px 24px 64px' }}>
-        {/* Where it stands */}
-        <section style={{ marginBottom: 56 }}>
-          <SectionHeading eyebrow="Where it stands" title="Three questions, three honest answers">
-            Loading and working are different claims, so they&apos;re scored separately, and a card only goes green once somebody has seen it happen.
-          </SectionHeading>
-          <div className="forever-board">
-            {boardItems.map(b => {
-              const status = b.obs?.status ?? 'untested'
-              const color = STATUS_COLOR[status]
-              return (
-                <div key={b.id} style={{ ...cardBase, padding: '20px 20px 18px', borderTop: `3px solid ${color}`, background: 'var(--bg-secondary)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                    <span style={{ width: 38, height: 38, borderRadius: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color, background: `${color}1f`, border: `0.5px solid ${color}55` }}>
-                      {b.icon}
-                    </span>
-                    <StatusChip status={status} />
-                  </div>
-                  <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 8px' }}>{b.title}</h3>
-                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.65, margin: '0 0 12px' }}>{b.blurb}</p>
-                  {b.obs ? (
-                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', margin: 0 }}>
-                      {formatShortDate(b.obs.date)}, {b.obs.source}
-                    </p>
-                  ) : null}
-                </div>
-              )
-            })}
-          </div>
-        </section>
-
         {/* Sequences */}
         <section style={{ marginBottom: 56 }}>
           <SectionHeading eyebrow="On the site now" title="Forever sequences">
@@ -475,10 +423,9 @@ export default async function ForeverPage() {
 
         {/* Closing call */}
         <section style={{ ...cardBase, background: 'var(--bg-secondary)', border: '0.5px solid var(--accent)', padding: '30px 28px', textAlign: 'center' }}>
-          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 10px' }}>Nobody has cleared the bar yet</h2>
+          <h2 style={{ fontSize: 'var(--text-xl)', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 10px' }}>Played one on Forever? Tell us how it went</h2>
           <p style={{ ...body, maxWidth: 600, margin: '0 auto 20px' }}>
-            A sequence counts as validated here once somebody runs it on a Forever client, past a UI reload, and says so with a date. That&apos;s the whole test, and the first name on that list is still open.
-          </p>
+            Nothing on this site counts as validated until somebody has actually played it on a Forever client and reported back, so the most useful thing you can do is run one, make sure it survives a UI reload, and drop a note in the Discord with the date and what you ran.</p>
           <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 10 }}>
             <a href="https://discord.gg/UUdmCNUv" target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 20px', borderRadius: 'var(--radius-md)', background: 'var(--accent)', color: 'white', textDecoration: 'none', fontWeight: 600, fontSize: 'var(--text-base)' }}>
               <MessageCircle size={16} />

@@ -108,13 +108,11 @@ export function foreverLaunchLine(now: Date = new Date()): string {
   return isForeverLaunched(now) ? 'Launched Nov 4' : 'Launches Nov 4'
 }
 
-// What the /forever page shows in its stat tiles and timeline. Each of these was read from a source
-// on the date beside it, so change the value and the date together, and never carry one over from
-// retail. The release number matches the one the homepage names.
+// The interface number Forever declares, shown in the /forever stat tiles. It was read from a shipped
+// addon under the Forever flavor and from the live client on launch night, so change it only when
+// Blizzard changes it, and never carry one over from retail. The other two tiles are not typed in
+// here: the release comes from the changelog archive and the sequence count from the database.
 export const FOREVER_FACTS = {
-  gripRelease: 'v2.4.23',
-  liveBuild: '1.60.1.70790',
-  liveBuildNote: 'Build Sataana saw on launch night, Nov 4',
   interfaceNumber: '16001',
 }
 

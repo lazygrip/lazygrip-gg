@@ -176,7 +176,7 @@ body {
 .forever-loop-run { stroke-dasharray: 10 14; animation: forever-run 3.4s linear infinite; }
 .forever-node-pulse { animation: forever-pulse 2.6s ease-in-out infinite; }
 .forever-live-dot { animation: forever-live-dot 1.8s ease-out infinite; }
-.forever-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.forever-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .forever-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .forever-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .forever-seq-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
@@ -188,7 +188,6 @@ body {
 .forever-tl-item:last-child { padding-bottom: 0; }
 .forever-tl-dot { position: absolute; left: -28px; top: 4px; width: 16px; height: 16px; border-radius: 50%; box-sizing: border-box; }
 @media (max-width: 860px) {
-  .forever-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .forever-board { grid-template-columns: minmax(0, 1fr); }
   .forever-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
