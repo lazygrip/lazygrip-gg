@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import { CalendarDays, Download, FlaskConical, Library, MessageCircle, Power, Save, Swords } from 'lucide-react'
+import { CalendarDays, Download, FlaskConical, Library, MessageCircle } from 'lucide-react'
 import { createPublicClient } from '@/lib/supabase/public'
 import { getClassColor } from '@/lib/wow-data'
 import ForeverMark from '@/components/forever/ForeverMark'
@@ -165,27 +165,6 @@ function ObservationCard({ o }: { o: ForeverObservation }) {
   )
 }
 
-const BOARD: Array<{ id: string; title: string; blurb: string; icon: ReactNode }> = [
-  {
-    id: 'loads-on-live',
-    title: 'It loads',
-    blurb: 'No Lua errors at login or at any point after it on the live client, build 1.60.1.70790, on launch night.',
-    icon: <Power size={20} />,
-  },
-  {
-    id: 'saves-survive-reload',
-    title: 'It saves',
-    blurb: 'Three imported sequences came back from saved data after a UI reload, so the beta-era save bug did not show up at launch.',
-    icon: <Save size={20} />,
-  },
-  {
-    id: 'sequences-run',
-    title: 'It runs in a fight',
-    blurb: 'None of the launch-night sequences was run in a fight, and no Forever sequence on this site has been validated. Run one and tell us.',
-    icon: <Swords size={20} />,
-  },
-]
-
 const STEPS: Array<{ title: string; text: ReactNode; icon: ReactNode }> = [
   {
     title: 'Update the addon',
@@ -235,7 +214,6 @@ export default async function ForeverPage() {
 
   const live = FOREVER_OBSERVATIONS.filter(o => o.date >= FOREVER_LAUNCH_DATE || o.status === 'untested')
   const beta = FOREVER_OBSERVATIONS.filter(o => !live.includes(o))
-  const boardItems = BOARD.map(b => ({ ...b, obs: FOREVER_OBSERVATIONS.find(o => o.id === b.id) }))
 
   // The first timeline entry that has not happened yet gets the "next" treatment.
   const nextIdx = FOREVER_TIMELINE.findIndex(t => daysUntil(t.date) > 0)
@@ -295,36 +273,6 @@ export default async function ForeverPage() {
       </section>
 
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: '56px 24px 64px' }}>
-        {/* Where it stands */}
-        <section style={{ marginBottom: 56 }}>
-          <SectionHeading eyebrow="Where it stands" title="Three questions, three answers">
-            Loading and working are different claims, so they&apos;re scored separately, and a card only goes green once somebody has seen it happen.
-          </SectionHeading>
-          <div className="forever-board">
-            {boardItems.map(b => {
-              const status = b.obs?.status ?? 'untested'
-              const color = STATUS_COLOR[status]
-              return (
-                <div key={b.id} style={{ ...cardBase, padding: '20px 20px 18px', borderTop: `3px solid ${color}`, background: 'var(--bg-secondary)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                    <span style={{ width: 38, height: 38, borderRadius: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color, background: `${color}1f`, border: `0.5px solid ${color}55` }}>
-                      {b.icon}
-                    </span>
-                    <StatusChip status={status} />
-                  </div>
-                  <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 8px' }}>{b.title}</h3>
-                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.65, margin: '0 0 12px' }}>{b.blurb}</p>
-                  {b.obs ? (
-                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', margin: 0 }}>
-                      {formatShortDate(b.obs.date)}, {b.obs.source}
-                    </p>
-                  ) : null}
-                </div>
-              )
-            })}
-          </div>
-        </section>
-
         {/* Sequences */}
         <section style={{ marginBottom: 56 }}>
           <SectionHeading eyebrow="On the site now" title="Forever sequences">
