@@ -297,7 +297,7 @@ export default async function ForeverPage() {
       <div style={{ maxWidth: 1040, margin: '0 auto', padding: '56px 24px 64px' }}>
         {/* Where it stands */}
         <section style={{ marginBottom: 56 }}>
-          <SectionHeading eyebrow="Where it stands" title="Three questions, three honest answers">
+          <SectionHeading eyebrow="Where it stands" title="Three questions, three answers">
             Loading and working are different claims, so they&apos;re scored separately, and a card only goes green once somebody has seen it happen.
           </SectionHeading>
           <div className="forever-board">
