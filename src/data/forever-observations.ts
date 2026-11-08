@@ -18,6 +18,20 @@ export type ForeverObservation = {
 
 export const FOREVER_OBSERVATIONS: ForeverObservation[] = [
   {
+    id: 'blizzard-known-issues',
+    date: '2026-11-07',
+    status: 'reported',
+    text: 'Blizzard\'s live Known Issues thread for Forever, as updated on November 5, has no entry about addons, macros, saved data or keybinds, and the Forever hotfix notes through November 6 list no addon changes.',
+    source: 'Blizzard US forums and Blue Tracker, read November 7',
+  },
+  {
+    id: 'v2423-changelog',
+    date: '2026-11-05',
+    status: 'reported',
+    text: 'v2.4.23 is the current release, and its changelog fixes two v2.4.22 problems that showed up on Forever: the Regions must have a frame parent error when you open a second sequence, and two characters whose names share a first part sharing one record. We have not run v2.4.23 on the live client ourselves, so the changelog is the only evidence for those fixes.',
+    source: 'GRIP-EMS v2.4.23 changelog',
+  },
+  {
     id: 'loads-on-live',
     date: '2026-11-04',
     status: 'confirmed',
@@ -92,4 +106,40 @@ export function isForeverLaunched(now: Date = new Date()): boolean {
 
 export function foreverLaunchLine(now: Date = new Date()): string {
   return isForeverLaunched(now) ? 'Launched Nov 4' : 'Launches Nov 4'
+}
+
+// What the /forever page shows in its stat tiles and timeline. Each of these was read from a source
+// on the date beside it, so change the value and the date together, and never carry one over from
+// retail. The release number matches the one the homepage names.
+export const FOREVER_FACTS = {
+  gripRelease: 'v2.4.23',
+  liveBuild: '1.60.1.70790',
+  liveBuildNote: 'Build Sataana saw on launch night, Nov 4',
+  interfaceNumber: '16001',
+}
+
+export const FOREVER_RAIDS_DATE = '2026-12-09'
+
+export type ForeverTimelineEntry = {
+  date: string
+  title: string
+  detail: string
+  kind: 'game' | 'addon'
+}
+
+export const FOREVER_TIMELINE: ForeverTimelineEntry[] = [
+  { date: '2026-09-17', title: 'Beta opens', detail: 'GRIP-EMS adds Forever\'s interface number to its .toc in v2.4.18, the same day.', kind: 'game' },
+  { date: '2026-10-17', title: 'v2.4.21', detail: 'Fixes the Lua error v2.4.20 threw at every Forever login.', kind: 'addon' },
+  { date: '2026-10-23', title: 'Beta closes', detail: 'Blizzard shuts the beta at 10:00 a.m. Pacific.', kind: 'game' },
+  { date: '2026-11-01', title: 'v2.4.22', detail: 'More Forever fixes, including a Class tab that lists your spells.', kind: 'addon' },
+  { date: '2026-11-04', title: 'Forever goes live', detail: 'Sataana loads GRIP-EMS on the live client and logs the first launch-night readings.', kind: 'game' },
+  { date: '2026-11-05', title: 'v2.4.23', detail: 'Fixes two v2.4.22 problems seen on Forever.', kind: 'addon' },
+  { date: FOREVER_RAIDS_DATE, title: 'Raids open', detail: 'Barrow Deeps, Hyjal Summit and Onyxia\'s Lair, per Blizzard\'s launch posts. Blizzard can move it.', kind: 'game' },
+]
+
+// Whole days from today (UTC) to an ISO date, negative once it has passed.
+export function daysUntil(iso: string, now: Date = new Date()): number {
+  const [y, m, d] = iso.split('-').map(Number)
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  return Math.round((Date.UTC(y, m - 1, d) - today) / 86_400_000)
 }

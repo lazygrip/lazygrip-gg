@@ -154,6 +154,53 @@ body {
   background-position: 0 0;
 }
 
+/* WoW: Forever page (/forever). Layout grids and the small amount of motion the page uses. The
+   motion is decoration only and every animation is switched off under prefers-reduced-motion. */
+.forever-hero {
+  background-image:
+    radial-gradient(ellipse 760px 480px at 50% -8%, rgba(29,158,117,0.30) 0%, transparent 65%),
+    radial-gradient(ellipse 520px 380px at 88% 38%, rgba(125,105,255,0.16) 0%, transparent 70%),
+    radial-gradient(ellipse 460px 320px at 8% 70%, rgba(29,158,117,0.10) 0%, transparent 70%),
+    repeating-linear-gradient(45deg, var(--border-strong) 0, var(--border-strong) 1px, transparent 1px, transparent 22px),
+    repeating-linear-gradient(-45deg, var(--border-strong) 0, var(--border-strong) 1px, transparent 1px, transparent 22px);
+}
+.forever-title-accent {
+  background: linear-gradient(100deg, var(--accent-text) 0%, #8f86ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+@keyframes forever-run { to { stroke-dashoffset: -48; } }
+@keyframes forever-pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+@keyframes forever-live-dot { 0% { box-shadow: 0 0 0 0 rgba(29,158,117,0.6); } 100% { box-shadow: 0 0 0 9px rgba(29,158,117,0); } }
+.forever-loop-run { stroke-dasharray: 10 14; animation: forever-run 3.4s linear infinite; }
+.forever-node-pulse { animation: forever-pulse 2.6s ease-in-out infinite; }
+.forever-live-dot { animation: forever-live-dot 1.8s ease-out infinite; }
+.forever-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.forever-board { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.forever-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.forever-seq-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.forever-card { transition: transform 0.15s ease, border-color 0.15s ease; }
+.forever-card:hover { transform: translateY(-2px); border-color: var(--accent); }
+.forever-tl { position: relative; margin: 0; padding: 0 0 0 28px; list-style: none; }
+.forever-tl::before { content: ''; position: absolute; left: 7px; top: 6px; bottom: 6px; width: 2px; background: linear-gradient(to bottom, var(--accent) 0%, var(--accent) 78%, var(--border-strong) 100%); border-radius: 2px; }
+.forever-tl-item { position: relative; padding: 0 0 22px; }
+.forever-tl-item:last-child { padding-bottom: 0; }
+.forever-tl-dot { position: absolute; left: -28px; top: 4px; width: 16px; height: 16px; border-radius: 50%; box-sizing: border-box; }
+@media (max-width: 860px) {
+  .forever-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .forever-board { grid-template-columns: minmax(0, 1fr); }
+  .forever-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .forever-steps { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .forever-loop-run, .forever-node-pulse, .forever-live-dot { animation: none; }
+  .forever-card { transition: none; }
+  .forever-card:hover { transform: none; }
+}
+
 /* Marquee: pure-CSS infinite scroll for the homepage "recently posted" ticker. The row is
    rendered twice back to back (see RecentTicker) and this animates exactly -50%, so the
    seam between the two copies is invisible and the loop never jumps. */
