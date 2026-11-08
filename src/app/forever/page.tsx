@@ -376,7 +376,7 @@ export default async function ForeverPage() {
                       {t.kind === 'addon' ? 'GRIP-EMS' : 'Game'}
                     </span>
                     {isNext ? (
-                      <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent-text)' }}>Next, in {away} days</span>
+                      <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--accent-text)' }}>{away === 1 ? 'Next, tomorrow' : `Next, in ${away} days`}</span>
                     ) : null}
                   </div>
                   <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '4px 0 0' }}>{t.detail}</p>
