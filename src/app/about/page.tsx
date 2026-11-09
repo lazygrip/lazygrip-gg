@@ -58,7 +58,7 @@ export default function AboutPage() {
             </div>
             <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ color: 'var(--text-secondary)' }}>GRIP-EMS Discord</span>
-              <a href="https://discord.gg/UUdmCNUv" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Join</a>
+              <a href="https://discord.gg/temptingus" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>Join</a>
             </div>
             <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ color: 'var(--text-secondary)' }}>GRIP-EMS Subreddit</span>

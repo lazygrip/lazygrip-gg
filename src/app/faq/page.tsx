@@ -60,7 +60,7 @@ const GROUPS: { heading: string; items: FaqItem[] }[] = [
           <>
             <p style={{ margin: 0 }}>
               The GRIP-EMS Discord is the fastest place to get help. The developer is in there along with the rest of the community.{' '}
-              <a href="https://discord.gg/UUdmCNUv" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>discord.gg/UUdmCNUv</a>
+              <a href="https://discord.gg/temptingus" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>discord.gg/temptingus</a>
             </p>
             <p style={{ marginTop: 8 }}>
               The community also has a subreddit for discussion, sharing sequences, and general GRIP-EMS questions.{' '}
@@ -68,7 +68,7 @@ const GROUPS: { heading: string; items: FaqItem[] }[] = [
             </p>
           </>
         ),
-        aPlain: 'The GRIP-EMS Discord is the fastest place to get help: https://discord.gg/UUdmCNUv. The community also has a subreddit for discussion and sharing sequences: https://www.reddit.com/r/GRIPEMS/.',
+        aPlain: 'The GRIP-EMS Discord is the fastest place to get help: https://discord.gg/temptingus. The community also has a subreddit for discussion and sharing sequences: https://www.reddit.com/r/GRIPEMS/.',
       },
     ],
   },
