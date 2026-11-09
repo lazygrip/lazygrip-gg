@@ -198,7 +198,7 @@ const STEPS: Array<{ title: string; text: ReactNode; icon: ReactNode }> = [
     text: (
       <>
         Post it in the{' '}
-        <a href="https://discord.gg/UUdmCNUv" target="_blank" rel="noopener noreferrer" style={link}>GRIP-EMS Discord</a>
+        <a href="https://discord.gg/temptingus" target="_blank" rel="noopener noreferrer" style={link}>GRIP-EMS Discord</a>
         {' '}with the date and what you ran, and it goes on the list below with your name on it.
       </>
     ),
