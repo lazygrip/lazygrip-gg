@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Copy, Check, Bookmark, ExternalLink, ChevronDown, ChevronUp, Pencil, Trash2, CornerDownRight, Link2, Link2Off, Wrench } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import GameVersionControl from '@/components/sequence/GameVersionControl'
@@ -8,6 +9,7 @@ import { Sequence, Comment, SequenceVersion, LinkedSequence, CollectionSequenceE
 import { getClassColor, CONTENT_TYPES, getGameVersionLabel } from '@/lib/wow-data'
 import { formatDistanceToNow } from 'date-fns'
 import { describeSequenceAge } from '@/lib/sequence-dates'
+import { sequenceTagline } from '@/lib/sequence-seo'
 import RenderedContent from '@/components/editor/RenderedContent'
 import { sanitizeWarcraftLogsUrl } from '@/lib/url-safety'
 import { normalizeCollectionEntries } from '@/lib/collection-entries'
@@ -1103,6 +1105,10 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
               {isStale && <Badge color="#e0a020">Needs revalidation</Badge>}
             </div>
 
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: 0 }}>
+              {sequenceTagline(sequence, contentLabel, sequence.author?.username ?? '')}
+            </p>
+
             {sequence.description && (
               <div style={{ marginTop: 16 }}>
                 <RenderedContent html={sequence.description} />
@@ -1411,6 +1417,12 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 8 }}>
                 In-game: type /gems import and paste this string
               </p>
+              <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 500, marginTop: 16, marginBottom: 8 }}>Import in three steps</h3>
+              <ol style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: 0, paddingLeft: 20, lineHeight: 1.6 }}>
+                <li>Install GRIP-EMS. The <Link href="/guide/installation">installation guide</Link> has the download links.</li>
+                <li>Copy the GRIP import string on this page.</li>
+                <li>In game, type /gems import and paste it.</li>
+              </ol>
             </div>
           )}
 
