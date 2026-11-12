@@ -6,6 +6,7 @@ import { fetchSequencePage } from '@/lib/sequence-server'
 import { stripHtml } from '@/lib/html-text'
 import { getClassById, CONTENT_TYPES } from '@/lib/wow-data'
 import { jsonLdString } from '@/lib/json-ld'
+import { sequenceLead, sequenceSeoTitle } from '@/lib/sequence-seo'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -40,7 +41,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     .from('sequences')
     // !sequences_author_id_fkey: required as of migration 030 -- see
     // sequence-server.ts's fetchSequencePage for the full explanation.
-    .select('title, description, class_name, spec_name, hero_talent, content_type, patch_version, author:profiles!sequences_author_id_fkey(username)')
+    .select('title, description, class_name, spec_name, hero_talent, content_type, patch_version, game_version, author:profiles!sequences_author_id_fkey(username)')
     .eq('slug', params.slug)
     .eq('status', 'published')
     .single()
@@ -76,14 +77,16 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const authorName = (sequence.author as any)?.username
   const authorPart = authorName ? ` by ${authorName}` : ''
 
-  const title = sequence.title
+  const title = sequenceSeoTitle(sequence)
 
   const plainDescription = sequence.description
     ? stripHtml(sequence.description).slice(0, 155)
-    : `${specPart}${sequence.class_name}${heroTalentPart} GRIP-EMS sequence for ${contentLabel}${authorPart}${patchPart}. Free to import on LazyGrip.net.`
+    : `${specPart}${sequence.class_name}${heroTalentPart} one-button macro for ${contentLabel}${authorPart}${patchPart}. A free GRIP-EMS sequence to import on LazyGrip.net.`
 
   const keywords = [
     'GRIP-EMS',
+    'one-button macro',
+    `${sequenceLead(sequence)} macro`,
     'WoW macro',
     sequence.class_name,
     sequence.spec_name,
