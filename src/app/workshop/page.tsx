@@ -117,7 +117,7 @@ export default function WorkshopPage() {
             href="https://www.curseforge.com/wow/addons/grip-ems-actionbutton-override"
             eyebrow="Action Bars"
             title="GRIP-EMS Actionbutton Override"
-            description="Adds action bar override and drag-and-drop keybinding for GRIP-EMS sequences. Fully optional, GRIP-EMS works without it."
+            description="Adds action bar override and drag-and-drop keybinding for GRIP-EMS sequences, on Retail 12.1.5 and on WoW Forever. Fully optional, GRIP-EMS works without it."
             requires="Requires GRIP-EMS"
             icon={<ExternalLink size={20} />}
             cta="View on CurseForge"
