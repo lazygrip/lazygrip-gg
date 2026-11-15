@@ -99,8 +99,8 @@ export default function WorkshopPage() {
             href="https://www.curseforge.com/wow/addons/grip-ems-wow-default-ui"
             eyebrow="UI Shell"
             title="GRIP-EMS Wow Default UI"
-            description="A standalone shell that gives the sequence editor a cleaner, native Blizzard-style look with improved layout behavior. Fully optional, GRIP-EMS works without it."
-            requires="Requires GRIP-EMS"
+            description="A standalone shell that gives the sequence editor a cleaner, native Blizzard-style look with improved layout behavior. Retail only, and its CurseForge page lists game versions up to 12.1.0 with no WoW Forever build. Fully optional, GRIP-EMS works without it."
+            requires="Requires GRIP-EMS, WoW Retail"
             icon={<ExternalLink size={20} />}
             cta="View on CurseForge"
           />
@@ -108,8 +108,8 @@ export default function WorkshopPage() {
             href="https://www.curseforge.com/wow/addons/grip-ems-dynamic-theme"
             eyebrow="Theme"
             title="GRIP-EMS Dynamic Theme"
-            description="Recolors the GRIP-EMS window to match your UI without changing how the addon works. Fully optional, GRIP-EMS works without it."
-            requires="Requires GRIP-EMS"
+            description="Recolors the GRIP-EMS window to match your UI without changing how the addon works. Retail only, and its CurseForge page lists game versions up to 12.1.0 with no WoW Forever build. Fully optional, GRIP-EMS works without it."
+            requires="Requires GRIP-EMS v2.0 or newer, WoW Retail"
             icon={<ExternalLink size={20} />}
             cta="View on CurseForge"
           />
