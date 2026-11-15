@@ -39,7 +39,13 @@ const GROUPS: { heading: string; items: FaqItem[] }[] = [
       },
       {
         q: 'Is it allowed by Blizzard?',
-        a: 'Yes. One action per keypress is within the rules. The site will not host anything that requires bots or prohibited automation tools.',
+        a: (
+          <>
+            Nobody at Blizzard has ruled on GRIP-EMS or any sequencer like it by name. The closest thing to guidance is a 2019 Customer Support reply saying one action per keypress is the rule, and GRIP-EMS is built to fire exactly one spell per keypress, the same as a castsequence macro. That is a reading of the available evidence, not a Blizzard approval, and the full source-by-source breakdown, with dates and links, is on the guide.{' '}
+            <a href="/guide/blizzard-and-addons" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 500 }}>What Blizzard has said about addons like GRIP-EMS</a>
+          </>
+        ),
+        aPlain: 'Nobody at Blizzard has ruled on GRIP-EMS or any sequencer like it by name. The closest thing to guidance is a 2019 Customer Support reply saying one action per keypress is the rule, and GRIP-EMS fires exactly one spell per keypress, the same as a castsequence macro. That is a reading of the evidence, not a Blizzard approval. See https://lazygrip.net/guide/blizzard-and-addons for the full breakdown with dates and links.',
       },
       {
         q: 'Where do I learn how to build sequences?',
