@@ -83,7 +83,7 @@ const sections = [
     icon: AlertTriangle,
     time: '3 min',
     title: 'WoW: Forever',
-    desc: "Whether GRIP-EMS runs on Blizzard's Classic+ expansion, what Sataana has confirmed so far, where the beta's early SavedVariables bug stands now that a fix build has been reported, and what Blizzard has said about addons there. Updated as the beta moves.",
+    desc: "Whether GRIP-EMS runs on WoW: Forever, which has been live since November 4, what was confirmed on the beta and on the live client at launch, where the early SavedVariables bug stands, and what Blizzard has said about addons there. Updated as the game changes.",
   },
   {
     href: '/guide/ems-changelog',
