@@ -83,7 +83,14 @@ $knownExempt = @(
     # Reason 3: service-role-only, confirmed via live grant check
     # (migration 013). No anon/authenticated grant exists to exploit.
     "lookup_discord_id_by_user_id",
-    "lookup_profile_by_discord_id"
+    "lookup_profile_by_discord_id",
+
+    # Reason 3, added 2026-11-19: report_message(uuid, uuid, text), migration
+    # 052. Live grant check the same day: EXECUTE is held by service_role only,
+    # anon and authenticated both false. The reporter id is passed in by
+    # /api/messages/report from the signed-in session, never from the request
+    # body, and the function checks the reporter received the message itself.
+    "report_message"
 )
 
 $flagged = @()
@@ -177,8 +184,19 @@ Write-Host "[2/3] Checking for API routes added since the last full audit..." -F
 # Verified live (not just in the migration files) that DISCORD_RELAY_SECRET
 # and LAZYGRIP_ADMIN_TASK_SECRET are actually set in Vercel Production
 # before trusting either route's fail-closed claim.
+# 2026-11-19: the three routes flagged NEW on the previous run got their
+# hostile-caller read. messages/report takes the reporter from the session and
+# calls a service-role-only function, with the Discord alert unable to ping
+# anyone. relay-opt-outs fails closed on a missing or wrong secret, compares in
+# constant time, and rate limits only after the secret check. csp-report is
+# public by design, capped at 8 KB, 60 per minute per IP, and only logs; its
+# one soft spot is that many IPs could inflate log volume, which is a cost
+# issue and not an access one.
 $auditedRoutes = @(
     "src\app\api\admin\sequence-thread\route.ts",
+    "src\app\api\csp-report\route.ts",
+    "src\app\api\messages\report\route.ts",
+    "src\app\api\relay-opt-outs\route.ts",
     "src\app\api\comments\route.ts",
     "src\app\api\comments\delete\route.ts",
     "src\app\api\comments\edit\route.ts",
