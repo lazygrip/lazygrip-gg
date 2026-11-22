@@ -1,7 +1,8 @@
 'use client'
-import { useMemo, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import DOMPurify from 'dompurify'
 import { stripHtml } from '@/lib/html-text'
+import { copyToClipboard } from '@/components/ui/CopyButton'
 
 interface RenderedContentProps {
   html: string
@@ -27,6 +28,64 @@ const SANITIZE_OPTIONS = {
   ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
 }
 
+
+// The sanitized description is plain HTML, so its code blocks cannot carry a React
+// button. After the HTML is in place each <pre> is wrapped and given a copy button
+// with the same icon the rest of the site uses. The wrapper keeps the button fixed in
+// the corner while a long line scrolls sideways inside the block. The returned
+// function puts every block back the way it was, which matters under React's
+// double-run of effects in development.
+const COPY_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>'
+const CHECK_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>'
+
+function addCopyButtons(root: HTMLElement): () => void {
+  const undo: Array<() => void> = []
+  root.querySelectorAll('pre').forEach(pre => {
+    const parent = pre.parentNode
+    if (!parent) return
+    const wrap = document.createElement('div')
+    wrap.className = 'rc-pre'
+    parent.insertBefore(wrap, pre)
+    wrap.appendChild(pre)
+
+    const btn = document.createElement('button')
+    btn.type = 'button'
+    btn.className = 'rc-copy'
+    btn.title = 'Copy'
+    btn.setAttribute('aria-label', 'Copy code')
+    btn.innerHTML = COPY_SVG
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const onClick = async () => {
+      const ok = await copyToClipboard(pre.textContent ?? '')
+      btn.innerHTML = ok ? CHECK_SVG : COPY_SVG
+      btn.title = ok ? 'Copied' : 'Copy failed, select the text and copy it by hand'
+      btn.setAttribute('aria-label', btn.title)
+      btn.dataset.state = ok ? 'copied' : 'failed'
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => {
+        btn.innerHTML = COPY_SVG
+        btn.title = 'Copy'
+        btn.setAttribute('aria-label', 'Copy code')
+        delete btn.dataset.state
+      }, 1500)
+    }
+    btn.addEventListener('click', onClick)
+    wrap.appendChild(btn)
+
+    undo.push(() => {
+      if (timer) clearTimeout(timer)
+      btn.removeEventListener('click', onClick)
+      // If React already replaced the HTML these nodes are detached and there is
+      // nothing to put back.
+      if (wrap.parentNode) {
+        wrap.parentNode.insertBefore(pre, wrap)
+        wrap.remove()
+      }
+    })
+  })
+  return () => undo.forEach(fn => fn())
+}
+
 export default function RenderedContent({ html }: RenderedContentProps) {
   // dompurify here is the browser build. Outside a DOM it sets isSupported = false and never
   // assigns sanitize at all, so calling it on the server throws TypeError and 500s the route
@@ -50,6 +109,13 @@ export default function RenderedContent({ html }: RenderedContentProps) {
     [onClient, html],
   )
 
+  const contentRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const root = contentRef.current
+    if (!root || clean === null) return
+    return addCopyButtons(root)
+  }, [clean])
+
   if (!html || html.trim() === '' || html === '<p></p>') {
     return <p style={{ color: 'var(--text-muted, #9ca3af)', fontStyle: 'italic' }}>No description provided.</p>
   }
@@ -63,6 +129,7 @@ export default function RenderedContent({ html }: RenderedContentProps) {
       ) : (
         <div
           key="html"
+          ref={contentRef}
           className="rendered-content"
           dangerouslySetInnerHTML={{ __html: clean }}
         />
@@ -133,6 +200,19 @@ export default function RenderedContent({ html }: RenderedContentProps) {
           font-size: 13px;
           line-height: 1.5;
         }
+        .rendered-content .rc-pre { position: relative; margin: 16px 0; }
+        .rendered-content .rc-pre pre { margin: 0; padding-right: 48px; }
+        .rendered-content .rc-copy {
+          position: absolute; top: 6px; right: 6px;
+          display: inline-flex; align-items: center; justify-content: center;
+          width: 28px; height: 28px; padding: 0; cursor: pointer;
+          background: rgba(255, 255, 255, 0.08);
+          border: 0.5px solid rgba(255, 255, 255, 0.25);
+          border-radius: 4px; color: #e5e7eb;
+        }
+        .rendered-content .rc-copy:hover { background: rgba(255, 255, 255, 0.16); }
+        .rendered-content .rc-copy[data-state='copied'] { color: #34d399; border-color: #34d399; }
+        .rendered-content .rc-copy[data-state='failed'] { color: #f87171; border-color: #f87171; }
         .rendered-content pre code {
           background: none;
           color: inherit;

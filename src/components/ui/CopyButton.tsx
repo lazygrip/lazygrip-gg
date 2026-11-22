@@ -119,3 +119,31 @@ export function CopyBox({
     </div>
   )
 }
+
+// A text input or textarea with the copy button inside its right edge. The padding
+// that keeps typed text clear of the button lives in globals.css under .copy-field,
+// so the wrapped field keeps whatever style it already had.
+export function CopyField({
+  text, label, multiline = false, width, children,
+}: {
+  text: string
+  label?: string
+  multiline?: boolean
+  // For a field narrower than its row, so the button stays beside the field.
+  width?: number
+  children: ReactNode
+}) {
+  return (
+    <div className="copy-field" style={{ position: 'relative', ...(width ? { width } : {}) }}>
+      {children}
+      <CopyButton
+        text={text}
+        label={label}
+        size={12}
+        style={multiline
+          ? { position: 'absolute', top: 6, right: 6 }
+          : { position: 'absolute', top: '50%', right: 4, transform: 'translateY(-50%)' }}
+      />
+    </div>
+  )
+}
