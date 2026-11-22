@@ -3,7 +3,8 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Copy, Check, Plus, Trash2, ChevronUp, ChevronDown, Copy as CopyIcon, RotateCcw, GripVertical } from 'lucide-react'
+import CopyButton, { copyToClipboard } from '@/components/ui/CopyButton'
+import { Copy, Check, Plus, Trash2, ChevronUp, ChevronDown, CopyPlus as CopyIcon, RotateCcw, GripVertical } from 'lucide-react'
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd'
 import AuthForm from '@/components/auth/AuthForm'
 import { CONTENT_TYPES, GAME_VERSIONS, getClassById } from '@/lib/wow-data'
@@ -451,7 +452,8 @@ function MacroTextarea({ value, onChange, placeholder, rows, classId, style }: {
 
   return (
     <div style={{ position: 'relative' }}>
-      <textarea ref={textareaRef} value={value} onChange={handleInput} onKeyDown={handleKeyDown} onClick={e => onTextareaChange((e.target as HTMLTextAreaElement).value, (e.target as HTMLTextAreaElement).selectionStart)} onBlur={() => setTimeout(close, 150)} placeholder={placeholder} rows={rows || 3} spellCheck={false} style={style} />
+      <textarea ref={textareaRef} value={value} onChange={handleInput} onKeyDown={handleKeyDown} onClick={e => onTextareaChange((e.target as HTMLTextAreaElement).value, (e.target as HTMLTextAreaElement).selectionStart)} onBlur={() => setTimeout(close, 150)} placeholder={placeholder} rows={rows || 3} spellCheck={false} style={{ ...style, paddingRight: 40 }} />
+      <CopyButton text={value} label="Copy macro text" style={{ position: 'absolute', top: 6, right: 6 }} />
       <AutocompleteDropdown suggestions={suggestions} activeIndex={activeIndex} onSelect={s => { if (textareaRef.current) applySuggestion(s, textareaRef.current, onChange) }} onSetActive={setActiveIndex} />
     </div>
   )
@@ -826,12 +828,18 @@ function VariablesPanel({ variables, onChange }: { variables: GripVariable[]; on
           {v.type === 'text' ? (
             <div>
               <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Value</label>
-              <textarea value={v.value} onChange={e => updateVariable(v.id, { ...v, value: e.target.value })} rows={2} spellCheck={false} style={S.textarea()} />
+              <div style={{ position: 'relative' }}>
+                <textarea value={v.value} onChange={e => updateVariable(v.id, { ...v, value: e.target.value })} rows={2} spellCheck={false} style={{ ...S.textarea(), paddingRight: 40 }} />
+                <CopyButton text={v.value} label="Copy variable value" style={{ position: 'absolute', top: 6, right: 6 }} />
+              </div>
             </div>
           ) : (
             <div>
               <label style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'block', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Function</label>
-              <textarea value={v.function} onChange={e => updateVariable(v.id, { ...v, function: e.target.value })} rows={4} spellCheck={false} style={{ ...S.textarea(), fontFamily: 'var(--font-mono)' }} />
+              <div style={{ position: 'relative' }}>
+                <textarea value={v.function} onChange={e => updateVariable(v.id, { ...v, function: e.target.value })} rows={4} spellCheck={false} style={{ ...S.textarea(), fontFamily: 'var(--font-mono)', paddingRight: 40 }} />
+                <CopyButton text={v.function} label="Copy variable function" style={{ position: 'absolute', top: 6, right: 6 }} />
+              </div>
             </div>
           )}
         </div>
@@ -1116,7 +1124,7 @@ export default function WorkshopBuildPage() {
 
   async function copyExport() {
     if (!exportCode) return
-    await navigator.clipboard.writeText(exportCode)
+    if (!(await copyToClipboard(exportCode))) return
     setCopied(true); setTimeout(() => setCopied(false), 1500)
   }
 
@@ -1316,7 +1324,10 @@ export default function WorkshopBuildPage() {
               </div>
               <div>
                 <label style={S.label()}>Talent string (collection-wide)</label>
-                <input value={model.exportMeta.talentString || ''} onChange={e => setModel(m => ({ ...m, exportMeta: { ...m.exportMeta, talentString: e.target.value } }))} placeholder="Optional, applies to all sequences unless overridden below" style={{ ...S.input(), width: '100%', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }} />
+                <div style={{ position: 'relative' }}>
+                  <input value={model.exportMeta.talentString || ''} onChange={e => setModel(m => ({ ...m, exportMeta: { ...m.exportMeta, talentString: e.target.value } }))} placeholder="Optional, applies to all sequences unless overridden below" style={{ ...S.input(), width: '100%', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', paddingRight: 44 }} />
+                  <CopyButton text={model.exportMeta.talentString || ''} label="Copy collection talent string" size={12} style={{ position: 'absolute', top: '50%', right: 4, transform: 'translateY(-50%)' }} />
+                </div>
               </div>
               <div>
                 <label style={S.label()}>Sequence name</label>
@@ -1329,7 +1340,10 @@ export default function WorkshopBuildPage() {
               <div className="wb-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label style={S.label()}>Talent string (this sequence only)</label>
-                  <input value={activeSeq.talentString} onChange={e => updateSeq({ ...activeSeq, talentString: e.target.value })} placeholder="Optional, per-sequence" style={{ ...S.input(), width: '100%', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }} />
+                  <div style={{ position: 'relative' }}>
+                    <input value={activeSeq.talentString} onChange={e => updateSeq({ ...activeSeq, talentString: e.target.value })} placeholder="Optional, per-sequence" style={{ ...S.input(), width: '100%', fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', paddingRight: 44 }} />
+                    <CopyButton text={activeSeq.talentString} label="Copy sequence talent string" size={12} style={{ position: 'absolute', top: '50%', right: 4, transform: 'translateY(-50%)' }} />
+                  </div>
                 </div>
                 <div>
                   <label style={S.label()}>WarcraftLogs / author URL</label>

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import CopyButton from '@/components/ui/CopyButton'
 import Link from 'next/link'
 import { ArrowLeft, ExternalLink } from 'lucide-react'
 import GuideHeader from '@/components/guide/GuideHeader'
@@ -47,6 +48,7 @@ export default function ValidatingPage() {
           ].map(item => (
             <div key={item.cmd} style={{ display: 'flex', gap: 12, alignItems: 'baseline', padding: '9px 14px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)' }}>
               <code style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--accent-text)', flexShrink: 0, minWidth: 200 }}>{item.cmd}</code>
+              <CopyButton text={item.cmd} label={`Copy ${item.cmd}`} size={12} style={{ alignSelf: 'center' }} />
               <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{item.desc}</span>
             </div>
           ))}

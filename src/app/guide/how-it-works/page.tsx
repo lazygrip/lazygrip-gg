@@ -4,7 +4,7 @@ import GuideHeader from '@/components/guide/GuideHeader'
 import GuideSection from '@/components/guide/GuideSection'
 import GuideCallout from '@/components/guide/GuideCallout'
 import GuideImage from '@/components/guide/GuideImage'
-import { guideCodeStyle } from '@/components/guide/GuideCode'
+import { guideCodeStyle, GuideCommand } from '@/components/guide/GuideCode'
 
 export const metadata: Metadata = {
   title: 'How GRIP-EMS Works | GRIP-EMS Guide',
@@ -53,7 +53,7 @@ export default function HowItWorksPage() {
 
       <GuideSection title="Proc-gated abilities">
         <p>A step whose line names a spell you cannot cast right now produces nothing on that press, and the step advances anyway. There is no macro conditional that tests a proc. The documented set covers combat, modifiers, form, channeling, whether a spell is in your book and so on, but nothing that reads a buff, so you cannot write a step that fires only while a proc is up.</p>
-        <p style={{ marginTop: 12 }}>Where WoW itself swaps the button to the proc version, name the base spell and the swap happens for you. Warrior&apos;s Slam becoming Heroic Strike under Bloodsurge is the old textbook case: <code style={code}>/cast Slam</code> gets you Heroic Strike while the proc is up, because WoW substitutes the override on the action and you never spend a press on a spell you do not have. The trap is writing <code style={code}>/cast Heroic Strike</code> instead, which casts nothing on every press where the proc is down. Adding a second spell after a semicolon does not rescue it either. A clause with no conditional in front of it is always true, so <code style={code}>/cast Heroic Strike; Slam</code> picks Heroic Strike every time and Slam never fires.</p>
+        <p style={{ marginTop: 12 }}>Where WoW itself swaps the button to the proc version, name the base spell and the swap happens for you. Warrior&apos;s Slam becoming Heroic Strike under Bloodsurge is the old textbook case: <GuideCommand>/cast Slam</GuideCommand> gets you Heroic Strike while the proc is up, because WoW substitutes the override on the action and you never spend a press on a spell you do not have. The trap is writing <GuideCommand>/cast Heroic Strike</GuideCommand> instead, which casts nothing on every press where the proc is down. Adding a second spell after a semicolon does not rescue it either. A clause with no conditional in front of it is always true, so <GuideCommand>/cast Heroic Strike; Slam</GuideCommand> picks Heroic Strike every time and Slam never fires.</p>
         <GuideCallout>
           If the proc version is a genuine override of the base spell, write the base spell. If it is a separate spell with its own availability, accept that some presses on that step do nothing, and keep anything else you need on that same step above the proc line, because a <code style={code}>/cast</code> that fails on cooldown stops the lines under it.
         </GuideCallout>

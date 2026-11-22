@@ -4,7 +4,7 @@ import { ArrowRight, ArrowLeft } from 'lucide-react'
 import GuideHeader from '@/components/guide/GuideHeader'
 import GuideSection from '@/components/guide/GuideSection'
 import GuideInfoBox from '@/components/guide/GuideInfoBox'
-import GuideCode from '@/components/guide/GuideCode'
+import GuideCode, { GuideCommand } from '@/components/guide/GuideCode'
 
 export const metadata: Metadata = {
   title: 'Coming from GSE | GRIP-EMS Guide',
@@ -59,7 +59,7 @@ export default function FromGsePage() {
         </div>
 
         <p>
-          After importing, run <GuideCode>/gems repairall</GuideCode> to scan every transferred sequence across 11 diagnostic categories. Most issues from format differences get flagged and fixed automatically. This takes about thirty seconds and saves you from discovering problems mid-pull.
+          After importing, run <GuideCommand>/gems repairall</GuideCommand> to scan every transferred sequence across 11 diagnostic categories. Most issues from format differences get flagged and fixed automatically. This takes about thirty seconds and saves you from discovering problems mid-pull.
         </p>
         <GuideInfoBox>
           Some sequences from GSE overshoot WoW&apos;s 255-character step limit. The Repair module flags any step over 255 characters and the fix is to split the oversized step into two shorter steps carrying the same spells. If repair comes back with character limit violations do not be alarmed, it is fixable in a few minutes.

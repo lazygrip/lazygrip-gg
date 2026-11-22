@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Copy, Check, AlertTriangle, ArrowRight } from 'lucide-react'
+import CopyButton, { copyToClipboard } from '@/components/ui/CopyButton'
 import { GAME_VERSIONS } from '@/lib/wow-data'
 
 interface ConvertReport {
@@ -61,13 +62,10 @@ export default function WorkshopConvertPage() {
 
   async function copyExport() {
     if (!report) return
-    try {
-      await navigator.clipboard.writeText(report.export)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
-      // Clipboard access can be refused; the string is still selectable in the box above.
-    }
+    // A refused clipboard leaves the string selectable in the box above.
+    if (!(await copyToClipboard(report.export))) return
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1500)
   }
 
   function openInBuilder() {
@@ -180,18 +178,21 @@ export default function WorkshopConvertPage() {
 
               <div style={card}>
                 <h2 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>GRIP-EMS export</h2>
-                <textarea
-                  readOnly
-                  aria-label="Converted GRIP-EMS export"
-                  value={report.export}
-                  rows={4}
-                  onFocus={e => e.currentTarget.select()}
-                  style={{
-                    width: '100%', padding: '10px 12px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)',
-                    background: 'var(--bg-tertiary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)',
-                    color: 'var(--text-primary)', resize: 'vertical', marginBottom: 10,
-                  }}
-                />
+                <div style={{ position: 'relative', marginBottom: 10 }}>
+                  <textarea
+                    readOnly
+                    aria-label="Converted GRIP-EMS export"
+                    value={report.export}
+                    rows={4}
+                    onFocus={e => e.currentTarget.select()}
+                    style={{
+                      display: 'block', width: '100%', padding: '10px 44px 10px 12px', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)',
+                      background: 'var(--bg-tertiary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)',
+                      color: 'var(--text-primary)', resize: 'vertical',
+                    }}
+                  />
+                  <CopyButton text={report.export} label="Copy converted export" style={{ position: 'absolute', top: 8, right: 8 }} />
+                </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <button
                     onClick={copyExport}
@@ -211,7 +212,7 @@ export default function WorkshopConvertPage() {
                   <Link href={`/post?gv=${shareGameVersion}`} style={secondaryBtn}>Share it on LazyGrip <ArrowRight size={14} /></Link>
                 </div>
                 <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', lineHeight: 1.5, marginTop: 10 }}>
-                  In game, type <code style={{ fontFamily: 'var(--font-mono)' }}>/gems import</code> and paste the export. New to GRIP-EMS? <Link href="/guide/from-gse" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Coming from GSE</Link> covers what behaves differently.
+                  In game, type <span style={{ whiteSpace: 'nowrap' }}><code style={{ fontFamily: 'var(--font-mono)' }}>/gems import</code><CopyButton text="/gems import" label="Copy /gems import" size={11} style={{ width: 18, height: 18, marginLeft: 3, verticalAlign: 'middle', background: 'transparent', border: 'none' }} /></span> and paste the export. New to GRIP-EMS? <Link href="/guide/from-gse" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Coming from GSE</Link> covers what behaves differently.
                 </p>
               </div>
             </div>

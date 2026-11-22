@@ -35,6 +35,7 @@
 // in /api/workshop/decode/route.ts no longer load-bearing (left in place,
 // harmless, not worth a second migration-adjacent change to remove).
 import type { ActionNode } from '@/types'
+import CopyButton from '@/components/ui/CopyButton'
 export type { ActionNode }
 
 function ActionLine({ text }: { text: string }) {
@@ -177,6 +178,7 @@ export default function ActionTree({ nodes, startIndex = 1 }: { nodes: ActionNod
                   ))}
                 </div>
               </div>
+              {lines.length > 0 && <CopyButton text={lines.join('\n')} label={`Copy step ${n}`} size={12} />}
             </div>
           )
         }
