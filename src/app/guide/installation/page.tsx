@@ -1,10 +1,11 @@
 import Link from 'next/link'
+import CopyButton from '@/components/ui/CopyButton'
 import type { Metadata } from 'next'
 import GuideHeader from '@/components/guide/GuideHeader'
 import GuideSection from '@/components/guide/GuideSection'
 import GuideCallout from '@/components/guide/GuideCallout'
 import GuideImage from '@/components/guide/GuideImage'
-import { guideCodeStyle } from '@/components/guide/GuideCode'
+import { guideCodeStyle, GuideCommand } from '@/components/guide/GuideCode'
 
 export const metadata: Metadata = {
   title: 'Installation | GRIP-EMS Guide',
@@ -69,8 +70,8 @@ export default function InstallationPage() {
 
         <Step number={1} label="Key Down Casting is handled for you now">
           <p>GRIP-EMS runs a step on the <strong>key-down</strong> event, so it needs WoW's key-down casting setting switched on. With it off, the addon's own notes say a sequence does not advance at all, which is the difference between a functioning rotation and nothing happening.</p>
-          <p style={{ marginTop: 8 }}>Starting in v2.3.14, GRIP-EMS sets <code style={guideCodeStyle}>ActionButtonUseKeyDown</code> to enabled itself on every login, whether or not you have ever opened the settings. It is no longer a row in the CVar Health tab and there is nothing to fix here manually. The check runs once per login while you are out of combat, so if a sequence goes dead after you changed settings mid-session, run <code style={guideCodeStyle}>/gems status</code> to read the live value and <code style={guideCodeStyle}>/reload</code> to put it back.</p>
-          <GuideCallout>Running an older version than 2.3.14? Update through your addon manager first. On anything older, open <code style={guideCodeStyle}>/gems settings</code>, go to the CVar Health tab, and click Fix if the row is not green. That is the single most common reason a pre-2.3.14 install does nothing on keypress.</GuideCallout>
+          <p style={{ marginTop: 8 }}>Starting in v2.3.14, GRIP-EMS sets <code style={guideCodeStyle}>ActionButtonUseKeyDown</code> to enabled itself on every login, whether or not you have ever opened the settings. It is no longer a row in the CVar Health tab and there is nothing to fix here manually. The check runs once per login while you are out of combat, so if a sequence goes dead after you changed settings mid-session, run <GuideCommand>/gems status</GuideCommand> to read the live value and <GuideCommand>/reload</GuideCommand> to put it back.</p>
+          <GuideCallout>Running an older version than 2.3.14? Update through your addon manager first. On anything older, open <GuideCommand>/gems settings</GuideCommand>, go to the CVar Health tab, and click Fix if the row is not green. That is the single most common reason a pre-2.3.14 install does nothing on keypress.</GuideCallout>
         </Step>
 
         <Step number={2} label="Verify your SpellQueueWindow">
@@ -88,7 +89,7 @@ export default function InstallationPage() {
           GRIP-EMS does not need a button on your bar to run a sequence. It binds a key directly to the sequence inside the addon, and that is how most players use it. It does still make a macro for you, though: every sequence gets a character macro named GEMS: followed by the sequence name, which clicks the sequence's button, and you can find it in your /macro list and drag it to an action bar if you want something clickable. A button does not appear on your bars by itself, and that is expected behavior and not a bug.
         </p>
         <p style={{ fontSize: 'var(--text-base)', color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 12 }}>
-          To bind a key to a sequence, open the sequence in the GRIP-EMS editor, go to the Keybind tab, and assign a key there. The bind is stored per spec, so each spec keeps its own keys and they switch when you do. As of v2.4.22 a sequence can carry more than one key, so you can put it on a mouse button and a keyboard key at once: the tab lists every key with a button to remove it, Add Key binds another, and every key presses the same sequence button, so the steps advance in one order whichever key you hit. From chat, <code style={guideCodeStyle}>/gems bind &lt;sequence&gt; &lt;key&gt; --add</code> adds a key and <code style={guideCodeStyle}>/gems unbind &lt;sequence&gt; &lt;key&gt;</code> removes one.
+          To bind a key to a sequence, open the sequence in the GRIP-EMS editor, go to the Keybind tab, and assign a key there. The bind is stored per spec, so each spec keeps its own keys and they switch when you do. As of v2.4.22 a sequence can carry more than one key, so you can put it on a mouse button and a keyboard key at once: the tab lists every key with a button to remove it, Add Key binds another, and every key presses the same sequence button, so the steps advance in one order whichever key you hit. From chat, <GuideCommand>/gems bind &lt;sequence&gt; &lt;key&gt; --add</GuideCommand> adds a key and <GuideCommand>/gems unbind &lt;sequence&gt; &lt;key&gt;</GuideCommand> removes one.
         </p>
         <GuideImage
           src="/guide/keybind-tab-bound.png"
@@ -178,14 +179,17 @@ export default function InstallationPage() {
             { cmd: '/gems revalidate', desc: 'Re-tags every sequence with current spell IDs, useful after a patch or respec' },
           ].map(item => (
             <div key={item.cmd} style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', alignItems: 'baseline', fontSize: 'var(--text-sm)' }}>
-              <code style={{
-                fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)',
-                color: 'var(--accent)', background: 'var(--accent-subtle)',
-                padding: '2px 8px', borderRadius: 'var(--radius-sm)',
-                flexShrink: 0, maxWidth: '100%', overflowWrap: 'anywhere',
-              }}>
-                {item.cmd}
-              </code>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, maxWidth: '100%' }}>
+                <code style={{
+                  fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)',
+                  color: 'var(--accent)', background: 'var(--accent-subtle)',
+                  padding: '2px 8px', borderRadius: 'var(--radius-sm)',
+                  overflowWrap: 'anywhere',
+                }}>
+                  {item.cmd}
+                </code>
+                <CopyButton text={item.cmd} label={`Copy ${item.cmd}`} size={12} />
+              </span>
               <span style={{ color: 'var(--text-secondary)' }}>{item.desc}</span>
             </div>
           ))}

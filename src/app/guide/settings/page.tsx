@@ -1,10 +1,11 @@
 import Link from 'next/link'
+import CopyButton from '@/components/ui/CopyButton'
 import type { Metadata } from 'next'
 import GuideHeader from '@/components/guide/GuideHeader'
 import GuideSection from '@/components/guide/GuideSection'
 import GuideCallout from '@/components/guide/GuideCallout'
 import GuideImage from '@/components/guide/GuideImage'
-import { guideCodeStyle } from '@/components/guide/GuideCode'
+import { guideCodeStyle, GuideCommand } from '@/components/guide/GuideCode'
 
 export const metadata: Metadata = {
   title: 'Settings | GRIP-EMS Guide',
@@ -48,7 +49,7 @@ export default function SettingsPage() {
       <GuideSection title="Key Down Casting">
         <p style={{ marginBottom: 4, fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Automatic as of v2.3.14</p>
         <p>This is the WoW setting <code style={code}>ActionButtonUseKeyDown</code>. It controls whether your abilities fire when you <strong style={{ color: 'var(--text-primary)' }}>press</strong> a key or when you <strong style={{ color: 'var(--text-primary)' }}>release</strong> it. GRIP-EMS fires on the press, and it needs this set to on to work correctly. Leave it off, and your sequence either does not advance at all or advances on the wrong event, with an extra 50 to 100ms of dead time on every single press, eating into your rotation.</p>
-        <p style={{ marginTop: 12 }}>It is also the one setting on this page that is not a preference. Everything else here is tuning, and this one is mandatory, because the press is what advances the sequence to the next step. As of GRIP-EMS v2.3.14 you do not have to do anything about it: every time you log in, while you are out of combat, the addon checks the value and sets it to 1 if it is anything else, whether or not you have ever opened the settings and whether or not Auto-Fix CVars on Login is turned on. On the current releases, v2.3.14 through v2.4.23, it has no row in the CVar Health tab at all, since a setting the engine cannot run without is not a recommendation you weigh up. Run <code style={code}>/gems status</code> any time to read the live value.</p>
+        <p style={{ marginTop: 12 }}>It is also the one setting on this page that is not a preference. Everything else here is tuning, and this one is mandatory, because the press is what advances the sequence to the next step. As of GRIP-EMS v2.3.14 you do not have to do anything about it: every time you log in, while you are out of combat, the addon checks the value and sets it to 1 if it is anything else, whether or not you have ever opened the settings and whether or not Auto-Fix CVars on Login is turned on. On the current releases, v2.3.14 through v2.4.23, it has no row in the CVar Health tab at all, since a setting the engine cannot run without is not a recommendation you weigh up. Run <GuideCommand>/gems status</GuideCommand> any time to read the live value.</p>
         <GuideCallout>
           On a version older than 2.3.14, you will still need to fix this yourself. Run /gems settings, go to the CVar Health tab, and click Fix if the row is not green. Do it outside of combat; WoW locks some CVars while you are in a fight, which is why the Fix buttons grey out mid-pull. The Installation page covers this in more detail for older versions.
         </GuideCallout>
@@ -94,7 +95,7 @@ export default function SettingsPage() {
 
       <GuideSection title="Dynamic SQW Optimiser">
         <p style={{ marginBottom: 4, fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Settings {'>'} CVar Health</p>
-        <p>This is the setting that does the SQW math for you and keeps it updated as your connection moves around during a session. It is off by default, so nothing described in this section happens until you tick Dynamic SQW Optimiser in CVar Health (or type <code style={code}>/gems sqw on</code>). Once it is on, it continuously monitors your world latency, using a smoothed average sampled every 10 seconds, ignoring one-off spikes that would otherwise throw your numbers off. From that, it sets SQW to your current latency plus a configurable Safety Buffer, kept inside the 50 to 400ms ceiling, and it only touches the CVar when the new number differs from the current one by 15ms or more, so it settles instead of flickering.</p>
+        <p>This is the setting that does the SQW math for you and keeps it updated as your connection moves around during a session. It is off by default, so nothing described in this section happens until you tick Dynamic SQW Optimiser in CVar Health (or type <GuideCommand>/gems sqw on</GuideCommand>). Once it is on, it continuously monitors your world latency, using a smoothed average sampled every 10 seconds, ignoring one-off spikes that would otherwise throw your numbers off. From that, it sets SQW to your current latency plus a configurable Safety Buffer, kept inside the 50 to 400ms ceiling, and it only touches the CVar when the new number differs from the current one by 15ms or more, so it settles instead of flickering.</p>
         <p style={{ marginTop: 12 }}>So if your latency is 120ms and your Safety Buffer is 50ms, SQW lands at around 170ms. Your latency jumps to 160ms mid-key, SQW adjusts.</p>
 
         <div style={{ padding: '12px 14px', background: 'var(--bg-primary)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-md)', marginTop: 16 }}>
@@ -152,7 +153,7 @@ export default function SettingsPage() {
 
       <GuideSection title="Keybind Conflicts">
         <p style={{ marginBottom: 4, fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>Added in v2.4.0 · /gems keys or the Keybind tab</p>
-        <p>Run <code style={code}>/gems keys</code>, or click Check Conflicts on the Keybind tab, and GRIP-EMS checks every key your sequences use, plus vehicle and pet battle slots, against your saved bindings: what the keypress actually reaches, cast-redirect modifiers, and click bindings. Where it can identify the addon behind a conflicting binding, it names it directly, and it clears two known kinds of conflict for you automatically.</p>
+        <p>Run <GuideCommand>/gems keys</GuideCommand>, or click Check Conflicts on the Keybind tab, and GRIP-EMS checks every key your sequences use, plus vehicle and pet battle slots, against your saved bindings: what the keypress actually reaches, cast-redirect modifiers, and click bindings. Where it can identify the addon behind a conflicting binding, it names it directly, and it clears two known kinds of conflict for you automatically.</p>
         <p style={{ marginTop: 12 }}>This is the tool for the recurring question of why a key works on one character and does nothing on another. Different characters can carry different addon-set or click bindings on the same physical key, and this check surfaces that instead of leaving you to hunt through every addon's keybind panel by hand.</p>
         <p style={{ marginTop: 12 }}>Three things changed in v2.4.21. The panel now reads branches written with a modified-click action, such as <code style={code}>[mod:SELFCAST]</code>, and it checks the key each modifier variant is bound to, where before a key taken by something else could still show as clear. It also tells you, under that sequence&apos;s key, when a branch can never run, which is what happens to <code style={code}>[mod:SELFCAST]</code> when Self Cast is set to None in the game&apos;s options. And with Per-loadout keybinds on, it checks the keys saved to your active talent loadout, the same ones the game binds, and follows a switch of loadout or spec while it is open.</p>
         <p style={{ marginTop: 12 }}>The Fix button changed too, and this one is worth reading before you press it. Clearing a cast redirect means setting Self Cast, Focus Cast or Mouseover Cast to None, and that stops every branch that checks the same setting in any of your sequences. With account-wide key bindings the setting is shared, so it stops those branches on your other characters that use account-wide bindings as well. Fix All no longer touches those rows, and a row&apos;s own Fix names the setting and the sequences that use it and asks before it changes anything.</p>
@@ -162,7 +163,7 @@ export default function SettingsPage() {
           caption="Check Conflicts run against a sequence's key. It names whatever else has claimed the bind, including the modifier combinations."
         />
         <GuideCallout>
-          If a fix does not stick, run <code style={code}>/gems keys</code> again and use Undo, which backs out the last change if something else grabbed the key in the meantime.
+          If a fix does not stick, run <GuideCommand>/gems keys</GuideCommand> again and use Undo, which backs out the last change if something else grabbed the key in the meantime.
         </GuideCallout>
       </GuideSection>
 
@@ -196,14 +197,17 @@ export default function SettingsPage() {
             { cmd: '/gems fs reset', desc: 'Clear the off-GCD classifications EMS has learned and re-run the analysis on your loaded sequences' },
           ].map(item => (
             <div key={item.cmd} style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', alignItems: 'baseline', fontSize: 'var(--text-sm)' }}>
-              <code style={{
-                fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)',
-                color: 'var(--accent)', background: 'var(--accent-subtle)',
-                padding: '2px 8px', borderRadius: 'var(--radius-sm)',
-                flexShrink: 0, maxWidth: '100%', overflowWrap: 'anywhere',
-              }}>
-                {item.cmd}
-              </code>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, maxWidth: '100%' }}>
+                <code style={{
+                  fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)',
+                  color: 'var(--accent)', background: 'var(--accent-subtle)',
+                  padding: '2px 8px', borderRadius: 'var(--radius-sm)',
+                  overflowWrap: 'anywhere',
+                }}>
+                  {item.cmd}
+                </code>
+                <CopyButton text={item.cmd} label={`Copy ${item.cmd}`} size={12} />
+              </span>
               <span style={{ color: 'var(--text-secondary)' }}>{item.desc}</span>
             </div>
           ))}
@@ -221,14 +225,14 @@ export default function SettingsPage() {
 
       <GuideSection title="Spell Cache Viewer">
         <p style={{ marginBottom: 4, fontSize: 'var(--text-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>/gems spellcache</p>
-        <p>The cached spell data GRIP-EMS uses for icon resolution, autocomplete, and the Tempo Advisor's spell classification all lives in one place you can inspect directly. Run <code style={code}>/gems spellcache</code>, search by spell name or spell ID, and see exactly what the addon has resolved it to: the icon and the spell ID behind that name.</p>
+        <p>The cached spell data GRIP-EMS uses for icon resolution, autocomplete, and the Tempo Advisor's spell classification all lives in one place you can inspect directly. Run <GuideCommand>/gems spellcache</GuideCommand>, search by spell name or spell ID, and see exactly what the addon has resolved it to: the icon and the spell ID behind that name.</p>
         <GuideImage
           src="/guide/spell-cache-viewer.png"
           alt="The Spell Cache Viewer listing spell names, icons, and spell IDs"
           caption="The Spell Cache Viewer. It's a lookup of name-to-icon-and-ID, not a tooltip — there's no cast time, cooldown, or spell school breakdown here."
         />
         <p style={{ marginTop: 12 }}>This is the tool to reach for when a spell icon is not resolving on your tracker or action bar, or when the Tempo Advisor is classifying a spell as unknown instead of one of its real timing categories. A stale or missing cache entry, usually from a spell getting renamed or reworked in a patch, is the most common cause of both. Search for the spell here first before assuming something is broken in your sequence itself.</p>
-        <p style={{ marginTop: 12 }}>The cache populates on login and updates automatically when you change spec or talents. If a spell is genuinely missing rather than just stale, <code style={code}>/gems revalidate</code> forces a fresh re-tag of every sequence with current spell IDs, which usually resolves it.</p>
+        <p style={{ marginTop: 12 }}>The cache populates on login and updates automatically when you change spec or talents. If a spell is genuinely missing rather than just stale, <GuideCommand>/gems revalidate</GuideCommand> forces a fresh re-tag of every sequence with current spell IDs, which usually resolves it.</p>
       </GuideSection>
 
       <GuideSection title="How these settings connect">

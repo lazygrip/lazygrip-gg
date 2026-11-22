@@ -19,6 +19,7 @@ import { trackEvent } from '@/lib/analytics'
 import PostingEligibilityChecklist from '@/components/PostingEligibilityChecklist'
 import DiscordLinkPrompt from '@/components/sequence/DiscordLinkPrompt'
 import ActionTreeView, { countActionSteps } from '@/components/sequence/ActionTree'
+import CopyButton, { copyToClipboard } from '@/components/ui/CopyButton'
 
 const SITE_OWNER_ID = 'c2374192-e541-4636-9baf-84fc192cff52'
 
@@ -428,9 +429,17 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
 
   async function copyGripString() {
     if (!selectedVersion?.grip_string) return
-    await navigator.clipboard.writeText(selectedVersion.grip_string)
+    // Same copy route as the button inside the string box, which also falls back
+    // when the browser refuses the clipboard API. A refusal never counts as a copy.
+    if (!(await copyToClipboard(selectedVersion.grip_string))) return
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+    await recordGripCopy()
+  }
+
+  // The counting half of a copy, shared by the header button and the button inside
+  // the string box so a copy from either place is counted once.
+  async function recordGripCopy() {
     // This is the site's real activation moment -- a visitor got far enough
     // to actually take a sequence's import string, not just view the page.
     // Fires only after writeText resolves, so a clipboard permission failure
@@ -1411,17 +1420,25 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                   {copied ? <><Check size={13} /> Copied!</> : <><Copy size={13} /> Copy string</>}
                 </button>
               </div>
-              <div className="grip-string" style={{ maxHeight: 120, overflow: 'hidden' }}>
-                {selectedVersion.grip_string}
+              <div style={{ position: 'relative' }}>
+                <div className="grip-string" style={{ maxHeight: 120, overflow: 'hidden', paddingRight: 48 }}>
+                  {selectedVersion.grip_string}
+                </div>
+                <CopyButton
+                  text={selectedVersion.grip_string}
+                  label="Copy GRIP import string"
+                  style={{ position: 'absolute', top: 8, right: 8 }}
+                  onCopied={() => { setCopied(true); setTimeout(() => setCopied(false), 2000); void recordGripCopy() }}
+                />
               </div>
               <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginTop: 8 }}>
-                In-game: type /gems import and paste this string
+                In-game: type <span style={{ whiteSpace: 'nowrap' }}><code style={{ fontFamily: 'var(--font-mono)' }}>/gems import</code><CopyButton text="/gems import" label="Copy /gems import" size={11} style={{ width: 18, height: 18, marginLeft: 3, verticalAlign: 'middle', background: 'transparent', border: 'none' }} /></span> and paste this string
               </p>
               <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 500, marginTop: 16, marginBottom: 8 }}>Import in three steps</h3>
               <ol style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', margin: 0, paddingLeft: 20, lineHeight: 1.6 }}>
                 <li>Install GRIP-EMS. The <Link href="/guide/installation">installation guide</Link> has the download links.</li>
                 <li>Copy the GRIP import string on this page.</li>
-                <li>In game, type /gems import and paste it.</li>
+                <li>In game, type <span style={{ whiteSpace: 'nowrap' }}><code style={{ fontFamily: 'var(--font-mono)' }}>/gems import</code><CopyButton text="/gems import" label="Copy /gems import" size={11} style={{ width: 18, height: 18, marginLeft: 3, verticalAlign: 'middle', background: 'transparent', border: 'none' }} /></span> and paste it.</li>
               </ol>
             </div>
           )}
@@ -1483,6 +1500,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
 
               {activeEntry.talent_string && (
                 <div style={{
+                  position: 'relative',
                   marginBottom: 14,
                   padding: '8px',
                   background: 'var(--bg-tertiary)',
@@ -1492,10 +1510,11 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                   <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 4 }}>Talent build</p>
                   <div style={{
                     fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)',
-                    wordBreak: 'break-all', color: 'var(--text-secondary)',
+                    wordBreak: 'break-all', color: 'var(--text-secondary)', paddingRight: 40,
                   }}>
                     {activeEntry.talent_string}
                   </div>
+                  <CopyButton text={activeEntry.talent_string} label="Copy talent build" style={{ position: 'absolute', top: 6, right: 6 }} />
                 </div>
               )}
 
@@ -1533,6 +1552,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                         <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', alignSelf: 'flex-start', paddingTop: 2 }}>
                           {typeof step === 'object' && step.char_count ? `${step.char_count}/255` : ''}
                         </span>
+                        <CopyButton text={typeof step === 'string' ? step : step.text || ''} label={`Copy step ${i + 1}`} size={12} style={{ alignSelf: 'flex-start' }} />
                       </div>
                     ))}
                   </div>
@@ -1609,6 +1629,7 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
                     }}>
                       {typeof step === 'object' && step.char_count ? `${step.char_count}/255` : ''}
                     </span>
+                    <CopyButton text={typeof step === 'string' ? step : step.text || ''} label={`Copy step ${i + 1}`} size={12} style={{ alignSelf: 'flex-start' }} />
                   </div>
                 ))}
               </div>
@@ -2059,16 +2080,20 @@ export default function SequencePageClient({ initial }: { initial?: SequencePage
               padding: '16px',
             }}>
               <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 500, marginBottom: 8 }}>Talent build</h3>
-              <div style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 'var(--text-xs)',
-                background: 'var(--bg-tertiary)',
-                padding: '8px',
-                borderRadius: 'var(--radius-sm)',
-                wordBreak: 'break-all',
-                color: 'var(--text-secondary)',
-              }}>
-                {selectedVersion.talent_string}
+              <div style={{ position: 'relative' }}>
+                <div style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 'var(--text-xs)',
+                  background: 'var(--bg-tertiary)',
+                  padding: '8px',
+                  paddingRight: 44,
+                  borderRadius: 'var(--radius-sm)',
+                  wordBreak: 'break-all',
+                  color: 'var(--text-secondary)',
+                }}>
+                  {selectedVersion.talent_string}
+                </div>
+                <CopyButton text={selectedVersion.talent_string} label="Copy talent build" style={{ position: 'absolute', top: 6, right: 6 }} />
               </div>
             </div>
           )}

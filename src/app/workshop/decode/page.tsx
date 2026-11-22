@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Copy, Check } from 'lucide-react'
+import CopyButton, { CopyBox } from '@/components/ui/CopyButton'
 import ActionTree, { type ActionNode } from '@/components/sequence/ActionTree'
 
 interface DecodeResult {
@@ -43,10 +43,10 @@ function VersionStepView({ version }: { version: DecodeResult['sequences'][0]['v
       </div>
 
       {version.keyPress && (
-        <div style={{ marginBottom: 10, padding: '8px 10px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)' }}>
+        <CopyBox text={version.keyPress} label="Copy KeyPress" style={{ marginBottom: 10, padding: '8px 10px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)' }}>
           <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>KeyPress</span>
           <pre style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', color: 'var(--accent)', margin: 0, whiteSpace: 'pre-wrap' }}>{version.keyPress}</pre>
-        </div>
+        </CopyBox>
       )}
 
       {hasActions
@@ -59,6 +59,7 @@ function VersionStepView({ version }: { version: DecodeResult['sequences'][0]['v
                 <pre style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', margin: 0, whiteSpace: 'pre-wrap', flex: 1 }}>
                   {[...(step.preMarkers || []), step.text, ...(step.postMarkers || [])].filter(Boolean).join(' ')}
                 </pre>
+                <CopyButton text={[...(step.preMarkers || []), step.text, ...(step.postMarkers || [])].filter(Boolean).join(' ')} label={`Copy step ${i + 1}`} size={12} />
               </div>
             ))}
           </div>
@@ -84,7 +85,6 @@ export default function WorkshopDecodePage() {
   // of order and leave the earlier one's result on screen.
   const [decoded, setDecoded] = useState<{ code: string; result: DecodeResult | null; error: string | null } | null>(null)
   const [decoding, setDecoding] = useState(false)
-  const [copiedTalent, setCopiedTalent] = useState<string | null>(null)
 
   const code = input.trim()
   // Only the outcome of the code currently in the box counts as this render's
@@ -115,12 +115,6 @@ export default function WorkshopDecodePage() {
       else setDecoded({ code: codeToDecode, result: data, error: null })
     } catch { setDecoded({ code: codeToDecode, result: null, error: 'Network error. Please try again.' }) }
     finally { setDecoding(false) }
-  }
-
-  async function copyTalent(str: string) {
-    await navigator.clipboard.writeText(str)
-    setCopiedTalent(str)
-    setTimeout(() => setCopiedTalent(null), 1500)
   }
 
   const isGSE = result?.meta?.format === 'GSE3'
@@ -227,13 +221,7 @@ export default function WorkshopDecodePage() {
                     <code style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {(result.meta.exportMeta as any).talentString}
                     </code>
-                    <button
-                      onClick={() => copyTalent((result.meta.exportMeta as any).talentString)}
-                      title="Copy talent string"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: 0 }}
-                    >
-                      {copiedTalent === (result.meta.exportMeta as any).talentString ? <Check size={13} style={{ color: 'var(--accent)' }} /> : <Copy size={13} />}
-                    </button>
+                    <CopyButton text={String((result.meta.exportMeta as any).talentString)} label="Copy talent string" />
                   </div>
                 )}
               </div>

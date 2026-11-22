@@ -588,3 +588,9 @@ html[data-theme='dark'] .theme-icon-light { display: none; }
   font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
   border-radius: 4px; padding: 3px 6px; line-height: 1; white-space: nowrap;
 }
+
+/* Fields wrapped in CopyField keep typed text clear of the copy button. */
+.copy-field > input,
+.copy-field > textarea {
+  padding-right: 44px !important;
+}

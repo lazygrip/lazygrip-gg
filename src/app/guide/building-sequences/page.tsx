@@ -1,10 +1,11 @@
 import Link from 'next/link'
+import { CopyBox } from '@/components/ui/CopyButton'
 import type { Metadata } from 'next'
 import GuideHeader from '@/components/guide/GuideHeader'
 import GuideSection from '@/components/guide/GuideSection'
 import GuideCallout from '@/components/guide/GuideCallout'
 import GuideImage from '@/components/guide/GuideImage'
-import { guideCodeStyle } from '@/components/guide/GuideCode'
+import { guideCodeStyle, GuideCommand } from '@/components/guide/GuideCode'
 
 export const metadata: Metadata = {
   title: 'Building Sequences | GRIP-EMS Guide',
@@ -45,16 +46,20 @@ export default function BuildingSequencesPage() {
           ['Validated', '+13 Pit, +13 Darkflame Cleft, +13 Seat of the Triumvirate, +14 Ara-Kara, +14 Skyreach'],
         ]} />
 
-        <div style={{
-          marginTop: 16, padding: '12px 14px',
-          background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
-          borderRadius: 'var(--radius-md)',
-        }}>
+        <CopyBox
+          text="CgGA8cL7tpvige+kkmGM9zUPWDAAAAAAAAAAAgZmZmFzMjZWmZxMmZZZgZzMGNRmZWmZmZmlZmBAAAAAgZmNDYZbmBjZZAM1MLzyMzMAA2wMAWMGGYWssBYmZmNA"
+          label="Copy talent string"
+          style={{
+            marginTop: 16, padding: '12px 14px',
+            background: 'var(--bg-primary)', border: '0.5px solid var(--border)',
+            borderRadius: 'var(--radius-md)',
+          }}
+        >
           <p style={{ fontSize: 'var(--text-xs)', color: 'var(--text-muted)', marginBottom: 4 }}>Talent string</p>
           <code style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', wordBreak: 'break-all', color: 'var(--text-secondary)' }}>
             CgGA8cL7tpvige+kkmGM9zUPWDAAAAAAAAAAAgZmZmFzMjZWmZxMmZZZgZzMGNRmZWmZmZmlZmBAAAAAgZmNDYZbmBjZZAM1MLzyMzMAA2wMAWMGGYWssBYmZmNA
           </code>
-        </div>
+        </CopyBox>
 
         <p style={{ marginTop: 16 }}>This sequence runs 30 steps in a Sequential loop with resetOnCombat enabled, meaning it fires the opener every pull and loops through the rotation continuously from there. In the validated runs this produced Thrash at roughly 47% of total damage done, Ironfur uptime in the 91 to 97% range, and zero deaths across the validated keys.</p>
         <p style={{ marginTop: 12 }}>Two modifiers run throughout the entire sequence. Shift fires Frenzied Regeneration on demand without breaking the loop. Ctrl fires Ironfur manually when you need it outside the automatic cycling. Every step except the two MOONSPAM steps and steps 15 and 30 carries both modifier lines so they are always available regardless of where you are in the rotation.</p>
@@ -141,8 +146,8 @@ export default function BuildingSequencesPage() {
       <GuideSection title="The KeyPress field and what it is for">
         <p>GRIP-EMS has a KeyPress field that fires on every single keypress regardless of where the sequence is in its step list. It is not a step in the rotation. It is a persistent header that runs before every step fires.</p>
         <p style={{ marginTop: 12 }}>Modifier handling is best placed here. If you put <code style={inlineCode}>[mod:shift]</code> lines inside individual steps instead of in KeyPress, every step has to carry that conditional which eats into the 255-character step limit. Putting modifiers in KeyPress means a single line handles the modifier for every press and your steps stay clean.</p>
-        <p style={{ marginTop: 12 }}>There is a meaningful secondary benefit. When modifiers live in KeyPress, the Rotation Preview panel in the GRIP-EMS editor can display your actual spell names instead of showing only the raw conditional text. If your sequence preview shows <code style={inlineCode}>/cast [mod:shift]</code> instead of the spell name, the modifier is in the steps rather than in KeyPress. The Elune&apos;s Chosen sequence above does carry its modifier line in every step, which costs characters in each one, so read that as how this sequence happens to be built and not as the pattern to copy.</p>
-        <p style={{ marginTop: 12 }}>A sequence you make with New in v2.4.21 or later starts with <code style={inlineCode}>/stopmacro [channeling]</code> already in KeyPress, the way a version you add and a sequence the recorder makes already did, so the box is not empty when you open it. Your modifier lines go in the same box with it.</p>
+        <p style={{ marginTop: 12 }}>There is a meaningful secondary benefit. When modifiers live in KeyPress, the Rotation Preview panel in the GRIP-EMS editor can display your actual spell names instead of showing only the raw conditional text. If your sequence preview shows <GuideCommand>/cast [mod:shift]</GuideCommand> instead of the spell name, the modifier is in the steps rather than in KeyPress. The Elune&apos;s Chosen sequence above does carry its modifier line in every step, which costs characters in each one, so read that as how this sequence happens to be built and not as the pattern to copy.</p>
+        <p style={{ marginTop: 12 }}>A sequence you make with New in v2.4.21 or later starts with <GuideCommand>/stopmacro [channeling]</GuideCommand> already in KeyPress, the way a version you add and a sequence the recorder makes already did, so the box is not empty when you open it. Your modifier lines go in the same box with it.</p>
         <GuideCallout>
           Do not put combat spells in KeyPress. Anything in KeyPress fires on every single keypress including before combat, during movement, and any other context where you press the key. Modifiers and channel-stop lines belong there. Rotation spells belong in steps.
         </GuideCallout>
@@ -279,16 +284,21 @@ function StepBlock({ number, label, code, notes }: { number: string; label: stri
   )
 }
 
-function CodeBlock({ children }: { children: React.ReactNode }) {
+function CodeBlock({ children }: { children: string }) {
   return (
-    <div style={{
-      fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)',
-      background: 'var(--bg-tertiary)', border: '0.5px solid var(--border)',
-      borderRadius: 'var(--radius-md)', padding: '12px 14px',
-      color: 'var(--accent)', marginTop: 12, overflowX: 'auto',
-    }}>
+    <CopyBox
+      text={children}
+      label="Copy macro text"
+      style={{
+        fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)',
+        background: 'var(--bg-tertiary)', border: '0.5px solid var(--border)',
+        borderRadius: 'var(--radius-md)', padding: '12px 14px',
+        color: 'var(--accent)', marginTop: 12,
+      }}
+      innerStyle={{ overflowX: 'auto', whiteSpace: 'pre-wrap' }}
+    >
       {children}
-    </div>
+    </CopyBox>
   )
 }
 
